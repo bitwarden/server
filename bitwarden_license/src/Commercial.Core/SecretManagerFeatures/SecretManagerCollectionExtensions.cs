@@ -26,5 +26,7 @@ public static class SecretManagerCollectionExtensions
         services.AddScoped<IUpdateServiceAccountCommand, UpdateServiceAccountCommand>();
         services.AddScoped<ICreateAccessTokenCommand, CreateAccessTokenCommand>();
         services.AddScoped<ICreateAccessPoliciesCommand, CreateAccessPoliciesCommand>();
+        services.AddScoped<IUpdateAccessPolicyCommand, UpdateAccessPolicyCommand>();
+        services.AddScoped<IDeleteAccessPolicyCommand, DeleteAccessPolicyCommand>();
     }
 }

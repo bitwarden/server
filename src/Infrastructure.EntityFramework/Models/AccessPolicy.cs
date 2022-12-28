@@ -12,8 +12,8 @@ public class AccessPolicyMapperProfile : Profile
 {
     public AccessPolicyMapperProfile()
     {
-        CreateMap<Core.Entities.AccessPolicy, AccessPolicy>().ReverseMap();
-        CreateMap<Core.Entities.UserProjectAccessPolicy, UserProjectAccessPolicy>().ReverseMap();
+        CreateMap<Core.Entities.UserProjectAccessPolicy, UserProjectAccessPolicy>().ReverseMap()
+            .ForMember(dst => dst.User, opt => opt.MapFrom(src => src.OrganizationUser.User));
         CreateMap<Core.Entities.GroupProjectAccessPolicy, GroupProjectAccessPolicy>().ReverseMap();
         CreateMap<Core.Entities.ServiceAccountProjectAccessPolicy, ServiceAccountProjectAccessPolicy>().ReverseMap();
     }
