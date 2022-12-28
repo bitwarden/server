@@ -27,7 +27,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         secret.DeletedDate = existingSecret.DeletedDate;
         secret.RevisionDate = DateTime.UtcNow;
 
-        await _secretRepository.ReplaceAsync(secret);
+        await _secretRepository.UpdateAsync(secret);
         return secret;
     }
 }

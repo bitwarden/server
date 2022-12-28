@@ -20,6 +20,7 @@ public class SecretResponseModel : ResponseModel
         Note = secret.Note;
         CreationDate = secret.CreationDate;
         RevisionDate = secret.RevisionDate;
+        Projects = secret.Projects?.Select(p => new InnerProject(p));
     }
 
     public string Id { get; set; }
@@ -35,4 +36,18 @@ public class SecretResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
 
     public DateTime RevisionDate { get; set; }
+
+    public IEnumerable<InnerProject>? Projects { get; set; }
+
+    public class InnerProject
+    {
+        public InnerProject(Project project)
+        {
+            Id = project.Id;
+            Name = project.Name;
+        }
+
+        public Guid Id { get; set; }
+        public string Name { get; set; }
+    }
 }

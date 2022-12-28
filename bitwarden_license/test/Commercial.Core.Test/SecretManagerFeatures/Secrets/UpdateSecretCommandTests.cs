@@ -21,7 +21,7 @@ public class UpdateSecretCommandTests
     {
         var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data));
 
-        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+        await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().UpdateAsync(default);
     }
 
     [Theory]
@@ -32,7 +32,7 @@ public class UpdateSecretCommandTests
         await sutProvider.Sut.UpdateAsync(data);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
-            .ReplaceAsync(data);
+            .UpdateAsync(data);
     }
 
     [Theory]
