@@ -38,4 +38,5 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<IEnumerable<OrganizationUserUserDetails>> GetManyByMinimumRoleAsync(Guid organizationId, OrganizationUserType minRole);
     Task RevokeAsync(Guid id);
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
+    Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId);
 }

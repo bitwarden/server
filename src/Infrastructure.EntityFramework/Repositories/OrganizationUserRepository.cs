@@ -530,4 +530,33 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from p in dbContext.Policies
+                        join ou in dbContext.OrganizationUsers
+                            on p.OrganizationId equals ou.OrganizationId
+                        let providerOrganizations = from pu in dbContext.ProviderUsers
+                                                    where pu.UserId == userId
+                                                    join po in dbContext.ProviderOrganizations
+                                                        on pu.ProviderId equals po.ProviderId
+                                                    select po
+                        where
+                            ou.UserId == userId
+                        select new OrganizationUserPolicyDetails
+                        {
+                            OrganizationId = p.OrganizationId,
+                            PolicyType = p.Type,
+                            PolicyEnabled = p.Enabled,
+                            OrganizationUserType = ou.Type,
+                            OrganizationUserStatus = ou.Status,
+                            CanManagePolicies = ou.Permissions != null && ou.Permissions.Contains($"\"managePolicies\":true"),
+                            IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
+                        };
+            return await query.ToListAsync();
+        }
+    }
 }
