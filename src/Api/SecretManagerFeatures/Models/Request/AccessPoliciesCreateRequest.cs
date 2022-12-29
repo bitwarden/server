@@ -7,26 +7,26 @@ namespace Bit.Api.SecretManagerFeatures.Models.Request;
 
 public class AccessPoliciesCreateRequest
 {
-    public IEnumerable<AccessPolicyRequest>? UserRequests { get; set; }
+    public IEnumerable<AccessPolicyRequest>? UserAccessPolicyRequests { get; set; }
 
-    public IEnumerable<AccessPolicyRequest>? GroupRequests { get; set; }
+    public IEnumerable<AccessPolicyRequest>? GroupAccessPolicyRequests { get; set; }
 
-    public IEnumerable<AccessPolicyRequest>? ServiceAccountRequests { get; set; }
+    public IEnumerable<AccessPolicyRequest>? ServiceAccountAccessPolicyRequests { get; set; }
 
     public List<BaseAccessPolicy> ToBaseAccessPoliciesForProject(Guid projectId)
     {
-        if (UserRequests == null && GroupRequests == null && ServiceAccountRequests == null)
+        if (UserAccessPolicyRequests == null && GroupAccessPolicyRequests == null && ServiceAccountAccessPolicyRequests == null)
         {
             throw new BadRequestException("No creation requests provided.");
         }
 
-        var userAccessPolicies = UserRequests?
+        var userAccessPolicies = UserAccessPolicyRequests?
             .Select(x => x.ToUserProjectAccessPolicy(projectId)).ToList();
 
-        var groupAccessPolicies = GroupRequests?
+        var groupAccessPolicies = GroupAccessPolicyRequests?
             .Select(x => x.ToGroupProjectAccessPolicy(projectId)).ToList();
 
-        var serviceAccountAccessPolicies = ServiceAccountRequests?
+        var serviceAccountAccessPolicies = ServiceAccountAccessPolicyRequests?
             .Select(x => x.ToServiceAccountProjectAccessPolicy(projectId)).ToList();
 
         var policies = new List<BaseAccessPolicy>();
@@ -39,11 +39,14 @@ public class AccessPoliciesCreateRequest
 
 public class AccessPolicyRequest
 {
-    [Required] public Guid GranteeId { get; set; }
+    [Required]
+    public Guid GranteeId { get; set; }
 
-    [Required] public bool Read { get; set; }
+    [Required]
+    public bool Read { get; set; }
 
-    [Required] public bool Write { get; set; }
+    [Required]
+    public bool Write { get; set; }
 
     public UserProjectAccessPolicy ToUserProjectAccessPolicy(Guid projectId) =>
         new()

@@ -100,13 +100,27 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 return null;
             }
 
-            return entity switch
+            switch (entity)
             {
-                UserProjectAccessPolicy ap => Mapper.Map<Core.Entities.UserProjectAccessPolicy>(ap),
-                GroupProjectAccessPolicy ap => Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(ap),
-                ServiceAccountProjectAccessPolicy ap => Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(ap),
-                _ => throw new ArgumentException("Unsupported access policy type")
-            };
+                case UserProjectAccessPolicy accessPolicy:
+                    await dbContext.Entry(accessPolicy)
+                        .Reference(e => e.OrganizationUser)
+                        .Query().Include(e => e.User)
+                        .LoadAsync();
+                    return Mapper.Map<Core.Entities.UserProjectAccessPolicy>(accessPolicy);
+                case GroupProjectAccessPolicy accessPolicy:
+                    await dbContext.Entry(accessPolicy)
+                        .Reference(e => e.Group)
+                        .LoadAsync();
+                    return Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(accessPolicy);
+                case ServiceAccountProjectAccessPolicy accessPolicy:
+                    await dbContext.Entry(accessPolicy)
+                        .Reference(e => e.ServiceAccount)
+                        .LoadAsync();
+                    return Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(accessPolicy);
+                default:
+                    throw new ArgumentException("Unsupported access policy type");
+            }
         }
     }
 

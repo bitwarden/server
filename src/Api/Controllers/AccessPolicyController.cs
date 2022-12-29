@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bit.Api.Controllers;
 
 [SecretsManager]
+[Route("access-policies")]
 public class AccessPolicyController : Controller
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
@@ -28,7 +29,7 @@ public class AccessPolicyController : Controller
         _updateAccessPolicyCommand = updateAccessPolicyCommand;
     }
 
-    [HttpPost("projects/{id}/access-policies")]
+    [HttpPost("/projects/{id}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> CreateProjectAccessPoliciesAsync([FromRoute] Guid id,
         [FromBody] AccessPoliciesCreateRequest request)
     {
@@ -37,14 +38,14 @@ public class AccessPolicyController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpGet("projects/{id}/access-policies")]
+    [HttpGet("/projects/{id}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> GetProjectAccessPoliciesAsync([FromRoute] Guid id)
     {
         var results = await _accessPolicyRepository.GetManyByProjectId(id);
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpPut("access-policies/{id}")]
+    [HttpPut("{id}")]
     public async Task<BaseAccessPolicyResponseModel> UpdateAccessPolicyAsync([FromRoute] Guid id,
         [FromBody] AccessPolicyUpdateRequest request)
     {
@@ -60,7 +61,7 @@ public class AccessPolicyController : Controller
         };
     }
 
-    [HttpDelete("access-policies/{id}")]
+    [HttpDelete("{id}")]
     public async Task DeleteAccessPolicyAsync([FromRoute] Guid id)
     {
         await _deleteAccessPolicyCommand.DeleteAsync(id);
