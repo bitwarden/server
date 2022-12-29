@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
@@ -130,6 +131,17 @@ public class PolicyService : IPolicyService
         policy.RevisionDate = now;
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+    }
+
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUser(Guid userId, PolicyType policyType, OrganizationUserType minUserType, OrganizationUserStatusType minStatus)
+    {
+        var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId);
+        return organizationUserPolicyDetails.Where(o =>
+                     o.PolicyType == policyType &&
+                     o.PolicyEnabled &&
+                     o.OrganizationUserType >= minUserType &&
+                     o.OrganizationUserStatus >= minStatus &&
+                     !o.IsProvider).ToList();
     }
 
     private async Task DependsOnSingleOrgAsync(Organization org)
