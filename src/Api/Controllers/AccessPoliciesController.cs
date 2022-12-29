@@ -10,14 +10,14 @@ namespace Bit.Api.Controllers;
 
 [SecretsManager]
 [Route("access-policies")]
-public class AccessPolicyController : Controller
+public class AccessPoliciesController : Controller
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly ICreateAccessPoliciesCommand _createAccessPoliciesCommand;
     private readonly IDeleteAccessPolicyCommand _deleteAccessPolicyCommand;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
 
-    public AccessPolicyController(
+    public AccessPoliciesController(
         IAccessPolicyRepository accessPolicyRepository,
         ICreateAccessPoliciesCommand createAccessPoliciesCommand,
         IDeleteAccessPolicyCommand deleteAccessPolicyCommand,
