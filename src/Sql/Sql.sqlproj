@@ -234,6 +234,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByOrganizationIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserIds.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadByUserIdWithPolicyDetails.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByFreeOrganizationAdminUser.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOnlyOwner.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
