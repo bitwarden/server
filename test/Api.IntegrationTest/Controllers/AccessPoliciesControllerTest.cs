@@ -22,7 +22,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private Organization? _organization;
+    private Organization _organization = null!;
 
     public AccessPoliciesControllerTest(ApiApplicationFactory factory)
     {
@@ -103,11 +103,13 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountProjectAccessPolicyResult>();
+        Assert.NotNull(result);
         Assert.Equal(expectedRead, result.Read);
         Assert.Equal(expectedWrite, result.Write);
         AssertHelper.AssertRecent(result.RevisionDate);
 
         var updatedAccessPolicy = await _accessPolicyRepository.GetByIdAsync(result.Id);
+        Assert.NotNull(updatedAccessPolicy);
         Assert.Equal(expectedRead, updatedAccessPolicy.Read);
         Assert.Equal(expectedWrite, updatedAccessPolicy.Write);
         AssertHelper.AssertRecent(updatedAccessPolicy.RevisionDate);
@@ -136,7 +138,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var result = await response.Content.ReadFromJsonAsync<AccessPoliciesResult>();
 
-        Assert.NotNull(result.ServiceAccountAccessPolicies);
+        Assert.NotNull(result?.ServiceAccountAccessPolicies);
         Assert.Single(result.ServiceAccountAccessPolicies);
     }
 
