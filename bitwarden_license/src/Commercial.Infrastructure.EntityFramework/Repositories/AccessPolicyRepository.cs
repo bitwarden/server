@@ -145,6 +145,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+
             var userEntities = await dbContext.UserProjectAccessPolicy
                     .Where(c => c.GrantedProjectId == id)
                     .Include(e => e.OrganizationUser.User)
