@@ -1,8 +1,8 @@
 ﻿using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.IntegrationTest.Models;
 using Bit.Api.SecretManagerFeatures.Models.Request;
-using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
@@ -71,7 +71,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var response = await _client.PostAsJsonAsync($"/projects/{initialProject.Id}/access-policies", request);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<AccessPoliciesResponse>();
+        var result = await response.Content.ReadFromJsonAsync<AccessPoliciesResult>();
 
         Assert.NotNull(result);
         Assert.Equal(initialServiceAccount.Id, result.ServiceAccountAccessPolicies.First().ServiceAccountId);
@@ -102,7 +102,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var response = await _client.PutAsJsonAsync($"/access-policies/{initData.InitialAccessPolicyId}", request);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ServiceAccountProjectAccessPolicyResponse>();
+        var result = await response.Content.ReadFromJsonAsync<ServiceAccountProjectAccessPolicyResult>();
         Assert.Equal(expectedRead, result.Read);
         Assert.Equal(expectedWrite, result.Write);
         AssertHelper.AssertRecent(result.RevisionDate);
@@ -134,7 +134,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var response = await _client.GetAsync($"/projects/{initData.InitialProjectId}/access-policies");
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<AccessPoliciesResponse>();
+        var result = await response.Content.ReadFromJsonAsync<AccessPoliciesResult>();
 
         Assert.NotNull(result.ServiceAccountAccessPolicies);
         Assert.Single(result.ServiceAccountAccessPolicies);
@@ -145,13 +145,13 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var initialProject = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = _organization.Id,
-            Name = _mockEncryptedString
+            Name = _mockEncryptedString,
         });
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = _organization.Id,
-            Name = _mockEncryptedString
+            Name = _mockEncryptedString,
         });
 
         var initialAccessPolicy = await _accessPolicyRepository.CreateManyAsync(
@@ -162,7 +162,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
                     Read = true,
                     Write = true,
                     ServiceAccountId = initialServiceAccount.Id,
-                    GrantedProjectId = initialProject.Id
+                    GrantedProjectId = initialProject.Id,
                 }
             });
 
@@ -170,7 +170,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         {
             InitialProjectId = initialProject.Id,
             InitialServiceAccountId = initialServiceAccount.Id,
-            InitialAccessPolicyId = initialAccessPolicy.First().Id
+            InitialAccessPolicyId = initialAccessPolicy.First().Id,
         };
     }
 
@@ -179,55 +179,5 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         public Guid InitialProjectId { get; set; }
         public Guid InitialAccessPolicyId { get; set; }
         public Guid InitialServiceAccountId { get; set; }
-    }
-
-    private class AccessPoliciesResponse
-    {
-        public IEnumerable<UserProjectAccessPolicyResponse> UserAccessPolicies { get; set; }
-
-        public IEnumerable<GroupProjectAccessPolicyResponseModel> GroupAccessPolicies { get; set; }
-
-        public IEnumerable<ServiceAccountProjectAccessPolicyResponse> ServiceAccountAccessPolicies { get; set; }
-
-        public string Object { get; set; }
-    }
-
-    private class UserProjectAccessPolicyResponse
-    {
-        public string Object { get; set; }
-        public Guid Id { get; set; }
-        public bool Read { get; set; }
-        public bool Write { get; set; }
-        public DateTime CreationDate { get; set; }
-        public DateTime RevisionDate { get; set; }
-        public Guid? OrganizationUserId { get; set; }
-        public string? OrganizationUserName { get; set; }
-        public Guid? GrantedProjectId { get; set; }
-    }
-
-    private class GroupProjectAccessPolicyResponse
-    {
-        public string Object { get; set; }
-        public Guid Id { get; set; }
-        public bool Read { get; set; }
-        public bool Write { get; set; }
-        public DateTime CreationDate { get; set; }
-        public DateTime RevisionDate { get; set; }
-        public Guid? GroupId { get; set; }
-        public string? GroupName { get; set; }
-        public Guid? GrantedProjectId { get; set; }
-    }
-
-    private class ServiceAccountProjectAccessPolicyResponse
-    {
-        public string Object { get; set; }
-        public Guid Id { get; set; }
-        public bool Read { get; set; }
-        public bool Write { get; set; }
-        public DateTime CreationDate { get; set; }
-        public DateTime RevisionDate { get; set; }
-        public Guid? ServiceAccountId { get; set; }
-        public string? ServiceAccountName { get; set; }
-        public Guid? GrantedProjectId { get; set; }
     }
 }
