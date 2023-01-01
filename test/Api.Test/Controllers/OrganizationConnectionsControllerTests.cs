@@ -209,11 +209,12 @@ public class OrganizationConnectionsControllerTests
         {
             CloudOrganizationId = config.CloudOrganizationId,
         });
+
         updated.Config = JsonSerializer.Serialize(config);
         updated.Id = existing.Id;
         updated.Type = OrganizationConnectionType.CloudBillingSync;
         var model = RequestModelFromEntity<BillingSyncConfig>(updated);
-
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationConnectionRepository>()
             .GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type)
@@ -235,12 +236,12 @@ public class OrganizationConnectionsControllerTests
         organizationLicense.Trial = true;
 
         sutProvider.GetDependency<ILicensingService>()
-                    .VerifyLicense(organizationLicense)
-                    .Returns(true);
-
-        var licensev = sutProvider.GetDependency<ILicensingService>()
-            .ReadOrganizationLicenseAsync(model.OrganizationId)
+            .ReadOrganizationLicenseAsync(Arg.Any<Guid>())
             .Returns(organizationLicense);
+
+        sutProvider.GetDependency<ILicensingService>()
+            .VerifyLicense(organizationLicense)
+            .Returns(true);
 
         var expected = new OrganizationConnectionResponseModel(updated, typeof(BillingSyncConfig));
         var result = await sutProvider.Sut.UpdateConnection(existing.Id, model);
@@ -264,7 +265,7 @@ public class OrganizationConnectionsControllerTests
         updated.Id = existing.Id;
         updated.Type = OrganizationConnectionType.CloudBillingSync;
         var model = RequestModelFromEntity<BillingSyncConfig>(updated);
-
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(model.OrganizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationConnectionRepository>()
             .GetByOrganizationIdTypeAsync(model.OrganizationId, model.Type)
@@ -288,10 +289,6 @@ public class OrganizationConnectionsControllerTests
         sutProvider.GetDependency<ILicensingService>()
                     .VerifyLicense(organizationLicense)
                     .Returns(false);
-
-        var licensev = sutProvider.GetDependency<ILicensingService>()
-            .ReadOrganizationLicenseAsync(model.OrganizationId)
-            .Returns(organizationLicense);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.UpdateConnection(existing.Id, model));
 
