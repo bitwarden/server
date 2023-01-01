@@ -4,7 +4,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
@@ -97,7 +96,7 @@ public class OrganizationConnectionsController : Controller
         switch (model.Type)
         {
             case OrganizationConnectionType.CloudBillingSync:
-                return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model,ValidateBillingSyncConfig);
+                return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model, ValidateBillingSyncConfig);
             case OrganizationConnectionType.Scim:
                 return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model);
             default:
