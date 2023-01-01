@@ -97,7 +97,7 @@ public class OrganizationConnectionsController : Controller
         switch (model.Type)
         {
             case OrganizationConnectionType.CloudBillingSync:
-                return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model);
+                return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model,ValidateBillingSyncConfig);
             case OrganizationConnectionType.Scim:
                 return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model);
             default:
@@ -180,7 +180,11 @@ public class OrganizationConnectionsController : Controller
         {
             throw new BadRequestException($"Cannot create a {typedModel.Type} connection outside of a self-hosted instance.");
         }
-        var license = await VerifyLicense(typedModel.OrganizationId);
+        var license = await _licensingService.ReadOrganizationLicenseAsync(typedModel.OrganizationId);
+        if (!_licensingService.VerifyLicense(license))
+        {
+            throw new BadRequestException("Cannot verify license file.");
+        }
         typedModel.ParsedConfig.CloudOrganizationId = license.Id;
     }
 
@@ -197,13 +201,6 @@ public class OrganizationConnectionsController : Controller
         }
 
         var data = typedModel.ToData(organizationConnectionId);
-        var billingSyncKey = data.Config as BillingSyncConfig;
-        if (billingSyncKey != null && organizationConnectionId.HasValue)
-        {
-            var license = await VerifyLicense(model.OrganizationId);
-
-            billingSyncKey.CloudOrganizationId = license.Id;
-        }
 
         var connection = organizationConnectionId.HasValue
             ? await _updateOrganizationConnectionCommand.UpdateAsync(data)
@@ -212,14 +209,4 @@ public class OrganizationConnectionsController : Controller
         return new OrganizationConnectionResponseModel(connection, typeof(T));
     }
 
-    private async Task<OrganizationLicense> VerifyLicense(Guid OrganizationId)
-    {
-        var license = await _licensingService.ReadOrganizationLicenseAsync(OrganizationId);
-        if (!_licensingService.VerifyLicense(license))
-        {
-            throw new BadRequestException("Cannot verify license file.");
-        }
-
-        return license;
-    }
 }
