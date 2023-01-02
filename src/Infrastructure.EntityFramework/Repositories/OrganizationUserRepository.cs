@@ -536,14 +536,16 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+
+            var providerOrganizations = from pu in dbContext.ProviderUsers
+                                        where pu.UserId == userId
+                                        join po in dbContext.ProviderOrganizations
+                                            on pu.ProviderId equals po.ProviderId
+                                        select po;
+
             var query = from p in dbContext.Policies
                         join ou in dbContext.OrganizationUsers
                             on p.OrganizationId equals ou.OrganizationId
-                        let providerOrganizations = from pu in dbContext.ProviderUsers
-                                                    where pu.UserId == userId
-                                                    join po in dbContext.ProviderOrganizations
-                                                        on pu.ProviderId equals po.ProviderId
-                                                    select po
                         where
                             ou.UserId == userId
                         select new OrganizationUserPolicyDetails
@@ -551,6 +553,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                             OrganizationId = p.OrganizationId,
                             PolicyType = p.Type,
                             PolicyEnabled = p.Enabled,
+                            PolicyData = p.Data,
                             OrganizationUserType = ou.Type,
                             OrganizationUserStatus = ou.Status,
                             CanManagePolicies = ou.Permissions != null && ou.Permissions.Contains($"\"managePolicies\":true"),
