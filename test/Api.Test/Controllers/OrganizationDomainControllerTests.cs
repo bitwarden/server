@@ -111,7 +111,8 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
         sutProvider.GetDependency<IGetOrganizationDomainByIdQuery>().GetOrganizationDomainById(id)
-            .Returns(new OrganizationDomain{
+            .Returns(new OrganizationDomain
+            {
                 Id = Guid.NewGuid(),
                 OrganizationId = orgId,
                 CreationDate = DateTime.UtcNow.AddDays(-7),
