@@ -75,6 +75,7 @@ COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/MySqlMigrations/*.csproj ./util/MySqlMigrations/
 COPY util/PostgresMigrations/*.csproj ./util/PostgresMigrations/
+COPY util/SqliteMigrations/*.csproj ./util/SqliteMigrations/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
 COPY Directory.Build.props .
 
@@ -127,6 +128,7 @@ COPY src/SharedWeb/. ./src/SharedWeb/
 COPY util/Migrator/. ./util/Migrator/
 COPY util/MySqlMigrations/. ./util/MySqlMigrations/
 COPY util/PostgresMigrations/. ./util/PostgresMigrations/
+COPY util/SqliteMigrations/. ./util/SqliteMigrations/
 COPY util/EfShared/. ./util/EfShared/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
 COPY .git/. ./.git/
@@ -183,6 +185,7 @@ ENV BW_ENABLE_IDENTITY=true
 ENV BW_ENABLE_NOTIFICATIONS=true
 ENV BW_ENABLE_SCIM=false
 ENV BW_ENABLE_SSO=false
+ENV BW_DB_FILE="/etc/bitwarden/vault.db"
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV globalSettings__selfHosted="true"
 ENV globalSettings__pushRelayBaseUri="https://push.bitwarden.com"

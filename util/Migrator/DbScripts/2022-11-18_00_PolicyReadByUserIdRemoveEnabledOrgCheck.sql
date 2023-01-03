@@ -1,4 +1,9 @@
-﻿CREATE PROCEDURE [dbo].[Policy_ReadByUserId]
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[Policy_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -16,3 +21,4 @@ BEGIN
         OU.[UserId] = @UserId
         AND OU.[Status] = 2 -- 2 = Confirmed
 END
+GO
