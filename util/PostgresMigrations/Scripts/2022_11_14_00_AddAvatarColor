@@ -1,0 +1,9 @@
+﻿START TRANSACTION;
+
+ALTER TABLE "User" ADD "AvatarColor" character varying(7) NULL;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20221115034053_AvatarColor', '6.0.4');
+
+COMMIT;
+
