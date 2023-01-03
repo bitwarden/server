@@ -153,11 +153,6 @@
           "System.Xml.XPath.XmlDocument": "4.3.0"
         }
       },
-      "Dapper": {
-        "type": "Transitive",
-        "resolved": "2.0.123",
-        "contentHash": "RDFF4rBLLmbpi6pwkY7q/M6UXHRJEOerplDGE5jwEkP/JGJnBauAClYavNKJPW1yOTWRPIyfj4is3EaJxQXILQ=="
-      },
       "DnsClient": {
         "type": "Transitive",
         "resolved": "1.7.0",

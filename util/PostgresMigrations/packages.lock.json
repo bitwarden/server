@@ -153,11 +153,6 @@
           "System.Xml.XPath.XmlDocument": "4.3.0"
         }
       },
-      "Dapper": {
-        "type": "Transitive",
-        "resolved": "2.0.123",
-        "contentHash": "RDFF4rBLLmbpi6pwkY7q/M6UXHRJEOerplDGE5jwEkP/JGJnBauAClYavNKJPW1yOTWRPIyfj4is3EaJxQXILQ=="
-      },
       "DnsClient": {
         "type": "Transitive",
         "resolved": "1.7.0",
@@ -2705,22 +2700,6 @@
         "contentHash": "uP5F3Ko1gqZi3lwS2R/jAAwhBxXs/6PKDpS6FdQjsBA5qmF0hQmbtfxM6QHTXOMoWbUtfetG7+LtgmG8T5zDIg==",
         "dependencies": {
           "NETStandard.Library": "1.6.1"
-        }
-      },
-      "api": {
-        "type": "Project",
-        "dependencies": {
-          "Azure.Messaging.EventGrid": "[4.10.0, )",
-          "Commercial.Core": "[2022.10.0, )",
-          "Core": "[2022.10.0, )",
-          "SharedWeb": "[2022.10.0, )",
-          "Swashbuckle.AspNetCore": "[6.3.1, )"
-        }
-      },
-      "commercial.core": {
-        "type": "Project",
-        "dependencies": {
-          "Core": "[2022.10.0, )"
         }
       },
       "core": {
