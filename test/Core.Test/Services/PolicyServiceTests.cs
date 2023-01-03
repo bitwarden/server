@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -391,10 +392,78 @@ public class PolicyServiceTests
         Assert.True(policy.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsNoPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(userId, sutProvider);
+
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
+
+        Assert.Empty(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithOwnerUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsOnePolicy(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(userId, sutProvider);
+
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso, OrganizationUserType.Owner);
+
+        Assert.Single(result);
+        Assert.True(result.All(details => details.PolicyEnabled));
+        Assert.True(result.All(details => details.PolicyType == PolicyType.RequireSso));
+        Assert.True(result.All(details => details.OrganizationUserType == OrganizationUserType.Owner));
+        Assert.True(result.All(details => details.OrganizationUserStatus == OrganizationUserStatusType.Confirmed));
+        Assert.True(result.All(details => !details.IsProvider));
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithDisableTypeFilter_WithDefaultUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsNoPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(userId, sutProvider);
+
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend);
+
+        Assert.Empty(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetPoliciesApplicableToUserAsync_WithDisableSendTypeFilter_WithOwnerUserTypeFilter_WithInvitedUserStatusFilter_ReturnsOnePolicy(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(userId, sutProvider);
+
+        var result = await sutProvider.Sut
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserType.User, OrganizationUserStatusType.Invited);
+
+        Assert.Single(result);
+        Assert.True(result.All(details => details.PolicyEnabled));
+        Assert.True(result.All(details => details.PolicyType == PolicyType.DisableSend));
+        Assert.True(result.All(details => details.OrganizationUserType == OrganizationUserType.User));
+        Assert.True(result.All(details => details.OrganizationUserStatus == OrganizationUserStatusType.Invited));
+        Assert.True(result.All(details => !details.IsProvider));
+    }
+
     private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)
     {
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organizationId)
             .Returns(Task.FromResult(organization));
+    }
+
+    private static void SetupUserPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = false, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false},
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = true },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
+            });
     }
 }
