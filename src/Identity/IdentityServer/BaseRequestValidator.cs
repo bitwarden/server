@@ -34,7 +34,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly ILogger<ResourceOwnerPasswordValidator> _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyService _policyService;
     private readonly IUserRepository _userRepository;
     private readonly ICaptchaValidationService _captchaValidationService;
 
@@ -52,7 +52,7 @@ public abstract class BaseRequestValidator<T> where T : class
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
+        IPolicyService policyService,
         IUserRepository userRepository,
         ICaptchaValidationService captchaValidationService)
     {
@@ -69,7 +69,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _logger = logger;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
-        _policyRepository = policyRepository;
+        _policyService = policyService;
         _userRepository = userRepository;
         _captchaValidationService = captchaValidationService;
     }
@@ -348,32 +348,13 @@ public abstract class BaseRequestValidator<T> where T : class
             return true;
         }
 
-        // Is user apart of any orgs? Use cache for initial checks.
-        var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
-            .ToList();
-        if (orgs.Any())
+        // Check if user belongs to any organization with an active SSO policy 
+        // If 'EnforceSsoPolicyForAllUsers' is set to true then SSO policy applies to all user types otherwise it does not apply to Owner or Admin
+        var minSsoPolicyUserType = _globalSettings.Sso.EnforceSsoPolicyForAllUsers ? OrganizationUserType.Owner : OrganizationUserType.User;
+        var ssoPoliciesApplicableToUser = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, minSsoPolicyUserType, OrganizationUserStatusType.Confirmed);
+        if (ssoPoliciesApplicableToUser.Any())
         {
-            // Get all org abilities
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            // Parse all user orgs that are enabled and have the ability to use sso
-            var ssoOrgs = orgs.Where(o => OrgCanUseSso(orgAbilities, o.Id));
-            if (ssoOrgs.Any())
-            {
-                // Parse users orgs and determine if require sso policy is enabled
-                var userOrgs = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
-                    OrganizationUserStatusType.Confirmed);
-                foreach (var userOrg in userOrgs.Where(o => o.Enabled && o.UseSso))
-                {
-                    var orgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(userOrg.OrganizationId,
-                        PolicyType.RequireSso);
-                    // Owners and Admins are exempt from this policy
-                    if (orgPolicy != null && orgPolicy.Enabled &&
-                        (_globalSettings.Sso.EnforceSsoPolicyForAllUsers || (userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)))
-                    {
-                        return false;
-                    }
-                }
-            }
+            return false;
         }
 
         // Default - continue validation process
@@ -384,12 +365,6 @@ public abstract class BaseRequestValidator<T> where T : class
     {
         return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
             orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
-    }
-
-    private bool OrgCanUseSso(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
-    {
-        return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
-               orgAbilities[orgId].Enabled && orgAbilities[orgId].UseSso;
     }
 
     private Device GetDeviceFromRequest(ValidatedRequest request)

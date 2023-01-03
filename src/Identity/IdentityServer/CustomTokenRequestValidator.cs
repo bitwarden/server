@@ -33,13 +33,13 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
+        IPolicyService policyService,
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         ICaptchaValidationService captchaValidationService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+              applicationCacheService, mailService, logger, currentContext, globalSettings, policyService,
               userRepository, captchaValidationService)
     {
         _userManager = userManager;
