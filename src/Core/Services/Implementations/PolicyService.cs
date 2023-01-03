@@ -133,7 +133,7 @@ public class PolicyService : IPolicyService
         await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUser(Guid userId, PolicyType policyType, OrganizationUserType minUserType, OrganizationUserStatusType minStatus)
+    public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserType minUserType = OrganizationUserType.User, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId);
         return organizationUserPolicyDetails.Where(o =>
