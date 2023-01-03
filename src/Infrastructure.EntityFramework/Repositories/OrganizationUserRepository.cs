@@ -546,8 +546,9 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var query = from p in dbContext.Policies
                         join ou in dbContext.OrganizationUsers
                             on p.OrganizationId equals ou.OrganizationId
+                        let email = dbContext.Users.Find(userId).Email
                         where
-                            ou.UserId == userId
+                            ou.UserId == userId || ou.Email == email // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
                         select new OrganizationUserPolicyDetails
                         {
                             OrganizationId = p.OrganizationId,

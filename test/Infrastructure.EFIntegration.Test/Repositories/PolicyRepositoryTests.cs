@@ -142,6 +142,7 @@ public class PolicyRepositoryTests
             var i = policyRepos.IndexOf(policyRepo);
 
             // Seed database
+            user.CreationDate = user.RevisionDate = DateTime.Now;
             var savedUser = await userRepos[i].CreateAsync(user);
             var savedOrg = await orgRepos[i].CreateAsync(organization);
 
