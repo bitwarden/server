@@ -110,11 +110,19 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
-        sutProvider.GetDependency<IGetOrganizationDomainByIdQuery>().GetOrganizationDomainById(id).Returns(new OrganizationDomain());
+        sutProvider.GetDependency<IGetOrganizationDomainByIdQuery>().GetOrganizationDomainById(id)
+            .Returns(new OrganizationDomain{
+                Id = Guid.NewGuid(),
+                OrganizationId = orgId,
+                CreationDate = DateTime.UtcNow.AddDays(-7),
+                DomainName = "test.com",
+                Txt = "btw+12342"
+            });
 
         var result = await sutProvider.Sut.Get(orgId.ToString(), id.ToString());
 
         Assert.IsType<OrganizationDomainResponseModel>(result);
+        Assert.Equal(orgId.ToString(), result.OrganizationId);
     }
 
     [Theory, BitAutoData]
