@@ -39,6 +39,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyService _policyService;
     private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFido2 _fido2;
@@ -71,6 +72,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IDataProtectionProvider dataProtectionProvider,
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
+        IPolicyService policyService,
         IReferenceEventService referenceEventService,
         IFido2 fido2,
         ICurrentContext currentContext,
@@ -105,6 +107,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyRepository = policyRepository;
+        _policyService = policyService;
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
         _referenceEventService = referenceEventService;
@@ -1400,8 +1403,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
     {
-        var twoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
-            PolicyType.TwoFactorAuthentication);
+        var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
