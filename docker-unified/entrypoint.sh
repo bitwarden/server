@@ -11,9 +11,10 @@ adduser -s /bin/false -D -u $UID -G $GROUP_NAME bitwarden
 
 # Translate environment variables for application settings
 VAULT_SERVICE_URI=https://$BW_DOMAIN
-MYSQL_CONNECTION_STRING="server=$BW_DB_SERVER;database=$BW_DB_DATABASE;user=$BW_DB_USERNAME;password=$BW_DB_PASSWORD"
-POSTGRESQL_CONNECTION_STRING="Host=$BW_DB_SERVER;Database=$BW_DB_DATABASE;Username=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD"
-SQLSERVER_CONNECTION_STRING="Server=$BW_DB_SERVER;Database=$BW_DB_DATABASE;User Id=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD;"
+MYSQL_CONNECTION_STRING="server=$BW_DB_SERVER;port=${BW_DB_PORT:-3306};database=$BW_DB_DATABASE;user=$BW_DB_USERNAME;password=$BW_DB_PASSWORD"
+POSTGRESQL_CONNECTION_STRING="Host=$BW_DB_SERVER;Port=${BW_DB_PORT:-5432};Database=$BW_DB_DATABASE;Username=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD"
+SQLSERVER_CONNECTION_STRING="Server=$BW_DB_SERVER,${BW_DB_PORT:-1433};Database=$BW_DB_DATABASE;User Id=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD;"
+SQLITE_CONNECTION_STRING="Data Source=$BW_DB_FILE;"
 INTERNAL_IDENTITY_KEY=$(openssl rand -hex 30)
 OIDC_IDENTITY_CLIENT_KEY=$(openssl rand -hex 30)
 DUO_AKEY=$(openssl rand -hex 30)
@@ -29,6 +30,7 @@ export globalSettings__databaseProvider=$BW_DB_PROVIDER
 export globalSettings__mysql__connectionString=${globalSettings__mysql__connectionString:-$MYSQL_CONNECTION_STRING}
 export globalSettings__postgreSql__connectionString=${globalSettings__postgreSql__connectionString:-$POSTGRESQL_CONNECTION_STRING}
 export globalSettings__sqlServer__connectionString=${globalSettings__sqlServer__connectionString:-$SQLSERVER_CONNECTION_STRING}
+export globalSettings__sqlite__connectionString=${globalSettings__sqlite__connectionString:-$SQLITE_CONNECTION_STRING}
 
 # Generate Identity certificate
 if [ ! -f /etc/bitwarden/identity.pfx ]; then

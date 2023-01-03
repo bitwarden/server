@@ -2634,7 +2634,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2022.10.0, )",
+          "Core": "[2022.12.0, )",
           "Microsoft.Extensions.Logging": "[6.0.0, )",
           "dbup-sqlserver": "[4.5.0, )"
         }
