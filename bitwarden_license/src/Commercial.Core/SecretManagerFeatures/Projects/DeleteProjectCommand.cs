@@ -20,7 +20,11 @@ public class DeleteProjectCommand : IDeleteProjectCommand
 
     public async Task<List<Tuple<Project, string>>> DeleteProjects(List<Guid> ids, Guid userId)
     {
-        var projects = (await _projectRepository.GetManyByIds(ids)).ToList();
+        if(ids.Any() != true || userId == null){
+            throw new ArgumentNullException();
+        }
+
+        var projects = (await _projectRepository.GetManyByIds(ids))?.ToList();
 
         if (projects.Any() != true)
         {
