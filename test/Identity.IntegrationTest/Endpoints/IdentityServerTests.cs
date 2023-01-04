@@ -634,7 +634,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var errorDescription = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.StartsWith("sso authentication", errorDescription.ToLowerInvariant());
     }
-    
+
     private void ReinitializeDbForTests()
     {
         var databaseContext = _factory.GetDatabaseContext();
