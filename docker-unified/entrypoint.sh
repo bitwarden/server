@@ -99,4 +99,4 @@ chown -R $PUID:$PGID \
     /var/run/nginx \
     /run
 
-sudo -E -u $PUID /usr/bin/supervisord
+sudo -E -u \#$PUID /usr/bin/supervisord
