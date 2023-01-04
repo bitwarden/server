@@ -88,7 +88,7 @@ sed -i "s/autostart=true/autostart=${BW_ENABLE_NOTIFICATIONS}/" /etc/supervisor.
 sed -i "s/autostart=true/autostart=${BW_ENABLE_SCIM}/" /etc/supervisor.d/scim.ini
 sed -i "s/autostart=true/autostart=${BW_ENABLE_SSO}/" /etc/supervisor.d/sso.ini
 
-chown -R bitwarden:bitwarden \
+chown -R $PUID:$PGID \
     /app \
     /etc/bitwarden \
     /etc/nginx/http.d \
