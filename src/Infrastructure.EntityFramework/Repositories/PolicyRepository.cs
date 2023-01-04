@@ -49,6 +49,7 @@ public class PolicyRepository : Repository<Core.Entities.Policy, Policy, Guid>, 
         }
     }
 
+    [Obsolete("Use IPolicyService.GetPoliciesApplicableToUserAsync instead.")]
     public async Task<ICollection<Core.Entities.Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
                 OrganizationUserStatusType minStatus)
     {
@@ -62,6 +63,7 @@ public class PolicyRepository : Repository<Core.Entities.Policy, Policy, Guid>, 
         }
     }
 
+    [Obsolete("Use IPolicyService.GetPoliciesApplicableToUserAsync instead.")]
     public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
                 OrganizationUserStatusType minStatus)
     {

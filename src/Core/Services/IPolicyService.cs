@@ -8,7 +8,6 @@ public interface IPolicyService
 {
     Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
         Guid? savingUserId);
-
     Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType,
         OrganizationUserType minUserType = OrganizationUserType.User, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted);
 }
