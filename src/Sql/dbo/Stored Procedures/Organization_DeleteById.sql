@@ -63,6 +63,18 @@ BEGIN
 
     DELETE
     FROM
+        [dbo].[Project]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[Secret]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
         [dbo].[Organization]
     WHERE
         [Id] = @Id

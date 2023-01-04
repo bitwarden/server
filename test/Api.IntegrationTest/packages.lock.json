@@ -3161,6 +3161,15 @@
           "Core": "[2022.12.0, )"
         }
       },
+      "commercial.infrastructure.entityframework": {
+        "type": "Project",
+        "dependencies": {
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "11.0.0",
+          "Core": "2022.8.4",
+          "Infrastructure.EntityFramework": "2022.8.4",
+          "Microsoft.EntityFrameworkCore": "6.0.4"
+        }
+      },
       "common": {
         "type": "Project",
         "dependencies": {

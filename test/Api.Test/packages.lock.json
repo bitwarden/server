@@ -1036,6 +1036,15 @@
           "System.Security.Cryptography.Pkcs": "6.0.0"
         }
       },
+      "Moq": {
+        "type": "Transitive",
+        "resolved": "4.17.2",
+        "contentHash": "HytUPJ3/uks2UgJ9hIcyXm3YxpFAR4OJzbQwTHltbKGun3lFLhEHs97hiiPj1dY8jV/kasXeihTzDxct6Zf3iQ==",
+        "dependencies": {
+          "Castle.Core": "4.4.1",
+          "System.Threading.Tasks.Extensions": "4.5.4"
+        }
+      },
       "MySqlConnector": {
         "type": "Transitive",
         "resolved": "2.1.2",

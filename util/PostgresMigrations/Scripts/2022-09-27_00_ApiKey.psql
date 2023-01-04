@@ -1,0 +1,35 @@
+﻿START TRANSACTION;
+
+ALTER TABLE "AuthRequest" ALTER COLUMN "ResponseDate" TYPE timestamp without time zone;
+
+ALTER TABLE "AuthRequest" ALTER COLUMN "RequestIpAddress" TYPE character varying(50);
+
+ALTER TABLE "AuthRequest" ALTER COLUMN "RequestDeviceIdentifier" TYPE character varying(50);
+
+ALTER TABLE "AuthRequest" ALTER COLUMN "CreationDate" TYPE timestamp without time zone;
+
+ALTER TABLE "AuthRequest" ALTER COLUMN "AuthenticationDate" TYPE timestamp without time zone;
+
+ALTER TABLE "AuthRequest" ALTER COLUMN "AccessCode" TYPE character varying(25);
+
+CREATE TABLE "ApiKey" (
+    "Id" uuid NOT NULL,
+    "ServiceAccountId" uuid NULL,
+    "Name" character varying(200) NULL,
+    "ClientSecret" character varying(30) NULL,
+    "Scope" character varying(4000) NULL,
+    "EncryptedPayload" character varying(4000) NULL,
+    "Key" text NULL,
+    "ExpireAt" timestamp without time zone NOT NULL,
+    "CreationDate" timestamp without time zone NOT NULL,
+    "RevisionDate" timestamp without time zone NOT NULL,
+    CONSTRAINT "PK_ApiKey" PRIMARY KEY ("Id"),
+    CONSTRAINT "FK_ApiKey_ServiceAccount_ServiceAccountId" FOREIGN KEY ("ServiceAccountId") REFERENCES "ServiceAccount" ("Id")
+);
+
+CREATE INDEX "IX_ApiKey_ServiceAccountId" ON "ApiKey" ("ServiceAccountId");
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20221010151608_ApiKey', '6.0.4');
+
+COMMIT;

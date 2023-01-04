@@ -1,0 +1,8 @@
+﻿START TRANSACTION;
+
+ALTER TABLE "ApiKey" ALTER COLUMN "ExpireAt" DROP NOT NULL;
+
+INSERT INTO "__EFMigrationsHistory" ("MigrationId", "ProductVersion")
+VALUES ('20221130232731_NeverExpireApiKey', '6.0.4');
+
+COMMIT;
