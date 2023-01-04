@@ -81,7 +81,7 @@ public class Configuration
         "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
         "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
         "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
-        "https://2fa.directory; object-src 'self' blob:;";
+        "https://api.2fa.directory; object-src 'self' blob:;";
 
     [Description("Communicate with the Bitwarden push relay service (push.bitwarden.com) for mobile\n" +
         "app live sync.")]
