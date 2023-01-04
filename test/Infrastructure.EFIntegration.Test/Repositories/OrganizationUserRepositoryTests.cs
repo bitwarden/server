@@ -281,7 +281,6 @@ public class OrganizationUserRepositoryTests
         // Assert
         var distinctItems = results.Distinct(equalityComparer);
 
-        Assert.True(results.All(r => r == null) ||
-            !distinctItems.Skip(1).Any());
+        Assert.Single(distinctItems);
     }
 }
