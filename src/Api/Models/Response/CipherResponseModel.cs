@@ -48,6 +48,12 @@ public class CipherMiniResponseModel : ResponseModel
                 cipherData = identityData;
                 Identity = new CipherIdentityModel(identityData);
                 break;
+            case CipherType.Fido2Key:
+                var fido2KeyData = JsonSerializer.Deserialize<CipherFido2KeyData>(cipher.Data);
+                Data = fido2KeyData;
+                cipherData = fido2KeyData;
+                Fido2Key = new CipherFido2KeyModel(fido2KeyData);
+                break;
             default:
                 throw new ArgumentException("Unsupported " + nameof(Type) + ".");
         }
@@ -75,6 +81,7 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
+    public CipherFido2KeyModel Fido2Key { get; set; }
     public IEnumerable<CipherFieldModel> Fields { get; set; }
     public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
     public IEnumerable<AttachmentResponseModel> Attachments { get; set; }

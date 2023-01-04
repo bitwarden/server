@@ -37,6 +37,7 @@ public class CipherRequestModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
+    public CipherFido2KeyModel Fido2Key { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
@@ -81,6 +82,9 @@ public class CipherRequestModel
                 break;
             case CipherType.SecureNote:
                 existingCipher.Data = JsonSerializer.Serialize(ToCipherSecureNoteData(), JsonHelpers.IgnoreWritingNull);
+                break;
+            case CipherType.Fido2Key:
+                existingCipher.Data = JsonSerializer.Serialize(ToCipherFido2KeyData(), JsonHelpers.IgnoreWritingNull);
                 break;
             default:
                 throw new ArgumentException("Unsupported type: " + nameof(Type) + ".");
@@ -226,6 +230,22 @@ public class CipherRequestModel
             PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
 
             Type = SecureNote.Type,
+        };
+    }
+
+    private CipherFido2KeyData ToCipherFido2KeyData()
+    {
+        return new CipherFido2KeyData
+        {
+            Name = Name,
+            Notes = Notes,
+            Fields = Fields?.Select(f => f.ToCipherFieldData()),
+            PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
+
+            Key = Fido2Key.Key,
+            RpId = Fido2Key.RpId,
+            Origin = Fido2Key.Origin,
+            UserHandle = Fido2Key.UserHandle
         };
     }
 }

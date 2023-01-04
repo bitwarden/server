@@ -25,4 +25,11 @@
     <ProjectReference Include="..\..\..\test\Common\Common.csproj" />
     <ProjectReference Include="..\..\..\test\IntegrationTestCommon\IntegrationTestCommon.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Update="Properties\launchSettings.json">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
