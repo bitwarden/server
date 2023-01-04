@@ -104,7 +104,7 @@ public class ProjectsController : Controller
     [HttpPost("projects/delete")]
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteProjectsAsync([FromBody] List<Guid> ids)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = (Guid)_userService.GetProperUserId(User);
 
         var results = await _deleteProjectCommand.DeleteProjects(ids, userId);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));

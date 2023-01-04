@@ -19,7 +19,7 @@ public class ProjectsControllerTests
     [BitAutoData]
     public async void BulkDeleteProjects_Success(SutProvider<ProjectsController> sutProvider, List<Project> data)
     {
-        var ids = data.Select(project => project.Id).ToList();
+        var ids = data.Select(project => project.Id)?.ToList();
         var mockResult = new List<Tuple<Project, string>>();
         foreach (var project in data)
         {

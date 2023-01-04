@@ -20,7 +20,8 @@ public class DeleteProjectCommand : IDeleteProjectCommand
 
     public async Task<List<Tuple<Project, string>>> DeleteProjects(List<Guid> ids, Guid userId)
     {
-        if(ids.Any() != true || userId == null){
+        if(ids.Any() != true || userId == new Guid())
+        {
             throw new ArgumentNullException();
         }
 
