@@ -22,6 +22,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     public IdentityServerTests(IdentityApplicationFactory factory)
     {
         _factory = factory;
+        ReinitializeDbForTests();
     }
 
     [Fact]
@@ -554,48 +555,21 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var organizationUserRepository = _factory.Services.GetService<IOrganizationUserRepository>();
         var policyRepository = _factory.Services.GetService<IPolicyRepository>();
 
-        var organization = await organizationRepository.GetByIdAsync(organizationId);
-        if (organization == null)
-        {
-            organization = new Bit.Core.Entities.Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled };
-            await organizationRepository.CreateAsync(organization);
-        }
-        else
-        {
-            organization.UseSso = ssoPolicyEnabled;
-            await organizationRepository.ReplaceAsync(organization);
-        }
+        var organization = new Bit.Core.Entities.Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled };
+        await organizationRepository.CreateAsync(organization);
 
         var user = await userRepository.GetByEmailAsync(username);
-        var organizationUser = await organizationUserRepository.GetByOrganizationEmailAsync(organization.Id, username);
-        if (organizationUser == null)
+        var organizationUser = new Bit.Core.Entities.OrganizationUser
         {
-            organizationUser = new Bit.Core.Entities.OrganizationUser
-            {
-                OrganizationId = organization.Id,
-                UserId = user.Id,
-                Status = OrganizationUserStatusType.Confirmed,
-                Type = organizationUserType
-            };
-            await organizationUserRepository.CreateAsync(organizationUser);
-        }
-        else
-        {
-            organizationUser.Type = organizationUserType;
-            await organizationUserRepository.ReplaceAsync(organizationUser);
-        }
+            OrganizationId = organization.Id,
+            UserId = user.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = organizationUserType
+        };
+        await organizationUserRepository.CreateAsync(organizationUser);
 
-        var ssoPolicy = await policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso);
-        if (ssoPolicy == null)
-        {
-            ssoPolicy = new Bit.Core.Entities.Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
-            await policyRepository.CreateAsync(ssoPolicy);
-        }
-        else
-        {
-            ssoPolicy.Enabled = ssoPolicyEnabled;
-            await policyRepository.ReplaceAsync(ssoPolicy);
-        }
+        var ssoPolicy = new Bit.Core.Entities.Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
+        await policyRepository.CreateAsync(ssoPolicy);
     }
 
     private static string DeviceTypeAsString(DeviceType deviceType)
@@ -659,5 +633,15 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal("invalid_grant", error);
         var errorDescription = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.StartsWith("sso authentication", errorDescription.ToLowerInvariant());
+    }
+    
+    private void ReinitializeDbForTests()
+    {
+        var databaseContext = _factory.GetDatabaseContext();
+        databaseContext.Policies.RemoveRange(databaseContext.Policies);
+        databaseContext.OrganizationUsers.RemoveRange(databaseContext.OrganizationUsers);
+        databaseContext.Organizations.RemoveRange(databaseContext.Organizations);
+        databaseContext.Users.RemoveRange(databaseContext.Users);
+        databaseContext.SaveChanges();
     }
 }
