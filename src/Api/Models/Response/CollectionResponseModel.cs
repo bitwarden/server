@@ -50,7 +50,7 @@ public class CollectionAccessDetailsResponseModel : CollectionResponseModel
 
     public IEnumerable<SelectionReadOnlyResponseModel> Groups { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Users { get; set; }
-    
+
     /// <summary>
     /// True if the acting user is explicitly assigned to the collection
     /// </summary>
