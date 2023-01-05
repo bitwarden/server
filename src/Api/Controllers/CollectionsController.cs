@@ -85,21 +85,29 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
-        IEnumerable<Tuple<Collection, CollectionAccessDetails>> orgCollections;
-        if (await _currentContext.OrganizationAdmin(orgId) || await _currentContext.EditAnyCollection(orgId) || await _currentContext.DeleteAnyCollection(orgId) || await _currentContext.CreateNewCollections(orgId))
+        // We always need to know which collections the current user is assigned to
+        var assignedOrgCollections = await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
+
+        if (await _currentContext.ViewAllCollections(orgId))
         {
-            // Admins, Owners, Providers and Custom (with Admin collection management permissions) can access all collections even if not assigned to them
-            orgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
-        }
-        else
-        {
-            // Managers and Custom (with Manager collection management permissions) can only access collections assigned to them
-            orgCollections = await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
+            // The user can view all collections, but they may not always be assigned to all of them
+            var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
+
+            return new ListResponseModel<CollectionAccessDetailsResponseModel>(allOrgCollections.Select(c =>
+                new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
+                {
+                    // Manually determine which collections they're assigned to
+                    Assigned = assignedOrgCollections.Any(ac => ac.Item1.Id == c.Item1.Id)
+                })
+            );
         }
 
-
-        var responses = orgCollections.Select(d => new CollectionAccessDetailsResponseModel(d.Item1, d.Item2.Groups, d.Item2.Users));
-        return new ListResponseModel<CollectionAccessDetailsResponseModel>(responses);
+        return new ListResponseModel<CollectionAccessDetailsResponseModel>(assignedOrgCollections.Select(c =>
+            new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
+            {
+                Assigned = true // Mapping from assignedOrgCollections implies they're all assigned
+            })
+        );
     }
 
     [HttpGet("")]
