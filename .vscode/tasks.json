@@ -90,6 +90,22 @@
             }
         },
         {
+            "label": "buildNotifications",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Notifications/Notifications.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
             "label": "buildBilling",
             "command": "dotnet",
             "type": "process",

@@ -71,7 +71,7 @@ public class FreshdeskControllerTests
             return Send(request, cancellationToken);
         }
 
-        public virtual Task<HttpResponseMessage> Send(HttpRequestMessage request, CancellationToken cancellationToken)
+        public new virtual Task<HttpResponseMessage> Send(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             throw new NotImplementedException();
         }

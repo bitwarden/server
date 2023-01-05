@@ -27,6 +27,7 @@
                 document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
                 document.getElementById('@(nameof(Model.UseEvents))').checked = true;
                 document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
+                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;                
                 document.getElementById('@(nameof(Model.UseTotp))').checked = true;
                 document.getElementById('@(nameof(Model.Use2fa))').checked = true;
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
@@ -61,6 +62,7 @@
                 document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
                 document.getElementById('@(nameof(Model.UseEvents))').checked = true;
                 document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
+                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = true;
                 document.getElementById('@(nameof(Model.UseTotp))').checked = true;
                 document.getElementById('@(nameof(Model.Use2fa))').checked = true;
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
@@ -235,6 +237,10 @@
             <div class="form-check">
                 <input type="checkbox" class="form-check-input" asp-for="UseResetPassword">
                 <label class="form-check-label" asp-for="UseResetPassword"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseCustomPermissions">
+                <label class="form-check-label" asp-for="UseCustomPermissions"></label>
             </div>
         </div>
         <div class="col-4">

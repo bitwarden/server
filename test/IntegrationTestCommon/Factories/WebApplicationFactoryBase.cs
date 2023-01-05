@@ -86,6 +86,14 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.Remove(eventRepositoryService);
             services.AddSingleton<IEventRepository, EventRepository>();
 
+            var mailDeliveryService = services.First(sd => sd.ServiceType == typeof(IMailDeliveryService));
+            services.Remove(mailDeliveryService);
+            services.AddSingleton<IMailDeliveryService, NoopMailDeliveryService>();
+
+            var captchaValidationService = services.First(sd => sd.ServiceType == typeof(ICaptchaValidationService));
+            services.Remove(captchaValidationService);
+            services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
+
             // Our Rate limiter works so well that it begins to fail tests unless we carve out
             // one whitelisted ip. We should still test the rate limiter though and they should change the Ip
             // to something that is NOT whitelisted

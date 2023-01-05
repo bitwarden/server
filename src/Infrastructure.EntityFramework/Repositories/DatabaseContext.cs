@@ -152,11 +152,11 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eAuthRequest.ToTable(nameof(AuthRequest));
 
-        ConfigureDateTimeUTCQueries(builder);
+        ConfigureDateTimeUtcQueries(builder);
     }
 
     // Make sure this is called after configuring all the entities as it iterates through all setup entities.
-    private void ConfigureDateTimeUTCQueries(ModelBuilder builder)
+    private void ConfigureDateTimeUtcQueries(ModelBuilder builder)
     {
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
@@ -168,10 +168,20 @@ public class DatabaseContext : DbContext
             {
                 if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
                 {
-                    property.SetValueConverter(
-                        new ValueConverter<DateTime, DateTime>(
-                            v => v,
-                            v => new DateTime(v.Ticks, DateTimeKind.Utc)));
+                    if (Database.IsNpgsql())
+                    {
+                        property.SetValueConverter(
+                            new ValueConverter<DateTime, DateTime>(
+                                v => v,
+                                v => v.ToUniversalTime()));
+                    }
+                    else
+                    {
+                        property.SetValueConverter(
+                            new ValueConverter<DateTime, DateTime>(
+                                v => v,
+                                v => new DateTime(v.Ticks, DateTimeKind.Utc)));
+                    }
                 }
             }
         }

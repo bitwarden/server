@@ -20,6 +20,7 @@ SELECT
     O.[UseSecretsManager],
     O.[SelfHost],
     O.[UsersGetPremium],
+    O.[UseCustomPermissions],
     O.[Seats],
     O.[MaxCollections],
     O.[MaxStorageGb],

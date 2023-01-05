@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
+using Bit.Core.LoginFeatures;
 using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
@@ -45,7 +46,7 @@ namespace Bit.SharedWeb.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddSqlServerRepositories(this IServiceCollection services, GlobalSettings globalSettings)
+    public static SupportedDatabaseProviders AddDatabaseRepositories(this IServiceCollection services, GlobalSettings globalSettings)
     {
         var selectedDatabaseProvider = globalSettings.DatabaseProvider;
         var provider = SupportedDatabaseProviders.SqlServer;
@@ -64,6 +65,10 @@ public static class ServiceCollectionExtensions
                 case "mariadb":
                     provider = SupportedDatabaseProviders.MySql;
                     connectionString = globalSettings.MySql.ConnectionString;
+                    break;
+                case "sqlite":
+                    provider = SupportedDatabaseProviders.Sqlite;
+                    connectionString = globalSettings.Sqlite.ConnectionString;
                     break;
                 case "sqlserver":
                     connectionString = globalSettings.SqlServer.ConnectionString;
@@ -100,6 +105,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<IInstallationDeviceRepository, TableStorageRepos.InstallationDeviceRepository>();
             services.AddSingleton<IMetaDataRepository, TableStorageRepos.MetaDataRepository>();
         }
+
+        return provider;
     }
 
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
@@ -116,6 +123,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAppleIapService, AppleIapService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<ISendService, SendService>();
+        services.AddLoginServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
