@@ -120,6 +120,7 @@ BEGIN
 
     COMMIT TRANSACTION User_DeleteById
 END
+GO
 
 CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
