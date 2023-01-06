@@ -15,7 +15,8 @@
     @ActingUserId UNIQUEIDENTIFIER,
     @DeviceType SMALLINT,
     @IpAddress VARCHAR(50),
-    @Date DATETIME2(7)
+    @Date DATETIME2(7),
+    @SystemUser TINYINT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -38,7 +39,8 @@ BEGIN
         [ActingUserId],
         [DeviceType],
         [IpAddress],
-        [Date]
+        [Date],
+        [SystemUser]
     )
     VALUES
     (
@@ -58,6 +60,7 @@ BEGIN
         @ActingUserId,
         @DeviceType,
         @IpAddress,
-        @Date
+        @Date,
+        @SystemUser
     )
 END

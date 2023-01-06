@@ -33,8 +33,9 @@ public class OrganizationsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoConfigService _ssoConfigService;
-    private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
+    private readonly IGetOrganizationApiKeyQuery _getOrganizationApiKeyQuery;
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
+    private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly GlobalSettings _globalSettings;
 
@@ -48,8 +49,9 @@ public class OrganizationsController : Controller
         ICurrentContext currentContext,
         ISsoConfigRepository ssoConfigRepository,
         ISsoConfigService ssoConfigService,
-        IGetOrganizationApiKeyCommand getOrganizationApiKeyCommand,
+        IGetOrganizationApiKeyQuery getOrganizationApiKeyQuery,
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
+        ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         GlobalSettings globalSettings)
     {
@@ -62,8 +64,9 @@ public class OrganizationsController : Controller
         _currentContext = currentContext;
         _ssoConfigRepository = ssoConfigRepository;
         _ssoConfigService = ssoConfigService;
-        _getOrganizationApiKeyCommand = getOrganizationApiKeyCommand;
+        _getOrganizationApiKeyQuery = getOrganizationApiKeyQuery;
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
+        _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _globalSettings = globalSettings;
     }
@@ -514,8 +517,9 @@ public class OrganizationsController : Controller
             }
         }
 
-        var organizationApiKey = await _getOrganizationApiKeyCommand
-            .GetOrganizationApiKeyAsync(organization.Id, model.Type);
+        var organizationApiKey = await _getOrganizationApiKeyQuery
+                                     .GetOrganizationApiKeyAsync(organization.Id, model.Type) ??
+                                 await _createOrganizationApiKeyCommand.CreateAsync(organization.Id, model.Type);
 
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -565,8 +569,9 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var organizationApiKey = await _getOrganizationApiKeyCommand
-            .GetOrganizationApiKeyAsync(organization.Id, model.Type);
+        var organizationApiKey = await _getOrganizationApiKeyQuery
+                                    .GetOrganizationApiKeyAsync(organization.Id, model.Type) ??
+                                await _createOrganizationApiKeyCommand.CreateAsync(organization.Id, model.Type);
 
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -706,8 +711,10 @@ public class OrganizationsController : Controller
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
+        organization.Identifier = model.Identifier;
 
         await _ssoConfigService.SaveAsync(ssoConfig, organization);
+        await _organizationService.UpdateAsync(organization);
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
     }

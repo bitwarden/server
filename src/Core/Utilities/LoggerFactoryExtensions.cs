@@ -20,7 +20,7 @@ public static class LoggerFactoryExtensions
         IHostApplicationLifetime applicationLifetime,
         GlobalSettings globalSettings)
     {
-        if (env.IsDevelopment())
+        if (env.IsDevelopment() && !globalSettings.EnableDevLogging)
         {
             return;
         }
@@ -33,13 +33,13 @@ public static class LoggerFactoryExtensions
         WebHostBuilderContext context,
         Func<LogEvent, IGlobalSettings, bool> filter = null)
     {
-        if (context.HostingEnvironment.IsDevelopment())
+        var globalSettings = new GlobalSettings();
+        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
+
+        if (context.HostingEnvironment.IsDevelopment() && !globalSettings.EnableDevLogging)
         {
             return builder;
         }
-
-        var globalSettings = new GlobalSettings();
-        ConfigurationBinder.Bind(context.Configuration.GetSection("GlobalSettings"), globalSettings);
 
         bool inclusionPredicate(LogEvent e)
         {
@@ -125,13 +125,22 @@ public static class LoggerFactoryExtensions
         {
             if (globalSettings.LogRollBySizeLimit.HasValue)
             {
-                config.WriteTo.File($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/log.txt",
-                    rollOnFileSizeLimit: true, fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
+                var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}.log");
+                if (globalSettings.LogDirectoryByProject)
+                {
+                    pathFormat = Path.Combine(globalSettings.LogDirectory, globalSettings.ProjectName, "log.txt");
+                }
+                config.WriteTo.File(pathFormat, rollOnFileSizeLimit: true,
+                    fileSizeLimitBytes: globalSettings.LogRollBySizeLimit);
             }
             else
             {
-                config.WriteTo
-                    .RollingFile($"{globalSettings.LogDirectory}/{globalSettings.ProjectName}/{{Date}}.txt");
+                var pathFormat = Path.Combine(globalSettings.LogDirectory, $"{globalSettings.ProjectName.ToLowerInvariant()}_{{Date}}.log");
+                if (globalSettings.LogDirectoryByProject)
+                {
+                    pathFormat = Path.Combine(globalSettings.LogDirectory, globalSettings.ProjectName, "{Date}.txt");
+                }
+                config.WriteTo.RollingFile(pathFormat);
             }
             config
                 .Enrich.FromLogContext()

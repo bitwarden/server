@@ -1,0 +1,90 @@
+name: Bitwarden Unified Bug Report
+name: Bitwarden Unified Deployment Bug Report
+description: File a bug report
+labels: [bug, bw-unified-deploy]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+
+        Please do not submit feature requests. The [Community Forums](https://community.bitwarden.com) has a section for submitting, voting for, and discussing product feature requests.
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps To Reproduce
+      description: How can we reproduce the behavior.
+      value: |
+        1. Go to '...'
+        2. Click on '....'
+        3. Scroll down to '....'
+        4. Click on '...'
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Result
+      description: A clear and concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Result
+      description: A clear and concise description of what is happening.
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or Videos
+      description: If applicable, add screenshots and/or a short video to help explain your problem.
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here.
+  - type: input
+    id: version
+    attributes:
+      label: Githash Version
+      description: Please go to https://{your-bitwarden-domain}/api/config and copy the gitHash version
+    validations:
+      required: true
+  - type: textarea
+    id: environment-details
+    attributes:
+      label: Environment Details
+      description: If Self-Hosted please provide some additional environment details.
+      placeholder: |
+        - Operating system: [e.g. Windows 10, Mac OS Catalina]
+        - Environment: [e.g. Docker, EKS, ECS, K8S]
+        - Hardware: [e.g. Intel 6-core, 8GB RAM]
+  - type: textarea
+    id: database-image
+    attributes:
+      label: Database Image
+      description: Please include the image and version of your database
+      placeholder: |
+        # MariaDB Example
+        mariadb:10
+        # Postgres Example
+        postgres:14
+  - type: textarea
+    id: epic-label
+    attributes:
+      label: Issue-Link
+      description: Link to our pinned issue, tracking all Bitwarden Unified
+      value: |
+        https://github.com/bitwarden/server/issues/2480
+    validations:
+      required: true
+  - type: checkboxes
+    id: issue-tracking-info
+    attributes:
+      label: Issue Tracking Info
+      description: |
+        Issue tracking information
+      options:
+        - label: I understand that work is tracked outside of Github. A PR will be linked to this issue should one be opened to address it, but Bitwarden doesn't use fields like "assigned", "milestone", or "project" to track progress.

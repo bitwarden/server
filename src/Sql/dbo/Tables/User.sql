@@ -35,6 +35,7 @@
     [FailedLoginCount]                 INT              CONSTRAINT [D_User_FailedLoginCount] DEFAULT ((0)) NOT NULL,
     [LastFailedLoginDate]              DATETIME2 (7)    NULL,
     [UnknownDeviceVerificationEnabled] BIT              CONSTRAINT [D_User_UnknownDeviceVerificationEnabled] DEFAULT ((1)) NOT NULL,
+    [AvatarColor] VARCHAR(7) NULL, 
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

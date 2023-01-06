@@ -47,28 +47,45 @@ public abstract class BaseIdentityClientService : IDisposable
     protected string AccessToken { get; private set; }
 
     protected Task SendAsync(HttpMethod method, string path) =>
-        SendAsync<object, object>(method, path, null);
+        SendAsync<object>(method, path, null);
 
-    protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest body) =>
-        SendAsync<TRequest, object>(method, path, body);
+    protected Task SendAsync<TRequest>(HttpMethod method, string path, TRequest requestModel) =>
+        SendAsync<TRequest, object>(method, path, requestModel, false);
 
-    protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path, TRequest requestModel)
+    protected async Task<TResult> SendAsync<TRequest, TResult>(HttpMethod method, string path,
+        TRequest requestModel, bool hasJsonResult)
     {
+        var fullRequestPath = string.Concat(Client.BaseAddress, path);
+
         var tokenStateResponse = await HandleTokenStateAsync();
         if (!tokenStateResponse)
         {
+            _logger.LogError("Unable to send {method} request to {requestUri} because an access token was unable to be obtained",
+                method.Method, fullRequestPath);
             return default;
         }
 
         var message = new TokenHttpRequestMessage(requestModel, AccessToken)
         {
             Method = method,
-            RequestUri = new Uri(string.Concat(Client.BaseAddress, path))
+            RequestUri = new Uri(fullRequestPath)
         };
         try
         {
             var response = await Client.SendAsync(message);
-            return await response.Content.ReadFromJsonAsync<TResult>();
+            if (response.IsSuccessStatusCode)
+            {
+                if (hasJsonResult)
+                {
+                    return await response.Content.ReadFromJsonAsync<TResult>();
+                }
+            }
+            else
+            {
+                _logger.LogError("Request to {url} is unsuccessful with status of {code}-{reason}",
+                    message.RequestUri.ToString(), response.StatusCode, response.ReasonPhrase);
+            }
+            return default;
         }
         catch (Exception e)
         {
@@ -79,8 +96,9 @@ public abstract class BaseIdentityClientService : IDisposable
 
     protected async Task<bool> HandleTokenStateAsync()
     {
-        if (_nextAuthAttempt.HasValue && DateTime.UtcNow > _nextAuthAttempt.Value)
+        if (_nextAuthAttempt.HasValue && DateTime.UtcNow < _nextAuthAttempt.Value)
         {
+            _logger.LogInformation("Not requesting a token at {now} because the next request time is {nextAttempt}", DateTime.UtcNow, _nextAuthAttempt.Value);
             return false;
         }
         _nextAuthAttempt = null;
@@ -115,12 +133,13 @@ public abstract class BaseIdentityClientService : IDisposable
 
         if (response == null)
         {
+            _logger.LogError("Empty token response from {identity} for client {clientId}", IdentityClient.BaseAddress, _identityClientId);
             return false;
         }
 
         if (!response.IsSuccessStatusCode)
         {
-            _logger.LogInformation("Unsuccessful token response with status code {StatusCode}", response.StatusCode);
+            _logger.LogError("Unsuccessful token response from {identity} for client {clientId} with status {code}-{reason}", IdentityClient.BaseAddress, _identityClientId, response.StatusCode, response.ReasonPhrase);
 
             if (response.StatusCode == HttpStatusCode.BadRequest)
             {
@@ -136,7 +155,8 @@ public abstract class BaseIdentityClientService : IDisposable
             return false;
         }
 
-        using var jsonDocument = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
+        var content = await response.Content.ReadAsStreamAsync();
+        using var jsonDocument = await JsonDocument.ParseAsync(content);
 
         AccessToken = jsonDocument.RootElement.GetProperty("access_token").GetString();
         return true;

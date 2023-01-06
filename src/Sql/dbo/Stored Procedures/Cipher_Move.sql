@@ -15,8 +15,7 @@ BEGIN
         FROM
             [dbo].[UserCipherDetails](@UserId)
         WHERE
-            [Edit] = 1
-            AND [Id] IN (SELECT * FROM @Ids)
+            [Id] IN (SELECT * FROM @Ids)
     )
     UPDATE
         [dbo].[Cipher]
