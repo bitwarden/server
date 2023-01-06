@@ -253,7 +253,7 @@ public class OrganizationConnectionsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateConnection_BillingSyncType_InvalidLicense_Throws(OrganizationConnection existing, BillingSyncConfig config,
+    public async Task UpdateConnection_BillingSyncType_InvalidLicense_ErrorThrows(OrganizationConnection existing, BillingSyncConfig config,
         OrganizationConnection updated,
         SutProvider<OrganizationConnectionsController> sutProvider)
     {
