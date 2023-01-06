@@ -7,4 +7,4 @@
 );
 
 GO
-CREATE INDEX [IX_ProjectSecret_SecretsId] ON [ProjectSecret] ([SecretsId]);
+CREATE NONCLUSTERED INDEX [IX_ProjectSecret_SecretsId] ON [ProjectSecret] ([SecretsId]);
