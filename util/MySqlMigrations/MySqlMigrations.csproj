@@ -19,4 +19,9 @@
   <ItemGroup>
     <Compile Include="..\EfShared\MigrationBuilderExtensions.cs" />
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.sql" />
+    <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.sql" />
+  </ItemGroup>
 </Project>
