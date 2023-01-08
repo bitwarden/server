@@ -96,7 +96,7 @@ public class OrganizationConnectionsController : Controller
         switch (model.Type)
         {
             case OrganizationConnectionType.CloudBillingSync:
-                return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model,ValidateBillingSyncConfig);
+                return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model, ValidateBillingSyncConfig);
             case OrganizationConnectionType.Scim:
                 return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model);
             default:
