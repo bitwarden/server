@@ -104,13 +104,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 return null;
             }
 
-            return entity switch
-            {
-                UserProjectAccessPolicy ap => Mapper.Map<Core.Entities.UserProjectAccessPolicy>(ap),
-                GroupProjectAccessPolicy ap => Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(ap),
-                ServiceAccountProjectAccessPolicy ap => Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(ap),
-                _ => throw new ArgumentException("Unsupported access policy type")
-            };
+            return MapToCore(entity);
         }
     }
 
@@ -119,18 +113,19 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entity = await dbContext.AccessPolicies.Where(c => c.Id == baseAccessPolicy.Id).FirstOrDefaultAsync();
+            var entity = await dbContext.AccessPolicies.FindAsync(baseAccessPolicy.Id);
             if (entity != null)
             {
                 dbContext.AccessPolicies.Attach(entity);
                 entity.Write = baseAccessPolicy.Write;
                 entity.Read = baseAccessPolicy.Read;
+                entity.RevisionDate = baseAccessPolicy.RevisionDate;
                 await dbContext.SaveChangesAsync();
             }
         }
     }
 
-    public async Task<List<Core.Entities.BaseAccessPolicy>?> GetManyByProjectId(Guid id)
+    public async Task<IEnumerable<Core.Entities.BaseAccessPolicy>?> GetManyByProjectId(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -145,31 +140,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
                 .ToListAsync();
 
-            if (!entities.Any())
-            {
-                return null;
-            }
-
-            var policies = new List<Core.Entities.BaseAccessPolicy>();
-
-            foreach (var entity in entities)
-            {
-                switch (entity)
-                {
-                    case UserProjectAccessPolicy accessPolicy:
-                        policies.Add(Mapper.Map<Core.Entities.UserProjectAccessPolicy>(accessPolicy));
-                        break;
-                    case GroupProjectAccessPolicy accessPolicy:
-                        policies.Add(Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(accessPolicy));
-                        break;
-                    case ServiceAccountProjectAccessPolicy accessPolicy:
-                        policies.Add(Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(accessPolicy));
-                        break;
-                    default:
-                        throw new ArgumentException("Unsupported access policy type");
-                }
-            }
-            return policies;
+            return !entities.Any() ? null : entities.Select(MapToCore);
         }
     }
 
@@ -185,5 +156,16 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 await dbContext.SaveChangesAsync();
             }
         }
+    }
+
+    private Core.Entities.BaseAccessPolicy MapToCore(BaseAccessPolicy baseAccessPolicyEntity)
+    {
+        return baseAccessPolicyEntity switch
+        {
+            UserProjectAccessPolicy ap => Mapper.Map<Core.Entities.UserProjectAccessPolicy>(ap),
+            GroupProjectAccessPolicy ap => Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(ap),
+            ServiceAccountProjectAccessPolicy ap => Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(ap),
+            _ => throw new ArgumentException("Unsupported access policy type")
+        };
     }
 }

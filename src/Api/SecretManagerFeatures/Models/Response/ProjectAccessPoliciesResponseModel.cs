@@ -5,7 +5,7 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
 public class ProjectAccessPoliciesResponseModel : ResponseModel
 {
-    public ProjectAccessPoliciesResponseModel(List<BaseAccessPolicy>? baseAccessPolicies,
+    public ProjectAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy>? baseAccessPolicies,
         string obj = "projectAccessPolicies") : base(obj)
     {
         if (baseAccessPolicies == null) return;
