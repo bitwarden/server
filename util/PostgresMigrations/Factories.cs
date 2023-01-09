@@ -25,9 +25,6 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         var connectionString = globalSettings.PostgreSql?.ConnectionString;
-        // NpgSql 6.0 changed how timezones works. We have not yet updated our projects to support this new behavior and need to fallback to the previous behavior.
-        // Check https://www.npgsql.org/doc/release-notes/6.0.html#timestamp-rationalization-and-improvements for more details.
-        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new Exception("No Postgres connection string found.");
