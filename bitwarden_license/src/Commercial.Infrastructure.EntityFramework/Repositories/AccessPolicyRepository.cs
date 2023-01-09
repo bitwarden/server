@@ -93,34 +93,24 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entity = await dbContext.AccessPolicies.FindAsync(id);
+            var entity = await dbContext.AccessPolicies.Where(ap => ap.Id == id)
+                .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
+                .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
+                .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
+                .FirstOrDefaultAsync();
 
             if (entity == null)
             {
                 return null;
             }
 
-            switch (entity)
+            return entity switch
             {
-                case UserProjectAccessPolicy accessPolicy:
-                    await dbContext.Entry(accessPolicy)
-                        .Reference(e => e.OrganizationUser)
-                        .Query().Include(e => e.User)
-                        .LoadAsync();
-                    return Mapper.Map<Core.Entities.UserProjectAccessPolicy>(accessPolicy);
-                case GroupProjectAccessPolicy accessPolicy:
-                    await dbContext.Entry(accessPolicy)
-                        .Reference(e => e.Group)
-                        .LoadAsync();
-                    return Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(accessPolicy);
-                case ServiceAccountProjectAccessPolicy accessPolicy:
-                    await dbContext.Entry(accessPolicy)
-                        .Reference(e => e.ServiceAccount)
-                        .LoadAsync();
-                    return Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(accessPolicy);
-                default:
-                    throw new ArgumentException("Unsupported access policy type");
-            }
+                UserProjectAccessPolicy ap => Mapper.Map<Core.Entities.UserProjectAccessPolicy>(ap),
+                GroupProjectAccessPolicy ap => Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(ap),
+                ServiceAccountProjectAccessPolicy ap => Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(ap),
+                _ => throw new ArgumentException("Unsupported access policy type")
+            };
         }
     }
 
@@ -150,7 +140,9 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                     ((UserProjectAccessPolicy)ap).GrantedProjectId == id ||
                     ((GroupProjectAccessPolicy)ap).GrantedProjectId == id ||
                     ((ServiceAccountProjectAccessPolicy)ap).GrantedProjectId == id)
-                .Include("Group").Include("ServiceAccount").Include("OrganizationUser.User")
+                .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
+                .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
+                .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
                 .ToListAsync();
 
             if (!entities.Any())
