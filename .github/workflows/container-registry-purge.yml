@@ -39,18 +39,43 @@ jobs:
           REPO_LIST=$(az acr repository list -n $REGISTRY -o tsv)
           for REPO in $REPO_LIST
           do
+
+            PURGE_LATEST=""
+            PURGE_VERSION=""
+            PURGE_ELSE=""
+
             TAG_LIST=$(az acr repository show-tags -n $REGISTRY --repository $REPO -o tsv)
             for TAG in $TAG_LIST
             do
               if [ $TAG = "latest" ] || [ $TAG = "dev" ]; then
-                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged --keep 1"
+                PURGE_LATEST+="--filter '$REPO:$TAG' "
               elif [[ $TAG =~ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
-                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR_VER --untagged"
+                PURGE_VERSION+="--filter '$REPO:$TAG' "
               else
-                PURGE_CMD="acr purge --filter '$REPO:$TAG' --ago $AGO_DUR --untagged"
+                PURGE_ELSE+="--filter '$REPO:$TAG' "
               fi
-              az acr run --cmd "$PURGE_CMD" --registry $REGISTRY /dev/null
             done
+
+            if [ ! -z "$PURGE_LATEST" ]
+            then
+              PURGE_LATEST_CMD="acr purge $PURGE_LATEST --ago $AGO_DUR_VER --untagged --keep 1"
+              az acr run --cmd "$PURGE_LATEST_CMD" --registry $REGISTRY /dev/null &
+            fi
+
+            if [ ! -z "$PURGE_VERSION" ]
+            then
+              PURGE_VERSION_CMD="acr purge $PURGE_VERSION --ago $AGO_DUR_VER --untagged"
+              az acr run --cmd "$PURGE_VERSION_CMD" --registry $REGISTRY /dev/null &
+            fi
+
+            if [ ! -z "$PURGE_ELSE" ]
+            then
+              PURGE_ELSE_CMD="acr purge $PURGE_ELSE --ago $AGO_DUR --untagged"
+              az acr run --cmd "$PURGE_ELSE_CMD" --registry $REGISTRY /dev/null &
+            fi
+
+            wait
+
           done
 
 

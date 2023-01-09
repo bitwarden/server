@@ -61,6 +61,8 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     public int FailedLoginCount { get; set; }
     public DateTime? LastFailedLoginDate { get; set; }
     public bool UnknownDeviceVerificationEnabled { get; set; }
+    [MaxLength(7)]
+    public string AvatarColor { get; set; }
 
     public void SetNewId()
     {
