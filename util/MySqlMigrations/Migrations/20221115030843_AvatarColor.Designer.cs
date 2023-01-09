@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20221115030843_AvatarColor")]
+    partial class AvatarColor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -27,9 +29,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("AccessCode")
                         .HasMaxLength(25)
                         .HasColumnType("varchar(25)");
-
-                    b.Property<bool?>("Approved")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("AuthenticationDate")
                         .HasColumnType("datetime(6)");
@@ -351,9 +350,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("char(36)");
 
-                    b.Property<byte?>("SystemUser")
-                        .HasColumnType("tinyint unsigned");
-
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -620,9 +616,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UseApi")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("UseCustomPermissions")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UseDirectory")
