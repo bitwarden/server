@@ -146,41 +146,37 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var userEntities = await dbContext.UserProjectAccessPolicy
-                    .Where(c => c.GrantedProjectId == id)
-                    .Include(e => e.OrganizationUser.User)
-                    .ToListAsync();
-            var groupEntities = await dbContext.GroupProjectAccessPolicy
-                    .Where(c => c.GrantedProjectId == id)
-                    .Include(e => e.Group)
-                    .ToListAsync();
-            var serviceAccountEntities = await dbContext.ServiceAccountProjectAccessPolicy
-                    .Where(c => c.GrantedProjectId == id)
-                    .Include(e => e.ServiceAccount)
-                    .ToListAsync();
+            var entities = await dbContext.AccessPolicies.Where(ap =>
+                    ((UserProjectAccessPolicy)ap).GrantedProjectId == id ||
+                    ((GroupProjectAccessPolicy)ap).GrantedProjectId == id ||
+                    ((ServiceAccountProjectAccessPolicy)ap).GrantedProjectId == id)
+                .Include("Group").Include("ServiceAccount").Include("OrganizationUser.User")
+                .ToListAsync();
 
-            if (!userEntities.Any() && !groupEntities.Any() && !serviceAccountEntities.Any())
+            if (!entities.Any())
             {
                 return null;
             }
 
             var policies = new List<Core.Entities.BaseAccessPolicy>();
 
-            if (userEntities.Any())
+            foreach (var entity in entities)
             {
-                policies.AddRange(Mapper.Map<List<Core.Entities.UserProjectAccessPolicy>>(userEntities));
+                switch (entity)
+                {
+                    case UserProjectAccessPolicy accessPolicy:
+                        policies.Add(Mapper.Map<Core.Entities.UserProjectAccessPolicy>(accessPolicy));
+                        break;
+                    case GroupProjectAccessPolicy accessPolicy:
+                        policies.Add(Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(accessPolicy));
+                        break;
+                    case ServiceAccountProjectAccessPolicy accessPolicy:
+                        policies.Add(Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(accessPolicy));
+                        break;
+                    default:
+                        throw new ArgumentException("Unsupported access policy type");
+                }
             }
-
-            if (groupEntities.Any())
-            {
-                policies.AddRange(Mapper.Map<List<Core.Entities.GroupProjectAccessPolicy>>(groupEntities));
-            }
-
-            if (serviceAccountEntities.Any())
-            {
-                policies.AddRange(Mapper.Map<List<Core.Entities.ServiceAccountProjectAccessPolicy>>(serviceAccountEntities));
-            }
-
             return policies;
         }
     }
