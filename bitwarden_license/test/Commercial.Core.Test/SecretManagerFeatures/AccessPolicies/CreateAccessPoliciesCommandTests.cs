@@ -51,4 +51,36 @@ public class CreateAccessPoliciesCommandTests
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
     }
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateAsync_NotUnique_ThrowsException(
+        List<UserProjectAccessPolicy> userProjectAccessPolicies,
+        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
+        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
+        SutProvider<CreateAccessPoliciesCommand> sutProvider)
+    {
+        var data = new List<BaseAccessPolicy>();
+        data.AddRange(userProjectAccessPolicies);
+        data.AddRange(groupProjectAccessPolicies);
+        data.AddRange(serviceAccountProjectAccessPolicies);
+
+        var mockUserPolicy = new UserProjectAccessPolicy()
+        {
+            OrganizationUserId = Guid.NewGuid(),
+            GrantedProjectId = Guid.NewGuid()
+        };
+        data.Add(mockUserPolicy);
+
+        // Add a duplicate policy
+        data.Add(mockUserPolicy);
+
+        sutProvider.GetDependency<IAccessPolicyRepository>().AccessPolicyExists(Arg.Any<BaseAccessPolicy>())
+            .Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(data));
+
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+    }
 }
