@@ -114,7 +114,7 @@ public class Startup
                 options.ApplicationMaxBufferSize = 2048;
                 options.TransportMaxBufferSize = 4096;
             });
-            endpoints.MapHub<AnonymousNotificationsHub>("/anonymousHub", options =>
+            endpoints.MapHub<AnonymousNotificationsHub>("/anonymous-hub", options =>
             {
                 options.ApplicationMaxBufferSize = 2048;
                 options.TransportMaxBufferSize = 4096;

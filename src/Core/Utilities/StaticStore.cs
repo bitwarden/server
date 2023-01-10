@@ -30,7 +30,7 @@ public class StaticStore
         GlobalDomains.Add(GlobalEquivalentDomainsType.Avon, new List<string> { "avon.com", "youravon.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Diapers, new List<string> { "diapers.com", "soap.com", "wag.com", "yoyo.com", "beautybar.com", "casa.com", "afterschool.com", "vine.com", "bookworm.com", "look.com", "vinemarket.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Contacts, new List<string> { "1800contacts.com", "800contacts.com" });
-        GlobalDomains.Add(GlobalEquivalentDomainsType.Amazon, new List<string> { "amazon.com", "amazon.ae", "amazon.ca", "amazon.co.uk", "amazon.com.au", "amazon.com.br", "amazon.com.mx", "amazon.com.tr", "amazon.de", "amazon.es", "amazon.fr", "amazon.in", "amazon.it", "amazon.nl", "amazon.pl", "amazon.sa", "amazon.se", "amazon.sg" });
+        GlobalDomains.Add(GlobalEquivalentDomainsType.Amazon, new List<string> { "amazon.com", "amazon.com.be", "amazon.ae", "amazon.ca", "amazon.co.uk", "amazon.com.au", "amazon.com.br", "amazon.com.mx", "amazon.com.tr", "amazon.de", "amazon.es", "amazon.fr", "amazon.in", "amazon.it", "amazon.nl", "amazon.pl", "amazon.sa", "amazon.se", "amazon.sg" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Cox, new List<string> { "cox.com", "cox.net", "coxbusiness.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Norton, new List<string> { "mynortonaccount.com", "norton.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Verizon, new List<string> { "verizon.com", "verizon.net" });
@@ -100,6 +100,7 @@ public class StaticStore
         GlobalDomains.Add(GlobalEquivalentDomainsType.Ubisoft, new List<string> { "ubisoft.com", "ubi.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.TransferWise, new List<string> { "transferwise.com", "wise.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.TakeawayEU, new List<string> { "takeaway.com", "just-eat.dk", "just-eat.no", "just-eat.fr", "just-eat.ch", "lieferando.de", "lieferando.at", "thuisbezorgd.nl", "pyszne.pl" });
+        GlobalDomains.Add(GlobalEquivalentDomainsType.Atlassian, new List<string> { "atlassian.com", "bitbucket.org", "trello.com", "statuspage.io", "atlassian.net", "jira.com" });
         #endregion
 
         #region Plans
@@ -240,6 +241,7 @@ public class StaticStore
                 Has2fa = true,
                 HasApi = true,
                 UsersGetPremium = true,
+                HasCustomPermissions = true,
 
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
@@ -278,6 +280,7 @@ public class StaticStore
                 HasApi = true,
                 HasSelfHost = true,
                 UsersGetPremium = true,
+                HasCustomPermissions = true,
 
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
@@ -417,6 +420,7 @@ public class StaticStore
                 HasScim = true,
                 HasResetPassword = true,
                 UsersGetPremium = true,
+                HasCustomPermissions = true,
 
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
@@ -457,6 +461,7 @@ public class StaticStore
                 HasScim = true,
                 HasResetPassword = true,
                 UsersGetPremium = true,
+                HasCustomPermissions = true,
 
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,

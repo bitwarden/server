@@ -42,6 +42,7 @@
     @MaxAutoscaleSeats INT,
     @UseKeyConnector BIT = 0,
     @UseScim BIT = 0,
+    @UseCustomPermissions BIT = 0,
     @UseSecretsManager BIT = 0
 AS
 BEGIN
@@ -92,6 +93,7 @@ BEGIN
         [MaxAutoscaleSeats],
         [UseKeyConnector],
         [UseScim],
+        [UseCustomPermissions],
         [UseSecretsManager]
     )
     VALUES
@@ -139,6 +141,7 @@ BEGIN
         @MaxAutoscaleSeats,
         @UseKeyConnector,
         @UseScim,
+        @UseCustomPermissions,
         @UseSecretsManager
     )
 END

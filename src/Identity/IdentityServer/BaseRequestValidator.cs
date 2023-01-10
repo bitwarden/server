@@ -365,7 +365,7 @@ public abstract class BaseRequestValidator<T> where T : class
                         PolicyType.RequireSso);
                     // Owners and Admins are exempt from this policy
                     if (orgPolicy != null && orgPolicy.Enabled &&
-                        userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)
+                        (_globalSettings.Sso.EnforceSsoPolicyForAllUsers || (userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)))
                     {
                         return false;
                     }

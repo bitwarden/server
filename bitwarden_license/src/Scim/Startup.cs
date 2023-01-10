@@ -40,7 +40,7 @@ public class Startup
         StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
         // Repositories
-        services.AddSqlServerRepositories(globalSettings);
+        services.AddDatabaseRepositories(globalSettings);
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -75,6 +75,11 @@ public class Startup
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+
+        services.AddScimGroupCommands();
+        services.AddScimGroupQueries();
+        services.AddScimUserQueries();
+        services.AddScimUserCommands();
     }
 
     public void Configure(

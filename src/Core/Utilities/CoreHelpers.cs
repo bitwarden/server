@@ -28,7 +28,6 @@ public static class CoreHelpers
     private static readonly DateTime _epoc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _max = new DateTime(9999, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly Random _random = new Random();
-    private static string _version;
     private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
     private static readonly string RealIp = "X-Real-IP";
 

@@ -102,7 +102,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         return extistingOrg;
     }
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (!Core.Utilities.Duo.DuoApi.ValidHost(Host))
         {
@@ -160,7 +160,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
         return keyValue.Substring(0, 12);
     }
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(Key1) && string.IsNullOrWhiteSpace(Key2) && string.IsNullOrWhiteSpace(Key3) &&
             string.IsNullOrWhiteSpace(Key4) && string.IsNullOrWhiteSpace(Key5))
@@ -203,6 +203,8 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     public string Email { get; set; }
 
     public string DeviceIdentifier { get; set; }
+
+    public string AuthRequestId { get; set; }
 
     public User ToUser(User extistingUser)
     {

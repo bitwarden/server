@@ -618,7 +618,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
             await _userRepository.ReplaceAsync(user);
             await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
-            await _pushService.PushLogOutAsync(user.Id);
+            await _pushService.PushLogOutAsync(user.Id, true);
 
             return IdentityResult.Success;
         }

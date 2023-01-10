@@ -51,6 +51,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
             || context.Result.ValidatedRequest.ClientId.StartsWith("organization")
             || context.Result.ValidatedRequest.ClientId.StartsWith("installation")
+            || context.Result.ValidatedRequest.ClientId.StartsWith("internal")
             || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets))
         {
             if (context.Result.ValidatedRequest.Client.Properties.TryGetValue("encryptedPayload", out var payload) &&

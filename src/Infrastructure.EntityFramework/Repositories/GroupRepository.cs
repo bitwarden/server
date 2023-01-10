@@ -46,6 +46,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                             gu.OrganizationUserId == organizationUserId
                         select gu;
             dbContext.RemoveRange(await query.ToListAsync());
+            await dbContext.UserBumpAccountRevisionDateByOrganizationUserIdAsync(organizationUserId);
             await dbContext.SaveChangesAsync();
         }
     }
@@ -128,13 +129,51 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.Group obj, IEnumerable<SelectionReadOnly> collections)
+    public async Task ReplaceAsync(Core.Entities.Group group, IEnumerable<SelectionReadOnly> requestedCollections)
     {
-        await base.ReplaceAsync(obj);
+        await base.ReplaceAsync(group);
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            await UserBumpAccountRevisionDateByOrganizationId(obj.OrganizationId);
+
+            var availableCollections = await dbContext.Collections
+                .Where(c => c.OrganizationId == group.OrganizationId)
+                .Select(c => c.Id)
+                .ToListAsync();
+
+            var existingCollectionGroups = await dbContext.CollectionGroups
+                .Where(cg => cg.GroupId == group.Id)
+                .ToListAsync();
+
+            foreach (var requestedCollection in requestedCollections)
+            {
+                var existingCollectionGroup = existingCollectionGroups
+                    .FirstOrDefault(cg => cg.CollectionId == requestedCollection.Id);
+
+                if (existingCollectionGroup == null)
+                {
+                    // It needs to be added
+                    dbContext.CollectionGroups.Add(new CollectionGroup
+                    {
+                        CollectionId = requestedCollection.Id,
+                        GroupId = group.Id,
+                        ReadOnly = requestedCollection.ReadOnly,
+                        HidePasswords = requestedCollection.HidePasswords,
+                    });
+                    continue;
+                }
+
+                existingCollectionGroup.ReadOnly = requestedCollection.ReadOnly;
+                existingCollectionGroup.HidePasswords = requestedCollection.HidePasswords;
+            }
+
+            var requestedCollectionIds = requestedCollections.Select(c => c.Id);
+
+            dbContext.CollectionGroups.RemoveRange(
+                existingCollectionGroups.Where(cg => !requestedCollectionIds.Contains(cg.CollectionId)));
+
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(group.OrganizationId);
+            await dbContext.SaveChangesAsync();
         }
     }
 
@@ -161,7 +200,8 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                          select gu;
             dbContext.RemoveRange(delete);
             await dbContext.SaveChangesAsync();
-            await UserBumpAccountRevisionDateByOrganizationId(orgId);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(orgId);
+            await dbContext.SaveChangesAsync();
         }
     }
 }

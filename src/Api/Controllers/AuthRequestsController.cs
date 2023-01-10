@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -46,7 +47,7 @@ public class AuthRequestsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var authRequests = await _authRequestRepository.GetManyByUserIdAsync(userId);
-        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.SelfHosted)).ToList();
+        var responses = authRequests.Select(a => new AuthRequestResponseModel(a, _globalSettings.BaseServiceUri.Vault)).ToList();
         return new ListResponseModel<AuthRequestResponseModel>(responses);
     }
 
@@ -60,7 +61,7 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 
     [HttpGet("{id}/response")]
@@ -68,12 +69,12 @@ public class AuthRequestsController : Controller
     public async Task<AuthRequestResponseModel> GetResponse(string id, [FromQuery] string code)
     {
         var authRequest = await _authRequestRepository.GetByIdAsync(new Guid(id));
-        if (authRequest == null || code != authRequest.AccessCode || authRequest.GetExpirationDate() < DateTime.UtcNow)
+        if (authRequest == null || !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code) || authRequest.GetExpirationDate() < DateTime.UtcNow)
         {
             throw new NotFoundException();
         }
 
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 
     [HttpPost("")]
@@ -89,12 +90,12 @@ public class AuthRequestsController : Controller
         {
             throw new BadRequestException("Device type not provided.");
         }
-        if (!_globalSettings.PasswordlessAuth.KnownDevicesOnly)
+        if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
         {
-            var d = await _deviceRepository.GetByIdentifierAsync(_currentContext.DeviceIdentifier);
-            if (d == null || d.UserId != user.Id)
+            var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+            if (devices == null || !devices.Any(d => d.Identifier == model.DeviceIdentifier))
             {
-                throw new NotFoundException();
+                throw new BadRequestException("Login with device is only available on devices that have been previously logged in.");
             }
         }
 
@@ -111,7 +112,8 @@ public class AuthRequestsController : Controller
         };
         authRequest = await _authRequestRepository.CreateAsync(authRequest);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        var r = new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
+        return r;
     }
 
     [HttpPut("{id}")]
@@ -124,22 +126,36 @@ public class AuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier);
+        if (authRequest.Approved is not null)
+        {
+            throw new DuplicateAuthRequestException();
+        }
+
+        var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, userId);
         if (device == null)
         {
             throw new BadRequestException("Invalid device.");
         }
 
+        authRequest.ResponseDeviceId = device.Id;
+        authRequest.ResponseDate = DateTime.UtcNow;
+        authRequest.Approved = model.RequestApproved;
+
         if (model.RequestApproved)
         {
             authRequest.Key = model.Key;
             authRequest.MasterPasswordHash = model.MasterPasswordHash;
-            authRequest.ResponseDeviceId = device.Id;
-            authRequest.ResponseDate = DateTime.UtcNow;
-            await _authRequestRepository.ReplaceAsync(authRequest);
         }
 
-        await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
-        return new AuthRequestResponseModel(authRequest, _globalSettings.SelfHosted);
+        await _authRequestRepository.ReplaceAsync(authRequest);
+
+        // We only want to send an approval notification if the request is approved (or null), 
+        // to not leak that it was denied to the originating client if it was originated by a malicious actor.
+        if (authRequest.Approved ?? true)
+        {
+            await _pushNotificationService.PushAuthRequestResponseAsync(authRequest);
+        }
+
+        return new AuthRequestResponseModel(authRequest, _globalSettings.BaseServiceUri.Vault);
     }
 }
