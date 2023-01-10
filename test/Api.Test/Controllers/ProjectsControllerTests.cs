@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Controllers;
 using Bit.Core.Entities;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -19,6 +20,7 @@ public class ProjectsControllerTests
     [BitAutoData]
     public async void BulkDeleteProjects_Success(SutProvider<ProjectsController> sutProvider, List<Project> data)
     {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         var ids = data.Select(project => project.Id)?.ToList();
         var mockResult = new List<Tuple<Project, string>>();
         foreach (var project in data)
@@ -37,6 +39,7 @@ public class ProjectsControllerTests
     [BitAutoData]
     public async void BulkDeleteProjects_NoGuids_ThrowsArgumentNullException(SutProvider<ProjectsController> sutProvider)
     {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.BulkDeleteProjectsAsync(new List<Guid>()));
     }
 }
