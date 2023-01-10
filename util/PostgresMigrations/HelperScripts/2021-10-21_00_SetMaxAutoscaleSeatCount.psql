@@ -1,0 +1,4 @@
+UPDATE "Organization"
+	SET "MaxAutoscaleSeats" = "Seats"
+WHERE NOT EXISTS (SELECT 1 FROM "Organization" WHERE "MaxAutoscaleSeats" IS NOT NULL LIMIT 1)
+    AND NOT EXISTS (SELECT 1 FROM "Organization" WHERE "OwnersNotifiedOfAutoscaling" IS NOT NULL LIMIT 1)
