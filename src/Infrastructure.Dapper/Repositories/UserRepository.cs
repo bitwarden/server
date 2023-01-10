@@ -104,7 +104,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public async Task<DateTime> GetAccountRevisionDateAsync(Guid id)
     {
-        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<DateTime>(
                 $"[{Schema}].[{Table}_ReadAccountRevisionDateById]",
