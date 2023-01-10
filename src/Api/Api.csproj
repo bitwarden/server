@@ -18,13 +18,13 @@
   <ItemGroup>
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
-    <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
   </ItemGroup>
 
   <Choose>
     <When Condition="!$(DefineConstants.Contains('OSS'))">
       <ItemGroup>
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
       </ItemGroup>
     </When>
   </Choose>
