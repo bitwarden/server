@@ -1533,8 +1533,8 @@
       },
       "System.Data.SqlClient": {
         "type": "Transitive",
-        "resolved": "4.8.3",
-        "contentHash": "yERfVLXAY0QbylAgaGLByYN0hFxX28aeEQ0hUgJO+Ntn1AfmWl5HHUoYJA0Yl9HhIUUJHVaS/Sw/RLZr5aaC+A==",
+        "resolved": "4.8.5",
+        "contentHash": "fRqxut4lrndPHrXD+ht1XRmCL3obuKldm4XjCRYS9p5f7FSR7shBxAwTkDrpFMsHC9BhNgjjmUtiIjvehn5zkg==",
         "dependencies": {
           "Microsoft.Win32.Registry": "4.7.0",
           "System.Security.Principal.Windows": "4.7.0",
@@ -2824,7 +2824,7 @@
         "dependencies": {
           "Core": "[2022.12.0, )",
           "Dapper": "[2.0.123, )",
-          "System.Data.SqlClient": "[4.8.3, )"
+          "System.Data.SqlClient": "[4.8.5, )"
         }
       },
       "infrastructure.entityframework": {
