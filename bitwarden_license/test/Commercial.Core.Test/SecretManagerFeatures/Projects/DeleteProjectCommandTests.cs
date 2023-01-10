@@ -15,24 +15,28 @@ public class DeleteProjectCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task DeleteProjects_Throws_NotFoundException(List<Guid> data,
+    public async Task DeleteProjects_Throws_NotFoundException(List<Guid> data, Guid userId,
       SutProvider<DeleteProjectCommand> sutProvider)
     {
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>());
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, default));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, userId));
 
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().DeleteManyByIdAsync(default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteSecrets_OneIdNotFound_Throws_NotFoundException(List<Guid> data,
+    public async Task DeleteSecrets_OneIdNotFound_Throws_NotFoundException(List<Guid> data, Guid userId,
       SutProvider<DeleteProjectCommand> sutProvider)
     {
-        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>());
+        var project = new Project()
+        {
+            Id = Guid.NewGuid()
+        };
+        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>() { project });
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, default));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, userId));
 
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().DeleteManyByIdAsync(default);
     }

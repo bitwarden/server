@@ -20,14 +20,14 @@ public class DeleteProjectCommand : IDeleteProjectCommand
 
     public async Task<List<Tuple<Project, string>>> DeleteProjects(List<Guid> ids, Guid userId)
     {
-        if(ids.Any() != true || userId == new Guid())
+        if (ids.Any() != true || userId == new Guid())
         {
             throw new ArgumentNullException();
         }
 
         var projects = (await _projectRepository.GetManyByIds(ids))?.ToList();
 
-        if (projects.Any() != true)
+        if (projects?.Any() != true || projects.Count != ids.Count)
         {
             throw new NotFoundException();
         }
