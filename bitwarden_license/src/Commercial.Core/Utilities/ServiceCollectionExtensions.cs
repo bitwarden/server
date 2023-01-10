@@ -12,7 +12,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IProviderService, ProviderService>();
     }
 
-    public static void AddCommercialSecretsServices(this IServiceCollection services)
+    public static void AddCommercialSecretsManagerServices(this IServiceCollection services)
     {
         services.AddSecretManagerServices();
     }
