@@ -8,13 +8,6 @@ public partial class SecretsManager : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
-        migrationBuilder.AddColumn<string>(
-            name: "AvatarColor",
-            table: "User",
-            type: "TEXT",
-            maxLength: 7,
-            nullable: true);
-
         migrationBuilder.AddColumn<bool>(
             name: "UseSecretsManager",
             table: "Organization",
@@ -264,10 +257,6 @@ public partial class SecretsManager : Migration
 
         migrationBuilder.DropTable(
             name: "Secret");
-
-        migrationBuilder.DropColumn(
-            name: "AvatarColor",
-            table: "User");
 
         migrationBuilder.DropColumn(
             name: "UseSecretsManager",

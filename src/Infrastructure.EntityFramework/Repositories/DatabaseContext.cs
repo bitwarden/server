@@ -171,20 +171,10 @@ public class DatabaseContext : DbContext
             {
                 if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
                 {
-                    if (Database.IsNpgsql())
-                    {
-                        property.SetValueConverter(
-                            new ValueConverter<DateTime, DateTime>(
-                                v => v,
-                                v => v.ToUniversalTime()));
-                    }
-                    else
-                    {
-                        property.SetValueConverter(
-                            new ValueConverter<DateTime, DateTime>(
-                                v => v,
-                                v => new DateTime(v.Ticks, DateTimeKind.Utc)));
-                    }
+                    property.SetValueConverter(
+                        new ValueConverter<DateTime, DateTime>(
+                            v => v,
+                            v => new DateTime(v.Ticks, DateTimeKind.Utc)));
                 }
             }
         }
