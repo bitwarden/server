@@ -21,7 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-   <ItemGroup>
     <None Remove="HelperScripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
     <None Remove="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
   </ItemGroup>
