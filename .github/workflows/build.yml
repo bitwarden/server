@@ -73,12 +73,21 @@ jobs:
         shell: pwsh
 
       - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --no-build
+        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx" || true
         shell: pwsh
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build
+        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx" || true
         shell: pwsh
+
+      - name: Report test results
+        uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226
+        if: always()
+        with:
+          name: Test Results
+          path: "**/*-test-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: true
 
   build-artifacts:
     name: Build artifacts
