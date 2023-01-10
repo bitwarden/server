@@ -64,6 +64,7 @@ public class EnvironmentFileBuilder
             UserID = "sa",
             Password = dbPassword,
             MultipleActiveResultSets = false,
+            Encrypt = true,
             ConnectTimeout = 30,
             TrustServerCertificate = true,
             PersistSecurityInfo = false
