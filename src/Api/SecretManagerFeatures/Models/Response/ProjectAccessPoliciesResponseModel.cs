@@ -5,8 +5,10 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
 public class ProjectAccessPoliciesResponseModel : ResponseModel
 {
-    public ProjectAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy>? baseAccessPolicies,
-        string obj = "projectAccessPolicies") : base(obj)
+    private const string _objectName = "projectAccessPolicies";
+
+    public ProjectAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy>? baseAccessPolicies)
+        : base(_objectName)
     {
         if (baseAccessPolicies == null) return;
         foreach (var baseAccessPolicy in baseAccessPolicies)
@@ -23,6 +25,10 @@ public class ProjectAccessPoliciesResponseModel : ResponseModel
                         new ServiceAccountProjectAccessPolicyResponseModel(accessPolicy));
                     break;
             }
+    }
+
+    public ProjectAccessPoliciesResponseModel() : base(_objectName)
+    {
     }
 
     public List<UserProjectAccessPolicyResponseModel> UserAccessPolicies { get; set; } = new();

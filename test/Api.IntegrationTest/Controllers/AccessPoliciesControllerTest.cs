@@ -1,8 +1,8 @@
 ﻿using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.IntegrationTest.Models;
 using Bit.Api.SecretManagerFeatures.Models.Request;
+using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
@@ -71,7 +71,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var response = await _client.PostAsJsonAsync($"/projects/{initialProject.Id}/access-policies", request);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<AccessPoliciesResult>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(initialServiceAccount.Id, result.ServiceAccountAccessPolicies.First().ServiceAccountId);
@@ -102,7 +102,8 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var response = await _client.PutAsJsonAsync($"/access-policies/{initData.InitialAccessPolicyId}", request);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<ServiceAccountProjectAccessPolicyResult>();
+        var result = await response.Content.ReadFromJsonAsync<ServiceAccountProjectAccessPolicyResponseModel>();
+
         Assert.NotNull(result);
         Assert.Equal(expectedRead, result.Read);
         Assert.Equal(expectedWrite, result.Write);
@@ -136,7 +137,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var response = await _client.GetAsync($"/projects/{initData.InitialProjectId}/access-policies");
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<AccessPoliciesResult>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
 
         Assert.NotNull(result?.ServiceAccountAccessPolicies);
         Assert.Single(result.ServiceAccountAccessPolicies);

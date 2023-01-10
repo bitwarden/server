@@ -24,12 +24,17 @@ public abstract class BaseAccessPolicyResponseModel : ResponseModel
 
 public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel
 {
-    public UserProjectAccessPolicyResponseModel(UserProjectAccessPolicy accessPolicy,
-        string obj = "userProjectAccessPolicy") : base(accessPolicy, obj)
+    private const string _objectName = "userProjectAccessPolicy";
+
+    public UserProjectAccessPolicyResponseModel(UserProjectAccessPolicy accessPolicy) : base(accessPolicy, _objectName)
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
         OrganizationUserName = accessPolicy.User?.Name;
+    }
+
+    public UserProjectAccessPolicyResponseModel() : base(new UserProjectAccessPolicy(), _objectName)
+    {
     }
 
     public Guid? OrganizationUserId { get; set; }
@@ -39,12 +44,18 @@ public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMode
 
 public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResponseModel
 {
-    public UserServiceAccountAccessPolicyResponseModel(UserServiceAccountAccessPolicy accessPolicy,
-        string obj = "userServiceAccountAccessPolicy") : base(accessPolicy, obj)
+    private const string _objectName = "userServiceAccountAccessPolicy";
+
+    public UserServiceAccountAccessPolicyResponseModel(UserServiceAccountAccessPolicy accessPolicy)
+        : base(accessPolicy, _objectName)
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
         OrganizationUserName = accessPolicy.User?.Name;
+    }
+
+    public UserServiceAccountAccessPolicyResponseModel() : base(new UserServiceAccountAccessPolicy(), _objectName)
+    {
     }
 
     public Guid? OrganizationUserId { get; set; }
@@ -54,12 +65,18 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
 
 public class GroupProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel
 {
-    public GroupProjectAccessPolicyResponseModel(GroupProjectAccessPolicy accessPolicy,
-        string obj = "groupProjectAccessPolicy") : base(accessPolicy, obj)
+    private const string _objectName = "groupProjectAccessPolicy";
+
+    public GroupProjectAccessPolicyResponseModel(GroupProjectAccessPolicy accessPolicy)
+        : base(accessPolicy, _objectName)
     {
         GroupId = accessPolicy.GroupId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
         GroupName = accessPolicy.Group?.Name;
+    }
+
+    public GroupProjectAccessPolicyResponseModel() : base(new GroupProjectAccessPolicy(), _objectName)
+    {
     }
 
     public Guid? GroupId { get; set; }
@@ -69,12 +86,18 @@ public class GroupProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMod
 
 public class GroupServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResponseModel
 {
-    public GroupServiceAccountAccessPolicyResponseModel(GroupServiceAccountAccessPolicy accessPolicy,
-        string obj = "groupServiceAccountAccessPolicy") : base(accessPolicy, obj)
+    private const string _objectName = "groupServiceAccountAccessPolicy";
+
+    public GroupServiceAccountAccessPolicyResponseModel(GroupServiceAccountAccessPolicy accessPolicy)
+        : base(accessPolicy, _objectName)
     {
         GroupId = accessPolicy.GroupId;
         GroupName = accessPolicy.Group?.Name;
         GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
+    }
+
+    public GroupServiceAccountAccessPolicyResponseModel() : base(new GroupServiceAccountAccessPolicy(), _objectName)
+    {
     }
 
     public Guid? GroupId { get; set; }
@@ -84,12 +107,19 @@ public class GroupServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResp
 
 public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel
 {
-    public ServiceAccountProjectAccessPolicyResponseModel(ServiceAccountProjectAccessPolicy accessPolicy,
-        string obj = "serviceAccountProjectAccessPolicy") : base(accessPolicy, obj)
+    private const string _objectName = "serviceAccountProjectAccessPolicy";
+
+    public ServiceAccountProjectAccessPolicyResponseModel(ServiceAccountProjectAccessPolicy accessPolicy)
+        : base(accessPolicy, _objectName)
     {
         ServiceAccountId = accessPolicy.ServiceAccountId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
         ServiceAccountName = accessPolicy.ServiceAccount?.Name;
+    }
+
+    public ServiceAccountProjectAccessPolicyResponseModel()
+        : base(new ServiceAccountProjectAccessPolicy(), _objectName)
+    {
     }
 
     public Guid? ServiceAccountId { get; set; }
