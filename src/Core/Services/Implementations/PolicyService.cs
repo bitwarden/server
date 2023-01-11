@@ -91,7 +91,7 @@ public class PolicyService : IPolicyService
                 var removableOrgUsers = orgUsers.Where(ou =>
                     ou.Status != Enums.OrganizationUserStatusType.Invited &&
                     ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin &&
-                    ou.UserId != savingUserId);
+                    ou.UserId.HasValue && ou.UserId != savingUserId);
                 switch (policy.Type)
                 {
                     case Enums.PolicyType.TwoFactorAuthentication:
