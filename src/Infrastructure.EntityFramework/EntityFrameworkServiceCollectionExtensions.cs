@@ -14,7 +14,9 @@ public static class EntityFrameworkServiceCollectionExtensions
             throw new Exception($"Database provider type {provider} was selected but no connection string was found.");
         }
 
+        // TODO: We should move away from using LINQ syntax for EF (TDL-48).
         LinqToDBForEFTools.Initialize();
+
         services.AddAutoMapper(typeof(UserRepository));
         services.AddDbContext<DatabaseContext>(options =>
         {
@@ -42,9 +44,6 @@ public static class EntityFrameworkServiceCollectionExtensions
 
     public static void AddPasswordManagerEFRepositories(this IServiceCollection services, bool selfHosted)
     {
-        // TODO: We should move away from using LINQ syntax for EF (TDL-48).
-        LinqToDBForEFTools.Initialize();
-
         services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
         services.AddSingleton<IAuthRequestRepository, AuthRequestRepository>();
         services.AddSingleton<ICipherRepository, CipherRepository>();

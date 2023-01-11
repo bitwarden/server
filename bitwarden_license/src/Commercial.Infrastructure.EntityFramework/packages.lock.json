@@ -536,11 +536,11 @@
       },
       "Microsoft.EntityFrameworkCore.SqlServer": {
         "type": "Transitive",
-        "resolved": "6.0.4",
-        "contentHash": "rMJcVbMxrXmufywA1wYUMqLuxS7PvoPVxR8juUGwJcBdQ31rKyDBxII3i5B2JrgSgWXGiy8V7n9acxKRTX03fw==",
+        "resolved": "6.0.12",
+        "contentHash": "bdKnSz1w+WZz9QYWhs3wwGuMn4YssjdR+HOBpzChQ6C3+dblq4Pammm5fzugcPOhTgCiWftOT2jPOT5hEy4bYg==",
         "dependencies": {
           "Microsoft.Data.SqlClient": "2.1.4",
-          "Microsoft.EntityFrameworkCore.Relational": "6.0.4"
+          "Microsoft.EntityFrameworkCore.Relational": "6.0.12"
         }
       },
       "Microsoft.Extensions.Caching.Abstractions": {
@@ -2735,7 +2735,7 @@
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
           "Core": "[2022.12.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[6.0.12, )",
-          "Microsoft.EntityFrameworkCore.SqlServer": "[6.0.4, )",
+          "Microsoft.EntityFrameworkCore.SqlServer": "[6.0.12, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[6.0.12, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.8, )",
           "Pomelo.EntityFrameworkCore.MySql": "[6.0.2, )",
