@@ -1,4 +1,6 @@
 ﻿using System.Data;
+using System.Security.Cryptography;
+using System.Text;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -20,7 +22,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public override async Task<User> GetByIdAsync(Guid id)
     {
-        return await base.GetByIdAsync(id);
+        var user = await base.GetByIdAsync(id);
+        await UnprotectDataAsync(user);
+        return user;
     }
 
     public async Task<User> GetByEmailAsync(string email)
@@ -32,6 +36,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Email = email },
                 commandType: CommandType.StoredProcedure);
 
+            await UnprotectDataAsync(results);
             return results.SingleOrDefault();
         }
     }
@@ -45,6 +50,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { OrganizationId = organizationId, ExternalId = externalId },
                 commandType: CommandType.StoredProcedure);
 
+            await UnprotectDataAsync(results);
             return results.SingleOrDefault();
         }
     }
@@ -72,6 +78,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 120);
 
+            await UnprotectDataAsync(results);
             return results.ToList();
         }
     }
@@ -85,6 +92,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Premium = premium },
                 commandType: CommandType.StoredProcedure);
 
+            await UnprotectDataAsync(results);
             return results.ToList();
         }
     }
@@ -114,9 +122,15 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             return results.SingleOrDefault();
         }
     }
+    public override async Task<User> CreateAsync(User user)
+    {
+        await ProtectDataAsync(user);
+        return await base.CreateAsync(user);
+    }
 
     public override async Task ReplaceAsync(User user)
     {
+        await ProtectDataAsync(user);
         await base.ReplaceAsync(user);
     }
 
@@ -164,7 +178,39 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Ids = ids.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
 
+            await UnprotectDataAsync(results);
             return results.ToList();
+        }
+    }
+
+    private async Task ProtectDataAsync(User user)
+    {
+        var masterPasswordData = new ServerProtectedData { PlaintextData = user.MasterPassword };
+        user.MasterPassword = await masterPasswordData.EncryptAsync();
+
+        var keyData = new ServerProtectedData { PlaintextData = user.Key };
+        user.Key = await keyData.EncryptAsync();
+    }
+
+    private async Task UnprotectDataAsync(User user)
+    {
+        var masterPasswordData = new ServerProtectedData { EncryptedData = user.MasterPassword };
+        if (masterPasswordData.Protected())
+        {
+            user.MasterPassword = await masterPasswordData.DecryptAsync();
+        }
+
+        var keyData = new ServerProtectedData { EncryptedData = user.Key };
+        if (keyData.Protected())
+        {
+            user.Key = await keyData.DecryptAsync();
+        }
+    }
+    private async Task UnprotectDataAsync(IEnumerable<User> users)
+    {
+        foreach (var user in users)
+        {
+            await UnprotectDataAsync(user);
         }
     }
 }
