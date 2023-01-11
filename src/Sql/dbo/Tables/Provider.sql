@@ -11,7 +11,7 @@
     [BillingPhone]      NVARCHAR (50)    NULL,
     [Status]            TINYINT          NOT NULL,
     [UseEvents]         BIT              NOT NULL,
-    [Type]              TINYINT          NOT NULL,
+    [Type]              TINYINT          NOT NULL CONSTRAINT DF_Provider_Type DEFAULT (0),
     [Enabled]           BIT              NOT NULL,
     [CreationDate]      DATETIME2 (7)    NOT NULL,
     [RevisionDate]      DATETIME2 (7)    NOT NULL,

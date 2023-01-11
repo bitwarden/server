@@ -4,7 +4,7 @@ BEGIN
     ALTER TABLE
         [dbo].[Provider]
     ADD
-        [Type] TINYINT NOT NULL CONSTRAINT DF_Provider_Type DEFAULT 0;
+        [Type] TINYINT NOT NULL CONSTRAINT DF_Provider_Type DEFAULT (0);
 END
 GO
 
