@@ -1,6 +1,4 @@
 ﻿using System.Data;
-using System.Security.Cryptography;
-using System.Text;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
