@@ -204,6 +204,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             user.Key = await keyData.DecryptAsync();
         }
     }
+
     private async Task UnprotectDataAsync(IEnumerable<User> users)
     {
         foreach (var user in users)
