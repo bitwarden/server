@@ -58,7 +58,7 @@ public class SelfHostedGetOrganizationLicenseQuery : BaseIdentityClientService, 
         if (response == null)
         {
             _logger.LogDebug("Organization License sync failed for '{OrgId}'", organization.Id);
-            throw new BadRequestException("Organization License sync failed");
+            throw new BadRequestException("An error has occurred. Check your internet connection and ensure the billing token is correct.");
         }
 
         return response;
