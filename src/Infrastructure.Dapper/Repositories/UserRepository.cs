@@ -4,15 +4,22 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
-    public UserRepository(GlobalSettings globalSettings)
+    private readonly IDataProtector _dataProtector;
+
+    public UserRepository(
+        GlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    {
+        _dataProtector = dataProtectionProvider.CreateProtector("UserRepositoryProtection");
+    }
 
     public UserRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
@@ -183,26 +190,21 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     private async Task ProtectDataAsync(User user)
     {
-        var masterPasswordData = new ServerProtectedData { PlaintextData = user.MasterPassword };
-        user.MasterPassword = await masterPasswordData.EncryptAsync();
-
-        var keyData = new ServerProtectedData { PlaintextData = user.Key };
-        user.Key = await keyData.EncryptAsync();
+        user.MasterPassword = string.Concat("P_", _dataProtector.Protect(user.MasterPassword));
+        user.Key = string.Concat("P_", _dataProtector.Protect(user.Key));
     }
 
-    private async Task UnprotectDataAsync(User user)
+    private Task UnprotectDataAsync(User user)
     {
-        var masterPasswordData = new ServerProtectedData { EncryptedData = user.MasterPassword };
-        if (masterPasswordData.Protected())
+        if (user.MasterPassword.StartsWith("P_"))
         {
-            user.MasterPassword = await masterPasswordData.DecryptAsync();
+            user.MasterPassword = _dataProtector.Unprotect(user.MasterPassword.Substring(2));
         }
-
-        var keyData = new ServerProtectedData { EncryptedData = user.Key };
-        if (keyData.Protected())
+        if (user.Key.StartsWith("P_"))
         {
-            user.Key = await keyData.DecryptAsync();
+            user.Key = _dataProtector.Unprotect(user.Key.Substring(2));
         }
+        return Task.FromResult(0);
     }
 
     private async Task UnprotectDataAsync(IEnumerable<User> users)
