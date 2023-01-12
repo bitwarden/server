@@ -28,7 +28,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     public override async Task<User> GetByIdAsync(Guid id)
     {
         var user = await base.GetByIdAsync(id);
-        await UnprotectDataAsync(user);
+        UnprotectData(user);
         return user;
     }
 
@@ -41,7 +41,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Email = email },
                 commandType: CommandType.StoredProcedure);
 
-            await UnprotectDataAsync(results);
+            UnprotectData(results);
             return results.SingleOrDefault();
         }
     }
@@ -55,7 +55,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { OrganizationId = organizationId, ExternalId = externalId },
                 commandType: CommandType.StoredProcedure);
 
-            await UnprotectDataAsync(results);
+            UnprotectData(results);
             return results.SingleOrDefault();
         }
     }
@@ -83,7 +83,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 120);
 
-            await UnprotectDataAsync(results);
+            UnprotectData(results);
             return results.ToList();
         }
     }
@@ -97,7 +97,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Premium = premium },
                 commandType: CommandType.StoredProcedure);
 
-            await UnprotectDataAsync(results);
+            UnprotectData(results);
             return results.ToList();
         }
     }
@@ -129,13 +129,13 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     }
     public override async Task<User> CreateAsync(User user)
     {
-        await ProtectDataAsync(user);
+        ProtectData(user);
         return await base.CreateAsync(user);
     }
 
     public override async Task ReplaceAsync(User user)
     {
-        await ProtectDataAsync(user);
+        ProtectData(user);
         await base.ReplaceAsync(user);
     }
 
@@ -183,18 +183,18 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Ids = ids.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
 
-            await UnprotectDataAsync(results);
+            UnprotectData(results);
             return results.ToList();
         }
     }
 
-    private async Task ProtectDataAsync(User user)
+    private void ProtectData(User user)
     {
         user.MasterPassword = string.Concat("P_", _dataProtector.Protect(user.MasterPassword));
         user.Key = string.Concat("P_", _dataProtector.Protect(user.Key));
     }
 
-    private Task UnprotectDataAsync(User user)
+    private void UnprotectData(User user)
     {
         if (user.MasterPassword.StartsWith("P_"))
         {
@@ -204,14 +204,13 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             user.Key = _dataProtector.Unprotect(user.Key.Substring(2));
         }
-        return Task.FromResult(0);
     }
 
-    private async Task UnprotectDataAsync(IEnumerable<User> users)
+    private void UnprotectData(IEnumerable<User> users)
     {
         foreach (var user in users)
         {
-            await UnprotectDataAsync(user);
+            UnprotectData(user);
         }
     }
 }
