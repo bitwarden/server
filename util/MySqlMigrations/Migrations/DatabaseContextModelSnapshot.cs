@@ -1166,6 +1166,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
 
+                    b.Property<string>("AvatarColor")
+                        .HasMaxLength(7)
+                        .HasColumnType("varchar(7)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 

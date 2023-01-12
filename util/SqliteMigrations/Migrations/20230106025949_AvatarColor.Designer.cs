@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230106025949_AvatarColor")]
+    partial class AvatarColor
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.12");
@@ -840,9 +842,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("BillingEmail")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("BillingPhone")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("BusinessAddress1")
                         .HasColumnType("TEXT");
 
@@ -874,9 +873,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<byte>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<byte>("Type")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseEvents")
