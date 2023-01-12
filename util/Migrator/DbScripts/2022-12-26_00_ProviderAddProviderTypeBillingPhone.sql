@@ -44,7 +44,7 @@ SELECT
     P.[Type] ProviderType
 FROM
     [dbo].[ProviderUser] PU
-    LEFT JOIN
+LEFT JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
 GO
 
@@ -154,6 +154,7 @@ SET
 WHERE
     [Id] = @Id
 END
+GO
 
 IF OBJECT_ID('[dbo].[Provider_ReadById]') IS NOT NULL
 BEGIN
