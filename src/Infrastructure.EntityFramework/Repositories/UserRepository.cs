@@ -222,17 +222,29 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     private void ProtectData(Core.Entities.User user)
     {
-        user.MasterPassword = string.Concat("P_", _dataProtector.Protect(user.MasterPassword));
-        user.Key = string.Concat("P_", _dataProtector.Protect(user.Key));
+        if (user == null)
+        {
+            return;
+        }
+
+        user.MasterPassword = user.MasterPassword == null ? null :
+            string.Concat("P_", _dataProtector.Protect(user.MasterPassword));
+        user.Key = user.Key == null ? null :
+            string.Concat("P_", _dataProtector.Protect(user.Key));
     }
 
     private void UnprotectData(Core.Entities.User user)
     {
-        if (user.MasterPassword.StartsWith("P_"))
+        if (user == null)
+        {
+            return;
+        }
+
+        if (user.MasterPassword?.StartsWith("P_") ?? false)
         {
             user.MasterPassword = _dataProtector.Unprotect(user.MasterPassword.Substring(2));
         }
-        if (user.Key.StartsWith("P_"))
+        if (user.Key?.StartsWith("P_") ?? false)
         {
             user.Key = _dataProtector.Unprotect(user.Key.Substring(2));
         }
@@ -240,6 +252,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     private void UnprotectData(IEnumerable<Core.Entities.User> users)
     {
+        if (users == null)
+        {
+            return;
+        }
         foreach (var user in users)
         {
             UnprotectData(user);
