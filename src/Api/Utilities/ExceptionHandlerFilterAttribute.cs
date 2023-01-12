@@ -94,8 +94,16 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is AggregateException aggregateException)
         {
-            errorMessage = string.Join(Environment.NewLine, aggregateException.InnerExceptions.Select(ex => ex.Message));
             context.HttpContext.Response.StatusCode = 400;
+            var errorValues = aggregateException.InnerExceptions.Select(ex => ex.Message);
+            if (_publicApi)
+            {
+                publicErrorModel = new ErrorResponseModel(errorMessage, errorValues);
+            }
+            else
+            {
+                internalErrorModel = new InternalApi.ErrorResponseModel(errorMessage, errorValues);
+            }
         }
         else
         {
