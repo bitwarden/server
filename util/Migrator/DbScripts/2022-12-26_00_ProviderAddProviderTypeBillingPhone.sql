@@ -19,13 +19,7 @@ END
 GO
 
 -- Recreate ProviderView so that it includes the new columns 'Type' and 'BillingPhone'
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderView')
-    BEGIN
-        DROP VIEW [dbo].[ProviderView]
-    END
-GO
-
-CREATE VIEW [dbo].[ProviderView]
+CREATE OR ALTER VIEW VIEW [dbo].[ProviderView]
 AS
 SELECT
     *
@@ -34,13 +28,7 @@ FROM
 GO
 
 -- Recreate ProviderUserProviderDetailsView so that it includes the new columns 'Type' and 'BillingPhone'
-IF EXISTS(SELECT * FROM sys.views WHERE [Name] = 'ProviderUserProviderDetailsView')
-    BEGIN
-        DROP VIEW [dbo].[ProviderUserProviderDetailsView]
-    END
-GO
-
-CREATE VIEW [dbo].[ProviderUserProviderDetailsView]
+CREATE OR ALTER VIEW VIEW [dbo].[ProviderUserProviderDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -61,7 +49,7 @@ FROM
 GO
 
 -- Alter Provider_Create view to add new columns 'Type' and 'BillingPhone'
-ALTER PROCEDURE [dbo].[Provider_Create]
+CREATE OR ALTER PROCEDURE [dbo].[Provider_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
@@ -124,7 +112,7 @@ END
 GO
 
 -- Alter Provider_Update view to add new columns 'Type' and 'BillingPhone'
-ALTER PROCEDURE [dbo].[Provider_Update]
+CREATE OR ALTER PROCEDURE [dbo].[Provider_Update]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
