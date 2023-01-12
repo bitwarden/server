@@ -185,6 +185,14 @@ public class EventService : IEventService
             Date = date.GetValueOrDefault(DateTime.UtcNow),
             SystemUser = systemUser
         };
+        
+        if (systemUser is EventSystemUser.SCIM)
+        {
+            // System user only used for SCIM logs in this method
+            // and we want event logs to report server instead of unknown
+            e.DeviceType = DeviceType.Server;
+        }
+        
         await _eventWriteService.CreateAsync(e);
     }
 
@@ -239,7 +247,7 @@ public class EventService : IEventService
                 continue;
             }
 
-            eventMessages.Add(new EventMessage(_currentContext)
+            var e = new EventMessage(_currentContext)
             {
                 OrganizationId = organizationUser.OrganizationId,
                 UserId = organizationUser.UserId,
@@ -249,7 +257,16 @@ public class EventService : IEventService
                 ActingUserId = _currentContext?.UserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow),
                 SystemUser = systemUser
-            });
+            };
+            
+            if (systemUser is EventSystemUser.SCIM)
+            {
+                // System user only used for SCIM logs in this method
+                // and we want event logs to report server instead of unknown
+                e.DeviceType = DeviceType.Server;
+            }
+
+            eventMessages.Add(e);
         }
 
         await _eventWriteService.CreateManyAsync(eventMessages);
@@ -360,7 +377,8 @@ public class EventService : IEventService
             ActingUserId = _currentContext?.UserId,
             DomainName = organizationDomain.DomainName,
             SystemUser = systemUser,
-            Date = date.GetValueOrDefault(DateTime.UtcNow)
+            Date = date.GetValueOrDefault(DateTime.UtcNow),
+            DeviceType = DeviceType.Server
         };
         await _eventWriteService.CreateAsync(e);
     }
