@@ -56,9 +56,6 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             if (await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt))
             {
                 domain.SetVerifiedDate();
-                domain.SetLastCheckedDate();
-                await _organizationDomainRepository.ReplaceAsync(domain);
-                await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified);
             }
         }
         catch (Exception e)
@@ -69,7 +66,8 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         domain.SetLastCheckedDate();
         await _organizationDomainRepository.ReplaceAsync(domain);
 
-        await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified);
+        await _eventService.LogOrganizationDomainEventAsync(domain,
+            domain.VerifiedDate != null ? EventType.OrganizationDomain_Verified : EventType.OrganizationDomain_NotVerified);
         return domain;
     }
 }
