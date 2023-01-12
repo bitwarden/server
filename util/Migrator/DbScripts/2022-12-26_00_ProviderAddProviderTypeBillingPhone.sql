@@ -19,7 +19,7 @@ END
 GO
 
 -- Recreate ProviderView so that it includes the new columns 'Type' and 'BillingPhone'
-CREATE OR ALTER VIEW VIEW [dbo].[ProviderView]
+CREATE OR ALTER VIEW [dbo].[ProviderView]
 AS
 SELECT
     *
@@ -28,7 +28,7 @@ FROM
 GO
 
 -- Recreate ProviderUserProviderDetailsView so that it includes the new columns 'Type' and 'BillingPhone'
-CREATE OR ALTER VIEW VIEW [dbo].[ProviderUserProviderDetailsView]
+CREATE OR ALTER VIEW [dbo].[ProviderUserProviderDetailsView]
 AS
 SELECT
     PU.[UserId],
