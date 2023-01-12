@@ -6,7 +6,7 @@ namespace Bit.PostgresMigrations.Migrations;
 public partial class SplitManageCollectionsPermissions2 : Migration
 {
     private const string _scriptLocation =
-        "PostgresMigrations.Scripts.2021-09-21_01_SplitManageCollectionsPermission.psql";
+        "PostgresMigrations.HelperScripts.2021-09-21_01_SplitManageCollectionsPermission.psql";
 
     protected override void Up(MigrationBuilder migrationBuilder)
     {

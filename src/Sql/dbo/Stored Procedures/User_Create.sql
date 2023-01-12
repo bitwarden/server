@@ -34,7 +34,8 @@
     @UsesKeyConnector BIT = 0,
     @FailedLoginCount INT = 0,
     @LastFailedLoginDate DATETIME2(7),
-    @UnknownDeviceVerificationEnabled BIT = 1
+    @UnknownDeviceVerificationEnabled BIT = 1,
+    @AvatarColor VARCHAR(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -76,7 +77,8 @@ BEGIN
         [UsesKeyConnector],
         [FailedLoginCount],
         [LastFailedLoginDate],
-        [UnknownDeviceVerificationEnabled]
+        [UnknownDeviceVerificationEnabled],
+        [AvatarColor]
     )
     VALUES
     (
@@ -115,6 +117,7 @@ BEGIN
         @UsesKeyConnector,
         @FailedLoginCount,
         @LastFailedLoginDate,
-        @UnknownDeviceVerificationEnabled
+        @UnknownDeviceVerificationEnabled,
+        @AvatarColor
     )
 END
