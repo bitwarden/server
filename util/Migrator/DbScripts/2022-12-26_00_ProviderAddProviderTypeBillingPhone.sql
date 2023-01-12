@@ -154,3 +154,15 @@ SET
 WHERE
     [Id] = @Id
 END
+
+IF OBJECT_ID('[dbo].[Provider_ReadById]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[Provider_ReadById]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[Provider_Search]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[Provider_Search]';
+END
+GO
