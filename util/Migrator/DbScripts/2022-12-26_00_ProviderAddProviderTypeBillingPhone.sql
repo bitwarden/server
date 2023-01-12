@@ -122,7 +122,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Provider_Update]
     @BusinessCountry VARCHAR(2),
     @BusinessTaxNumber NVARCHAR(30),
     @BillingEmail NVARCHAR(256),
-    @BillingPhone NVARCHAR(50),
+    @BillingPhone NVARCHAR(50) = NULL,
     @Status TINYINT,
     @Type TINYINT = 0,
     @UseEvents BIT,
