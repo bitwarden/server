@@ -185,14 +185,14 @@ public class EventService : IEventService
             Date = date.GetValueOrDefault(DateTime.UtcNow),
             SystemUser = systemUser
         };
-        
+
         if (systemUser is EventSystemUser.SCIM)
         {
             // System user only used for SCIM logs in this method
             // and we want event logs to report server instead of unknown
             e.DeviceType = DeviceType.Server;
         }
-        
+
         await _eventWriteService.CreateAsync(e);
     }
 
@@ -258,7 +258,7 @@ public class EventService : IEventService
                 Date = date.GetValueOrDefault(DateTime.UtcNow),
                 SystemUser = systemUser
             };
-            
+
             if (systemUser is EventSystemUser.SCIM)
             {
                 // System user only used for SCIM logs in this method
