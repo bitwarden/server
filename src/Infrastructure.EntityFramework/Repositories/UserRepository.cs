@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
@@ -9,9 +10,23 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
 {
-    public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+    private readonly IDataProtector _dataProtector;
+
+    public UserRepository(
+        IServiceScopeFactory serviceScopeFactory,
+        IMapper mapper,
+        IDataProtectionProvider dataProtectionProvider)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
-    { }
+    {
+        _dataProtector = dataProtectionProvider.CreateProtector("UserRepositoryProtection");
+    }
+
+    public override async Task<Core.Entities.User> GetByIdAsync(Guid id)
+    {
+        var user = await base.GetByIdAsync(id);
+        UnprotectData(user);
+        return user;
+    }
 
     public async Task<Core.Entities.User> GetByEmailAsync(string email)
     {
@@ -19,6 +34,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             var dbContext = GetDatabaseContext(scope);
             var entity = await GetDbSet(dbContext).FirstOrDefaultAsync(e => e.Email == email);
+            UnprotectData(entity);
             return Mapper.Map<Core.Entities.User>(entity);
         }
     }
@@ -60,6 +76,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                     .Skip(skip).Take(take)
                     .ToListAsync();
             }
+            UnprotectData(users);
             return Mapper.Map<List<Core.Entities.User>>(users);
         }
     }
@@ -70,6 +87,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             var dbContext = GetDatabaseContext(scope);
             var users = await GetDbSet(dbContext).Where(e => e.Premium == premium).ToListAsync();
+            UnprotectData(users);
             return Mapper.Map<List<Core.Entities.User>>(users);
         }
     }
@@ -129,6 +147,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             }
 
             var entity = await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
+            UnprotectData(entity);
             return Mapper.Map<Core.Entities.User>(entity);
         }
     }
@@ -138,8 +157,9 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var users = dbContext.Users.Where(x => ids.Contains(x.Id));
-            return await users.ToListAsync();
+            var users = await dbContext.Users.Where(x => ids.Contains(x.Id)).ToListAsync();
+            UnprotectData(users);
+            return users;
         }
     }
 
@@ -176,6 +196,53 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             await transaction.CommitAsync();
             await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public override async Task<Core.Entities.User> CreateAsync(Core.Entities.User user)
+    {
+        ProtectData(user);
+        return await base.CreateAsync(user);
+    }
+
+    public override async Task<List<Core.Entities.User>> CreateMany(List<Core.Entities.User> users)
+    {
+        foreach (var user in users)
+        {
+            ProtectData(user);
+        }
+        return await base.CreateMany(users);
+    }
+
+    public override async Task ReplaceAsync(Core.Entities.User user)
+    {
+        ProtectData(user);
+        await base.ReplaceAsync(user);
+    }
+
+    private void ProtectData(Core.Entities.User user)
+    {
+        user.MasterPassword = string.Concat("P_", _dataProtector.Protect(user.MasterPassword));
+        user.Key = string.Concat("P_", _dataProtector.Protect(user.Key));
+    }
+
+    private void UnprotectData(Core.Entities.User user)
+    {
+        if (user.MasterPassword.StartsWith("P_"))
+        {
+            user.MasterPassword = _dataProtector.Unprotect(user.MasterPassword.Substring(2));
+        }
+        if (user.Key.StartsWith("P_"))
+        {
+            user.Key = _dataProtector.Unprotect(user.Key.Substring(2));
+        }
+    }
+
+    private void UnprotectData(IEnumerable<Core.Entities.User> users)
+    {
+        foreach (var user in users)
+        {
+            UnprotectData(user);
         }
     }
 }
