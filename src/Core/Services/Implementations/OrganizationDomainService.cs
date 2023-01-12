@@ -47,7 +47,7 @@ public class OrganizationDomainService : IOrganizationDomainService
             try
             {
                 _logger.LogInformation(Constants.BypassFiltersEventId, null,
-                    "Attempting verification for {OrgId} with domain {Domain}", domain.OrganizationId, domain.DomainName);
+                    "Attempting verification for organization {OrgId} with domain {Domain}", domain.OrganizationId, domain.DomainName);
 
                 var status = await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt);
                 if (status)
@@ -67,10 +67,12 @@ public class OrganizationDomainService : IOrganizationDomainService
                 await _domainRepository.ReplaceAsync(domain);
                 await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified,
                     EventSystemUser.SSO);
+                _logger.LogInformation(Constants.BypassFiltersEventId, null,
+                    "Verification for organization {OrgId} with domain {Domain} failed", domain.OrganizationId, domain.DomainName);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Verification for organization {OrgId} with domain {Domain} failed", domain.OrganizationId, domain.DomainName);
+                _logger.LogError(ex, "Verification for organization {OrgId} with domain {Domain} threw an exception", domain.OrganizationId, domain.DomainName);
             }
         }
     }
