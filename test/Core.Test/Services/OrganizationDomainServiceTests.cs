@@ -46,7 +46,7 @@ public class OrganizationDomainServiceTests
             .ReplaceAsync(default);
         await sutProvider.GetDependency<IEventService>().ReceivedWithAnyArgs(2)
             .LogOrganizationDomainEventAsync(default, EventType.OrganizationDomain_NotVerified,
-                EventSystemUser.SSO);
+                EventSystemUser.DomainVerification);
     }
 
     [Theory, BitAutoData]
