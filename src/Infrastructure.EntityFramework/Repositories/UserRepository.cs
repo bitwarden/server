@@ -10,6 +10,7 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
 {
+    private const string DataProtectorPurpose = "UserRepositoryProtection";
     private readonly IDataProtector _dataProtector;
 
     public UserRepository(
@@ -18,7 +19,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         IDataProtectionProvider dataProtectionProvider)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
     {
-        _dataProtector = dataProtectionProvider.CreateProtector("UserRepositoryProtection");
+        _dataProtector = dataProtectionProvider.CreateProtector(DataProtectorPurpose);
     }
 
     public override async Task<Core.Entities.User> GetByIdAsync(Guid id)
@@ -211,6 +212,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             ProtectData(user);
         }
+
         return await base.CreateMany(users);
     }
 
@@ -244,6 +246,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             user.MasterPassword = _dataProtector.Unprotect(user.MasterPassword.Substring(2));
         }
+
         if (user.Key?.StartsWith("P_") ?? false)
         {
             user.Key = _dataProtector.Unprotect(user.Key.Substring(2));
@@ -256,6 +259,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         {
             return;
         }
+
         foreach (var user in users)
         {
             UnprotectData(user);

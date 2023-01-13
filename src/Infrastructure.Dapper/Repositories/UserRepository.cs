@@ -11,6 +11,7 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
+    private const string DataProtectorPurpose = "UserRepositoryProtection";
     private readonly IDataProtector _dataProtector;
 
     public UserRepository(
@@ -18,7 +19,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         IDataProtectionProvider dataProtectionProvider)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
-        _dataProtector = dataProtectionProvider.CreateProtector("UserRepositoryProtection");
+        _dataProtector = dataProtectionProvider.CreateProtector(DataProtectorPurpose);
     }
 
     public UserRepository(string connectionString, string readOnlyConnectionString)
@@ -127,6 +128,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             return results.SingleOrDefault();
         }
     }
+
     public override async Task<User> CreateAsync(User user)
     {
         ProtectData(user);
@@ -212,6 +214,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             user.MasterPassword = _dataProtector.Unprotect(user.MasterPassword.Substring(2));
         }
+
         if (user.Key?.StartsWith("P_") ?? false)
         {
             user.Key = _dataProtector.Unprotect(user.Key.Substring(2));
@@ -224,6 +227,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         {
             return;
         }
+
         foreach (var user in users)
         {
             UnprotectData(user);
