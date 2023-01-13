@@ -674,6 +674,15 @@
           "Microsoft.Extensions.DependencyModel": "6.0.0"
         }
       },
+      "Microsoft.EntityFrameworkCore.SqlServer": {
+        "type": "Transitive",
+        "resolved": "6.0.12",
+        "contentHash": "bdKnSz1w+WZz9QYWhs3wwGuMn4YssjdR+HOBpzChQ6C3+dblq4Pammm5fzugcPOhTgCiWftOT2jPOT5hEy4bYg==",
+        "dependencies": {
+          "Microsoft.Data.SqlClient": "2.1.4",
+          "Microsoft.EntityFrameworkCore.Relational": "6.0.12"
+        }
+      },
       "Microsoft.Extensions.ApiDescription.Server": {
         "type": "Transitive",
         "resolved": "3.0.0",
@@ -3132,6 +3141,7 @@
         "dependencies": {
           "Azure.Messaging.EventGrid": "[4.10.0, )",
           "Commercial.Core": "[2022.12.0, )",
+          "Commercial.Infrastructure.EntityFramework": "[2022.12.0, )",
           "Core": "[2022.12.0, )",
           "SharedWeb": "[2022.12.0, )",
           "Swashbuckle.AspNetCore": "[6.3.1, )"
@@ -3141,6 +3151,14 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2022.12.0, )"
+        }
+      },
+      "commercial.infrastructure.entityframework": {
+        "type": "Project",
+        "dependencies": {
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
+          "Core": "[2022.12.0, )",
+          "Infrastructure.EntityFramework": "[2022.12.0, )"
         }
       },
       "common": {
@@ -3216,6 +3234,7 @@
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
           "Core": "[2022.12.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[6.0.12, )",
+          "Microsoft.EntityFrameworkCore.SqlServer": "[6.0.12, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[6.0.12, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.8, )",
           "Pomelo.EntityFrameworkCore.MySql": "[6.0.2, )",

@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -137,7 +138,7 @@ public class CurrentContext : ICurrentContext
             }
         }
 
-        DeviceIdentifier = GetClaimValue(claimsDict, "device");
+        DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
 
         Organizations = GetOrganizations(claimsDict, orgApi);
 
@@ -149,9 +150,9 @@ public class CurrentContext : ICurrentContext
     private List<CurrentContentOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
     {
         var organizations = new List<CurrentContentOrganization>();
-        if (claimsDict.ContainsKey("orgowner"))
+        if (claimsDict.ContainsKey(Claims.OrganizationOwner))
         {
-            organizations.AddRange(claimsDict["orgowner"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationOwner].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -167,9 +168,9 @@ public class CurrentContext : ICurrentContext
             });
         }
 
-        if (claimsDict.ContainsKey("orgadmin"))
+        if (claimsDict.ContainsKey(Claims.OrganizationAdmin))
         {
-            organizations.AddRange(claimsDict["orgadmin"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationAdmin].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -177,9 +178,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey("orguser"))
+        if (claimsDict.ContainsKey(Claims.OrganizationUser))
         {
-            organizations.AddRange(claimsDict["orguser"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationUser].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -187,9 +188,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey("orgmanager"))
+        if (claimsDict.ContainsKey(Claims.OrganizationManager))
         {
-            organizations.AddRange(claimsDict["orgmanager"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationManager].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -197,9 +198,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey("orgcustom"))
+        if (claimsDict.ContainsKey(Claims.OrganizationCustom))
         {
-            organizations.AddRange(claimsDict["orgcustom"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationCustom].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -214,9 +215,9 @@ public class CurrentContext : ICurrentContext
     private List<CurrentContentProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
     {
         var providers = new List<CurrentContentProvider>();
-        if (claimsDict.ContainsKey("providerprovideradmin"))
+        if (claimsDict.ContainsKey(Claims.ProviderAdmin))
         {
-            providers.AddRange(claimsDict["providerprovideradmin"].Select(c =>
+            providers.AddRange(claimsDict[Claims.ProviderAdmin].Select(c =>
                 new CurrentContentProvider
                 {
                     Id = new Guid(c.Value),
@@ -224,9 +225,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey("providerserviceuser"))
+        if (claimsDict.ContainsKey(Claims.ProviderServiceUser))
         {
-            providers.AddRange(claimsDict["providerserviceuser"].Select(c =>
+            providers.AddRange(claimsDict[Claims.ProviderServiceUser].Select(c =>
                 new CurrentContentProvider
                 {
                     Id = new Guid(c.Value),

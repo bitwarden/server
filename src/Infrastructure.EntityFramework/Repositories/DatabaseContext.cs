@@ -1,7 +1,6 @@
 ﻿using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.AspNetCore.DataProtection;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -16,6 +15,8 @@ public class DatabaseContext : DbContext
         : base(options)
     { }
 
+    public DbSet<AccessPolicy> AccessPolicies { get; set; }
+    public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
@@ -36,6 +37,9 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
+    public DbSet<Secret> Secret { get; set; }
+    public DbSet<ServiceAccount> ServiceAccount { get; set; }
+    public DbSet<Project> Project { get; set; }
     public DbSet<ProviderUser> ProviderUsers { get; set; }
     public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
     public DbSet<Send> Sends { get; set; }
@@ -48,6 +52,13 @@ public class DatabaseContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        // Scans and loads all configurations implementing the `IEntityTypeConfiguration` from the
+        //  `Infrastructure.EntityFramework` Module. Note to get the assembly we can use a random class
+        //   from this module.
+        builder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+
+        // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
+        // Entity Framework code first database configurations.
         var eCipher = builder.Entity<Cipher>();
         var eCollection = builder.Entity<Collection>();
         var eCollectionCipher = builder.Entity<CollectionCipher>();
@@ -173,5 +184,4 @@ public class DatabaseContext : DbContext
             }
         }
     }
-
 }

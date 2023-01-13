@@ -83,9 +83,9 @@ public class Startup
         services.AddDefaultServices(globalSettings);
 
 #if OSS
-            services.AddOosServices();
+        services.AddOosServices();
 #else
-        services.AddCommCoreServices();
+        services.AddCommercialCoreServices();
 #endif
 
         // Mvc

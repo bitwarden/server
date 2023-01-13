@@ -6,13 +6,13 @@
 #  in the future and investigate if we can migrate back.
 # docker-compose --profile mssql exec mssql bash /mnt/helpers/run_migrations.sh @args
 
-param([switch]$all = $false, [switch]$postgres = $false, [switch]$mysql = $false, [switch]$mssql = $false)
+param([switch]$all = $false, [switch]$postgres = $false, [switch]$mysql = $false, [switch]$mssql = $false, [switch]$sqlite = $false)
 
-if (!$all -and !$postgres -and !$mysql) {
+if (!$all -and !$postgres -and !$mysql -and !$sqlite) {
   $mssql = $true;
 }
 
-if ($all -or $postgres -or $mysql) {
+if ($all -or $postgres -or $mysql -or $sqlite) {
   dotnet ef *> $null
   if ($LASTEXITCODE -ne 0) {
     Write-Host "Entity Framework Core tools were not found in the dotnet global tools. Attempting to install"
@@ -35,14 +35,13 @@ if ($all -or $mssql) {
 
 $currentDir = Get-Location
 
-if ($all -or $mysql) {
-  Write-Host "Starting MySQL Migrations"
-  Set-Location "$currentDir/../util/MySqlMigrations/"
-  dotnet ef database update
-}
-if ($all -or $postgres) {
-  Write-Host "Starting PostgreSQL Migrations"
-  Set-Location "$currentDir/../util/PostgresMigrations/"
+Foreach ($item in @(@($mysql, "MySQL", "MySqlMigrations"), @($postgres, "PostgreSQL", "PostgresMigrations"), @($sqlite, "SQLite", "SqliteMigrations"))) {
+  if (!$item[0] -and !$all) {
+    continue
+  }
+
+  Write-Host "Starting $($item[1]) Migrations"
+  Set-Location "$currentDir/../util/$($item[2])/"
   dotnet ef database update
 }
 
