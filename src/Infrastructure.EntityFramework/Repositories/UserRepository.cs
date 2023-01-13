@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
@@ -10,17 +9,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories;
 
 public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserRepository
 {
-    private const string DataProtectorPurpose = "UserRepositoryProtection";
-    private readonly IDataProtector _dataProtector;
-
-    public UserRepository(
-        IServiceScopeFactory serviceScopeFactory,
-        IMapper mapper,
-        IDataProtectionProvider dataProtectionProvider)
+    public UserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Users)
-    {
-        _dataProtector = dataProtectionProvider.CreateProtector(DataProtectorPurpose);
-    }
+    { }
 
     public async Task<Core.Entities.User> GetByEmailAsync(string email)
     {
