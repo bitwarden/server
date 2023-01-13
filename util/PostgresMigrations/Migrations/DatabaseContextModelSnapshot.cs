@@ -284,14 +284,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("ReadOnly")
                         .HasColumnType("boolean");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("CollectionId", "OrganizationUserId");
 
                     b.HasIndex("OrganizationUserId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("CollectionUsers");
                 });
@@ -550,14 +545,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("OrganizationUserId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("GroupId", "OrganizationUserId");
 
                     b.HasIndex("OrganizationUserId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("GroupUser", (string)null);
                 });
@@ -1687,10 +1677,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", null)
-                        .WithMany("CollectionUsers")
-                        .HasForeignKey("UserId");
-
                     b.Navigation("Collection");
 
                     b.Navigation("OrganizationUser");
@@ -1755,14 +1741,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
-                        .WithMany()
+                        .WithMany("GroupUsers")
                         .HasForeignKey("OrganizationUserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", null)
-                        .WithMany("GroupUsers")
-                        .HasForeignKey("UserId");
 
                     b.Navigation("Group");
 
@@ -2094,6 +2076,8 @@ namespace Bit.PostgresMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", b =>
                 {
                     b.Navigation("CollectionUsers");
+
+                    b.Navigation("GroupUsers");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Project", b =>
@@ -2109,11 +2093,7 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.Navigation("Ciphers");
 
-                    b.Navigation("CollectionUsers");
-
                     b.Navigation("Folders");
-
-                    b.Navigation("GroupUsers");
 
                     b.Navigation("OrganizationUsers");
 
