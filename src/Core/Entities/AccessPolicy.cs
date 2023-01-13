@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
