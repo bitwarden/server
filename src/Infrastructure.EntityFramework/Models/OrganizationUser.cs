@@ -7,6 +7,7 @@ public class OrganizationUser : Core.Entities.OrganizationUser
     public virtual Organization Organization { get; set; }
     public virtual User User { get; set; }
     public virtual ICollection<CollectionUser> CollectionUsers { get; set; }
+    public virtual ICollection<GroupUser> GroupUsers { get; set; }
 }
 
 public class OrganizationUserMapperProfile : Profile
