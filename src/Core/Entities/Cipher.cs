@@ -87,7 +87,7 @@ public class Cipher : ITableObject<Guid>, ICloneable
         {
             return;
         }
-        // NRJ: We know it contains something so therefore it exists
+        // Justification: We know it contains something so therefore it exists
         attachments!.Remove(id);
         SetAttachments(attachments);
     }
