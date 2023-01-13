@@ -1,5 +1,9 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Infrastructure.EntityFramework.Converters;
+using Bit.Infrastructure.EntityFramework.Models;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
@@ -101,6 +105,10 @@ public class DatabaseContext : DbContext
         eGrant.HasKey(x => x.Key);
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
+        var dataProtector = this.GetService<IDataProtectionProvider>().CreateProtector("DatabaseFieldProtection");
+        var dataProtectionConverter = new DataProtectionConverter(dataProtector);
+        eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
+        eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
 
         if (Database.IsNpgsql())
         {
@@ -165,4 +173,5 @@ public class DatabaseContext : DbContext
             }
         }
     }
+
 }

@@ -198,9 +198,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
 
         user.MasterPassword = user.MasterPassword == null ? null :
-            string.Concat("P_", _dataProtector.Protect(user.MasterPassword));
+            string.Concat("P|", _dataProtector.Protect(user.MasterPassword));
         user.Key = user.Key == null ? null :
-            string.Concat("P_", _dataProtector.Protect(user.Key));
+            string.Concat("P|", _dataProtector.Protect(user.Key));
     }
 
     private void UnprotectData(User user)
@@ -210,12 +210,12 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             return;
         }
 
-        if (user.MasterPassword?.StartsWith("P_") ?? false)
+        if (user.MasterPassword?.StartsWith("P|") ?? false)
         {
             user.MasterPassword = _dataProtector.Unprotect(user.MasterPassword.Substring(2));
         }
 
-        if (user.Key?.StartsWith("P_") ?? false)
+        if (user.Key?.StartsWith("P|") ?? false)
         {
             user.Key = _dataProtector.Unprotect(user.Key.Substring(2));
         }
