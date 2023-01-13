@@ -19,7 +19,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
     private readonly ApiApplicationFactory _factory;
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
-    private Organization? _organization;
+    private Organization _organization = null!;
 
     public SecretsControllerTest(ApiApplicationFactory factory)
     {
@@ -58,7 +58,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         var result = await response.Content.ReadFromJsonAsync<Secret>();
 
         Assert.NotNull(result);
-        Assert.Equal(request.Key, result.Key);
+        Assert.Equal(request.Key, result!.Key);
         Assert.Equal(request.Value, result.Value);
         Assert.Equal(request.Note, result.Note);
         AssertHelper.AssertRecent(result.RevisionDate);
@@ -84,7 +84,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
             OrganizationId = _organization.Id,
             Name = _mockEncryptedString
         });
-        var projectIds = new Guid[] { project.Id };
+        var projectIds = new[] { project.Id };
         var secretRequest = new SecretCreateRequestModel()
         {
             Key = _mockEncryptedString,
@@ -99,7 +99,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         var secret = (await _secretRepository.GetManyByProjectIdAsync(project.Id)).First();
 
         Assert.NotNull(secretResult);
-        Assert.Equal(secret.Id, secretResult.Id);
+        Assert.Equal(secret.Id, secretResult!.Id);
         Assert.Equal(secret.OrganizationId, secretResult.OrganizationId);
         Assert.Equal(secret.Key, secretResult.Key);
         Assert.Equal(secret.Value, secretResult.Value);
@@ -129,7 +129,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         var response = await _client.PutAsJsonAsync($"/secrets/{initialSecret.Id}", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<Secret>();
-        Assert.Equal(request.Key, result.Key);
+        Assert.Equal(request.Key, result!.Key);
         Assert.Equal(request.Value, result.Value);
         Assert.NotEqual(initialSecret.Value, result.Value);
         Assert.Equal(request.Note, result.Note);
@@ -200,7 +200,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         var response = await _client.GetAsync($"/secrets/{createdSecret.Id}");
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<Secret>();
-        Assert.Equal(createdSecret.Key, result.Key);
+        Assert.Equal(createdSecret.Key, result!.Key);
         Assert.Equal(createdSecret.Value, result.Value);
         Assert.Equal(createdSecret.Note, result.Note);
         Assert.Equal(createdSecret.RevisionDate, result.RevisionDate);

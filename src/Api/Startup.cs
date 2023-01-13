@@ -136,7 +136,7 @@ public class Startup
         services.AddOosServices();
 #else
         services.AddCommercialCoreServices();
-        services.AddCommercialSecretsServices();
+        services.AddCommercialSecretsManagerServices();
         services.AddCommercialEFRepositories();
 #endif
 

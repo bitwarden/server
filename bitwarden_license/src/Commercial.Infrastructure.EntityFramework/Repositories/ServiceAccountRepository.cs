@@ -19,9 +19,9 @@ public class ServiceAccountRepository : Repository<Core.Entities.ServiceAccount,
         {
             var dbContext = GetDatabaseContext(scope);
             var serviceAccounts = await dbContext.ServiceAccount
-                                    .Where(c => c.OrganizationId == organizationId)
-                                    .OrderBy(c => c.RevisionDate)
-                                    .ToListAsync();
+                .Where(c => c.OrganizationId == organizationId)
+                .OrderBy(c => c.RevisionDate)
+                .ToListAsync();
             return Mapper.Map<List<Core.Entities.ServiceAccount>>(serviceAccounts);
         }
     }

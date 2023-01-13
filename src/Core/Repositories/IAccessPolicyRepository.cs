@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using Bit.Core.Entities;
 
 namespace Bit.Core.Repositories;

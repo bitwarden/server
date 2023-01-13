@@ -1,5 +1,4 @@
-﻿using System.Data.SqlClient;
-using Bit.Billing.Constants;
+﻿using Bit.Billing.Constants;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -9,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Stripe;
 using TaxRate = Bit.Core.Entities.TaxRate;

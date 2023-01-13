@@ -18,7 +18,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly IProjectRepository _projectRepository;
-    private Organization? _organization;
+    private Organization _organization = null!;
 
     public ProjectsControllerTest(ApiApplicationFactory factory)
     {
@@ -55,7 +55,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var result = await response.Content.ReadFromJsonAsync<Project>();
 
         Assert.NotNull(result);
-        Assert.Equal(request.Name, result.Name);
+        Assert.Equal(request.Name, result!.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
         Assert.Null(result.DeletedDate);
@@ -87,7 +87,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var response = await _client.PutAsJsonAsync($"/projects/{initialProject.Id}", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<Project>();
-        Assert.NotEqual(initialProject.Name, result.Name);
+        Assert.NotEqual(initialProject.Name, result!.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
         Assert.NotEqual(initialProject.RevisionDate, result.RevisionDate);
         Assert.Null(result.DeletedDate);
@@ -114,7 +114,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var response = await _client.GetAsync($"/projects/{createdProject.Id}");
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<Project>();
-        Assert.Equal(createdProject.Name, result.Name);
+        Assert.Equal(createdProject.Name, result!.Name);
         Assert.Equal(createdProject.RevisionDate, result.RevisionDate);
         Assert.Equal(createdProject.CreationDate, result.CreationDate);
         Assert.Null(result.DeletedDate);

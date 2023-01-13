@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.SecretManagerFeatures.AccessPolicies;
+using Bit.Commercial.Core.SecretManagerFeatures.AccessPolicies;
 using Bit.Commercial.Core.SecretManagerFeatures.AccessTokens;
 using Bit.Commercial.Core.SecretManagerFeatures.Projects;
 using Bit.Commercial.Core.SecretManagerFeatures.Secrets;

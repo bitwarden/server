@@ -18,7 +18,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private Organization _organization;
+    private Organization _organization = null!;
 
     public ServiceAccountsControllerTest(ApiApplicationFactory factory)
     {
@@ -74,12 +74,12 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
             Name = _mockEncryptedString,
         };
 
-        var response = await _client.PostAsJsonAsync($"/organizations/{_organization?.Id}/service-accounts", request);
+        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/service-accounts", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ServiceAccount>();
 
         Assert.NotNull(result);
-        Assert.Equal(request.Name, result.Name);
+        Assert.Equal(request.Name, result!.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
 
@@ -108,7 +108,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ServiceAccount>();
         Assert.NotNull(result);
-        Assert.Equal(request.Name, result.Name);
+        Assert.Equal(request.Name, result!.Name);
         Assert.NotEqual(initialServiceAccount.Name, result.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
         Assert.NotEqual(initialServiceAccount.RevisionDate, result.RevisionDate);
@@ -145,7 +145,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ApiKey>();
 
         Assert.NotNull(result);
-        Assert.Equal(request.Name, result.Name);
+        Assert.Equal(request.Name, result!.Name);
         Assert.NotNull(result.ClientSecret);
         Assert.Equal(mockExpiresAt, result.ExpireAt);
         AssertHelper.AssertRecent(result.RevisionDate);
@@ -174,7 +174,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         var result = await response.Content.ReadFromJsonAsync<ApiKey>();
 
         Assert.NotNull(result);
-        Assert.Equal(request.Name, result.Name);
+        Assert.Equal(request.Name, result!.Name);
         Assert.NotNull(result.ClientSecret);
         Assert.Null(result.ExpireAt);
         AssertHelper.AssertRecent(result.RevisionDate);
