@@ -17,8 +17,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
 
-    private readonly string _mockEncryptedString =
-        "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
+    private const string _mockEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
@@ -74,7 +73,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Equal(initialServiceAccount.Id, result.ServiceAccountAccessPolicies.First().ServiceAccountId);
+        Assert.Equal(initialServiceAccount.Id, result!.ServiceAccountAccessPolicies.First().ServiceAccountId);
         Assert.True(result.ServiceAccountAccessPolicies.First().Read);
         Assert.True(result.ServiceAccountAccessPolicies.First().Write);
         AssertHelper.AssertRecent(result.ServiceAccountAccessPolicies.First().RevisionDate);
@@ -83,7 +82,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var createdAccessPolicy =
             await _accessPolicyRepository.GetByIdAsync(result.ServiceAccountAccessPolicies.First().Id);
         Assert.NotNull(createdAccessPolicy);
-        Assert.Equal(result.ServiceAccountAccessPolicies.First().Read, createdAccessPolicy.Read);
+        Assert.Equal(result.ServiceAccountAccessPolicies.First().Read, createdAccessPolicy!.Read);
         Assert.Equal(result.ServiceAccountAccessPolicies.First().Write, createdAccessPolicy.Write);
         Assert.Equal(result.ServiceAccountAccessPolicies.First().Id, createdAccessPolicy.Id);
         AssertHelper.AssertRecent(createdAccessPolicy.CreationDate);
@@ -105,13 +104,13 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountProjectAccessPolicyResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Equal(expectedRead, result.Read);
+        Assert.Equal(expectedRead, result!.Read);
         Assert.Equal(expectedWrite, result.Write);
         AssertHelper.AssertRecent(result.RevisionDate);
 
         var updatedAccessPolicy = await _accessPolicyRepository.GetByIdAsync(result.Id);
         Assert.NotNull(updatedAccessPolicy);
-        Assert.Equal(expectedRead, updatedAccessPolicy.Read);
+        Assert.Equal(expectedRead, updatedAccessPolicy!.Read);
         Assert.Equal(expectedWrite, updatedAccessPolicy.Write);
         AssertHelper.AssertRecent(updatedAccessPolicy.RevisionDate);
     }
@@ -140,7 +139,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
 
         Assert.NotNull(result?.ServiceAccountAccessPolicies);
-        Assert.Single(result.ServiceAccountAccessPolicies);
+        Assert.Single(result!.ServiceAccountAccessPolicies);
     }
 
     private async Task<RequestSetupData> SetupAccessPolicyRequest()

@@ -7,7 +7,7 @@ public class ProjectAccessPoliciesResponseModel : ResponseModel
 {
     private const string _objectName = "projectAccessPolicies";
 
-    public ProjectAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy>? baseAccessPolicies)
+    public ProjectAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies)
         : base(_objectName)
     {
         if (baseAccessPolicies == null)
