@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Data.SqlClient;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
