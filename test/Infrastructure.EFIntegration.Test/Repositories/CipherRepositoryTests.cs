@@ -24,20 +24,20 @@ public class CipherRepositoryTests
     }
 
     [CiSkippedTheory, EfUserCipherCustomize, BitAutoData]
-    public void UserCipher_CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
+    public Task UserCipher_CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
         CipherCompare equalityComparer, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.CipherRepository sqlCipherRepo,
         SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo) => CreateAsync_Works_DataMatches(
             cipher, user, org, equalityComparer, suts, efUserRepos, efOrgRepos, sqlCipherRepo, sqlUserRepo, sqlOrgRepo);
 
     [CiSkippedTheory, EfOrganizationCipherCustomize, BitAutoData]
-    public void OrganizationCipher_CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
+    public Task OrganizationCipher_CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
         CipherCompare equalityComparer, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.CipherRepository sqlCipherRepo,
         SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo) => CreateAsync_Works_DataMatches(
             cipher, user, org, equalityComparer, suts, efUserRepos, efOrgRepos, sqlCipherRepo, sqlUserRepo, sqlOrgRepo);
 
-    private async void CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
+    private async Task CreateAsync_Works_DataMatches(Cipher cipher, User user, Organization org,
         CipherCompare equalityComparer, List<EfRepo.CipherRepository> suts, List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.CipherRepository sqlCipherRepo,
         SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo)
@@ -184,7 +184,11 @@ public class CipherRepositoryTests
         List<EfRepo.CipherRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
         List<EfRepo.OrganizationRepository> efOrgRepos
-            ) => DeleteAsync_CipherIsDeleted(cipher, user, org, suts, efUserRepos, efOrgRepos);
+            )
+    {
+        DeleteAsync_CipherIsDeleted(cipher, user, org, suts, efUserRepos, efOrgRepos);
+        return Task.CompletedTask;
+    }
 
     private async Task DeleteAsync_CipherIsDeleted(
         Cipher cipher,

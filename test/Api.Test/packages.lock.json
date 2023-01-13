@@ -658,6 +658,15 @@
           "Microsoft.Extensions.DependencyModel": "6.0.0"
         }
       },
+      "Microsoft.EntityFrameworkCore.SqlServer": {
+        "type": "Transitive",
+        "resolved": "6.0.12",
+        "contentHash": "bdKnSz1w+WZz9QYWhs3wwGuMn4YssjdR+HOBpzChQ6C3+dblq4Pammm5fzugcPOhTgCiWftOT2jPOT5hEy4bYg==",
+        "dependencies": {
+          "Microsoft.Data.SqlClient": "2.1.4",
+          "Microsoft.EntityFrameworkCore.Relational": "6.0.12"
+        }
+      },
       "Microsoft.Extensions.ApiDescription.Server": {
         "type": "Transitive",
         "resolved": "3.0.0",
@@ -1051,6 +1060,15 @@
         "dependencies": {
           "Portable.BouncyCastle": "1.9.0",
           "System.Security.Cryptography.Pkcs": "6.0.0"
+        }
+      },
+      "Moq": {
+        "type": "Transitive",
+        "resolved": "4.17.2",
+        "contentHash": "HytUPJ3/uks2UgJ9hIcyXm3YxpFAR4OJzbQwTHltbKGun3lFLhEHs97hiiPj1dY8jV/kasXeihTzDxct6Zf3iQ==",
+        "dependencies": {
+          "Castle.Core": "4.4.1",
+          "System.Threading.Tasks.Extensions": "4.5.4"
         }
       },
       "MySqlConnector": {
@@ -3002,6 +3020,7 @@
         "dependencies": {
           "Azure.Messaging.EventGrid": "[4.10.0, )",
           "Commercial.Core": "[2022.12.0, )",
+          "Commercial.Infrastructure.EntityFramework": "[2022.12.0, )",
           "Core": "[2022.12.0, )",
           "SharedWeb": "[2022.12.0, )",
           "Swashbuckle.AspNetCore": "[6.3.1, )"
@@ -3011,6 +3030,14 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2022.12.0, )"
+        }
+      },
+      "commercial.infrastructure.entityframework": {
+        "type": "Project",
+        "dependencies": {
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
+          "Core": "[2022.12.0, )",
+          "Infrastructure.EntityFramework": "[2022.12.0, )"
         }
       },
       "common": {
@@ -3065,6 +3092,20 @@
           "YubicoDotNetClient": "[1.2.0, )"
         }
       },
+      "core.test": {
+        "type": "Project",
+        "dependencies": {
+          "AutoFixture.AutoNSubstitute": "[4.17.0, )",
+          "AutoFixture.Xunit2": "[4.17.0, )",
+          "Common": "[2022.12.0, )",
+          "Core": "[2022.12.0, )",
+          "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
+          "Microsoft.NET.Test.Sdk": "[17.1.0, )",
+          "Moq": "[4.17.2, )",
+          "NSubstitute": "[4.3.0, )",
+          "xunit": "[2.4.1, )"
+        }
+      },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
@@ -3078,6 +3119,7 @@
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[11.0.0, )",
           "Core": "[2022.12.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[6.0.12, )",
+          "Microsoft.EntityFrameworkCore.SqlServer": "[6.0.12, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[6.0.12, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.8, )",
           "Pomelo.EntityFrameworkCore.MySql": "[6.0.2, )",
