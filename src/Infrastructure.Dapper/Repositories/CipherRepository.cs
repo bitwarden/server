@@ -1,5 +1,4 @@
 ﻿using System.Data;
-using System.Data.SqlClient;
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
@@ -7,6 +6,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Core.Models.Data;
 using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 

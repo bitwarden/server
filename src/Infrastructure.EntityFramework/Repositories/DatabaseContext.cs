@@ -12,6 +12,8 @@ public class DatabaseContext : DbContext
         : base(options)
     { }
 
+    public DbSet<AccessPolicy> AccessPolicies { get; set; }
+    public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
@@ -32,6 +34,9 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
+    public DbSet<Secret> Secret { get; set; }
+    public DbSet<ServiceAccount> ServiceAccount { get; set; }
+    public DbSet<Project> Project { get; set; }
     public DbSet<ProviderUser> ProviderUsers { get; set; }
     public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
     public DbSet<Send> Sends { get; set; }
@@ -44,6 +49,13 @@ public class DatabaseContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        // Scans and loads all configurations implementing the `IEntityTypeConfiguration` from the
+        //  `Infrastructure.EntityFramework` Module. Note to get the assembly we can use a random class
+        //   from this module.
+        builder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+
+        // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
+        // Entity Framework code first database configurations.
         var eCipher = builder.Entity<Cipher>();
         var eCollection = builder.Entity<Collection>();
         var eCollectionCipher = builder.Entity<CollectionCipher>();
@@ -101,7 +113,6 @@ public class DatabaseContext : DbContext
         eGrant.HasKey(x => x.Key);
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
-
         if (Database.IsNpgsql())
         {
             // the postgres provider doesn't currently support database level non-deterministic collations.
@@ -157,20 +168,10 @@ public class DatabaseContext : DbContext
             {
                 if (property.ClrType == typeof(DateTime) || property.ClrType == typeof(DateTime?))
                 {
-                    if (Database.IsNpgsql())
-                    {
-                        property.SetValueConverter(
-                            new ValueConverter<DateTime, DateTime>(
-                                v => v,
-                                v => v.ToUniversalTime()));
-                    }
-                    else
-                    {
-                        property.SetValueConverter(
-                            new ValueConverter<DateTime, DateTime>(
-                                v => v,
-                                v => new DateTime(v.Ticks, DateTimeKind.Utc)));
-                    }
+                    property.SetValueConverter(
+                        new ValueConverter<DateTime, DateTime>(
+                            v => v,
+                            v => new DateTime(v.Ticks, DateTimeKind.Utc)));
                 }
             }
         }
