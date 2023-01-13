@@ -57,7 +57,7 @@ public class OrganizationDomainService : IOrganizationDomainService
 
                     await _domainRepository.ReplaceAsync(domain);
                     await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified,
-                        EventSystemUser.SSO);
+                        EventSystemUser.DomainVerification);
                     return;
                 }
 
@@ -65,7 +65,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                 await _domainRepository.ReplaceAsync(domain);
                 await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified,
-                    EventSystemUser.SSO);
+                    EventSystemUser.DomainVerification);
                 _logger.LogInformation(Constants.BypassFiltersEventId, "Verification for organization {OrgId} with domain {Domain} failed", domain.OrganizationId, domain.DomainName);
             }
             catch (Exception ex)

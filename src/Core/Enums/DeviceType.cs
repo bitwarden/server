@@ -45,5 +45,7 @@ public enum DeviceType : byte
     [Display(Name = "Vivaldi Extension")]
     VivaldiExtension = 19,
     [Display(Name = "Safari Extension")]
-    SafariExtension = 20
+    SafariExtension = 20,
+    [Display(Name = "Server")]
+    Server = 21
 }

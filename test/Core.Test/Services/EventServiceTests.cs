@@ -125,7 +125,7 @@ public class EventServiceTests
 
     [Theory, BitAutoData]
     public async Task LogOrganizationUserEvent_WithEventSystemUser_LogsRequiredInfo(OrganizationUser orgUser, EventType eventType, EventSystemUser eventSystemUser, DateTime date,
-        Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+        Guid actingUserId, Guid providerId, string ipAddress, SutProvider<EventService> sutProvider)
     {
         var orgAbilities = new Dictionary<Guid, OrganizationAbility>()
         {
@@ -135,7 +135,6 @@ public class EventServiceTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
         sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
-        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
 
         await sutProvider.Sut.LogOrganizationUserEventAsync(orgUser, eventType, eventSystemUser, date);
 
@@ -143,7 +142,7 @@ public class EventServiceTests
             new EventMessage()
             {
                 IpAddress = ipAddress,
-                DeviceType = deviceType,
+                DeviceType = DeviceType.Server,
                 OrganizationId = orgUser.OrganizationId,
                 UserId = orgUser.UserId,
                 OrganizationUserId = orgUser.Id,
