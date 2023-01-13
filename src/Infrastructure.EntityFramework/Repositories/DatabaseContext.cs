@@ -1,6 +1,6 @@
 ﻿using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
-using Microsoft.AspNetCore.DataProtection;
+using DP = Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -116,7 +116,7 @@ public class DatabaseContext : DbContext
         eGrant.HasKey(x => x.Key);
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
-        var dataProtector = this.GetService<IDataProtectionProvider>().CreateProtector("DatabaseFieldProtection");
+        var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector("DatabaseFieldProtection");
         var dataProtectionConverter = new DataProtectionConverter(dataProtector);
         eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
         eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
