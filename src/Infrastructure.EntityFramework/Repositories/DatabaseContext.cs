@@ -1,9 +1,9 @@
 ﻿using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
-using DP = Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using DP = Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 

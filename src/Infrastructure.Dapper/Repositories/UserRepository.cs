@@ -11,7 +11,7 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
-    private const string DataProtectorPurpose = "UserRepositoryProtection";
+    private const string DataProtectorPurpose = "DatabaseFieldProtection";
     private readonly IDataProtector _dataProtector;
 
     public UserRepository(
