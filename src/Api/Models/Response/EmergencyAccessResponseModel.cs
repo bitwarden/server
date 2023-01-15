@@ -93,9 +93,13 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
         KeyEncrypted = emergencyAccess.KeyEncrypted;
         Kdf = grantor.Kdf;
         KdfIterations = grantor.KdfIterations;
+        KdfMemory = grantor.KdfMemory;
+        KdfParallelism = grantor.KdfParallelism;
     }
 
     public int KdfIterations { get; private set; }
+    public int KdfMemory { get; private set; }
+    public int KdfParallelism { get; private set; }
     public KdfType Kdf { get; private set; }
     public string KeyEncrypted { get; private set; }
 }

@@ -54,6 +54,8 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     public string ApiKey { get; set; }
     public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
     public int KdfIterations { get; set; } = 5000;
+    public int KdfMemory { get; set; } = 0;
+    public int KdfParallelism { get; set; } = 0;
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public bool ForcePasswordReset { get; set; }

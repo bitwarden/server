@@ -24,11 +24,15 @@ public class OrganizationUserResetPasswordDetails
 
         Kdf = user.Kdf;
         KdfIterations = user.KdfIterations;
+        KdfMemory = user.KdfMemory;
+        KdfParallelism = user.KdfParallelism;
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = org.PrivateKey;
     }
     public KdfType Kdf { get; set; }
     public int KdfIterations { get; set; }
+    public int KdfMemory { get; set; }
+    public int KdfParallelism { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
 }

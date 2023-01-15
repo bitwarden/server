@@ -79,6 +79,8 @@ public class AccountsController : Controller
             {
                 Kdf = KdfType.PBKDF2_SHA256,
                 KdfIterations = 100000,
+                KdfMemory = 0,
+                KdfParallelism = 0,
             };
         }
         return new PreloginResponseModel(kdfInformation);
@@ -330,7 +332,7 @@ public class AccountsController : Controller
         }
 
         var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value);
+            model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value, model.KdfMemory.GetValueOrDefault(0), model.KdfParallelism.GetValueOrDefault(0));
         if (result.Succeeded)
         {
             return;

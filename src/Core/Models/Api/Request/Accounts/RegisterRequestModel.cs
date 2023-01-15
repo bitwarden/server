@@ -26,6 +26,8 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     public Guid? OrganizationUserId { get; set; }
     public KdfType? Kdf { get; set; }
     public int? KdfIterations { get; set; }
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
     public Dictionary<string, object> ReferenceData { get; set; }
 
     public User ToUser()
@@ -37,6 +39,8 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
             MasterPasswordHint = MasterPasswordHint,
             Kdf = Kdf.GetValueOrDefault(KdfType.PBKDF2_SHA256),
             KdfIterations = KdfIterations.GetValueOrDefault(5000),
+            KdfMemory = KdfMemory.GetValueOrDefault(0),
+            KdfParallelism = KdfParallelism.GetValueOrDefault(0)
         };
 
         if (ReferenceData != null)

@@ -9,6 +9,8 @@ public class KdfRequestModel : PasswordRequestModel, IValidatableObject
     public KdfType? Kdf { get; set; }
     [Required]
     public int? KdfIterations { get; set; }
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
