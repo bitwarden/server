@@ -8,4 +8,5 @@ public class EmergencyAccessDetails : EmergencyAccess
     public string GranteeEmail { get; set; }
     public string GrantorName { get; set; }
     public string GrantorEmail { get; set; }
+    public string GrantorAvatarColor { get; set; }
 }
