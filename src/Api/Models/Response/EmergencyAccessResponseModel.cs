@@ -54,7 +54,7 @@ public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessRespons
         GranteeId = emergencyAccess.GranteeId.ToString();
         Email = emergencyAccess.GranteeEmail;
         Name = emergencyAccess.GranteeName;
-        AvatarColor = emergencyAccess.GrantorAvatarColor;
+        AvatarColor = emergencyAccess.GranteeAvatarColor;
     }
 
     public string GranteeId { get; private set; }
