@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.DataProtection;
+﻿using Bit.Core;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Bit.Infrastructure.EntityFramework.Converters;
@@ -10,21 +11,23 @@ public class DataProtectionConverter : ValueConverter<string, string>
 
     private static string Protect(IDataProtector dataProtector, string value)
     {
-        if (value == null)
+        if (value?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? true)
         {
             return value;
         }
 
-        return string.Concat("P|", dataProtector.Protect(value));
+        return string.Concat(
+            Constants.DatabaseFieldProtectedPrefix, dataProtector.Protect(value));
     }
 
     private static string Unprotect(IDataProtector dataProtector, string value)
     {
-        if (value == null)
+        if (!value?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? true)
         {
             return value;
         }
 
-        return dataProtector.Unprotect(value.Substring(2));
+        return dataProtector.Unprotect(
+            value.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
     }
 }
