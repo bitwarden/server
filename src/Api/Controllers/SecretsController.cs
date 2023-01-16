@@ -19,6 +19,7 @@ public class SecretsController : Controller
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
+    private readonly IUserRepository _userRepository;
 
     public SecretsController(ISecretRepository secretRepository, IProjectRepository projectRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand)
     {
@@ -32,14 +33,22 @@ public class SecretsController : Controller
     [HttpGet("organizations/{organizationId}/secrets")]
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
     {
-        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId, userId, AccessClientType, orgAdmin);
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
     [HttpGet("secrets/{id}")]
     public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
     {
-        var secret = await _secretRepository.GetByIdAsync(id);
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var secret = await _secretRepository.GetByIdAsync(id, userId, accessClient, orgAdmin);
         if (secret == null)
         {
             throw new NotFoundException();
@@ -50,7 +59,11 @@ public class SecretsController : Controller
     [HttpGet("projects/{projectId}/secrets")]
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByProjectAsync([FromRoute] Guid projectId)
     {
-        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId);
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId, userId, accessClient, orgAdmin);
         var responses = secrets.Select(s => new SecretResponseModel(s));
         return new SecretWithProjectsListResponseModel(secrets);
     }
@@ -58,14 +71,21 @@ public class SecretsController : Controller
     [HttpPost("organizations/{organizationId}/secrets")]
     public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
     {
-        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId));
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId, accessClient, orgAdmin);
         return new SecretResponseModel(result);
     }
 
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
-        var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id));
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id), userId, accessClient, orgAdmin);
         return new SecretResponseModel(result);
     }
 
@@ -73,7 +93,11 @@ public class SecretsController : Controller
     [HttpPost("secrets/delete")]
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
-        var results = await _deleteSecretCommand.DeleteSecrets(ids);
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var results = await _deleteSecretCommand.DeleteSecrets(ids, userId, accessClient, orgAdmin);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
