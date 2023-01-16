@@ -65,7 +65,10 @@ public class DeleteProjectCommand : IDeleteProjectCommand
             }
         }
 
-        await _projectRepository.DeleteManyByIdAsync(deleteIds);
+        if (deleteIds.Count > 0)
+        {
+            await _projectRepository.DeleteManyByIdAsync(deleteIds);
+        }
         return results;
     }
 }

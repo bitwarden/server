@@ -2,6 +2,7 @@
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -41,7 +42,47 @@ public class DeleteProjectCommandTests
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().DeleteManyByIdAsync(default);
     }
 
-    // FIXME: Add tests covering regular user deleting!
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteSecrets_User_Success(List<Guid> data, Guid userId, Guid organizationId,
+        SutProvider<DeleteProjectCommand> sutProvider)
+    {
+        var projects = data.Select(id => new Project { Id = id, OrganizationId = organizationId }).ToList();
+
+        sutProvider.GetDependency<ICurrentContext>().ClientType = ClientType.User;
+        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
+        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(Arg.Any<Guid>(), userId).Returns(true);
+
+        var results = await sutProvider.Sut.DeleteProjects(data, userId);
+
+        foreach (var result in results)
+        {
+            Assert.Equal("", result.Item2);
+        }
+
+        await sutProvider.GetDependency<IProjectRepository>().Received(1).DeleteManyByIdAsync(Arg.Is<List<Guid>>(d => d.SequenceEqual(data)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteSecrets_User_No_Permission(List<Guid> data, Guid userId, Guid organizationId,
+        SutProvider<DeleteProjectCommand> sutProvider)
+    {
+        var projects = data.Select(id => new Project { Id = id, OrganizationId = organizationId }).ToList();
+
+        sutProvider.GetDependency<ICurrentContext>().ClientType = ClientType.User;
+        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
+        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(userId, userId).Returns(false);
+
+        var results = await sutProvider.Sut.DeleteProjects(data, userId);
+
+        foreach (var result in results)
+        {
+            Assert.Equal("access denied", result.Item2);
+        }
+
+        await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().DeleteManyByIdAsync(default);
+    }
 
     [Theory]
     [BitAutoData]
