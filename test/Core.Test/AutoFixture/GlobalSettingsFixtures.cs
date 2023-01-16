@@ -34,9 +34,9 @@ public class GlobalSettingsBuilder : ISpecimenBuilder
         if (pi.ParameterType == typeof(IDataProtectionProvider))
         {
             var dataProtector = new Mock<IDataProtector>();
-                dataProtector
-                    .Setup(d => d.Unprotect(It.IsAny<byte[]>()))
-                    .Returns<byte[]>(data => Encoding.UTF8.GetBytes("P|" + Encoding.UTF8.GetString(data))); // I THINK?
+            dataProtector
+                .Setup(d => d.Unprotect(It.IsAny<byte[]>()))
+                .Returns<byte[]>(data => Encoding.UTF8.GetBytes("P|" + Encoding.UTF8.GetString(data))); // I THINK?
 
             var dataProtectionProvider = new Mock<IDataProtectionProvider>();
             dataProtectionProvider

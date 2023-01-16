@@ -1,5 +1,4 @@
-﻿using System.Reflection.Metadata;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
