@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using Bit.Core;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -11,7 +12,6 @@ namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
-    private const string DataProtectorPurpose = "DatabaseFieldProtection";
     private readonly IDataProtector _dataProtector;
 
     public UserRepository(
@@ -19,7 +19,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         IDataProtectionProvider dataProtectionProvider)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     {
-        _dataProtector = dataProtectionProvider.CreateProtector(DataProtectorPurpose);
+        _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
     }
 
     public UserRepository(string connectionString, string readOnlyConnectionString)
