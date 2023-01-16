@@ -131,14 +131,13 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public override async Task<User> CreateAsync(User user)
     {
-        ProtectData(user);
-        return await base.CreateAsync(user);
+        await ProtectDataAndSaveAsync(user, async () => await base.CreateAsync(user));
+        return user;
     }
 
     public override async Task ReplaceAsync(User user)
     {
-        ProtectData(user);
-        await base.ReplaceAsync(user);
+        await ProtectDataAndSaveAsync(user, async () => await base.ReplaceAsync(user));
     }
 
     public override async Task DeleteAsync(User user)
@@ -190,17 +189,37 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    private void ProtectData(User user)
+    private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
     {
         if (user == null)
         {
+            await saveTask();
             return;
         }
 
-        user.MasterPassword = user.MasterPassword == null ? null :
-            string.Concat("P|", _dataProtector.Protect(user.MasterPassword));
-        user.Key = user.Key == null ? null :
-            string.Concat("P|", _dataProtector.Protect(user.Key));
+        // Capture original values
+        var originalMasterPassword = user.MasterPassword;
+        var originalKey = user.Key;
+
+        // Protect values
+        if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.MasterPassword));
+        }
+
+        if (!user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.Key));
+        }
+
+        // Save
+        await saveTask();
+
+        // Restore original values
+        user.MasterPassword = originalMasterPassword;
+        user.Key = originalKey;
     }
 
     private void UnprotectData(User user)
@@ -210,14 +229,16 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
             return;
         }
 
-        if (user.MasterPassword?.StartsWith("P|") ?? false)
+        if (user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            user.MasterPassword = _dataProtector.Unprotect(user.MasterPassword.Substring(2));
+            user.MasterPassword = _dataProtector.Unprotect(
+                user.MasterPassword.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
         }
 
-        if (user.Key?.StartsWith("P|") ?? false)
+        if (user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
         {
-            user.Key = _dataProtector.Unprotect(user.Key.Substring(2));
+            user.Key = _dataProtector.Unprotect(
+                user.Key.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
         }
     }
 
