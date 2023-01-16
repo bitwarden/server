@@ -458,11 +458,6 @@ public class CurrentContext : ICurrentContext
         return Providers;
     }
 
-    public bool ServiceAccount()
-    {
-        return ClientType == ClientType.ServiceAccount;
-    }
-
     private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
     {
         if (!claims.ContainsKey(type))
