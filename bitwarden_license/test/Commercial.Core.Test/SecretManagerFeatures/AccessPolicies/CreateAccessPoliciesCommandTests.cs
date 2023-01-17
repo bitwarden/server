@@ -54,27 +54,67 @@ public class CreateAccessPoliciesCommandTests
 
 
     [Theory]
-    [BitAutoData]
+    [BitAutoData(true, false, false)]
+    [BitAutoData(false, true, false)]
+    [BitAutoData(true, true, false)]
+    [BitAutoData(false, false, true)]
+    [BitAutoData(true, false, true)]
+    [BitAutoData(false, true, true)]
+    [BitAutoData(true, true, true)]
     public async Task CreateAsync_NotUnique_ThrowsException(
+        bool testUserPolicies,
+        bool testGroupPolicies,
+        bool testServiceAccountPolicies,
         List<UserProjectAccessPolicy> userProjectAccessPolicies,
         List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
         List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
-        SutProvider<CreateAccessPoliciesCommand> sutProvider)
+        SutProvider<CreateAccessPoliciesCommand> sutProvider
+    )
     {
         var data = new List<BaseAccessPolicy>();
         data.AddRange(userProjectAccessPolicies);
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
 
-        var mockUserPolicy = new UserProjectAccessPolicy()
+        if (testUserPolicies)
         {
-            OrganizationUserId = Guid.NewGuid(),
-            GrantedProjectId = Guid.NewGuid()
-        };
-        data.Add(mockUserPolicy);
+            var mockUserPolicy = new UserProjectAccessPolicy
+            {
+                OrganizationUserId = Guid.NewGuid(),
+                GrantedProjectId = Guid.NewGuid()
+            };
+            data.Add(mockUserPolicy);
 
-        // Add a duplicate policy
-        data.Add(mockUserPolicy);
+            // Add a duplicate policy
+            data.Add(mockUserPolicy);
+        }
+
+        if (testGroupPolicies)
+        {
+            var mockGroupPolicy = new GroupProjectAccessPolicy
+            {
+                GroupId = Guid.NewGuid(),
+                GrantedProjectId = Guid.NewGuid()
+            };
+            data.Add(mockGroupPolicy);
+
+            // Add a duplicate policy
+            data.Add(mockGroupPolicy);
+        }
+
+        if (testServiceAccountPolicies)
+        {
+            var mockServiceAccountPolicy = new ServiceAccountProjectAccessPolicy
+            {
+                ServiceAccountId = Guid.NewGuid(),
+                GrantedProjectId = Guid.NewGuid()
+            };
+            data.Add(mockServiceAccountPolicy);
+
+            // Add a duplicate policy
+            data.Add(mockServiceAccountPolicy);
+        }
+
 
         sutProvider.GetDependency<IAccessPolicyRepository>().AccessPolicyExists(Arg.Any<BaseAccessPolicy>())
             .Returns(true);
