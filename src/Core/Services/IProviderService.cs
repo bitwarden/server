@@ -7,7 +7,7 @@ namespace Bit.Core.Services;
 
 public interface IProviderService
 {
-    Task CreateAsync(string ownerEmail);
+    Task CreateAsync(Provider provider, string ownerEmail);
     Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key);
     Task UpdateAsync(Provider provider, bool updateBilling = false);
 
