@@ -22,6 +22,7 @@ public class OrganizationUser : ITableObject<Guid>, IExternal
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
     public string Permissions { get; set; }
+    public bool AccessSecretsManager { get; set; }
 
     public void SetNewId()
     {
