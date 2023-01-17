@@ -30,8 +30,9 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task InitializeAsync()
     {
         var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        var tokens = await _factory.LoginWithNewAccount(ownerEmail);
+        await _factory.LoginWithNewAccount(ownerEmail);
         var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: ownerEmail, billingEmail: ownerEmail);
+        var tokens = await _factory.LoginAsync(ownerEmail);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
         _organization = organization;
     }
