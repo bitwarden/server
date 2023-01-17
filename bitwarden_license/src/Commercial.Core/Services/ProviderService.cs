@@ -53,21 +53,21 @@ public class ProviderService : IProviderService
         _currentContext = currentContext;
     }
 
-    public async Task CreateAsync(string ownerEmail)
+    public async Task CreateAsync(Provider provider, string ownerEmail)
     {
+        if (provider.Type == ProviderType.Reseller)
+        {
+            await ProviderRepositoryCreateAsync(provider);
+            return;
+        }
+
         var owner = await _userRepository.GetByEmailAsync(ownerEmail);
         if (owner == null)
         {
             throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
         }
 
-        var provider = new Provider
-        {
-            Status = ProviderStatusType.Pending,
-            Enabled = true,
-            UseEvents = true,
-        };
-        await _providerRepository.CreateAsync(provider);
+        await ProviderRepositoryCreateAsync(provider);
 
         var providerUser = new ProviderUser
         {
@@ -504,5 +504,13 @@ public class ProviderService : IProviderService
         {
             throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
         }
+    }
+
+    private async Task ProviderRepositoryCreateAsync(Provider provider)
+    {
+        provider.Status = ProviderStatusType.Pending;
+        provider.Enabled = true;
+        provider.UseEvents = true;
+        await _providerRepository.CreateAsync(provider);
     }
 }

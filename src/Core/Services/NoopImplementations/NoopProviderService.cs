@@ -7,7 +7,7 @@ namespace Bit.Core.Services;
 
 public class NoopProviderService : IProviderService
 {
-    public Task CreateAsync(string ownerEmail) => throw new NotImplementedException();
+    public Task CreateAsync(Provider provider, string ownerEmail) => throw new NotImplementedException();
 
     public Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key) => throw new NotImplementedException();
 
