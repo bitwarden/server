@@ -5,6 +5,9 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Bit.Core.Context;
+using Bit.Core.Enums;
+
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories;
 
@@ -77,9 +80,10 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
             //Todo we need to see if projId is null, if so, use orgAdmin status if they can read/write
             //(!sec.projectId && orgAdmin) || hasAccess
             query = accessType switch
+            {
                 AccessClientType.NoAccessCheck => query,
                 AccessClientType.User => query.Where(sec => _projectRepository.UserHasReadAccessToProject(sec.projectId, userId)),
-                AccessClientType.ServiceAccount => query.Where(sec => (_projectRepository.ServiceAccountHasReadAccessToProject(sec.projectId, userId)), 
+                AccessClientType.ServiceAccount => query.Where(sec => _projectRepository.ServiceAccountHasReadAccessToProject(sec.projectId, userId)), 
                 _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
             };
 

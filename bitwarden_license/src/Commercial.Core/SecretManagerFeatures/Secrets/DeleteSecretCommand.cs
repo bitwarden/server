@@ -2,6 +2,8 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
+using Bit.Core.Enums;
+using Bit.Core.Context;
 
 namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets;
 
@@ -9,16 +11,19 @@ public class DeleteSecretCommand : IDeleteSecretCommand
 {
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ICurrentContext _currentContext;
 
-    public DeleteSecretCommand(ISecretRepository secretRepository, IProjectRepository projectRepository)
+    public DeleteSecretCommand(ISecretRepository secretRepository, IProjectRepository projectRepository, ICurrentContext currentContext)
     {
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
+        _currentContext = currentContext;
     }
 
-    public async Task<List<Tuple<Secret, string>>> DeleteSecrets(List<Guid> ids)
+    public async Task<List<Tuple<Secret, string>>> DeleteSecrets(List<Guid> ids, Guid userId, Guid organizationId)
     {
-        var secrets = await _secretRepository.GetManyByIds(ids);
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var secrets = await _secretRepository.GetManyByIds(ids, userId, _currentContext.AccessClientType, orgAdmin); //TODO
 
         if (secrets?.Any() != true)
         {
@@ -28,6 +33,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         var results = ids.Select(id =>
         {
             var secret = secrets.FirstOrDefault(secret => secret.Id == id);
+
             if (secret == null)
             {
                 throw new NotFoundException();
@@ -36,7 +42,6 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             {
                 //Check if the Project this secret is associated with allows deletion (write permisison)
                 //Check if this secret has a projId
-                var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
                 var hasAccess = false;
 
                 if(!secret.projectId){
@@ -47,7 +52,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                     hasAccess = accessClient switch
                     {
                         AccessClientType.NoAccessCheck => true,
-                        AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(secret.projectId, userId),
+                        AccessClientType.User => _projectRepository.UserHasWriteAccessToProject(secret.projectId, userId),
                         _ => false,
                     };
                 }
@@ -61,7 +66,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             }
         }).ToList();
 
-        await _secretRepository.SoftDeleteManyByIdAsync(ids);
+        await _secretRepository.SoftDeleteManyByIdAsync(ids, _currentContext.AccessClientType, userId, orgAdmin);
         return results;
     }
 }

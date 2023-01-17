@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
+using Bit.Core.Enums;
+using Bit.Core.Context;
 
 namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets;
 
@@ -8,19 +10,22 @@ public class CreateSecretCommand : ICreateSecretCommand
 {
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ICurrentContext _currentContext;
 
-    public CreateSecretCommand(ISecretRepository secretRepository, IProjectRepository projectRepository)
+    public CreateSecretCommand(ISecretRepository secretRepository, IProjectRepository projectRepository, ICurrentContext currentContext)
     {
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
+        _currentContext = currentContext;
     }
 
-    public async Task<Secret> CreateAsync(Secret secret)
+    public async Task<Secret> CreateAsync(Secret secret, Guid userId)
     {
-        var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
+        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var hasAccess = false;
 
-        if(!secret.projectId){
+        var project = secret.Projects?.FirstOrDefault();
+        if(project == null){
             hasAccess = orgAdmin;
         } else {
             var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
@@ -28,7 +33,7 @@ public class CreateSecretCommand : ICreateSecretCommand
             hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(secret.projectId, userId),
+                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
                 _ => false,
             };
         }
@@ -39,6 +44,6 @@ public class CreateSecretCommand : ICreateSecretCommand
         }
 
         //Check if the project thats associated with the secret gives this user read/write/no access
-        return await _secretRepository.CreateAsync(secret);
+        return await _secretRepository.CreateAsync(secret, userId, _currentContext.AccessClientType, orgAdmin);
     }
 }

@@ -2,6 +2,8 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
+using Bit.Core.Enums;
+using Bit.Core.Context;
 
 namespace Bit.Commercial.Core.SecretManagerFeatures.Secrets;
 
@@ -9,19 +11,22 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 {
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ICurrentContext _currentContext;
 
-    public UpdateSecretCommand(ISecretRepository secretRepository, IProjectRepository projectRepository)
+    public UpdateSecretCommand(ISecretRepository secretRepository, IProjectRepository projectRepository, ICurrentContext currentContext)
     {
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
+        _currentContext = currentContext;
     }
 
-    public async Task<Secret> UpdateAsync(Secret updatedSecret)
+    public async Task<Secret> UpdateAsync(Secret updatedSecret, Guid userId)
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(updatedSecret.OrganizationId);
         var hasAccess = false;
 
-        if(!secret.projectId){
+        var project = updatedSecret.Projects?.FirstOrDefault();
+        if(project == null){
             hasAccess = orgAdmin;
         } else {
             var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
@@ -29,7 +34,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
             hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(updatedSecret.projectId, userId),
+                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project?.Id, userId),
                 _ => false,
             };
         }
@@ -39,18 +44,18 @@ public class UpdateSecretCommand : IUpdateSecretCommand
             throw new UnauthorizedAccessException();
         }
 
-        var existingSecret = await _secretRepository.GetByIdAsync(secret.Id);
+        var existingSecret = await _secretRepository.GetByIdAsync(updatedSecret.Id, userId, _currentContext.AccessClientType, orgAdmin);
         if (existingSecret == null)
         {
             throw new NotFoundException();
         }
 
-        secret.OrganizationId = existingSecret.OrganizationId;
-        secret.CreationDate = existingSecret.CreationDate;
-        secret.DeletedDate = existingSecret.DeletedDate;
-        secret.RevisionDate = DateTime.UtcNow;
+        updatedSecret.OrganizationId = existingSecret.OrganizationId;
+        updatedSecret.CreationDate = existingSecret.CreationDate;
+        updatedSecret.DeletedDate = existingSecret.DeletedDate;
+        updatedSecret.RevisionDate = DateTime.UtcNow;
 
-        await _secretRepository.UpdateAsync(secret);
-        return secret;
+        await _secretRepository.UpdateAsync(updatedSecret, userId, AccessClientType.AccessClientType, orgAdmin);
+        return updatedSecret;
     }
 }
