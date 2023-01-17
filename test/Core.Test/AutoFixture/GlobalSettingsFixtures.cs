@@ -36,7 +36,7 @@ public class GlobalSettingsBuilder : ISpecimenBuilder
             var dataProtector = new Mock<IDataProtector>();
             dataProtector
                 .Setup(d => d.Unprotect(It.IsAny<byte[]>()))
-                .Returns<byte[]>(data => Encoding.UTF8.GetBytes("P|" + Encoding.UTF8.GetString(data))); // I THINK?
+                .Returns<byte[]>(data => Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix + Encoding.UTF8.GetString(data)));
 
             var dataProtectionProvider = new Mock<IDataProtectionProvider>();
             dataProtectionProvider
