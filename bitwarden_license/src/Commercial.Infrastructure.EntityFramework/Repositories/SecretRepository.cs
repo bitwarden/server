@@ -7,17 +7,18 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Entities;
 
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories;
 
-public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, ISecretRepository
+public class SecretRepository : Repository<Core.Entities.Secret, Core.Entities.Secret, Guid>, ISecretRepository
 {
     public SecretRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, db => db.Secret)
     { }
 
-    public override async Task<Core.Entities.Secret> GetByIdAsync(Guid id, Guid userId, AccessClientType accessType, bool orgAdmin)
+    public override async Task<Core.Entities.Secret> GetByIdAsync(Guid id, Guid userId, Bit.Core.Enums.AccessClientType accessType, bool orgAdmin)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

@@ -22,14 +22,14 @@ public class CreateSecretCommand : ICreateSecretCommand
     public async Task<Secret> CreateAsync(Secret secret, Guid userId)
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
         var hasAccess = false;
 
         var project = secret.Projects?.FirstOrDefault();
         if(project == null){
             hasAccess = orgAdmin;
         } else {
-            var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
             hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
@@ -44,6 +44,6 @@ public class CreateSecretCommand : ICreateSecretCommand
         }
 
         //Check if the project thats associated with the secret gives this user read/write/no access
-        return await _secretRepository.CreateAsync(secret, userId, _currentContext.AccessClientType, orgAdmin);
+        return await _secretRepository.CreateAsync(secret, userId, accessClient, orgAdmin);
     }
 }

@@ -23,18 +23,18 @@ public class UpdateSecretCommand : IUpdateSecretCommand
     public async Task<Secret> UpdateAsync(Secret updatedSecret, Guid userId)
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(updatedSecret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         var hasAccess = false;
 
         var project = updatedSecret.Projects?.FirstOrDefault();
         if(project == null){
             hasAccess = orgAdmin;
         } else {
-            var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
             hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project?.Id, userId),
+                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
                 _ => false,
             };
         }
@@ -44,7 +44,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
             throw new UnauthorizedAccessException();
         }
 
-        var existingSecret = await _secretRepository.GetByIdAsync(updatedSecret.Id, userId, _currentContext.AccessClientType, orgAdmin);
+        var existingSecret = await _secretRepository.GetByIdAsync(updatedSecret.Id, userId, accessClient, orgAdmin);
         if (existingSecret == null)
         {
             throw new NotFoundException();
@@ -55,7 +55,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         updatedSecret.DeletedDate = existingSecret.DeletedDate;
         updatedSecret.RevisionDate = DateTime.UtcNow;
 
-        await _secretRepository.UpdateAsync(updatedSecret, userId, AccessClientType.AccessClientType, orgAdmin);
+        await _secretRepository.UpdateAsync(updatedSecret, userId, accessClient, orgAdmin);
         return updatedSecret;
     }
 }

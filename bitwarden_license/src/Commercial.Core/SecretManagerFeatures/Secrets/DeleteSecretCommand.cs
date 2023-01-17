@@ -23,7 +23,8 @@ public class DeleteSecretCommand : IDeleteSecretCommand
     public async Task<List<Tuple<Secret, string>>> DeleteSecrets(List<Guid> ids, Guid userId, Guid organizationId)
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var secrets = await _secretRepository.GetManyByIds(ids, userId, _currentContext.AccessClientType, orgAdmin); //TODO
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var secrets = await _secretRepository.GetManyByIds(ids, userId, accessClient, orgAdmin); //TODO
 
         if (secrets?.Any() != true)
         {
@@ -44,15 +45,14 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                 //Check if this secret has a projId
                 var hasAccess = false;
 
-                if(!secret.projectId){
+                if(secret.Projects == null){
                     hasAccess = orgAdmin;
                 } else {
-                    var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
+                    var projectId = secret.Projects.FirstOrDefault().Id;
                     hasAccess = accessClient switch
                     {
                         AccessClientType.NoAccessCheck => true,
-                        AccessClientType.User => _projectRepository.UserHasWriteAccessToProject(secret.projectId, userId),
+                        AccessClientType.User => false,//_projectRepository.UserHasWriteAccessToProject(projectId, userId),
                         _ => false,
                     };
                 }
@@ -66,7 +66,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             }
         }).ToList();
 
-        await _secretRepository.SoftDeleteManyByIdAsync(ids, _currentContext.AccessClientType, userId, orgAdmin);
+        await _secretRepository.SoftDeleteManyByIdAsync(ids, userId, accessClient, orgAdmin);
         return results;
     }
 }
