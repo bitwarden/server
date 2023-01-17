@@ -1,4 +1,6 @@
-﻿using IdentityModel;
+﻿using Bit.Core.Identity;
+using Bit.Core.IdentityServer;
+using IdentityModel;
 using IdentityServer4.Models;
 
 namespace Bit.Identity.IdentityServer;
@@ -9,27 +11,27 @@ public class ApiResources
     {
         return new List<ApiResource>
         {
-            new ApiResource("api", new string[] {
+            new("api", new[] {
                 JwtClaimTypes.Name,
                 JwtClaimTypes.Email,
                 JwtClaimTypes.EmailVerified,
-                "sstamp", // security stamp
-                "premium",
-                "device",
-                "orgowner",
-                "orgadmin",
-                "orgmanager",
-                "orguser",
-                "orgcustom",
-                "providerprovideradmin",
-                "providerserviceuser",
+                Claims.SecurityStamp,
+                Claims.Premium,
+                Claims.Device,
+                Claims.OrganizationOwner,
+                Claims.OrganizationAdmin,
+                Claims.OrganizationManager,
+                Claims.OrganizationUser,
+                Claims.OrganizationCustom,
+                Claims.ProviderAdmin,
+                Claims.ProviderServiceUser,
             }),
-            new ApiResource("internal", new string[] { JwtClaimTypes.Subject }),
-            new ApiResource("api.push", new string[] { JwtClaimTypes.Subject }),
-            new ApiResource("api.licensing", new string[] { JwtClaimTypes.Subject }),
-            new ApiResource("api.organization", new string[] { JwtClaimTypes.Subject }),
-            new ApiResource("api.provider", new string[] { JwtClaimTypes.Subject }),
-            new ApiResource("api.installation", new string[] { JwtClaimTypes.Subject }),
+            new(ApiScopes.Internal, new[] { JwtClaimTypes.Subject }),
+            new(ApiScopes.ApiPush, new[] { JwtClaimTypes.Subject }),
+            new(ApiScopes.ApiLicensing, new[] { JwtClaimTypes.Subject }),
+            new(ApiScopes.ApiOrganization, new[] { JwtClaimTypes.Subject }),
+            new(ApiScopes.ApiInstallation, new[] { JwtClaimTypes.Subject }),
+            new(ApiScopes.ApiSecrets, new[] { JwtClaimTypes.Subject, Claims.Organization }),
         };
     }
 }
