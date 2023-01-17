@@ -75,7 +75,8 @@ public class ProvidersController : Controller
             return View(model);
         }
 
-        await _providerService.CreateAsync(model.OwnerEmail);
+        var provider = model.ToProvider();
+        await _providerService.CreateAsync(provider, model.OwnerEmail);
 
         return RedirectToAction("Index");
     }
