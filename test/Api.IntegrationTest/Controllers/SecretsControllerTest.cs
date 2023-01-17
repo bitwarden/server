@@ -1,8 +1,9 @@
 ﻿using System.Net.Http.Headers;
-using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Response;
 using Bit.Api.SecretManagerFeatures.Models.Request;
+using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
@@ -55,7 +56,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
 
         var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/secrets", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Secret>();
+        var result = await response.Content.ReadFromJsonAsync<SecretResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.Key, result!.Key);
@@ -63,9 +64,8 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         Assert.Equal(request.Note, result.Note);
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
-        Assert.Null(result.DeletedDate);
 
-        var createdSecret = await _secretRepository.GetByIdAsync(result.Id);
+        var createdSecret = await _secretRepository.GetByIdAsync(new Guid(result.Id));
         Assert.NotNull(result);
         Assert.Equal(request.Key, createdSecret.Key);
         Assert.Equal(request.Value, createdSecret.Value);
@@ -94,13 +94,13 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         };
         var secretResponse = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/secrets", secretRequest);
         secretResponse.EnsureSuccessStatusCode();
-        var secretResult = await secretResponse.Content.ReadFromJsonAsync<Secret>();
+        var secretResult = await secretResponse.Content.ReadFromJsonAsync<SecretResponseModel>();
 
         var secret = (await _secretRepository.GetManyByProjectIdAsync(project.Id)).First();
 
         Assert.NotNull(secretResult);
-        Assert.Equal(secret.Id, secretResult!.Id);
-        Assert.Equal(secret.OrganizationId, secretResult.OrganizationId);
+        Assert.Equal(secret.Id.ToString(), secretResult!.Id);
+        Assert.Equal(secret.OrganizationId.ToString(), secretResult.OrganizationId);
         Assert.Equal(secret.Key, secretResult.Key);
         Assert.Equal(secret.Value, secretResult.Value);
         Assert.Equal(secret.Note, secretResult.Note);
@@ -128,16 +128,15 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
 
         var response = await _client.PutAsJsonAsync($"/secrets/{initialSecret.Id}", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Secret>();
+        var result = await response.Content.ReadFromJsonAsync<SecretResponseModel>();
         Assert.Equal(request.Key, result!.Key);
         Assert.Equal(request.Value, result.Value);
         Assert.NotEqual(initialSecret.Value, result.Value);
         Assert.Equal(request.Note, result.Note);
         AssertHelper.AssertRecent(result.RevisionDate);
         Assert.NotEqual(initialSecret.RevisionDate, result.RevisionDate);
-        Assert.Null(result.DeletedDate);
 
-        var updatedSecret = await _secretRepository.GetByIdAsync(result.Id);
+        var updatedSecret = await _secretRepository.GetByIdAsync(new Guid(result.Id));
         Assert.NotNull(result);
         Assert.Equal(request.Key, updatedSecret.Key);
         Assert.Equal(request.Value, updatedSecret.Value);
@@ -169,15 +168,14 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         var response = await _client.PostAsync("/secrets/delete", JsonContent.Create(secretIds));
         response.EnsureSuccessStatusCode();
 
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(content);
+        var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
+        Assert.NotNull(results);
 
-        var jsonResult = JsonDocument.Parse(content);
         var index = 0;
-        foreach (var element in jsonResult.RootElement.GetProperty("data").EnumerateArray())
+        foreach (var result in results!.Data)
         {
-            Assert.Equal(secretIds[index].ToString(), element.GetProperty("id").ToString());
-            Assert.Empty(element.GetProperty("error").ToString());
+            Assert.Equal(secretIds[index], result.Id);
+            Assert.Null(result.Error);
             index++;
         }
 
@@ -199,13 +197,12 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
 
         var response = await _client.GetAsync($"/secrets/{createdSecret.Id}");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Secret>();
+        var result = await response.Content.ReadFromJsonAsync<SecretResponseModel>();
         Assert.Equal(createdSecret.Key, result!.Key);
         Assert.Equal(createdSecret.Value, result.Value);
         Assert.Equal(createdSecret.Note, result.Note);
         Assert.Equal(createdSecret.RevisionDate, result.RevisionDate);
         Assert.Equal(createdSecret.CreationDate, result.CreationDate);
-        Assert.Null(result.DeletedDate);
     }
 
     [Fact]
@@ -227,11 +224,10 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
 
         var response = await _client.GetAsync($"/organizations/{_organization.Id}/secrets");
         response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
 
-        var jsonResult = JsonDocument.Parse(content);
-
-        Assert.NotEmpty(jsonResult.RootElement.GetProperty("secrets").EnumerateArray());
-        Assert.Equal(secretIds.Count(), jsonResult.RootElement.GetProperty("secrets").EnumerateArray().Count());
+        var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
+        Assert.NotNull(result);
+        Assert.NotEmpty(result!.Secrets);
+        Assert.Equal(secretIds.Count, result.Secrets.Count());
     }
 }

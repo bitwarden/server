@@ -5,8 +5,9 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
 public class ServiceAccountResponseModel : ResponseModel
 {
-    public ServiceAccountResponseModel(ServiceAccount serviceAccount, string obj = "serviceAccount")
-        : base(obj)
+    private const string _objectName = "serviceAccount";
+
+    public ServiceAccountResponseModel(ServiceAccount serviceAccount) : base(_objectName)
     {
         if (serviceAccount == null)
         {
@@ -18,6 +19,10 @@ public class ServiceAccountResponseModel : ResponseModel
         Name = serviceAccount.Name;
         CreationDate = serviceAccount.CreationDate;
         RevisionDate = serviceAccount.RevisionDate;
+    }
+
+    public ServiceAccountResponseModel() : base(_objectName)
+    {
     }
 
     public string Id { get; set; }
