@@ -3,14 +3,62 @@
     ViewData["Title"] = "Create Provider";
 }
 
+@section Scripts {
+    <script>
+        function toggleProviderTypeInfo(value) {
+            document.querySelectorAll('[id^="info-"]').forEach(el => { el.classList.add('d-none'); });
+            document.getElementById('info-' + value).classList.remove('d-none');
+        }
+    </script>
+}
+
 <h1>Create Provider</h1>
 
 <form method="post">
     <div asp-validation-summary="All" class="alert alert-danger"></div>
     
     <div class="form-group">
-        <label asp-for="OwnerEmail"></label>
-        <input type="text" class="form-control" asp-for="OwnerEmail">
+        <h2>Provider Type</h2>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="Type" name="Type" value="@((int)ProviderType.Msp)" id="radioMsp" onclick="toggleProviderTypeInfo(@((int)ProviderType.Msp))" checked>
+            <label class="form-check-label align-middle" for="radioMsp">
+                Managed Service Provider
+            </label>
+            <br/>
+            <label class="form-check-label small text-muted ml-3 align-top" for="radioMsp">
+                Access to clients organization
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="Type" name="Type" value="@((int)ProviderType.Reseller)" id="radioReseller" onclick="toggleProviderTypeInfo(@((int)ProviderType.Reseller))">
+            <label class="form-check-label align-middle" for="radioReseller">
+                Reseller
+            </label>
+            <br/>
+            <label class="form-check-label small text-muted ml-3 align-top" for="radioReseller">
+                Access to clients billing
+            </label>
+        </div>
+    </div>
+    
+    <div id="info-0" class="form-group">
+        <h2>MSP Info</h2>
+        <div class="form-group">
+            <label asp-for="OwnerEmail"></label>
+            <input type="text" class="form-control" asp-for="OwnerEmail">
+        </div>
+    </div>
+    
+    <div id="info-1" class="form-group d-none">
+        <h2>Reseller Info</h2>
+        <div class="form-group">
+            <label asp-for="BusinessName"></label>
+            <input type="text" class="form-control" asp-for="BusinessName">
+        </div>
+        <div class="form-group">
+            <label asp-for="BillingEmail"></label>
+            <input type="text" class="form-control" asp-for="BillingEmail">
+        </div>
     </div>
     
     <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
