@@ -4,7 +4,7 @@ using Bit.Core.Enums.Provider;
 
 namespace Bit.Admin.Models;
 
-public class CreateProviderModel
+public class CreateProviderModel : IValidatableObject
 {
     public CreateProviderModel() { }
 
@@ -12,7 +12,6 @@ public class CreateProviderModel
     public ProviderType Type { get; set; }
 
     [Display(Name = "Owner Email")]
-    [Required]
     public string OwnerEmail { get; set; }
 
     [Display(Name = "Business Name")]
@@ -29,5 +28,28 @@ public class CreateProviderModel
             BusinessName = BusinessName,
             BillingEmail = BillingEmail?.ToLowerInvariant().Trim()
         };
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        switch (Type)
+        {
+            case ProviderType.Msp:
+                if (string.IsNullOrWhiteSpace(OwnerEmail))
+                {
+                    yield return new ValidationResult("The Owner Email field is required.");
+                }
+                break;
+            case ProviderType.Reseller:
+                if (string.IsNullOrWhiteSpace(BusinessName))
+                {
+                    yield return new ValidationResult("The Business Name field is required.");
+                }
+                if (string.IsNullOrWhiteSpace(BillingEmail))
+                {
+                    yield return new ValidationResult("The Primary Billing Email field is required.");
+                }
+                break;
+        }
     }
 }
