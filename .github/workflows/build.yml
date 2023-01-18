@@ -455,6 +455,7 @@ jobs:
           ASPNETCORE_ENVIRONMENT: Production
           swaggerGen: "True"
           DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
+          GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
       - name: Upload Swagger artifact
         uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
