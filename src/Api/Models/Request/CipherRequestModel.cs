@@ -158,7 +158,7 @@ public class CipherRequestModel
             PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
 
             Uris =
-                Login.Uris?.Where(u => u != null)
+                Login.Uris?.Where(u => u.Uri != null)
                     .Select(u => u.ToCipherLoginUriData()),
             Username = Login.Username,
             Password = Login.Password,
