@@ -1287,7 +1287,7 @@ public class OrganizationService : IOrganizationService
             {
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
-            
+
             await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
