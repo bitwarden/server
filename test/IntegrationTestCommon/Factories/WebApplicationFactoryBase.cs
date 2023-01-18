@@ -56,10 +56,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         {
             var dbContextOptions = services.First(sd => sd.ServiceType == typeof(DbContextOptions<DatabaseContext>));
             services.Remove(dbContextOptions);
-            services.AddScoped(_ =>
+            services.AddScoped(services =>
             {
                 return new DbContextOptionsBuilder<DatabaseContext>()
                     .UseInMemoryDatabase(DatabaseName)
+                    .UseApplicationServiceProvider(services)
                     .Options;
             });
 
