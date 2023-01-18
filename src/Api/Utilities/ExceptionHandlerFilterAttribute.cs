@@ -97,6 +97,19 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 409;
         }
+        else if (exception is AggregateException aggregateException)
+        {
+            context.HttpContext.Response.StatusCode = 400;
+            var errorValues = aggregateException.InnerExceptions.Select(ex => ex.Message);
+            if (_publicApi)
+            {
+                publicErrorModel = new ErrorResponseModel(errorMessage, errorValues);
+            }
+            else
+            {
+                internalErrorModel = new InternalApi.ErrorResponseModel(errorMessage, errorValues);
+            }
+        }
         else
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
