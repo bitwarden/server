@@ -1,13 +1,14 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM alpine AS web-setup
+FROM --platform=$BUILDPLATFORM debian AS web-setup
 
 # Add packages
-RUN apk add --update-cache \
+RUN apt-get update && apt-get install -y \
     curl \
     jq \
-    && rm -rf /var/cache/apk/*
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
 
@@ -49,9 +50,6 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     && echo "RID=$RID" > /tmp/rid.txt
 
 # Add packages
-# RUN apk add --update-cache \
-#     npm \
-#     && rm -rf /var/cache/apk/*
 RUN apt-get update && apt-get install -y \
     npm \
     && rm -rf /var/lib/apt/lists/*
@@ -77,6 +75,7 @@ COPY util/MySqlMigrations/*.csproj ./util/MySqlMigrations/
 COPY util/PostgresMigrations/*.csproj ./util/PostgresMigrations/
 COPY util/SqliteMigrations/*.csproj ./util/SqliteMigrations/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
+COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
@@ -131,6 +130,7 @@ COPY util/PostgresMigrations/. ./util/PostgresMigrations/
 COPY util/SqliteMigrations/. ./util/SqliteMigrations/
 COPY util/EfShared/. ./util/EfShared/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
+COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY .git/. ./.git/
 
 # Build Admin app
@@ -172,7 +172,7 @@ RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Scim --no-restore --no-s
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:6.0
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="unified"
@@ -207,16 +207,15 @@ ENV globalSettings__logDirectoryByProject="false"
 ENV globalSettings__logRollBySizeLimit="1073741824"
 
 # Add packages
-RUN apk add --update-cache \
+RUN apt-get update && apt-get install -y \
     curl \
-    icu-libs \
     nginx \
     openssl \
-    su-exec \
     supervisor \
     tzdata \
     unzip \
-    && rm -rf /var/cache/apk/*
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create required directories
 RUN mkdir -p /etc/bitwarden/attachments/send
@@ -227,6 +226,9 @@ RUN mkdir -p /etc/supervisor
 RUN mkdir -p /etc/supervisor.d
 RUN mkdir -p /var/log/bitwarden
 RUN mkdir -p /var/log/nginx/logs
+RUN mkdir -p /etc/nginx/http.d
+RUN mkdir -p /var/run/nginx
+RUN touch /var/run/nginx/nginx.pid
 RUN mkdir -p /app
 
 # Copy all apps from dotnet-build stage
@@ -256,9 +258,9 @@ COPY docker-unified/hbs/app-id.hbs /etc/hbs/
 COPY docker-unified/hbs/config.yaml /etc/hbs/
 
 # Download hbs tool for generating final configurations
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-x64_dotnet.zip; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-armv7_dotnet.zip; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-arm64_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_linux-x64_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_linux-armv7_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_linux-arm64_dotnet.zip; fi
 
 # Extract hbs
 RUN unzip hbs.zip -d /usr/local/bin && rm hbs.zip
@@ -267,11 +269,6 @@ RUN chmod +x /usr/local/bin/hbs
 # Copy entrypoint script and make it executable
 COPY docker-unified/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-# TODO: Remove after testing
-RUN apk add --update-cache \
-    vim \
-    && rm -rf /var/cache/apk/*
 
 VOLUME ["/etc/bitwarden"]
 
