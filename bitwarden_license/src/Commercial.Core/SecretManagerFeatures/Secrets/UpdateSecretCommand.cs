@@ -44,7 +44,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
             throw new UnauthorizedAccessException();
         }
 
-        var existingSecret = await _secretRepository.GetByIdAsync(updatedSecret.Id, userId, accessClient, orgAdmin);
+        var existingSecret = await _secretRepository.GetByIdAsync(updatedSecret.Id);
         if (existingSecret == null)
         {
             throw new NotFoundException();
@@ -55,7 +55,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         updatedSecret.DeletedDate = existingSecret.DeletedDate;
         updatedSecret.RevisionDate = DateTime.UtcNow;
 
-        await _secretRepository.UpdateAsync(updatedSecret, userId, accessClient, orgAdmin);
+        await _secretRepository.UpdateAsync(updatedSecret);
         return updatedSecret;
     }
 }

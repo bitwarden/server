@@ -24,7 +24,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var secrets = await _secretRepository.GetManyByIds(ids, userId, accessClient, orgAdmin); //TODO
+        var secrets = await _secretRepository.GetManyByIds(ids); //TODO
 
         if (secrets?.Any() != true)
         {
@@ -49,10 +49,12 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                     hasAccess = orgAdmin;
                 } else {
                     var projectId = secret.Projects.FirstOrDefault().Id;
+                    var hasAccess2 = await _projectRepository.UserHasWriteAccessToProject(projectId, userId);
+
                     hasAccess = accessClient switch
                     {
                         AccessClientType.NoAccessCheck => true,
-                        AccessClientType.User => _projectRepository.UserHasWriteAccessToProject(projectId, userId),
+                        AccessClientType.User => (bool)hasAccess2,
                         _ => false,
                     };
                 }
@@ -66,7 +68,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             }
         }).ToList();
 
-        await _secretRepository.SoftDeleteManyByIdAsync(ids, userId, accessClient, orgAdmin);
+        await _secretRepository.SoftDeleteManyByIdAsync(ids);
         return results;
     }
 }

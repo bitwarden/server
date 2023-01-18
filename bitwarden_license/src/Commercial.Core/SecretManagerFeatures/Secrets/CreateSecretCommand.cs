@@ -44,6 +44,6 @@ public class CreateSecretCommand : ICreateSecretCommand
         }
 
         //Check if the project thats associated with the secret gives this user read/write/no access
-        return await _secretRepository.CreateAsync(secret, userId, accessClient, orgAdmin);
+        return await _secretRepository.CreateAsync(secret);
     }
 }
