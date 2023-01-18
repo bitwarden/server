@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 param (
-  [Parameter(Position = 1)]
+  [Parameter(Mandatory)]
   $Name
 )
 
