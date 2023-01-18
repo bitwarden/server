@@ -5,20 +5,24 @@ using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Entities;
-
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories;
 
-public class SecretRepository : Repository<Core.Entities.Secret, Core.Entities.Secret, Guid>, ISecretRepository
+public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, ISecretRepository
 {
-    public SecretRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
-        : base(serviceScopeFactory, mapper, db => db.Secret)
-    { }
+    private readonly IProjectRepository _projectRepository;
 
-    public override async Task<Core.Entities.Secret> GetByIdAsync(Guid id, Guid userId, Bit.Core.Enums.AccessClientType accessType, bool orgAdmin)
+    public SecretRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper, IProjectRepository projectRepository)
+        : base(serviceScopeFactory, mapper, db => db.Secret)
+    {  }
+    
+    public async override Task<Core.Entities.Secret> GetByIdAsync(Guid id)
+    {
+        throw new NotSupportedException("You cannot call this method, please use the ");
+    }
+
+    public async Task<Core.Entities.Secret> GetByIdAsync(Guid id, Guid userId, AccessClientType accessType, bool orgAdmin)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -31,8 +35,8 @@ public class SecretRepository : Repository<Core.Entities.Secret, Core.Entities.S
             query = accessType switch
             {
                 AccessClientType.NoAccessCheck => query,
-                AccessClientType.User => query.Where(sec => _projectRepository.UserHasReadAccessToProject(sec.projectId, userId)),
-                AccessClientType.ServiceAccount => query.Where(sec => _projectRepository.ServiceAccountHasReadAccessToProject(sec.projectId, userId)), 
+                AccessClientType.User => _projectRepository.UserHasReadAccessToProject(query.projectId, userId),
+                AccessClientType.ServiceAccount => _projectRepository.ServiceAccountHasReadAccessToProject(sec.projectId, userId), 
                 _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
             };
 
@@ -117,15 +121,17 @@ public class SecretRepository : Repository<Core.Entities.Secret, Core.Entities.S
         }
     }
 
-    public override async Task<Core.Entities.Secret> CreateAsync(Core.Entities.Secret secret, Guid userId, AccessClientType accessType, bool orgAdmin)
+    public async Task<Core.Entities.Secret> CreateAsync(Core.Entities.Secret secret, Guid userId, AccessClientType accessType, bool orgAdmin)
     {   
         var hasAccess = false;
-        if(secret.projectId){
+        if(secret.Projects != null){
+            var projectId = secret.Projects.FirstOrDefault().Id;
+
             hasAccess = accessType switch
             {
                 AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => _projectRepository.UserHasWriteAccessToProject(secret.projectId, userId),
-                AccessClientType.ServiceAccount => _projectRepository.ServiceAccountHasWriteAccessToProject(secret.projectId, userId), 
+                AccessClientType.User => _projectRepository.UserHasWriteAccessToProject(projectId, userId),
+                AccessClientType.ServiceAccount => _projectRepository.ServiceAccountHasWriteAccessToProject(projectId, userId), 
                 _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
             };
         } else {
@@ -160,7 +166,8 @@ public class SecretRepository : Repository<Core.Entities.Secret, Core.Entities.S
     public async Task<Core.Entities.Secret> UpdateAsync(Core.Entities.Secret secret, Guid userId, AccessClientType accessType, bool orgAdmin)
     {
         var hasAccess = false;
-        if(secret.projectId){
+        if(!secret.Projects == null){
+
             hasAccess = accessType switch
             {
                 AccessClientType.NoAccessCheck => true,
@@ -213,7 +220,6 @@ public class SecretRepository : Repository<Core.Entities.Secret, Core.Entities.S
             
             await secrets.ForEachAsync(secret =>
             {
-                //Todo change?
                 var hasAccess = false;
 
                 if(secret.projectId){

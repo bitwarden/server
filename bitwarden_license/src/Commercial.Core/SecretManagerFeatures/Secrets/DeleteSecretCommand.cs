@@ -52,7 +52,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                     hasAccess = accessClient switch
                     {
                         AccessClientType.NoAccessCheck => true,
-                        AccessClientType.User => false,//_projectRepository.UserHasWriteAccessToProject(projectId, userId),
+                        AccessClientType.User => _projectRepository.UserHasWriteAccessToProject(projectId, userId),
                         _ => false,
                     };
                 }
