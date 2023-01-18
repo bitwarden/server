@@ -41,7 +41,7 @@
         </div>
     </div>
     
-    <div id="info-0" class="form-group">
+    <div id="info-0" class="form-group @(Model.Type != ProviderType.Msp ? "d-none" : string.Empty)">
         <h2>MSP Info</h2>
         <div class="form-group">
             <label asp-for="OwnerEmail"></label>
@@ -49,7 +49,7 @@
         </div>
     </div>
     
-    <div id="info-1" class="form-group d-none">
+    <div id="info-1" class="form-group @(Model.Type != ProviderType.Reseller ? "d-none" : string.Empty)">
         <h2>Reseller Info</h2>
         <div class="form-group">
             <label asp-for="BusinessName"></label>
