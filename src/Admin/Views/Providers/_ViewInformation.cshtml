@@ -1,4 +1,6 @@
-﻿@model ProviderViewModel
+﻿@using System.ComponentModel.DataAnnotations
+@using System.Reflection
+@model ProviderViewModel
 <dl class="row">
     <dt class="col-sm-4 col-lg-3">Id</dt>
     <dd class="col-sm-8 col-lg-9"><code>@Model.Provider.Id</code></dd>
@@ -7,7 +9,10 @@
     <dd class="col-sm-8 col-lg-9">@Model.Provider.Status</dd>
     
     <dt class="col-sm-4 col-lg-3">Users</dt>
-    <dd class="col-sm-8 col-lg-9">@Model.UserCount</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.Provider.Type == ProviderType.Reseller ? "N/A" : Model.UserCount)</dd>
+    
+    <dt class="col-sm-4 col-lg-3">Provider Type</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.Provider.Type.GetType().GetMember(Model.Provider.Type.ToString()).FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName())</dd>
     
     <dt class="col-sm-4 col-lg-3">Created</dt>
     <dd class="col-sm-8 col-lg-9">@Model.Provider.CreationDate.ToString()</dd>
