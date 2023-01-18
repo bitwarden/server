@@ -1287,8 +1287,7 @@ public class OrganizationService : IOrganizationService
             {
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
-
-            // Blows up here
+            
             await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
@@ -1300,14 +1299,6 @@ public class OrganizationService : IOrganizationService
         }
         catch (Exception e)
         {
-            // Exception message: No recipients have been specified.
-            // at MailKit.Net.Smtp.SmtpClient.SendAsync(FormatOptions options, MimeMessage message, CancellationToken cancellationToken, ITransferProgress progress)
-            // at MailKit.MailTransport.SendAsync(MimeMessage message, CancellationToken cancellationToken, ITransferProgress progress)
-            // at Bit.Core.Services.MailKitSmtpMailDeliveryService.SendEmailAsync(MailMessage message) in /Users/jaredsnider/Repos/server/src/Core/Services/Implementations/MailKitSmtpMailDeliveryService.cs:line 96
-            // at Bit.Core.Services.HandlebarsMailService.SendOrganizationAutoscaledEmailAsync(Organization organization, Int32 initialSeatCount, IEnumerable`1 ownerEmails) in /Users/jaredsnider/Repos/server/src/Core/Services/Implementations/HandlebarsMailService.cs:line 170
-            // at Bit.Core.Services.OrganizationService.AutoAddSeatsAsync(Organization organization, Int32 seatsToAdd, Nullable`1 prorationDate) in /Users/jaredsnider/Repos/server/src/Core/Services/Implementations/OrganizationService.cs:line 1635
-            // at Bit.Core.Services.OrganizationService.SaveUsersSendInvitesAsync(Guid organizationId, IEnumerable`1 invites) in /Users/jaredsnider/Repos/server/src/Core/Services/Implementations/OrganizationService.cs:line 1284
-
             // Revert any added users.
             var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
