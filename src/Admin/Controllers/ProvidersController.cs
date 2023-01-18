@@ -78,7 +78,7 @@ public class ProvidersController : Controller
         var provider = model.ToProvider();
         await _providerService.CreateAsync(provider, model.OwnerEmail);
 
-        return RedirectToAction("Index");
+        return RedirectToAction("View", new { id = provider.Id });
     }
 
     public async Task<IActionResult> View(Guid id)
