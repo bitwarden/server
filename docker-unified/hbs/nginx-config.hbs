@@ -77,6 +77,30 @@ server {
     add_header Content-Type $fido_content_type;
   }
 
+  location = /duo-connector.html {
+    root /app/Web;
+  }
+
+  location = /webauthn-connector.html {
+    root /app/Web;
+  }
+
+  location = /webauthn-fallback-connector.html {
+    root /app/Web;
+  }
+
+  location = /sso-connector.html {
+    root /app/Web;
+  }
+
+  location = /captcha-connector.html {
+    root /app/Web;
+  }
+
+  location = /captcha-mobile-connector.html {
+    root /app/Web;
+  }
+
   location /attachments {
     alias /etc/bitwarden/attachments/;
   }

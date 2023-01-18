@@ -16,6 +16,7 @@ public class OrganizationUserOrganizationDetails
     public bool Use2fa { get; set; }
     public bool UseApi { get; set; }
     public bool UseResetPassword { get; set; }
+    public bool UseSecretsManager { get; set; }
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool UseCustomPermissions { get; set; }
