@@ -5,7 +5,7 @@ GO
 
 ALTER PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
 @ProviderId UNIQUEIDENTIFIER,
-@Status TINYINT
+@Status TINYINT = NULL  -- new: this is required to be backwards compatible
 AS
 BEGIN
     SET NOCOUNT ON
@@ -16,6 +16,6 @@ BEGIN
         [dbo].[ProviderUserUserDetailsView]
     WHERE
         [ProviderId] = @ProviderId
-        AND [Status] = COALESCE(@Status, [Status])
+        AND [Status] = COALESCE(@Status, [Status])  -- new
 END
 GO
