@@ -8,6 +8,7 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using Bit.Core.IdentityServer;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
+using Bit.Commercial.Infrastructure.EntityFramework;
 #endif
 
 namespace Bit.Api;
@@ -84,34 +86,42 @@ public class Startup
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
             });
             config.AddPolicy("Web", policy =>
             {
                 policy.RequireAuthenticatedUser();
                 policy.RequireClaim(JwtClaimTypes.AuthenticationMethod, "Application", "external");
-                policy.RequireClaim(JwtClaimTypes.Scope, "api");
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api);
                 policy.RequireClaim(JwtClaimTypes.ClientId, "web");
             });
             config.AddPolicy("Push", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.push");
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiPush);
             });
             config.AddPolicy("Licensing", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.licensing");
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiLicensing);
             });
             config.AddPolicy("Organization", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.organization");
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiOrganization);
             });
             config.AddPolicy("Installation", policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireClaim(JwtClaimTypes.Scope, "api.installation");
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.ApiInstallation);
+            });
+            config.AddPolicy("Secrets", policy =>
+            {
+                policy.RequireAuthenticatedUser();
+                policy.RequireAssertion(ctx => ctx.User.HasClaim(c =>
+                    c.Type == JwtClaimTypes.Scope &&
+                    (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
+                ));
             });
         });
 
@@ -125,7 +135,9 @@ public class Startup
 #if OSS
         services.AddOosServices();
 #else
-        services.AddCommCoreServices();
+        services.AddCommercialCoreServices();
+        services.AddCommercialSecretsManagerServices();
+        services.AddCommercialEFRepositories();
 #endif
 
         // MVC
