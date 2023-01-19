@@ -99,4 +99,4 @@ chown -R $PUID:$PGID \
     /var/run/nginx \
     /run
 
-sudo -E -u \#$PUID /usr/bin/supervisord
+exec setpriv --reuid=$PUID --regid=$PGID --init-groups /usr/bin/supervisord
