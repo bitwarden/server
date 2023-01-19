@@ -54,7 +54,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
                         && x.NextRunDate.Hour == date.Hour)
             .AsNoTracking()
             .ToListAsync();
-        
+
         //Get records that have ignored/failed by the background service
         var pastDomains = dbContext.OrganizationDomains
             .AsEnumerable()
@@ -122,7 +122,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        
+
         //Get domains that have not been verified after 72 hours
         var domains = dbContext.OrganizationDomains
             .AsEnumerable()
