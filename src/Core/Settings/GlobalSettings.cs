@@ -73,7 +73,6 @@ public class GlobalSettings : IGlobalSettings
     public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
     public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
     public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
-    public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
     public virtual DistributedIpRateLimitingSettings DistributedIpRateLimiting { get; set; } =
         new DistributedIpRateLimitingSettings();
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
@@ -508,11 +507,6 @@ public class GlobalSettings : IGlobalSettings
     {
         public string ApiKey { get; set; }
         public int MaxNetworkRetries { get; set; } = 2;
-    }
-
-    public class TwoFactorAuthSettings : ITwoFactorAuthSettings
-    {
-        public bool EmailOnNewDeviceLogin { get; set; } = false;
     }
 
     public class DistributedIpRateLimitingSettings
