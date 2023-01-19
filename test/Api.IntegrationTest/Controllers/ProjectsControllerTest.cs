@@ -1,9 +1,10 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
-using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Response;
 using Bit.Api.SecretManagerFeatures.Models.Request;
+using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -62,15 +63,14 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/projects", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Project>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
-        Assert.Null(result.DeletedDate);
 
-        var createdProject = await _projectRepository.GetByIdAsync(result.Id);
+        var createdProject = await _projectRepository.GetByIdAsync(new Guid(result.Id));
         Assert.NotNull(result);
         Assert.Equal(request.Name, createdProject.Name);
         AssertHelper.AssertRecent(createdProject.RevisionDate);
@@ -106,13 +106,12 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.PutAsJsonAsync($"/projects/{initialProject.Id}", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Project>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
         Assert.NotEqual(initialProject.Name, result!.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
         Assert.NotEqual(initialProject.RevisionDate, result.RevisionDate);
-        Assert.Null(result.DeletedDate);
 
-        var updatedProject = await _projectRepository.GetByIdAsync(result.Id);
+        var updatedProject = await _projectRepository.GetByIdAsync(new Guid(result.Id));
         Assert.NotNull(result);
         Assert.Equal(request.Name, updatedProject.Name);
         AssertHelper.AssertRecent(updatedProject.RevisionDate);
@@ -169,11 +168,10 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.GetAsync($"/projects/{createdProject.Id}");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<Project>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
         Assert.Equal(createdProject.Name, result!.Name);
         Assert.Equal(createdProject.RevisionDate, result.RevisionDate);
         Assert.Equal(createdProject.CreationDate, result.CreationDate);
-        Assert.Null(result.DeletedDate);
     }
 
     [Fact]
@@ -193,12 +191,11 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.GetAsync($"/organizations/{_organization.Id}/projects");
         response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
-
-        var jsonResult = JsonDocument.Parse(content);
-
-        Assert.NotEmpty(jsonResult.RootElement.GetProperty("data").EnumerateArray());
-        Assert.Equal(projectIds.Count(), jsonResult.RootElement.GetProperty("data").EnumerateArray().Count());
+        
+        var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ProjectResponseModel>>();
+        Assert.NotNull(result);
+        Assert.NotEmpty(result!.Data);
+        Assert.Equal(projectIds.Count, result.Data.Count());
     }
 
     [Fact]
@@ -219,15 +216,14 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var response = await _client.PostAsync("/projects/delete", JsonContent.Create(projectIds));
         response.EnsureSuccessStatusCode();
 
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.NotEmpty(content);
+        var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
+        Assert.NotNull(results);
 
-        var jsonResult = JsonDocument.Parse(content);
         var index = 0;
-        foreach (var element in jsonResult.RootElement.GetProperty("data").EnumerateArray())
+        foreach (var result in results!.Data)
         {
-            Assert.Equal(projectIds[index].ToString(), element.GetProperty("id").ToString());
-            Assert.Empty(element.GetProperty("error").ToString());
+            Assert.Equal(projectIds[index], result.Id);
+            Assert.Null(result.Error);
             index++;
         }
 

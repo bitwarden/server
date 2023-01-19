@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
@@ -113,14 +113,14 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/service-accounts", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ServiceAccount>();
+        var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
 
-        var createdServiceAccount = await _serviceAccountRepository.GetByIdAsync(result.Id);
+        var createdServiceAccount = await _serviceAccountRepository.GetByIdAsync(new Guid(result.Id));
         Assert.NotNull(result);
         Assert.Equal(request.Name, createdServiceAccount.Name);
         AssertHelper.AssertRecent(createdServiceAccount.RevisionDate);
@@ -158,7 +158,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ServiceAccount>();
+        var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
         Assert.NotEqual(initialServiceAccount.Name, result.Name);
@@ -215,7 +215,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ApiKey>();
+        var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
@@ -269,7 +269,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ApiKey>();
+        var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
