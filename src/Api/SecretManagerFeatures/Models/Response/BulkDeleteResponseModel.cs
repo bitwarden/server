@@ -5,7 +5,9 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
 public class BulkDeleteResponseModel : ResponseModel
 {
-    public BulkDeleteResponseModel(Guid id, string error, string obj = "BulkDeleteResponseModel") : base(obj)
+    private const string _objectName = "BulkDeleteResponseModel";
+
+    public BulkDeleteResponseModel(Guid id, string error) : base(_objectName)
     {
         Id = id;
 
@@ -17,6 +19,10 @@ public class BulkDeleteResponseModel : ResponseModel
         {
             Error = error;
         }
+    }
+
+    public BulkDeleteResponseModel() : base(_objectName)
+    {
     }
 
     public Guid Id { get; set; }
