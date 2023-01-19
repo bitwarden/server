@@ -21,6 +21,17 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
+    Task IEventService.LogCollectionEventsAsync(IEnumerable<(Collection collection, EventType type, DateTime? date)> events)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task LogGroupEventsAsync(
+        IEnumerable<(Group group, EventType type, EventSystemUser? systemUser, DateTime? date)> events)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
     {
         return Task.FromResult(0);
@@ -82,4 +93,5 @@ public class NoopEventService : IEventService
     {
         return Task.FromResult(0);
     }
+
 }
