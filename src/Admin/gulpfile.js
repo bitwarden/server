@@ -50,6 +50,10 @@ function lib() {
             src: paths.npmDir + 'toastr/build/*',
             dest: paths.libDir + 'toastr'
         },
+        {
+            src: paths.sassDir + 'webfonts/*',
+            dest: paths.cssDir + 'webfonts'
+        }
     ];
 
     const tasks = libs.map((lib) => {
