@@ -4,7 +4,7 @@ namespace Bit.Api.Models.Public.Response;
 
 public class AssociationWithPermissionsResponseModel : AssociationWithPermissionsBaseModel
 {
-    public AssociationWithPermissionsResponseModel(SelectionReadOnly selection)
+    public AssociationWithPermissionsResponseModel(CollectionAccessSelection selection)
     {
         if (selection == null)
         {

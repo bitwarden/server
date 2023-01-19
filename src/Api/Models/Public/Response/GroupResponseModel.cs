@@ -9,7 +9,7 @@ namespace Bit.Api.Models.Public.Response;
 /// </summary>
 public class GroupResponseModel : GroupBaseModel, IResponseModel
 {
-    public GroupResponseModel(Group group, IEnumerable<SelectionReadOnly> collections)
+    public GroupResponseModel(Group group, IEnumerable<CollectionAccessSelection> collections)
     {
         if (group == null)
         {
