@@ -1,8 +1,9 @@
 ﻿using System.Net.Http.Headers;
-using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Api.Models.Response;
 using Bit.Api.SecretManagerFeatures.Models.Request;
+using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
@@ -58,12 +59,11 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.GetAsync($"/organizations/{_organization.Id}/service-accounts");
         response.EnsureSuccessStatusCode();
-        var content = await response.Content.ReadAsStringAsync();
+        var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ServiceAccountResponseModel>>();
 
-        var jsonResult = JsonDocument.Parse(content);
-
-        Assert.NotEmpty(jsonResult.RootElement.GetProperty("data").EnumerateArray());
-        Assert.Equal(serviceAccountIds.Count(), jsonResult.RootElement.GetProperty("data").EnumerateArray().Count());
+        Assert.NotNull(result);
+        Assert.NotEmpty(result!.Data);
+        Assert.Equal(serviceAccountIds.Count, result.Data.Count());
     }
 
     [Fact]
@@ -76,14 +76,14 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/service-accounts", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ServiceAccount>();
+        var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
 
-        var createdServiceAccount = await _serviceAccountRepository.GetByIdAsync(result.Id);
+        var createdServiceAccount = await _serviceAccountRepository.GetByIdAsync(new Guid(result.Id));
         Assert.NotNull(result);
         Assert.Equal(request.Name, createdServiceAccount.Name);
         AssertHelper.AssertRecent(createdServiceAccount.RevisionDate);
@@ -106,7 +106,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ServiceAccount>();
+        var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
         Assert.NotEqual(initialServiceAccount.Name, result.Name);
@@ -142,7 +142,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ApiKey>();
+        var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
@@ -171,7 +171,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ApiKey>();
+        var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.Name, result!.Name);
