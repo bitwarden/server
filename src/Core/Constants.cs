@@ -9,6 +9,8 @@ public static class Constants
     // in nginx/proxy.conf may also need to be updated accordingly.
     public const long FileSize101mb = 101L * 1024L * 1024L;
     public const long FileSize501mb = 501L * 1024L * 1024L;
+    public const string DatabaseFieldProtectorPurpose = "DatabaseFieldProtection";
+    public const string DatabaseFieldProtectedPrefix = "P|";
 }
 
 public static class TokenPurposes
