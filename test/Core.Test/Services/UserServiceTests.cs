@@ -123,7 +123,7 @@ public class UserServiceTests
         });
 
         await Assert.ThrowsAsync<ArgumentNullException>("No email.", () => sutProvider.Sut.SendTwoFactorEmailAsync(user));
-    }    
+    }
 
     [Theory, BitAutoData]
     public async void HasPremiumFromOrganization_Returns_False_If_No_Orgs(SutProvider<UserService> sutProvider, User user)

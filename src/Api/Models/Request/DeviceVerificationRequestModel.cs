@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities;
 
 namespace Bit.Api.Models.Request;
 
