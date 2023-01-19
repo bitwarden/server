@@ -34,8 +34,11 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         {
             throw new NotFoundException();
         }
+
         if (domain.VerifiedDate is not null)
         {
+            domain.SetLastCheckedDate();
+            await _organizationDomainRepository.ReplaceAsync(domain);
             throw new ConflictException("Domain has already been verified.");
         }
 
@@ -43,6 +46,8 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             await _organizationDomainRepository.GetClaimedDomainsByDomainNameAsync(domain.DomainName);
         if (claimedDomain.Any())
         {
+            domain.SetLastCheckedDate();
+            await _organizationDomainRepository.ReplaceAsync(domain);
             throw new ConflictException("The domain is not available to be claimed.");
         }
 
@@ -51,9 +56,6 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             if (await _dnsResolverService.ResolveAsync(domain.DomainName, domain.Txt))
             {
                 domain.SetVerifiedDate();
-                domain.SetLastCheckedDate();
-                await _organizationDomainRepository.ReplaceAsync(domain);
-                await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Verified);
             }
         }
         catch (Exception e)
@@ -61,7 +63,11 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
             _logger.LogError("Error verifying Organization domain.", e);
         }
 
-        await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified);
+        domain.SetLastCheckedDate();
+        await _organizationDomainRepository.ReplaceAsync(domain);
+
+        await _eventService.LogOrganizationDomainEventAsync(domain,
+            domain.VerifiedDate != null ? EventType.OrganizationDomain_Verified : EventType.OrganizationDomain_NotVerified);
         return domain;
     }
 }

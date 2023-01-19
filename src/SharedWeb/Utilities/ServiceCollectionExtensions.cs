@@ -410,7 +410,7 @@ public static class ServiceCollectionExtensions
     public static void AddCustomDataProtectionServices(
         this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
-        var builder = services.AddDataProtection(options => options.ApplicationDiscriminator = "Bitwarden");
+        var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
         if (env.IsDevelopment())
         {
             return;
@@ -435,7 +435,6 @@ public static class ServiceCollectionExtensions
                     "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
                     .GetAwaiter().GetResult();
             }
-            //TODO djsmith85 Check if this is the correct container name
             builder
                 .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
                 .ProtectKeysWithCertificate(dataProtectionCert);

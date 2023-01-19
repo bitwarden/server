@@ -23,7 +23,6 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<IMaintenanceRepository, MaintenanceRepository>();
         services.AddSingleton<IOrganizationApiKeyRepository, OrganizationApiKeyRepository>();
         services.AddSingleton<IOrganizationConnectionRepository, OrganizationConnectionRepository>();
-        services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
         services.AddSingleton<IOrganizationRepository, OrganizationRepository>();
         services.AddSingleton<IOrganizationSponsorshipRepository, OrganizationSponsorshipRepository>();
         services.AddSingleton<IOrganizationUserRepository, OrganizationUserRepository>();
@@ -37,6 +36,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
+        services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
 
         if (selfHosted)
         {

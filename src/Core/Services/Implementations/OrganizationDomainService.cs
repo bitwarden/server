@@ -52,6 +52,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 if (status)
                 {
                     _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
+                    domain.SetLastCheckedDate();
                     domain.SetVerifiedDate();
                     domain.SetJobRunCount();
 
@@ -61,6 +62,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                     return;
                 }
 
+                domain.SetLastCheckedDate();
                 domain.SetJobRunCount();
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                 await _domainRepository.ReplaceAsync(domain);
@@ -70,6 +72,9 @@ public class OrganizationDomainService : IOrganizationDomainService
             }
             catch (Exception ex)
             {
+                domain.SetLastCheckedDate();
+                await _domainRepository.ReplaceAsync(domain);
+
                 _logger.LogError(ex, "Verification for organization {OrgId} with domain {Domain} threw an exception", domain.OrganizationId, domain.DomainName);
             }
         }
