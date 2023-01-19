@@ -12,32 +12,49 @@ public class UpdateGroupCommand : IUpdateGroupCommand
 {
     private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public UpdateGroupCommand(
         IEventService eventService,
-        IGroupRepository groupRepository)
+        IGroupRepository groupRepository,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     public async Task UpdateGroupAsync(Group group, Organization organization,
-        IEnumerable<SelectionReadOnly> collections = null)
+        IEnumerable<CollectionAccessSelection> collections = null,
+        IEnumerable<Guid> userIds = null)
     {
         Validate(organization);
         await GroupRepositoryUpdateGroupAsync(group, collections);
+
+        if (userIds != null)
+        {
+            await GroupRepositoryUpdateUsersAsync(group, userIds);
+        }
+
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
     }
 
     public async Task UpdateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
-        IEnumerable<SelectionReadOnly> collections = null)
+        IEnumerable<CollectionAccessSelection> collections = null,
+        IEnumerable<Guid> userIds = null)
     {
         Validate(organization);
         await GroupRepositoryUpdateGroupAsync(group, collections);
+
+        if (userIds != null)
+        {
+            await GroupRepositoryUpdateUsersAsync(group, userIds, systemUser);
+        }
+
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser);
     }
 
-    private async Task GroupRepositoryUpdateGroupAsync(Group group, IEnumerable<SelectionReadOnly> collections = null)
+    private async Task GroupRepositoryUpdateGroupAsync(Group group, IEnumerable<CollectionAccessSelection> collections = null)
     {
         group.RevisionDate = DateTime.UtcNow;
 
@@ -48,6 +65,34 @@ public class UpdateGroupCommand : IUpdateGroupCommand
         else
         {
             await _groupRepository.ReplaceAsync(group, collections);
+        }
+    }
+
+    private async Task GroupRepositoryUpdateUsersAsync(Group group, IEnumerable<Guid> userIds, EventSystemUser? systemUser = null)
+    {
+        var newUserIds = userIds as Guid[] ?? userIds.ToArray();
+        var originalUserIds = await _groupRepository.GetManyUserIdsByIdAsync(group.Id);
+
+        await _groupRepository.UpdateUsersAsync(group.Id, newUserIds);
+
+        // We only want to create events OrganizationUserEvents for those that were actually modified.
+        // HashSet.SymmetricExceptWith is a convenient method of finding the difference between lists
+        var changedUserIds = new HashSet<Guid>(originalUserIds);
+        changedUserIds.SymmetricExceptWith(newUserIds);
+
+        // Fetch all changed users for logging the event
+        var users = await _organizationUserRepository.GetManyAsync(changedUserIds);
+        var eventDate = DateTime.UtcNow;
+
+        if (systemUser.HasValue)
+        {
+            await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                (u, EventType.OrganizationUser_UpdatedGroups, systemUser.Value, (DateTime?)eventDate)));
+        }
+        else
+        {
+            await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
         }
     }
 

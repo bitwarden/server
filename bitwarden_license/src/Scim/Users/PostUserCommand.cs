@@ -80,7 +80,7 @@ public class PostUserCommand : IPostUserCommand
         }
 
         var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, EventSystemUser.SCIM, email,
-            OrganizationUserType.User, false, externalId, new List<SelectionReadOnly>());
+            OrganizationUserType.User, false, externalId, new List<CollectionAccessSelection>(), new List<Guid>());
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 
         return orgUser;

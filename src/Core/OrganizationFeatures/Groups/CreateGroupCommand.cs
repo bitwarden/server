@@ -13,35 +13,52 @@ public class CreateGroupCommand : ICreateGroupCommand
 {
     private readonly IEventService _eventService;
     private readonly IGroupRepository _groupRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IReferenceEventService _referenceEventService;
 
     public CreateGroupCommand(
         IEventService eventService,
         IGroupRepository groupRepository,
+        IOrganizationUserRepository organizationUserRepository,
         IReferenceEventService referenceEventService)
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
+        _organizationUserRepository = organizationUserRepository;
         _referenceEventService = referenceEventService;
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization,
-        IEnumerable<SelectionReadOnly> collections = null)
+        IEnumerable<CollectionAccessSelection> collections = null,
+        IEnumerable<Guid> users = null)
     {
         Validate(organization);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
+
+        if (users != null)
+        {
+            await GroupRepositoryUpdateUsersAsync(group, users);
+        }
+
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
-        IEnumerable<SelectionReadOnly> collections = null)
+        IEnumerable<CollectionAccessSelection> collections = null,
+        IEnumerable<Guid> users = null)
     {
         Validate(organization);
         await GroupRepositoryCreateGroupAsync(group, organization, collections);
+
+        if (users != null)
+        {
+            await GroupRepositoryUpdateUsersAsync(group, users, systemUser);
+        }
+
         await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, systemUser);
     }
 
-    private async Task GroupRepositoryCreateGroupAsync(Group group, Organization organization, IEnumerable<SelectionReadOnly> collections = null)
+    private async Task GroupRepositoryCreateGroupAsync(Group group, Organization organization, IEnumerable<CollectionAccessSelection> collections = null)
     {
         group.CreationDate = group.RevisionDate = DateTime.UtcNow;
 
@@ -55,6 +72,28 @@ public class CreateGroupCommand : ICreateGroupCommand
         }
 
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, organization));
+    }
+
+    private async Task GroupRepositoryUpdateUsersAsync(Group group, IEnumerable<Guid> userIds,
+        EventSystemUser? systemUser = null)
+    {
+        var usersToAddToGroup = userIds as Guid[] ?? userIds.ToArray();
+
+        await _groupRepository.UpdateUsersAsync(group.Id, usersToAddToGroup);
+
+        var users = await _organizationUserRepository.GetManyAsync(usersToAddToGroup);
+        var eventDate = DateTime.UtcNow;
+
+        if (systemUser.HasValue)
+        {
+            await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                (u, EventType.OrganizationUser_UpdatedGroups, systemUser.Value, (DateTime?)eventDate)));
+        }
+        else
+        {
+            await _eventService.LogOrganizationUserEventsAsync(users.Select(u =>
+                (u, EventType.OrganizationUser_UpdatedGroups, (DateTime?)eventDate)));
+        }
     }
 
     private static void Validate(Organization organization)

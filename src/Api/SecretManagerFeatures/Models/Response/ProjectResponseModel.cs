@@ -5,8 +5,10 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
 public class ProjectResponseModel : ResponseModel
 {
-    public ProjectResponseModel(Project project, string obj = "project")
-        : base(obj)
+    private const string _objectName = "project";
+
+    public ProjectResponseModel(Project project)
+        : base(_objectName)
     {
         if (project == null)
         {
@@ -18,6 +20,10 @@ public class ProjectResponseModel : ResponseModel
         Name = project.Name;
         CreationDate = project.CreationDate;
         RevisionDate = project.RevisionDate;
+    }
+
+    public ProjectResponseModel() : base(_objectName)
+    {
     }
 
     public string Id { get; set; }
