@@ -44,7 +44,6 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        List<OrganizationDomain> pastDomains;
 
         var domains = await dbContext.OrganizationDomains
             .Where(x => x.VerifiedDate == null
@@ -55,25 +54,14 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
                         && x.NextRunDate.Hour == date.Hour)
             .AsNoTracking()
             .ToListAsync();
-
+        
         //Get records that have ignored/failed by the background service
-        if (dbContext.Database.IsNpgsql())
-        {
-            pastDomains = dbContext.OrganizationDomains
-                .AsEnumerable()
-                .Where(x => (date - x.NextRunDate).TotalHours > 36
-                && x.VerifiedDate == null
-                && x.JobRunCount != 3)
-                .ToList();
-        }
-        else
-        {
-            pastDomains = await dbContext.OrganizationDomains
-                .Where(x => EF.Functions.DateDiffHour(x.NextRunDate, date) > 36
-                    && x.VerifiedDate == null
-                    && x.JobRunCount != 3)
-                .ToListAsync();
-        }
+        var pastDomains = dbContext.OrganizationDomains
+            .AsEnumerable()
+            .Where(x => (date - x.NextRunDate).TotalHours > 36
+                        && x.VerifiedDate == null
+                        && x.JobRunCount != 3)
+            .ToList();
 
         var results = domains.Union(pastDomains);
 
@@ -132,27 +120,15 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
     public async Task<ICollection<Core.Entities.OrganizationDomain>> GetExpiredOrganizationDomainsAsync()
     {
-        List<OrganizationDomain> domains;
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-
-        if (dbContext.Database.IsNpgsql())
-        {
-            //Get domains that have not been verified after 72 hours
-            domains = dbContext.OrganizationDomains
-                .AsEnumerable()
-                .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
-                            && x.VerifiedDate == null)
-                .ToList();
-        }
-        else
-        {
-            //Get domains that have not been verified after 72 hours
-            domains = await dbContext.OrganizationDomains
-                .Where(x => EF.Functions.DateDiffDay(x.CreationDate, DateTime.UtcNow) == 4
-                            && x.VerifiedDate == null)
-                .ToListAsync();
-        }
+        
+        //Get domains that have not been verified after 72 hours
+        var domains = dbContext.OrganizationDomains
+            .AsEnumerable()
+            .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
+                        && x.VerifiedDate == null)
+            .ToList();
 
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
