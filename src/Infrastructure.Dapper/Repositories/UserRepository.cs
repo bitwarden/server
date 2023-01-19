@@ -1,18 +1,26 @@
 ﻿using System.Data;
+using Bit.Core;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
 public class UserRepository : Repository<User, Guid>, IUserRepository
 {
-    public UserRepository(GlobalSettings globalSettings)
+    private readonly IDataProtector _dataProtector;
+
+    public UserRepository(
+        GlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    {
+        _dataProtector = dataProtectionProvider.CreateProtector(Constants.DatabaseFieldProtectorPurpose);
+    }
 
     public UserRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
@@ -20,7 +28,9 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
 
     public override async Task<User> GetByIdAsync(Guid id)
     {
-        return await base.GetByIdAsync(id);
+        var user = await base.GetByIdAsync(id);
+        UnprotectData(user);
+        return user;
     }
 
     public async Task<User> GetByEmailAsync(string email)
@@ -32,6 +42,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Email = email },
                 commandType: CommandType.StoredProcedure);
 
+            UnprotectData(results);
             return results.SingleOrDefault();
         }
     }
@@ -45,6 +56,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { OrganizationId = organizationId, ExternalId = externalId },
                 commandType: CommandType.StoredProcedure);
 
+            UnprotectData(results);
             return results.SingleOrDefault();
         }
     }
@@ -72,6 +84,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 120);
 
+            UnprotectData(results);
             return results.ToList();
         }
     }
@@ -85,6 +98,7 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Premium = premium },
                 commandType: CommandType.StoredProcedure);
 
+            UnprotectData(results);
             return results.ToList();
         }
     }
@@ -115,9 +129,15 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public override async Task<User> CreateAsync(User user)
+    {
+        await ProtectDataAndSaveAsync(user, async () => await base.CreateAsync(user));
+        return user;
+    }
+
     public override async Task ReplaceAsync(User user)
     {
-        await base.ReplaceAsync(user);
+        await ProtectDataAndSaveAsync(user, async () => await base.ReplaceAsync(user));
     }
 
     public override async Task DeleteAsync(User user)
@@ -164,7 +184,74 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Ids = ids.ToGuidIdArrayTVP() },
                 commandType: CommandType.StoredProcedure);
 
+            UnprotectData(results);
             return results.ToList();
+        }
+    }
+
+    private async Task ProtectDataAndSaveAsync(User user, Func<Task> saveTask)
+    {
+        if (user == null)
+        {
+            await saveTask();
+            return;
+        }
+
+        // Capture original values
+        var originalMasterPassword = user.MasterPassword;
+        var originalKey = user.Key;
+
+        // Protect values
+        if (!user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.MasterPassword = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.MasterPassword));
+        }
+
+        if (!user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.Key = string.Concat(Constants.DatabaseFieldProtectedPrefix,
+                _dataProtector.Protect(user.Key));
+        }
+
+        // Save
+        await saveTask();
+
+        // Restore original values
+        user.MasterPassword = originalMasterPassword;
+        user.Key = originalKey;
+    }
+
+    private void UnprotectData(User user)
+    {
+        if (user == null)
+        {
+            return;
+        }
+
+        if (user.MasterPassword?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.MasterPassword = _dataProtector.Unprotect(
+                user.MasterPassword.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+        }
+
+        if (user.Key?.StartsWith(Constants.DatabaseFieldProtectedPrefix) ?? false)
+        {
+            user.Key = _dataProtector.Unprotect(
+                user.Key.Substring(Constants.DatabaseFieldProtectedPrefix.Length));
+        }
+    }
+
+    private void UnprotectData(IEnumerable<User> users)
+    {
+        if (users == null)
+        {
+            return;
+        }
+
+        foreach (var user in users)
+        {
+            UnprotectData(user);
         }
     }
 }
