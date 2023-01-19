@@ -43,7 +43,6 @@ public class CreateSecretCommand : ICreateSecretCommand
             throw new UnauthorizedAccessException();
         }
 
-        //Check if the project thats associated with the secret gives this user read/write/no access
         return await _secretRepository.CreateAsync(secret);
     }
 }

@@ -24,7 +24,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var secrets = await _secretRepository.GetManyByIds(ids); //TODO
+        var secrets = await _secretRepository.GetManyByIds(ids);
 
         if (secrets?.Any() != true)
         {
