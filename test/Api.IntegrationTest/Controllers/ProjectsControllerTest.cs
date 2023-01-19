@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
@@ -191,7 +191,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.GetAsync($"/organizations/{_organization.Id}/projects");
         response.EnsureSuccessStatusCode();
-        
+
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ProjectResponseModel>>();
         Assert.NotNull(result);
         Assert.NotEmpty(result!.Data);

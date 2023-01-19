@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
