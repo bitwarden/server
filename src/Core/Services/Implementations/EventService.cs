@@ -201,224 +201,224 @@ public class EventService : IEventService
 
             await _eventWriteService.CreateAsync(e);
         }
-
-
-        public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
-        {
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if (!CanUseEvents(orgAbilities, policy.OrganizationId))
-            {
-                return;
-            }
-
-            var e = new EventMessage(_currentContext)
-            {
-                OrganizationId = policy.OrganizationId,
-                PolicyId = policy.Id,
-                Type = type,
-                ActingUserId = _currentContext?.UserId,
-                ProviderId = await GetProviderIdAsync(policy.OrganizationId),
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
-            };
-            await _eventWriteService.CreateAsync(e);
-        }
-
-        public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-            DateTime? date = null) =>
-            await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, null, date) });
-
-        public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
-            EventSystemUser systemUser, DateTime? date = null) =>
-            await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, systemUser, date) });
-
-        public async Task LogOrganizationUserEventsAsync(
-            IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
-        {
-            await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)null, e.Item3)));
-        }
-
-        public async Task LogOrganizationUserEventsAsync(
-            IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events)
-        {
-            await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)e.Item3, e.Item4)));
-        }
-
-        private async Task CreateLogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser?, DateTime?)> events)
-        {
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            var eventMessages = new List<IEvent>();
-            foreach (var (organizationUser, type, systemUser, date) in events)
-            {
-                if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
-                {
-                    continue;
-                }
-
-                var e = new EventMessage(_currentContext)
-                {
-                    OrganizationId = organizationUser.OrganizationId,
-                    UserId = organizationUser.UserId,
-                    OrganizationUserId = organizationUser.Id,
-                    ProviderId = await GetProviderIdAsync(organizationUser.OrganizationId),
-                    Type = type,
-                    ActingUserId = _currentContext?.UserId,
-                    Date = date.GetValueOrDefault(DateTime.UtcNow),
-                    SystemUser = systemUser
-                };
-
-                if (systemUser is EventSystemUser.SCIM)
-                {
-                    // System user only used for SCIM logs in this method
-                    // and we want event logs to report server instead of unknown
-                    e.DeviceType = DeviceType.Server;
-                }
-
-                eventMessages.Add(e);
-            }
-
-            await _eventWriteService.CreateManyAsync(eventMessages);
-        }
-
-        public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
-        {
-            if (!organization.Enabled || !organization.UseEvents)
-            {
-                return;
-            }
-
-            var e = new EventMessage(_currentContext)
-            {
-                OrganizationId = organization.Id,
-                ProviderId = await GetProviderIdAsync(organization.Id),
-                Type = type,
-                ActingUserId = _currentContext?.UserId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow),
-                InstallationId = GetInstallationId(),
-            };
-            await _eventWriteService.CreateAsync(e);
-        }
-
-        public async Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null)
-        {
-            await LogProviderUsersEventAsync(new[] { (providerUser, type, date) });
-        }
-
-        public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
-        {
-            var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
-            var eventMessages = new List<IEvent>();
-            foreach (var (providerUser, type, date) in events)
-            {
-                if (!CanUseProviderEvents(providerAbilities, providerUser.ProviderId))
-                {
-                    continue;
-                }
-                eventMessages.Add(new EventMessage(_currentContext)
-                {
-                    ProviderId = providerUser.ProviderId,
-                    UserId = providerUser.UserId,
-                    ProviderUserId = providerUser.Id,
-                    Type = type,
-                    ActingUserId = _currentContext?.UserId,
-                    Date = date.GetValueOrDefault(DateTime.UtcNow)
-                });
-            }
-
-            await _eventWriteService.CreateManyAsync(eventMessages);
-        }
-
-        public async Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type,
-            DateTime? date = null)
-        {
-            var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
-            if (!CanUseProviderEvents(providerAbilities, providerOrganization.ProviderId))
-            {
-                return;
-            }
-
-            var e = new EventMessage(_currentContext)
-            {
-                ProviderId = providerOrganization.ProviderId,
-                ProviderOrganizationId = providerOrganization.Id,
-                Type = type,
-                ActingUserId = _currentContext?.UserId,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
-            };
-            await _eventWriteService.CreateAsync(e);
-        }
-
-        public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
-            DateTime? date = null)
-        {
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
-            {
-                return;
-            }
-
-            var e = new EventMessage(_currentContext)
-            {
-                OrganizationId = organizationDomain.OrganizationId,
-                Type = type,
-                ActingUserId = _currentContext?.UserId,
-                DomainName = organizationDomain.DomainName,
-                Date = date.GetValueOrDefault(DateTime.UtcNow)
-            };
-            await _eventWriteService.CreateAsync(e);
-        }
-
-        public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
-            EventSystemUser systemUser,
-            DateTime? date = null)
-        {
-            var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-            if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
-            {
-                return;
-            }
-
-            var e = new EventMessage(_currentContext)
-            {
-                OrganizationId = organizationDomain.OrganizationId,
-                Type = type,
-                ActingUserId = _currentContext?.UserId,
-                DomainName = organizationDomain.DomainName,
-                SystemUser = systemUser,
-                Date = date.GetValueOrDefault(DateTime.UtcNow),
-                DeviceType = DeviceType.Server
-            };
-            await _eventWriteService.CreateAsync(e);
-        }
-
-        private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
-        {
-            if (_currentContext == null || !orgId.HasValue)
-            {
-                return null;
-            }
-
-            return await _currentContext.ProviderIdForOrg(orgId.Value);
-        }
-
-        private Guid? GetInstallationId()
-        {
-            if (_currentContext == null)
-            {
-                return null;
-            }
-
-            return _currentContext.InstallationId;
-        }
-
-        private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
-        {
-            return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
-                orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
-        }
-
-        private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
-        {
-            return providerAbilities != null && providerAbilities.ContainsKey(providerId) &&
-                   providerAbilities[providerId].Enabled && providerAbilities[providerId].UseEvents;
-        }
     }
+
+    public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, policy.OrganizationId))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = policy.OrganizationId,
+            PolicyId = policy.Id,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            ProviderId = await GetProviderIdAsync(policy.OrganizationId),
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
+        DateTime? date = null) =>
+        await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, null, date) });
+
+    public async Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type,
+        EventSystemUser systemUser, DateTime? date = null) =>
+        await CreateLogOrganizationUserEventsAsync(new (OrganizationUser, EventType, EventSystemUser?, DateTime?)[] { (organizationUser, type, systemUser, date) });
+
+    public async Task LogOrganizationUserEventsAsync(
+        IEnumerable<(OrganizationUser, EventType, DateTime?)> events)
+    {
+        await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)null, e.Item3)));
+    }
+
+    public async Task LogOrganizationUserEventsAsync(
+        IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)> events)
+    {
+        await CreateLogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, (EventSystemUser?)e.Item3, e.Item4)));
+    }
+
+    private async Task CreateLogOrganizationUserEventsAsync(IEnumerable<(OrganizationUser, EventType, EventSystemUser?, DateTime?)> events)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+        foreach (var (organizationUser, type, systemUser, date) in events)
+        {
+            if (!CanUseEvents(orgAbilities, organizationUser.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = organizationUser.OrganizationId,
+                UserId = organizationUser.UserId,
+                OrganizationUserId = organizationUser.Id,
+                ProviderId = await GetProviderIdAsync(organizationUser.OrganizationId),
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow),
+                SystemUser = systemUser
+            };
+
+            if (systemUser is EventSystemUser.SCIM)
+            {
+                // System user only used for SCIM logs in this method
+                // and we want event logs to report server instead of unknown
+                e.DeviceType = DeviceType.Server;
+            }
+
+            eventMessages.Add(e);
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogOrganizationEventAsync(Organization organization, EventType type, DateTime? date = null)
+    {
+        if (!organization.Enabled || !organization.UseEvents)
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organization.Id,
+            ProviderId = await GetProviderIdAsync(organization.Id),
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow),
+            InstallationId = GetInstallationId(),
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null)
+    {
+        await LogProviderUsersEventAsync(new[] { (providerUser, type, date) });
+    }
+
+    public async Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events)
+    {
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        var eventMessages = new List<IEvent>();
+        foreach (var (providerUser, type, date) in events)
+        {
+            if (!CanUseProviderEvents(providerAbilities, providerUser.ProviderId))
+            {
+                continue;
+            }
+            eventMessages.Add(new EventMessage(_currentContext)
+            {
+                ProviderId = providerUser.ProviderId,
+                UserId = providerUser.UserId,
+                ProviderUserId = providerUser.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            });
+        }
+
+        await _eventWriteService.CreateManyAsync(eventMessages);
+    }
+
+    public async Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type,
+        DateTime? date = null)
+    {
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        if (!CanUseProviderEvents(providerAbilities, providerOrganization.ProviderId))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            ProviderId = providerOrganization.ProviderId,
+            ProviderOrganizationId = providerOrganization.Id,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
+        DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationDomain.OrganizationId,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            DomainName = organizationDomain.DomainName,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
+        EventSystemUser systemUser,
+        DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = organizationDomain.OrganizationId,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            DomainName = organizationDomain.DomainName,
+            SystemUser = systemUser,
+            Date = date.GetValueOrDefault(DateTime.UtcNow),
+            DeviceType = DeviceType.Server
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
+    {
+        if (_currentContext == null || !orgId.HasValue)
+        {
+            return null;
+        }
+
+        return await _currentContext.ProviderIdForOrg(orgId.Value);
+    }
+
+    private Guid? GetInstallationId()
+    {
+        if (_currentContext == null)
+        {
+            return null;
+        }
+
+        return _currentContext.InstallationId;
+    }
+
+    private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
+    {
+        return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
+            orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
+    }
+
+    private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
+    {
+        return providerAbilities != null && providerAbilities.ContainsKey(providerId) &&
+                providerAbilities[providerId].Enabled && providerAbilities[providerId].UseEvents;
+    }
+}
