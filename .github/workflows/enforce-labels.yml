@@ -4,9 +4,6 @@ name: Enforce PR labels
 on:
   pull_request:
     types: [labeled, unlabeled, opened, edited, synchronize]
-  workflow_run:
-    workflows: [Protect Files]
-    types: [completed]
 
 jobs:
   enforce-label:
