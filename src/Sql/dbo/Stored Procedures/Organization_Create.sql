@@ -43,7 +43,8 @@
     @UseKeyConnector BIT = 0,
     @UseScim BIT = 0,
     @UseCustomPermissions BIT = 0,
-    @UseSecretsManager BIT = 0
+    @UseSecretsManager BIT = 0,
+    @Status SMALLINT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -94,7 +95,8 @@ BEGIN
         [UseKeyConnector],
         [UseScim],
         [UseCustomPermissions],
-        [UseSecretsManager]
+        [UseSecretsManager],
+        [Status]
     )
     VALUES
     (
@@ -142,6 +144,7 @@ BEGIN
         @UseKeyConnector,
         @UseScim,
         @UseCustomPermissions,
-        @UseSecretsManager
+        @UseSecretsManager,
+        @Status
     )
 END
