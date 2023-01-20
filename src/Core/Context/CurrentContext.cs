@@ -426,12 +426,17 @@ public class CurrentContext : ICurrentContext
         return po?.ProviderId;
     }
 
+    public Task<bool> AccessSecretsManager(Guid organizationId)
+    {
+        return Task.FromResult(false);
+    }
+
     public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId)
     {
         if (Organizations == null)
         {
-            var userOrgs = await organizationUserRepository.GetManyByUserAsync(userId);
+            var userOrgs = await organizationUserRepository.GetManyDetailsByUserAsync(userId);
             Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
                 .Select(ou => new CurrentContentOrganization(ou)).ToList();
         }
