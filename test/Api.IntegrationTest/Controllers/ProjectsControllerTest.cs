@@ -1,10 +1,12 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
 using Xunit;
@@ -31,10 +33,19 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task InitializeAsync()
     {
         var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        var tokens = await _factory.LoginWithNewAccount(ownerEmail);
-        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: ownerEmail, billingEmail: ownerEmail);
+        await _factory.LoginWithNewAccount(ownerEmail);
+        (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: ownerEmail, billingEmail: ownerEmail);
+        var tokens = await _factory.LoginAsync(ownerEmail);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-        _organization = organization;
+    }
+
+    public async Task LoginAsNewOrgUser(OrganizationUserType type = OrganizationUserType.User)
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, type);
+        var tokens = await _factory.LoginAsync(email);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
     }
 
     public Task DisposeAsync()
@@ -44,12 +55,9 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task CreateProject()
+    public async Task CreateProject_Success()
     {
-        var request = new ProjectCreateRequestModel()
-        {
-            Name = _mockEncryptedString
-        };
+        var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
 
         var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/projects", request);
         response.EnsureSuccessStatusCode();
@@ -69,7 +77,17 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
-    public async Task UpdateProject()
+    public async Task CreateProject_NoPermission()
+    {
+        var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
+
+        var response = await _client.PostAsJsonAsync("/organizations/911d9106-7cf1-4d55-a3f9-f9abdeadecb3/projects", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateProject_Success()
     {
         var initialProject = await _projectRepository.CreateAsync(new Project
         {
@@ -99,6 +117,42 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(updatedProject.DeletedDate);
         Assert.NotEqual(initialProject.Name, updatedProject.Name);
         Assert.NotEqual(initialProject.RevisionDate, updatedProject.RevisionDate);
+    }
+
+    [Fact]
+    public async Task UpdateProject_NotFound()
+    {
+        var request = new ProjectUpdateRequestModel()
+        {
+            Name = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
+        };
+
+        var response = await _client.PutAsJsonAsync("/projects/c53de509-4581-402c-8cbd-f26d2c516fba", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateProject_MissingPermission()
+    {
+        // Create a new account as a user
+        await LoginAsNewOrgUser();
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = _organization.Id,
+            Name = _mockEncryptedString
+        });
+
+
+        var request = new ProjectUpdateRequestModel()
+        {
+            Name = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
+        };
+
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]

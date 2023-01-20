@@ -1,4 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
@@ -8,36 +10,65 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.Projects;
 public class DeleteProjectCommand : IDeleteProjectCommand
 {
     private readonly IProjectRepository _projectRepository;
+    private readonly ICurrentContext _currentContext;
 
-    public DeleteProjectCommand(IProjectRepository projectRepository)
+    public DeleteProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext)
     {
         _projectRepository = projectRepository;
+        _currentContext = currentContext;
     }
 
-    public async Task<List<Tuple<Project, string>>> DeleteProjects(List<Guid> ids)
+    public async Task<List<Tuple<Project, string>>> DeleteProjects(List<Guid> ids, Guid userId)
     {
-        var projects = await _projectRepository.GetManyByIds(ids);
+        if (ids.Any() != true || userId == new Guid())
+        {
+            throw new ArgumentNullException();
+        }
 
-        if (projects?.Any() != true)
+        var projects = (await _projectRepository.GetManyByIds(ids))?.ToList();
+
+        if (projects?.Any() != true || projects.Count != ids.Count)
         {
             throw new NotFoundException();
         }
 
-        var results = ids.Select(id =>
+        // Ensure all projects belongs to the same organization
+        var organizationId = projects.First().OrganizationId;
+        if (projects.Any(p => p.OrganizationId != organizationId))
         {
-            var project = projects.FirstOrDefault(project => project.Id == id);
-            if (project == null)
+            throw new UnauthorizedAccessException();
+        }
+
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var results = new List<Tuple<Project, String>>(projects.Count);
+        var deleteIds = new List<Guid>();
+
+        foreach (var project in projects)
+        {
+            var hasAccess = accessClient switch
             {
-                throw new NotFoundException();
+                AccessClientType.NoAccessCheck => true,
+                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
+                _ => false,
+            };
+
+            if (!hasAccess)
+            {
+                results.Add(new Tuple<Project, string>(project, "access denied"));
             }
-            // TODO Once permissions are implemented add check for each project here.
             else
             {
-                return new Tuple<Project, string>(project, "");
+                results.Add(new Tuple<Project, string>(project, ""));
+                deleteIds.Add(project.Id);
             }
-        }).ToList();
+        }
 
-        await _projectRepository.DeleteManyByIdAsync(ids);
+        if (deleteIds.Count > 0)
+        {
+            await _projectRepository.DeleteManyByIdAsync(deleteIds);
+        }
         return results;
     }
 }
