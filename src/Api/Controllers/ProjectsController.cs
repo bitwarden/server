@@ -51,20 +51,25 @@ public class ProjectsController : Controller
         return new ProjectResponseModel(result);
     }
 
+    [HttpGet("organizations/{organizationId}/projects")]
+    public async Task<ListResponseModel<ProjectResponseModel>> GetProjectsByOrganizationAsync([FromRoute] Guid organizationId)
+    {
+        if (_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId);
+        var responses = projects.Select(project => new ProjectResponseModel(project));
+        return new ListResponseModel<ProjectResponseModel>(responses);
+    }
+
     [HttpPut("projects/{id}")]
     public async Task<ProjectResponseModel> UpdateProjectAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
     {
         var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id));
         return new ProjectResponseModel(result);
-    }
-
-    [HttpGet("organizations/{organizationId}/projects")]
-    public async Task<ListResponseModel<ProjectResponseModel>> GetProjectsByOrganizationAsync([FromRoute] Guid organizationId)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId);
-        var responses = projects.Select(project => new ProjectResponseModel(project));
-        return new ListResponseModel<ProjectResponseModel>(responses);
     }
 
     [HttpGet("projects/{id}")]

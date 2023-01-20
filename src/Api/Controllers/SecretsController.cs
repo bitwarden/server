@@ -47,6 +47,18 @@ public class SecretsController : Controller
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
+    [HttpPost("organizations/{organizationId}/secrets")]
+    public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
+    {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId));
+        return new SecretResponseModel(result);
+    }
+
     [HttpGet("secrets/{id}")]
     public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
     {
@@ -64,13 +76,6 @@ public class SecretsController : Controller
         var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId);
         var responses = secrets.Select(s => new SecretResponseModel(s));
         return new SecretWithProjectsListResponseModel(secrets);
-    }
-
-    [HttpPost("organizations/{organizationId}/secrets")]
-    public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
-    {
-        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId));
-        return new SecretResponseModel(result);
     }
 
     [HttpPut("secrets/{id}")]

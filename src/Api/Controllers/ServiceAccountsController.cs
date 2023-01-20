@@ -3,6 +3,8 @@ using Bit.Api.Models.Response.SecretsManager;
 using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.AccessTokens.Interfaces;
 using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
@@ -15,6 +17,7 @@ namespace Bit.Api.Controllers;
 [Authorize("secrets")]
 public class ServiceAccountsController : Controller
 {
+    private readonly ICurrentContext _currentContext;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
@@ -22,11 +25,13 @@ public class ServiceAccountsController : Controller
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
 
     public ServiceAccountsController(
+        ICurrentContext currentContext,
         IServiceAccountRepository serviceAccountRepository,
         ICreateAccessTokenCommand createAccessTokenCommand,
         IApiKeyRepository apiKeyRepository, ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand)
     {
+        _currentContext = currentContext;
         _serviceAccountRepository = serviceAccountRepository;
         _apiKeyRepository = apiKeyRepository;
         _createServiceAccountCommand = createServiceAccountCommand;
@@ -37,6 +42,11 @@ public class ServiceAccountsController : Controller
     [HttpGet("/organizations/{organizationId}/service-accounts")]
     public async Task<ListResponseModel<ServiceAccountResponseModel>> GetServiceAccountsByOrganizationAsync([FromRoute] Guid organizationId)
     {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var serviceAccounts = await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId);
         var responses = serviceAccounts.Select(serviceAccount => new ServiceAccountResponseModel(serviceAccount));
         return new ListResponseModel<ServiceAccountResponseModel>(responses);
@@ -45,6 +55,11 @@ public class ServiceAccountsController : Controller
     [HttpPost("/organizations/{organizationId}/service-accounts")]
     public async Task<ServiceAccountResponseModel> CreateServiceAccountAsync([FromRoute] Guid organizationId, [FromBody] ServiceAccountCreateRequestModel createRequest)
     {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var result = await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId));
         return new ServiceAccountResponseModel(result);
     }
