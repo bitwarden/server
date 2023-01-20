@@ -6,6 +6,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -34,13 +35,12 @@ public class UpdateProjectCommandTests
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
 
-        var revisionDate = project.RevisionDate.ToLocalTime();
         var project2 = new Project { Id = project.Id, Name = "newName" };
         var result = await sutProvider.Sut.UpdateAsync(project2, userId);
 
         Assert.NotNull(result);
         Assert.Equal("newName", result.Name);
-        Assert.NotEqual(revisionDate, project.RevisionDate.ToLocalTime());
+        AssertHelper.AssertRecent(result.RevisionDate);
 
         await sutProvider.GetDependency<IProjectRepository>().ReceivedWithAnyArgs(1).ReplaceAsync(default);
     }

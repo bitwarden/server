@@ -39,15 +39,13 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
     }
 
-    public async Task<OrganizationUser> LoginAsNewOrgUser(OrganizationUserType type = OrganizationUserType.User)
+    public async Task LoginAsNewOrgUser(OrganizationUserType type = OrganizationUserType.User)
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
-        var orgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, type);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, type);
         var tokens = await _factory.LoginAsync(email);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-
-        return orgUser;
     }
 
     public Task DisposeAsync()
