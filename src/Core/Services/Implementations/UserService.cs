@@ -442,9 +442,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var options = CredentialCreateOptions.FromJson((string)provider.MetaData["pending"]);
 
-        // Callback to ensure credential id is unique. Always return true since we don't care if another
-        // account uses the same 2fa key.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = args => Task.FromResult(true);
+        // Callback to ensure credential ID is unique. Always return true since we don't care if another
+        // account uses the same 2FA key.
+        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
 
         var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 

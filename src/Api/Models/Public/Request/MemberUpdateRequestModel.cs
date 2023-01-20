@@ -9,6 +9,11 @@ public class MemberUpdateRequestModel : MemberBaseModel
     /// </summary>
     public IEnumerable<AssociationWithPermissionsRequestModel> Collections { get; set; }
 
+    /// <summary>
+    /// Ids of the associated groups that this member will belong to
+    /// </summary>
+    public IEnumerable<Guid> Groups { get; set; }
+
     public virtual OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
         existingUser.Type = Type.Value;

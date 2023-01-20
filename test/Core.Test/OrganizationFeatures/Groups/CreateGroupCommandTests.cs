@@ -31,7 +31,7 @@ public class CreateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task CreateGroup_WithCollections_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, List<SelectionReadOnly> collections)
+    public async Task CreateGroup_WithCollections_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, List<CollectionAccessSelection> collections)
     {
         await sutProvider.Sut.CreateGroupAsync(group, organization, collections);
 
