@@ -45,4 +45,12 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
     }
+
+    /// <summary>
+    /// Helper for logging in to an account
+    /// </summary>
+    public async Task<(string Token, string RefreshToken)> LoginAsync(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
+    {
+        return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
+    }
 }
