@@ -16,4 +16,7 @@ public static class Claims
 
     // Service Account
     public const string Organization = "organization";
+
+    // General
+    public const string Type = "type";
 }
