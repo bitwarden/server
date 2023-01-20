@@ -2,6 +2,7 @@
 using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
@@ -14,16 +15,21 @@ namespace Bit.Api.Controllers;
 [Authorize("secrets")]
 public class SecretsController : Controller
 {
+    private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
-    private readonly IProjectRepository _projectRepository;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
 
-    public SecretsController(ISecretRepository secretRepository, IProjectRepository projectRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand)
+    public SecretsController(
+        ICurrentContext currentContext,
+        ISecretRepository secretRepository,
+        ICreateSecretCommand createSecretCommand,
+        IUpdateSecretCommand updateSecretCommand,
+        IDeleteSecretCommand deleteSecretCommand)
     {
+        _currentContext = currentContext;
         _secretRepository = secretRepository;
-        _projectRepository = projectRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
@@ -32,6 +38,11 @@ public class SecretsController : Controller
     [HttpGet("organizations/{organizationId}/secrets")]
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
     {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
         return new SecretWithProjectsListResponseModel(secrets);
     }

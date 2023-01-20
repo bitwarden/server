@@ -6,12 +6,13 @@ using Bit.Api.Utilities;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.AccessTokens.Interfaces;
 using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
 
 [SecretsManager]
-[Route("service-accounts")]
+[Authorize("secrets")]
 public class ServiceAccountsController : Controller
 {
     private readonly IServiceAccountRepository _serviceAccountRepository;

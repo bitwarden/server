@@ -2,17 +2,21 @@
 using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
 
 [SecretsManager]
+[Authorize("secrets")]
 public class ProjectsController : Controller
 {
+    private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IProjectRepository _projectRepository;
     private readonly ICreateProjectCommand _createProjectCommand;
@@ -20,12 +24,14 @@ public class ProjectsController : Controller
     private readonly IDeleteProjectCommand _deleteProjectCommand;
 
     public ProjectsController(
+        ICurrentContext currentContext,
         IUserService userService,
         IProjectRepository projectRepository,
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
         IDeleteProjectCommand deleteProjectCommand)
     {
+        _currentContext = currentContext;
         _userService = userService;
         _projectRepository = projectRepository;
         _createProjectCommand = createProjectCommand;
@@ -36,6 +42,11 @@ public class ProjectsController : Controller
     [HttpPost("organizations/{organizationId}/projects")]
     public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] ProjectCreateRequestModel createRequest)
     {
+        if (_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId));
         return new ProjectResponseModel(result);
     }

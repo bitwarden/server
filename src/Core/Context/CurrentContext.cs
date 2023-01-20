@@ -426,9 +426,9 @@ public class CurrentContext : ICurrentContext
         return po?.ProviderId;
     }
 
-    public Task<bool> AccessSecretsManager(Guid organizationId)
+    public bool AccessSecretsManager(Guid orgId)
     {
-        return Task.FromResult(false);
+        return Organizations?.Any(o => o.Id == orgId && o.AccessSecretsManager) ?? false;
     }
 
     public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
