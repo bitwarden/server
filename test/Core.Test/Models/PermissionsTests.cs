@@ -12,11 +12,9 @@ public class PermissionsTests
         "\"accessEventLogs\": false,",
         "\"accessImportExport\": false,",
         "\"accessReports\": false,",
-        "\"manageAllCollections\": true,", // exists for backwards compatibility
         "\"createNewCollections\": true,",
         "\"editAnyCollection\": true,",
         "\"deleteAnyCollection\": true,",
-        "\"manageAssignedCollections\": false,", // exists for backwards compatibility
         "\"editAssignedCollections\": false,",
         "\"deleteAssignedCollections\": false,",
         "\"manageGroups\": false,",

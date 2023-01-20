@@ -1,6 +1,5 @@
 ﻿using Bit.Commercial.Infrastructure.EntityFramework.Repositories;
 using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Infrastructure.EntityFramework;
@@ -15,4 +14,3 @@ public static class CommercialEFServiceCollectionExtensions
         services.AddSingleton<IServiceAccountRepository, ServiceAccountRepository>();
     }
 }
-

@@ -5,8 +5,7 @@ namespace Bit.Core.Services;
 
 public interface ICollectionService
 {
-    Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null, Guid? assignUserId = null);
-    Task DeleteAsync(Collection collection);
+    Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null, IEnumerable<CollectionAccessSelection> users = null, Guid? assignUserId = null);
     Task DeleteUserAsync(Collection collection, Guid organizationUserId);
     Task<IEnumerable<Collection>> GetOrganizationCollections(Guid organizationId);
 }

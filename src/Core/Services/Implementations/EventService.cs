@@ -135,45 +135,51 @@ public class EventService : IEventService
         };
     }
 
-    public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null)
+    public async Task LogCollectionEventAsync(Collection collection, EventType type, DateTime? date = null) =>
+        await LogCollectionEventsAsync(new[] { (collection, type, date) });
+
+
+    public async Task LogCollectionEventsAsync(IEnumerable<(Collection collection, EventType type, DateTime? date)> events)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        if (!CanUseEvents(orgAbilities, collection.OrganizationId))
+        var eventMessages = new List<IEvent>();
+        foreach (var (collection, type, date) in events)
         {
-            return;
+            if (!CanUseEvents(orgAbilities, collection.OrganizationId))
+            {
+                continue;
+            }
+
+            eventMessages.Add(new EventMessage(_currentContext)
+            {
+                OrganizationId = collection.OrganizationId,
+                CollectionId = collection.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                ProviderId = await GetProviderIdAsync(collection.OrganizationId),
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            });
         }
 
-        var e = new EventMessage(_currentContext)
-        {
-            OrganizationId = collection.OrganizationId,
-            CollectionId = collection.Id,
-            Type = type,
-            ActingUserId = _currentContext?.UserId,
-            ProviderId = await GetProviderIdAsync(collection.OrganizationId),
-            Date = date.GetValueOrDefault(DateTime.UtcNow)
-        };
-        await _eventWriteService.CreateAsync(e);
+        await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
-    public async Task LogGroupEventAsync(Group group, EventType type,
-        DateTime? date = null)
-    {
-        await CreateLogGroupEventAsync(group, type, systemUser: null, date);
-    }
+    public async Task LogGroupEventAsync(Group group, EventType type, DateTime? date = null) =>
+        await LogGroupEventsAsync(new[] { (group, type, (EventSystemUser?)null, date) });
 
-    public async Task LogGroupEventAsync(Group group, EventType type, EventSystemUser systemUser,
-        DateTime? date = null)
-    {
-        await CreateLogGroupEventAsync(group, type, systemUser, date);
-    }
+    public async Task LogGroupEventAsync(Group group, EventType type, EventSystemUser systemUser, DateTime? date = null) =>
+        await LogGroupEventsAsync(new[] { (group, type, (EventSystemUser?)systemUser, date) });
 
-    private async Task CreateLogGroupEventAsync(Group group, EventType type, EventSystemUser? systemUser, DateTime? date = null)
+    public async Task LogGroupEventsAsync(IEnumerable<(Group group, EventType type, EventSystemUser? systemUser, DateTime? date)> events)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        if (!CanUseEvents(orgAbilities, group.OrganizationId))
+        var eventMessages = new List<IEvent>();
+        foreach (var (group, type, systemUser, date) in events)
         {
-            return;
-        }
+            if (!CanUseEvents(orgAbilities, group.OrganizationId))
+            {
+                continue;
+            }
 
         var e = new EventMessage(_currentContext)
         {
@@ -181,7 +187,7 @@ public class EventService : IEventService
             GroupId = group.Id,
             Type = type,
             ActingUserId = _currentContext?.UserId,
-            ProviderId = await GetProviderIdAsync(@group.OrganizationId),
+            ProviderId = await GetProviderIdAsync(group.OrganizationId),
             Date = date.GetValueOrDefault(DateTime.UtcNow),
             SystemUser = systemUser
         };
@@ -195,6 +201,7 @@ public class EventService : IEventService
 
         await _eventWriteService.CreateAsync(e);
     }
+
 
     public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
     {

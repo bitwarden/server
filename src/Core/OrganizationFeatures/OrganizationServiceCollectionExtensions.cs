@@ -3,10 +3,10 @@ using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationCollections;
+using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationDomains;
-using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -30,14 +30,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommandsQueries();
+        services.AddOrganizationCollectionCommands();
         services.AddOrganizationDomainCommandsQueries();
-    }
-
-    private static void AddOrganizationGroupCommands(this IServiceCollection services)
-    {
-        services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
-        services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
-        services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -79,7 +73,19 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICreateOrganizationApiKeyCommand, CreateOrganizationApiKeyCommand>();
     }
 
-    private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
+    public static void AddOrganizationCollectionCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
+    }
+
+    private static void AddOrganizationGroupCommands(this IServiceCollection services)
+    {
+        services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
+        services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
+        services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
+    }
+
+     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
         services.AddScoped<IVerifyOrganizationDomainCommand, VerifyOrganizationDomainCommand>();
