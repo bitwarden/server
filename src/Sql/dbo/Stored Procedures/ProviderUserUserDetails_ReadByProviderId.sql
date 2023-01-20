@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
     @ProviderId UNIQUEIDENTIFIER,
-    @Status TINYINT
+    @Status TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
