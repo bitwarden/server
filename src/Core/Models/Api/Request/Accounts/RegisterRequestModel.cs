@@ -39,8 +39,8 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
             MasterPasswordHint = MasterPasswordHint,
             Kdf = Kdf.GetValueOrDefault(KdfType.PBKDF2_SHA256),
             KdfIterations = KdfIterations.GetValueOrDefault(5000),
-            KdfMemory = KdfMemory.GetValueOrDefault(0),
-            KdfParallelism = KdfParallelism.GetValueOrDefault(0)
+            KdfMemory = KdfMemory,
+            KdfParallelism = KdfParallelism
         };
 
         if (ReferenceData != null)

@@ -15,8 +15,8 @@ public class SetKeyConnectorKeyRequestModel
     public KdfType Kdf { get; set; }
     [Required]
     public int KdfIterations { get; set; }
-    public int KdfMemory { get; set; }
-    public int KdfParallelism { get; set; }
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
     [Required]
     public string OrgIdentifier { get; set; }
 

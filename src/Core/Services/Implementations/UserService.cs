@@ -824,7 +824,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     }
 
     public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
-        string key, KdfType kdf, int kdfIterations, int kdfMemory, int kdfParallelism)
+        string key, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         if (user == null)
         {

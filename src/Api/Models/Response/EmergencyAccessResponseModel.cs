@@ -98,8 +98,8 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
     }
 
     public int KdfIterations { get; private set; }
-    public int KdfMemory { get; private set; }
-    public int KdfParallelism { get; private set; }
+    public int? KdfMemory { get; private set; }
+    public int? KdfParallelism { get; private set; }
     public KdfType Kdf { get; private set; }
     public string KeyEncrypted { get; private set; }
 }

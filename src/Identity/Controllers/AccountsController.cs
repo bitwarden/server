@@ -66,8 +66,6 @@ public class AccountsController : Controller
             {
                 Kdf = KdfType.PBKDF2_SHA256,
                 KdfIterations = 100000,
-                KdfMemory = 0,
-                KdfParallelism = 0,
             };
         }
         return new PreloginResponseModel(kdfInformation);

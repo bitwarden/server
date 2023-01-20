@@ -3,7 +3,7 @@ BEGIN
     ALTER TABLE
         [dbo].[User]
     ADD
-        [KdfMemory] INT NOT NULL DEFAULT(0)
+        [KdfMemory] INT
 END;
 
 IF COL_LENGTH('dbo.User', 'KdfParallelism') IS NULL
@@ -11,8 +11,16 @@ BEGIN
     ALTER TABLE
         [dbo].[User]
     ADD
-        [KdfParallelism] INT NOT NULL DEFAULT(0)
+        [KdfParallelism] INT
 END;
+
+CREATE OR ALTER VIEW [dbo].[UserView]
+AS
+SELECT
+   *
+FROM
+   [dbo].[User]
+;
 
 CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @Id UNIQUEIDENTIFIER,
@@ -43,8 +51,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @LicenseKey VARCHAR(100),
     @Kdf TINYINT,
     @KdfIterations INT,
-    @KdfMemory INT,
-    @KdfParallelism INT,
+    @KdfMemory INT = NULL,
+    @KdfParallelism INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
@@ -98,7 +106,7 @@ BEGIN
         [FailedLoginCount] = @FailedLoginCount,
         [LastFailedLoginDate] = @LastFailedLoginDate,
         [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled,
-	    [AvatarColor] = @AvatarColor
+	     [AvatarColor] = @AvatarColor
     WHERE
         [Id] = @Id
 END;
@@ -132,8 +140,8 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @LicenseKey VARCHAR(100),
     @Kdf TINYINT,
     @KdfIterations INT,
-    @KdfMemory INT,
-    @KdfParallelism TINYINT,
+    @KdfMemory INT = NULL,
+    @KdfParallelism INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
@@ -142,7 +150,7 @@ CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @FailedLoginCount INT = 0,
     @LastFailedLoginDate DATETIME2(7),
     @UnknownDeviceVerificationEnabled BIT = 1,
-    @AvatarColor VARCHAR(7) = NULL,
+    @AvatarColor VARCHAR(7)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -229,9 +237,9 @@ BEGIN
         @UnknownDeviceVerificationEnabled,
         @AvatarColor,
         @KdfMemory,
-        @KdfParallelism,
+        @KdfParallelism
     )
-END
+END;
 
 CREATE OR ALTER PROCEDURE [dbo].[User_ReadKdfByEmail]
     @Email NVARCHAR(256)
@@ -241,7 +249,7 @@ BEGIN
 
     SELECT
         [Kdf],
-        [KdfIterations]
+        [KdfIterations],
         [KdfMemory],
         [KdfParallelism]
     FROM
