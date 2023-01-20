@@ -102,6 +102,8 @@ public class OrganizationDomainService : IOrganizationDomainService
                     await _mailService.SendUnverifiedOrganizationDomainEmailAsync(adminEmails,
                         domain.OrganizationId.ToString(), domain.DomainName);
                 }
+                
+                _logger.LogInformation(Constants.BypassFiltersEventId, "Expired domain: {domainName}", domain.DomainName);
             }
             //delete domains that have not been verified within 7 days 
             var status = await _domainRepository.DeleteExpiredAsync(_globalSettings.DomainVerification.ExpirationPeriod);
