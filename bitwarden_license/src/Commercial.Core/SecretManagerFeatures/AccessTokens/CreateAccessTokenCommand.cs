@@ -10,12 +10,15 @@ namespace Bit.Commercial.Core.SecretManagerFeatures.AccessTokens;
 
 public class CreateAccessTokenCommand : ICreateAccessTokenCommand
 {
-    private readonly int _clientSecretMaxLength = 30;
     private readonly IApiKeyRepository _apiKeyRepository;
+    private readonly int _clientSecretMaxLength = 30;
     private readonly ICurrentContext _currentContext;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
-    public CreateAccessTokenCommand(IApiKeyRepository apiKeyRepository, ICurrentContext currentContext, IServiceAccountRepository serviceAccountRepository)
+    public CreateAccessTokenCommand(
+        IApiKeyRepository apiKeyRepository,
+        ICurrentContext currentContext,
+        IServiceAccountRepository serviceAccountRepository)
     {
         _apiKeyRepository = apiKeyRepository;
         _currentContext = currentContext;
@@ -36,7 +39,8 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount((Guid)apiKey.ServiceAccountId, userId),
+            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
+                (Guid)apiKey.ServiceAccountId, userId),
             _ => false,
         };
 

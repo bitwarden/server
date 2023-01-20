@@ -18,13 +18,13 @@ namespace Bit.Api.Controllers;
 [Route("service-accounts")]
 public class ServiceAccountsController : Controller
 {
-    private readonly IUserService _userService;
-    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
-    private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
-    private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
+    private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
     private readonly ICurrentContext _currentContext;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
+    private readonly IUserService _userService;
 
     public ServiceAccountsController(
         IUserService userService,
@@ -44,20 +44,23 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
-    public async Task<ListResponseModel<ServiceAccountResponseModel>> GetServiceAccountsByOrganizationAsync([FromRoute] Guid organizationId)
+    public async Task<ListResponseModel<ServiceAccountResponseModel>> GetServiceAccountsByOrganizationAsync(
+        [FromRoute] Guid organizationId)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var serviceAccounts = await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
+        var serviceAccounts =
+            await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
 
         var responses = serviceAccounts.Select(serviceAccount => new ServiceAccountResponseModel(serviceAccount));
         return new ListResponseModel<ServiceAccountResponseModel>(responses);
     }
 
     [HttpPost("/organizations/{organizationId}/service-accounts")]
-    public async Task<ServiceAccountResponseModel> CreateServiceAccountAsync([FromRoute] Guid organizationId, [FromBody] ServiceAccountCreateRequestModel createRequest)
+    public async Task<ServiceAccountResponseModel> CreateServiceAccountAsync([FromRoute] Guid organizationId,
+        [FromBody] ServiceAccountCreateRequestModel createRequest)
     {
         if (!await _currentContext.OrganizationUser(organizationId))
         {
@@ -69,7 +72,8 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpPut("{id}")]
-    public async Task<ServiceAccountResponseModel> UpdateServiceAccountAsync([FromRoute] Guid id, [FromBody] ServiceAccountUpdateRequestModel updateRequest)
+    public async Task<ServiceAccountResponseModel> UpdateServiceAccountAsync([FromRoute] Guid id,
+        [FromBody] ServiceAccountUpdateRequestModel updateRequest)
     {
         var userId = _userService.GetProperUserId(User).Value;
 
@@ -86,6 +90,7 @@ public class ServiceAccountsController : Controller
         {
             throw new NotFoundException();
         }
+
         var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
@@ -106,7 +111,8 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpPost("{id}/access-tokens")]
-    public async Task<AccessTokenCreationResponseModel> CreateAccessTokenAsync([FromRoute] Guid id, [FromBody] AccessTokenCreateRequestModel request)
+    public async Task<AccessTokenCreationResponseModel> CreateAccessTokenAsync([FromRoute] Guid id,
+        [FromBody] AccessTokenCreateRequestModel request)
     {
         var userId = _userService.GetProperUserId(User).Value;
 
