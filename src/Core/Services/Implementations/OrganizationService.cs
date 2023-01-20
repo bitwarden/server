@@ -645,6 +645,7 @@ public class OrganizationService : IOrganizationService
             PrivateKey = signup.PrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created
         };
 
         if (plan.Type == PlanType.Free && !provider)
@@ -755,7 +756,8 @@ public class OrganizationService : IOrganizationService
             PublicKey = publicKey,
             PrivateKey = privateKey,
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);

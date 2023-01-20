@@ -44,6 +44,7 @@
     [UseScim]                       BIT              NOT NULL CONSTRAINT [DF_Organization_UseScim] DEFAULT (0),
     [UseCustomPermissions]          BIT              NOT NULL CONSTRAINT [DF_Organization_UseCustomPermissions] DEFAULT (0),
     [UseSecretsManager]             BIT              NOT NULL CONSTRAINT [DF_Organization_UseSecretsManager] DEFAULT (0),
+    [Status]                        SMALLINT         NOT NULL CONSTRAINT [DF_Organization_Status] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
