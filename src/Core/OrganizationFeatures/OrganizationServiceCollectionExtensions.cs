@@ -7,6 +7,8 @@ using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationDomains;
+using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
