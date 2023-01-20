@@ -85,7 +85,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
     }
 
-     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
+    private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
         services.AddScoped<IVerifyOrganizationDomainCommand, VerifyOrganizationDomainCommand>();
