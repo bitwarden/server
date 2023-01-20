@@ -214,7 +214,6 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     tzdata \
     unzip \
-    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Create required directories

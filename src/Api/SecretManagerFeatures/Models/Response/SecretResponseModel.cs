@@ -5,8 +5,9 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
 public class SecretResponseModel : ResponseModel
 {
-    public SecretResponseModel(Secret secret, string obj = "secret")
-        : base(obj)
+    private const string _objectName = "secret";
+
+    public SecretResponseModel(Secret secret) : base(_objectName)
     {
         if (secret == null)
         {
@@ -21,6 +22,10 @@ public class SecretResponseModel : ResponseModel
         CreationDate = secret.CreationDate;
         RevisionDate = secret.RevisionDate;
         Projects = secret.Projects?.Select(p => new InnerProject(p));
+    }
+
+    public SecretResponseModel() : base(_objectName)
+    {
     }
 
     public string Id { get; set; }
@@ -45,6 +50,10 @@ public class SecretResponseModel : ResponseModel
         {
             Id = project.Id;
             Name = project.Name;
+        }
+
+        public InnerProject()
+        {
         }
 
         public Guid Id { get; set; }

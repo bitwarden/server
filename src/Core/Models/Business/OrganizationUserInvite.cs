@@ -10,7 +10,8 @@ public class OrganizationUserInvite
     public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
-    public IEnumerable<SelectionReadOnly> Collections { get; set; }
+    public IEnumerable<CollectionAccessSelection> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 
     public OrganizationUserInvite() { }
 
@@ -21,6 +22,7 @@ public class OrganizationUserInvite
         AccessAll = requestModel.AccessAll;
         AccessSecretsManager = requestModel.AccessSecretsManager;
         Collections = requestModel.Collections;
+        Groups = requestModel.Groups;
         Permissions = requestModel.Permissions;
     }
 }
