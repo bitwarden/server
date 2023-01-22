@@ -2,7 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Porting.Interfaces;
 
-namespace Bit.Commercial.Core.SecretManagerFeatures.Projects;
+namespace Bit.Commercial.Core.SecretManagerFeatures.Porting;
 
 public class ImportCommand : IImportCommand
 {

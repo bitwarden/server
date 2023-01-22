@@ -1,6 +1,7 @@
 ﻿using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretManagerFeatures.Porting.Interfaces;
@@ -29,7 +30,7 @@ public class SecretsManagerPortingController : Controller
     public async Task<SMExportResponseModel> Export([FromRoute] Guid organizationId, [FromRoute] string format = "json")
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId);
+        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, AccessClientType.NoAccessCheck);
         var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
 
         if (projects == null && secrets == null)
