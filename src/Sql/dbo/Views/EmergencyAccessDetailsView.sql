@@ -4,8 +4,10 @@ SELECT
     EA.*,
     GranteeU.[Name] GranteeName,
     ISNULL(GranteeU.[Email], EA.[Email]) GranteeEmail,
+    GranteeU.[AvatarColor] GranteeAvatarColor,
     GrantorU.[Name] GrantorName,
-    GrantorU.[Email] GrantorEmail
+    GrantorU.[Email] GrantorEmail,
+    GrantorU.[AvatarColor] GrantorAvatarColor
 FROM
     [dbo].[EmergencyAccess] EA
 LEFT JOIN

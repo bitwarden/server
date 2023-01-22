@@ -49,7 +49,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<OrganizationUserDetailsResponseModel> Get(string orgId, string id)
+    public async Task<OrganizationUserDetailsResponseModel> Get(string id, bool includeGroups = false)
     {
         var organizationUser = await _organizationUserRepository.GetByIdWithCollectionsAsync(new Guid(id));
         if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
@@ -57,11 +57,18 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        return new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+        var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+
+        if (includeGroups)
+        {
+            response.Groups = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Item1.Id);
+        }
+
+        return response;
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var orgGuidId = new Guid(orgId);
         if (!await _currentContext.ViewAllCollections(orgGuidId) &&
@@ -72,7 +79,7 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId);
+        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId, includeGroups, includeCollections);
         var responseTasks = organizationUsers.Select(async o => new OrganizationUserUserDetailsResponseModel(o,
             await _userService.TwoFactorIsEnabledAsync(o)));
         var responses = await Task.WhenAll(responseTasks);
@@ -262,7 +269,7 @@ public class OrganizationUsersController : Controller
 
         var userId = _userService.GetProperUserId(User);
         await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()));
+            model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
     }
 
     [HttpPut("{id}/groups")]
