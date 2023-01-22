@@ -1,7 +1,9 @@
-﻿using Bit.Api.SecretManagerFeatures.Models.Response;
+﻿using Bit.Api.SecretManagerFeatures.Models.Request;
+using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.SecretManagerFeatures.Porting.Interfaces;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,12 +15,14 @@ public class SecretsManagerPortingController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IUserService _userService;
+    private readonly IImportCommand _importCommand;
 
-    public SecretsManagerPortingController(ISecretRepository secretRepository, IProjectRepository projectRepository, IUserService userService)
+    public SecretsManagerPortingController(ISecretRepository secretRepository, IProjectRepository projectRepository, IUserService userService, IImportCommand importCommand)
     {
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _userService = userService;
+        _importCommand = importCommand;
     }
 
     [HttpGet("sm/{organizationId}/export")]
@@ -28,7 +32,7 @@ public class SecretsManagerPortingController : Controller
         var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId);
         var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
 
-        if (secrets == null && projects == null)
+        if (projects == null && secrets == null)
         {
             throw new NotFoundException();
         }
@@ -37,8 +41,9 @@ public class SecretsManagerPortingController : Controller
     }
 
     [HttpPost("sm/{organizationId}/import")]
-    public async Task<SMExportResponseModel> Import()
+    public async Task<SMImportResponseModel> Import([FromRoute] Guid organizationId, [FromBody] SMImportRequestModel importRequest)
     {
-        throw new NotImplementedException();
+        var result = await _importCommand.ImportAsync(organizationId, importRequest.ToSMImport());
+        return new SMImportResponseModel(result);
     }
 }

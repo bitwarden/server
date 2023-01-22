@@ -70,4 +70,21 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
 
     }
+
+    public async Task<IEnumerable<Core.Entities.Project>> ImportAsync(IEnumerable<Core.Entities.Project> projects)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var entities = new List<Project>();
+            foreach (var s in projects)
+            {
+                var entity = Mapper.Map<Project>(s);
+                entities.Add(entity);
+            }
+            var dbContext = GetDatabaseContext(scope);
+            await GetDbSet(dbContext).AddRangeAsync(entities);
+            await dbContext.SaveChangesAsync();
+            return projects;
+        }
+    }
 }

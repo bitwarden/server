@@ -1,21 +1,14 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Models.Api;
+﻿namespace Bit.Core.Entities;
 
-namespace Bit.Api.SecretManagerFeatures.Models.Response;
-
-public class SMExportResponseModel : ResponseModel
+public class SMImport
 {
-    public SMExportResponseModel(IEnumerable<Project> projects, IEnumerable<Secret> secrets, string obj = "SecretsManagerExportResponseModel") : base(obj)
-    {
-        Secrets = secrets?.Select(s => new InnerSecret(s));
-        Projects = projects?.Select(p => new InnerProject(p));
-    }
-
     public IEnumerable<InnerProject> Projects { get; set; }
     public IEnumerable<InnerSecret> Secrets { get; set; }
 
     public class InnerProject
     {
+        public InnerProject() { }
+
         public InnerProject(Project project)
         {
             Id = project.Id;
@@ -28,13 +21,15 @@ public class SMExportResponseModel : ResponseModel
 
     public class InnerSecret
     {
+        public InnerSecret() { }
+
         public InnerSecret(Secret secret)
         {
             Id = secret.Id;
             Key = secret.Key;
             Value = secret.Value;
             Note = secret.Note;
-            ProjectIds = secret.Projects?.Select(p => p.Id);
+            ProjectIds = secret.Projects != null && secret.Projects.Any() ? secret.Projects.Select(p => p.Id) : null;
         }
 
         public Guid Id { get; set; }

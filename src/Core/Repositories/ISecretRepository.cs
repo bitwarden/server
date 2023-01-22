@@ -11,4 +11,5 @@ public interface ISecretRepository
     Task<Secret> CreateAsync(Secret secret);
     Task<Secret> UpdateAsync(Secret secret);
     Task SoftDeleteManyByIdAsync(IEnumerable<Guid> ids);
+    Task<IEnumerable<Secret>> ImportAsync(IEnumerable<Secret> secrets);
 }

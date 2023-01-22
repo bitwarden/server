@@ -136,4 +136,21 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public async Task<IEnumerable<Core.Entities.Secret>> ImportAsync(IEnumerable<Core.Entities.Secret> secrets)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var entities = new List<Secret>();
+            foreach (var s in secrets)
+            {
+                var entity = Mapper.Map<Secret>(s);
+                entities.Add(entity);
+            }
+            var dbContext = GetDatabaseContext(scope);
+            await GetDbSet(dbContext).AddRangeAsync(entities);
+            await dbContext.SaveChangesAsync();
+            return secrets;
+        }
+    }
 }
