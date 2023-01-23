@@ -71,19 +71,26 @@ public class EventServiceTests
 
         await sutProvider.Sut.LogGroupEventAsync(group, eventType, eventSystemUser, date);
 
+        var eventMessage = new EventMessage()
+        {
+            IpAddress = ipAddress,
+            DeviceType = deviceType,
+            OrganizationId = group.OrganizationId,
+            GroupId = group.Id,
+            Type = eventType,
+            ActingUserId = actingUserId,
+            ProviderId = providerId,
+            Date = date,
+            SystemUser = eventSystemUser
+        };
+
+        if (eventSystemUser is EventSystemUser.SCIM)
+        {
+            eventMessage.DeviceType = DeviceType.Server;
+        }
+
         var expected = new List<IEvent>() {
-            new EventMessage()
-            {
-                IpAddress = ipAddress,
-                DeviceType = deviceType,
-                OrganizationId = group.OrganizationId,
-                GroupId = group.Id,
-                Type = eventType,
-                ActingUserId = actingUserId,
-                ProviderId = providerId,
-                Date = date,
-                SystemUser = eventSystemUser
-            }
+            eventMessage
         };
 
         await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));

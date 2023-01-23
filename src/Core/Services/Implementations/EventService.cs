@@ -188,8 +188,8 @@ public class EventService : IEventService
                 Type = type,
                 ActingUserId = _currentContext?.UserId,
                 ProviderId = await GetProviderIdAsync(group.OrganizationId),
-                Date = date.GetValueOrDefault(DateTime.UtcNow),
-                SystemUser = systemUser
+                SystemUser = systemUser,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
 
             if (systemUser is EventSystemUser.SCIM)
@@ -199,8 +199,9 @@ public class EventService : IEventService
                 e.DeviceType = DeviceType.Server;
             }
 
-            await _eventWriteService.CreateAsync(e);
+            eventMessages.Add(e);
         }
+        await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
     public async Task LogPolicyEventAsync(Policy policy, EventType type, DateTime? date = null)
