@@ -180,7 +180,7 @@ public class EventService : IEventService
             {
                 continue;
             }
-            
+
             var e = new EventMessage(_currentContext)
             {
                 OrganizationId = group.OrganizationId,
@@ -191,7 +191,7 @@ public class EventService : IEventService
                 SystemUser = systemUser,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
-            
+
             if (systemUser is EventSystemUser.SCIM)
             {
                 // System user only used for SCIM logs in this method
