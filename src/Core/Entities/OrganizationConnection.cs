@@ -2,11 +2,13 @@
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Entities;
 
 public class OrganizationConnection<T> : OrganizationConnection where T : new()
 {
-    public new T Config
+    public new T? Config
     {
         get => base.GetConfig<T>();
         set => base.SetConfig<T>(value);
@@ -19,18 +21,18 @@ public class OrganizationConnection : ITableObject<Guid>
     public OrganizationConnectionType Type { get; set; }
     public Guid OrganizationId { get; set; }
     public bool Enabled { get; set; }
-    public string Config { get; set; }
+    public string? Config { get; set; }
 
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
     }
 
-    public T GetConfig<T>() where T : new()
+    public T? GetConfig<T>() where T : new()
     {
         try
         {
-            return JsonSerializer.Deserialize<T>(Config);
+            return JsonSerializer.Deserialize<T>(Config!)!;
         }
         catch (JsonException)
         {
@@ -38,7 +40,7 @@ public class OrganizationConnection : ITableObject<Guid>
         }
     }
 
-    public void SetConfig<T>(T config) where T : new()
+    public void SetConfig<T>(T? config) where T : new()
     {
         Config = JsonSerializer.Serialize(config);
     }

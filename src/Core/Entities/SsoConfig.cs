@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Models.Data;
 
+#nullable enable
+
 namespace Bit.Core.Entities;
 
 public class SsoConfig : ITableObject<long>
@@ -7,7 +9,7 @@ public class SsoConfig : ITableObject<long>
     public long Id { get; set; }
     public bool Enabled { get; set; } = true;
     public Guid OrganizationId { get; set; }
-    public string Data { get; set; }
+    public string? Data { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

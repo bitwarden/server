@@ -2,6 +2,8 @@
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
+#nullable enable
+
 namespace Bit.Core.Entities;
 
 public class Send : ITableObject<Guid>
@@ -10,10 +12,10 @@ public class Send : ITableObject<Guid>
     public Guid? UserId { get; set; }
     public Guid? OrganizationId { get; set; }
     public SendType Type { get; set; }
-    public string Data { get; set; }
-    public string Key { get; set; }
+    public string Data { get; set; } = null!;
+    public string Key { get; set; } = null!;
     [MaxLength(300)]
-    public string Password { get; set; }
+    public string? Password { get; set; }
     public int? MaxAccessCount { get; set; }
     public int AccessCount { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
