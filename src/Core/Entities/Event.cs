@@ -28,7 +28,7 @@ public class Event : ITableObject<Guid>, IEvent
         IpAddress = e.IpAddress;
         ActingUserId = e.ActingUserId;
         SystemUser = e.SystemUser;
-
+        DomainName = e.DomainName;
     }
 
     public Guid Id { get; set; }
