@@ -49,12 +49,12 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                     hasAccess = orgAdmin;
                 } else {
                     var projectId = secret.Projects.FirstOrDefault().Id;
-                    var hasAccess2 = await _projectRepository.UserHasWriteAccessToProject(projectId, userId);
+                    //var hasAccess2 =  false; //await _projectRepository.UserHasWriteAccessToProject(projectId, userId).Response;
 
                     hasAccess = accessClient switch
                     {
                         AccessClientType.NoAccessCheck => true,
-                        AccessClientType.User => (bool)hasAccess2,
+                        AccessClientType.User => false,
                         _ => false,
                     };
                 }
