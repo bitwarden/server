@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Context;
+using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -70,7 +71,7 @@ public class ProfileService : IProfileService
 
     public async Task IsActiveAsync(IsActiveContext context)
     {
-        var securityTokenClaim = context.Subject?.Claims.FirstOrDefault(c => c.Type == "sstamp");
+        var securityTokenClaim = context.Subject?.Claims.FirstOrDefault(c => c.Type == Claims.SecurityStamp);
         var user = await _userService.GetUserByPrincipalAsync(context.Subject);
 
         if (user != null && securityTokenClaim != null)
