@@ -2,7 +2,7 @@
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
-namespace Bit.Commercial.Core.SecretManager.ServiceAccounts;
+namespace Bit.Commercial.Core.SecretManager.Commands.ServiceAccounts;
 
 public class CreateServiceAccountCommand : ICreateServiceAccountCommand
 {

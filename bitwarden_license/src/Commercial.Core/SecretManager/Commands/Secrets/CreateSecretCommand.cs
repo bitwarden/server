@@ -2,7 +2,7 @@
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
-namespace Bit.Commercial.Core.SecretManager.Secrets;
+namespace Bit.Commercial.Core.SecretManager.Commands.Secrets;
 
 public class CreateSecretCommand : ICreateSecretCommand
 {

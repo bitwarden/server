@@ -3,7 +3,7 @@ using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Utilities;
 
-namespace Bit.Commercial.Core.SecretManager.AccessTokens;
+namespace Bit.Commercial.Core.SecretManager.Commands.AccessTokens;
 
 public class CreateAccessTokenCommand : ICreateAccessTokenCommand
 {

@@ -2,7 +2,7 @@
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
-namespace Bit.Commercial.Core.SecretManager.Projects;
+namespace Bit.Commercial.Core.SecretManager.Commands.Projects;
 
 public class CreateProjectCommand : ICreateProjectCommand
 {

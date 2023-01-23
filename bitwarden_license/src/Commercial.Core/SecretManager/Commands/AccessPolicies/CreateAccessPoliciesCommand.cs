@@ -3,7 +3,7 @@ using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
-namespace Bit.Commercial.Core.SecretManager.AccessPolicies;
+namespace Bit.Commercial.Core.SecretManager.Commands.AccessPolicies;
 
 public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
 {

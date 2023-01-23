@@ -3,7 +3,7 @@ using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
-namespace Bit.Commercial.Core.SecretManager.Secrets;
+namespace Bit.Commercial.Core.SecretManager.Commands.Secrets;
 
 public class DeleteSecretCommand : IDeleteSecretCommand
 {

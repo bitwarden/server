@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.SecretManager.AccessTokens;
+﻿using Bit.Commercial.Core.SecretManager.Commands.AccessTokens;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Test.Common.AutoFixture;
