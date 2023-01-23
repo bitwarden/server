@@ -6,7 +6,9 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
 public class AccessTokenCreationResponseModel : ResponseModel
 {
-    public AccessTokenCreationResponseModel(ApiKey apiKey, string obj = "accessTokenCreation") : base(obj)
+    private const string _objectName = "accessTokenCreation";
+
+    public AccessTokenCreationResponseModel(ApiKey apiKey) : base(_objectName)
     {
         Id = apiKey.Id;
         Name = apiKey.Name;
@@ -16,10 +18,14 @@ public class AccessTokenCreationResponseModel : ResponseModel
         RevisionDate = apiKey.RevisionDate;
     }
 
-    public Guid Id { get; }
-    public string Name { get; }
-    public string ClientSecret { get; }
-    public DateTime? ExpireAt { get; }
-    public DateTime CreationDate { get; }
-    public DateTime RevisionDate { get; }
+    public AccessTokenCreationResponseModel() : base(_objectName)
+    {
+    }
+
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    public string ClientSecret { get; set; }
+    public DateTime? ExpireAt { get; set; }
+    public DateTime CreationDate { get; set; }
+    public DateTime RevisionDate { get; set; }
 }

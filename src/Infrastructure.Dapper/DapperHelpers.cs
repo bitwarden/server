@@ -29,7 +29,7 @@ public static class DapperHelpers
         return table;
     }
 
-    public static DataTable ToArrayTVP(this IEnumerable<SelectionReadOnly> values)
+    public static DataTable ToArrayTVP(this IEnumerable<CollectionAccessSelection> values)
     {
         var table = new DataTable();
         table.SetTypeName("[dbo].[SelectionReadOnlyArray]");
