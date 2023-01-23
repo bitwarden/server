@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.SecretManagerFeatures.AccessPolicies.Interfaces;
+using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
+using Bit.Core.SecretsManager.Repositories;
 
 namespace Bit.Commercial.Core.SecretManager.AccessPolicies;
 

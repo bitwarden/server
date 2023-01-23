@@ -1,11 +1,11 @@
 ﻿using AutoMapper;
-using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
 public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPolicyRepository
 {
@@ -14,7 +14,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     {
     }
 
-    public async Task<List<Core.Entities.BaseAccessPolicy>> CreateManyAsync(List<Core.Entities.BaseAccessPolicy> baseAccessPolicies)
+    public async Task<List<Core.SecretsManager.Entities.BaseAccessPolicy>> CreateManyAsync(List<Core.SecretsManager.Entities.BaseAccessPolicy> baseAccessPolicies)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -24,20 +24,20 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 baseAccessPolicy.SetNewId();
                 switch (baseAccessPolicy)
                 {
-                    case Core.Entities.UserProjectAccessPolicy accessPolicy:
+                    case Core.SecretsManager.Entities.UserProjectAccessPolicy accessPolicy:
                         {
                             var entity =
                                 Mapper.Map<UserProjectAccessPolicy>(accessPolicy);
                             await dbContext.AddAsync(entity);
                             break;
                         }
-                    case Core.Entities.GroupProjectAccessPolicy accessPolicy:
+                    case Core.SecretsManager.Entities.GroupProjectAccessPolicy accessPolicy:
                         {
                             var entity = Mapper.Map<GroupProjectAccessPolicy>(accessPolicy);
                             await dbContext.AddAsync(entity);
                             break;
                         }
-                    case Core.Entities.ServiceAccountProjectAccessPolicy accessPolicy:
+                    case Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy accessPolicy:
                         {
                             var entity = Mapper.Map<ServiceAccountProjectAccessPolicy>(accessPolicy);
                             await dbContext.AddAsync(entity);
@@ -51,14 +51,14 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<bool> AccessPolicyExists(Core.Entities.BaseAccessPolicy baseAccessPolicy)
+    public async Task<bool> AccessPolicyExists(Core.SecretsManager.Entities.BaseAccessPolicy baseAccessPolicy)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             switch (baseAccessPolicy)
             {
-                case Core.Entities.UserProjectAccessPolicy accessPolicy:
+                case Core.SecretsManager.Entities.UserProjectAccessPolicy accessPolicy:
                     {
                         var policy = await dbContext.UserProjectAccessPolicy
                             .Where(c => c.OrganizationUserId == accessPolicy.OrganizationUserId &&
@@ -66,7 +66,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                             .FirstOrDefaultAsync();
                         return policy != null;
                     }
-                case Core.Entities.GroupProjectAccessPolicy accessPolicy:
+                case Core.SecretsManager.Entities.GroupProjectAccessPolicy accessPolicy:
                     {
                         var policy = await dbContext.GroupProjectAccessPolicy
                             .Where(c => c.GroupId == accessPolicy.GroupId &&
@@ -74,7 +74,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                             .FirstOrDefaultAsync();
                         return policy != null;
                     }
-                case Core.Entities.ServiceAccountProjectAccessPolicy accessPolicy:
+                case Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy accessPolicy:
                     {
                         var policy = await dbContext.ServiceAccountProjectAccessPolicy
                             .Where(c => c.ServiceAccountId == accessPolicy.ServiceAccountId &&
@@ -88,7 +88,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<Core.Entities.BaseAccessPolicy?> GetByIdAsync(Guid id)
+    public async Task<Core.SecretsManager.Entities.BaseAccessPolicy?> GetByIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -108,7 +108,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.BaseAccessPolicy baseAccessPolicy)
+    public async Task ReplaceAsync(Core.SecretsManager.Entities.BaseAccessPolicy baseAccessPolicy)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -125,7 +125,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.BaseAccessPolicy>?> GetManyByProjectId(Guid id)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>?> GetManyByProjectId(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -158,13 +158,13 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    private Core.Entities.BaseAccessPolicy MapToCore(BaseAccessPolicy baseAccessPolicyEntity)
+    private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(BaseAccessPolicy baseAccessPolicyEntity)
     {
         return baseAccessPolicyEntity switch
         {
-            UserProjectAccessPolicy ap => Mapper.Map<Core.Entities.UserProjectAccessPolicy>(ap),
-            GroupProjectAccessPolicy ap => Mapper.Map<Core.Entities.GroupProjectAccessPolicy>(ap),
-            ServiceAccountProjectAccessPolicy ap => Mapper.Map<Core.Entities.ServiceAccountProjectAccessPolicy>(ap),
+            UserProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.UserProjectAccessPolicy>(ap),
+            GroupProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.GroupProjectAccessPolicy>(ap),
+            ServiceAccountProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy>(ap),
             _ => throw new ArgumentException("Unsupported access policy type")
         };
     }

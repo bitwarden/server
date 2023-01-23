@@ -1,5 +1,5 @@
-﻿using Bit.Commercial.Infrastructure.EntityFramework.Repositories;
-using Bit.Core.Repositories;
+﻿using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;

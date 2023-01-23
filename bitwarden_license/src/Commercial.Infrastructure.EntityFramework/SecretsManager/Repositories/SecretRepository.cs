@@ -1,20 +1,20 @@
 ﻿using AutoMapper;
-using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework;
-using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
-public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, ISecretRepository
+public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, Secret, Guid>, ISecretRepository
 {
     public SecretRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, db => db.Secret)
     { }
 
-    public override async Task<Core.Entities.Secret> GetByIdAsync(Guid id)
+    public override async Task<Core.SecretsManager.Entities.Secret> GetByIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -23,11 +23,11 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
                                     .Include("Projects")
                                     .Where(c => c.Id == id && c.DeletedDate == null)
                                     .FirstOrDefaultAsync();
-            return Mapper.Map<Core.Entities.Secret>(secret);
+            return Mapper.Map<Core.SecretsManager.Entities.Secret>(secret);
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Secret>> GetManyByIds(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByIds(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -35,11 +35,11 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
             var secrets = await dbContext.Secret
                                     .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
                                     .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Secret>>(secrets);
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -50,11 +50,11 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
                                     .OrderBy(c => c.RevisionDate)
                                     .ToListAsync();
 
-            return Mapper.Map<List<Core.Entities.Secret>>(secrets);
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Secret>> GetManyByProjectIdAsync(Guid projectId)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByProjectIdAsync(Guid projectId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -63,11 +63,11 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
                 .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null).Include("Projects")
                 .OrderBy(s => s.RevisionDate).ToListAsync();
 
-            return Mapper.Map<List<Core.Entities.Secret>>(secrets);
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
         }
     }
 
-    public override async Task<Core.Entities.Secret> CreateAsync(Core.Entities.Secret secret)
+    public override async Task<Core.SecretsManager.Entities.Secret> CreateAsync(Core.SecretsManager.Entities.Secret secret)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -90,7 +90,7 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         }
     }
 
-    public async Task<Core.Entities.Secret> UpdateAsync(Core.Entities.Secret secret)
+    public async Task<Core.SecretsManager.Entities.Secret> UpdateAsync(Core.SecretsManager.Entities.Secret secret)
     {
 
         using (var scope = ServiceScopeFactory.CreateScope())

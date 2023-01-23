@@ -1,10 +1,9 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Api.Utilities;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
+using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+using Bit.Core.SecretsManager.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

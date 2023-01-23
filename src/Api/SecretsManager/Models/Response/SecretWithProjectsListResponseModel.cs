@@ -1,5 +1,5 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Models.Api;
+using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 

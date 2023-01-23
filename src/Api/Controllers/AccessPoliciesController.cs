@@ -1,9 +1,9 @@
-﻿using Bit.Api.SecretsManager.Models.Request;
+﻿using Bit.Api.SecretsManager;
+using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Api.Utilities;
-using Bit.Core.Entities;
-using Bit.Core.Repositories;
-using Bit.Core.SecretManagerFeatures.AccessPolicies.Interfaces;
+using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;

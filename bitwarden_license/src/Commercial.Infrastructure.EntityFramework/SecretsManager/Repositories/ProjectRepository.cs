@@ -1,21 +1,21 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using Bit.Core.Enums;
-using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Commercial.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
-public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid>, IProjectRepository
+public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project, Project, Guid>, IProjectRepository
 {
     public ProjectRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, db => db.Project)
     { }
 
-    public override async Task<Core.Entities.Project> GetByIdAsync(Guid id)
+    public override async Task<Core.SecretsManager.Entities.Project> GetByIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -23,11 +23,11 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
             var project = await dbContext.Project
                                     .Where(c => c.Id == id && c.DeletedDate == null)
                                     .FirstOrDefaultAsync();
-            return Mapper.Map<Core.Entities.Project>(project);
+            return Mapper.Map<Core.SecretsManager.Entities.Project>(project);
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -42,7 +42,7 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         };
 
         var projects = await query.OrderBy(p => p.RevisionDate).ToListAsync();
-        return Mapper.Map<List<Core.Entities.Project>>(projects);
+        return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
     }
 
     private static Expression<Func<Project, bool>> UserHasReadAccessToProject(Guid userId) => p =>
@@ -70,7 +70,7 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
         }
     }
 
-    public async Task<IEnumerable<Core.Entities.Project>> GetManyByIds(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByIds(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -78,7 +78,7 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
             var projects = await dbContext.Project
                                     .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
                                     .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Project>>(projects);
+            return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
         }
     }
 

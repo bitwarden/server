@@ -1,7 +1,7 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
+﻿using Bit.Core.Exceptions;
+using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
 
 namespace Bit.Commercial.Core.SecretManager.ServiceAccounts;
 

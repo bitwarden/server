@@ -1,6 +1,6 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Repositories;
-using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
+﻿using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
 
 namespace Bit.Commercial.Core.SecretManager.Projects;
 

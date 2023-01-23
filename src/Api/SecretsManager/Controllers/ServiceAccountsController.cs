@@ -1,10 +1,9 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Api.Utilities;
-using Bit.Core.Repositories;
-using Bit.Core.SecretManagerFeatures.AccessTokens.Interfaces;
-using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
+using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;

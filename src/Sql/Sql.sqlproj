@@ -74,9 +74,6 @@
     <Build Include="dbo\Functions\PolicyApplicableToUser.sql" />
     <Build Include="dbo\Functions\UserCipherDetails.sql" />
     <Build Include="dbo\Functions\UserCollectionDetails.sql" />
-    <Build Include="dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
-    <Build Include="dbo\Stored Procedures\ApiKey\ApiKey_ReadByServiceAccountId.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_Create.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_DeleteIfExpired.sql" />
@@ -364,7 +361,6 @@
     <Build Include="dbo\Stored Procedures\User_UpdateKeys.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateStorage.sql" />
-    <Build Include="dbo\Tables\ApiKey.sql" />
     <Build Include="dbo\Tables\AuthRequest.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
     <Build Include="dbo\Tables\Collection.sql" />
@@ -400,8 +396,6 @@
     <Build Include="dbo\User Defined Types\OrganizationUserType.sql" />
     <Build Include="dbo\User Defined Types\SelectionReadOnlyArray.sql" />
     <Build Include="dbo\User Defined Types\TwoGuidIdArray.sql" />
-    <Build Include="dbo\Views\ApiKeyDetailsView.sql" />
-    <Build Include="dbo\Views\ApiKeyView.sql" />
     <Build Include="dbo\Views\AuthRequestView.sql" />
     <Build Include="dbo\Views\CipherView.sql" />
     <Build Include="dbo\Views\CollectionView.sql" />
@@ -432,10 +426,16 @@
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
+    <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
+    <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_ReadByServiceAccountId.sql" />
     <Build Include="SecretsManager\dbo\Tables\AccessPolicy.sql" />
+    <Build Include="SecretsManager\dbo\Tables\ApiKey.sql" />
     <Build Include="SecretsManager\dbo\Tables\Project.sql" />
     <Build Include="SecretsManager\dbo\Tables\ProjectSecret.sql" />
     <Build Include="SecretsManager\dbo\Tables\Secret.sql" />
     <Build Include="SecretsManager\dbo\Tables\ServiceAccount.sql" />
+    <Build Include="SecretsManager\dbo\Views\ApiKeyDetailsView.sql" />
+    <Build Include="SecretsManager\dbo\Views\ApiKeyView.sql" />
   </ItemGroup>
 </Project>

@@ -3,11 +3,11 @@ using Bit.Commercial.Core.SecretManager.AccessTokens;
 using Bit.Commercial.Core.SecretManager.Projects;
 using Bit.Commercial.Core.SecretManager.Secrets;
 using Bit.Commercial.Core.SecretManager.ServiceAccounts;
-using Bit.Core.SecretManagerFeatures.AccessPolicies.Interfaces;
-using Bit.Core.SecretManagerFeatures.AccessTokens.Interfaces;
-using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
-using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
-using Bit.Core.SecretManagerFeatures.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
+using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
+using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
+using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Core.SecretManager;

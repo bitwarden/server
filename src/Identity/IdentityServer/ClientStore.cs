@@ -6,6 +6,7 @@ using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;

@@ -1,6 +1,6 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Repositories;
-using Bit.Core.SecretManagerFeatures.AccessTokens.Interfaces;
+﻿using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Utilities;
 
 namespace Bit.Commercial.Core.SecretManager.AccessTokens;
