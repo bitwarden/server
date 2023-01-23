@@ -2,25 +2,24 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations
-{
-    public partial class OrganizationStatus : Migration
-    {
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.AddColumn<byte>(
-                name: "Status",
-                table: "Organization",
-                type: "INTEGER",
-                nullable: false,
-                defaultValue: (byte)0);
-        }
+namespace Bit.SqliteMigrations.Migrations;
 
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropColumn(
-                name: "Status",
-                table: "Organization");
-        }
+public partial class OrganizationStatus : Migration
+{
+    protected override void Up(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.AddColumn<byte>(
+            name: "Status",
+            table: "Organization",
+            type: "INTEGER",
+            nullable: false,
+            defaultValue: (byte)0);
+    }
+
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropColumn(
+            name: "Status",
+            table: "Organization");
     }
 }
