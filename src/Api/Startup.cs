@@ -15,8 +15,9 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #if !OSS
+using Bit.Commercial.Core.SecretManager;
 using Bit.Commercial.Core.Utilities;
-using Bit.Commercial.Infrastructure.EntityFramework;
+using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 #endif
 
 namespace Bit.Api;
@@ -137,7 +138,7 @@ public class Startup
 #else
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
-        services.AddCommercialEFRepositories();
+        services.AddSecretsManagerEfRepositories();
 #endif
 
         // MVC

@@ -1,4 +1,4 @@
-﻿using Bit.Api.Controllers;
+﻿using Bit.Api.SecretsManager.Controllers;
 using Bit.Core.Entities;
 using Bit.Core.SecretManagerFeatures.Projects.Interfaces;
 using Bit.Core.Services;

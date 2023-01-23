@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.SecretManagerFeatures.Projects;
+﻿using Bit.Commercial.Core.SecretManager.Projects;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;

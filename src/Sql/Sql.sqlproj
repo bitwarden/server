@@ -67,6 +67,7 @@
     <Folder Include="dbo\Functions\" />
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\User Defined Types\" />
+    <Folder Include="SecretsManager\dbo\Stored Procedures" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Functions\CipherDetails.sql" />
@@ -363,7 +364,6 @@
     <Build Include="dbo\Stored Procedures\User_UpdateKeys.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateRenewalReminderDate.sql" />
     <Build Include="dbo\Stored Procedures\User_UpdateStorage.sql" />
-    <Build Include="dbo\Tables\AccessPolicy.sql" />
     <Build Include="dbo\Tables\ApiKey.sql" />
     <Build Include="dbo\Tables\AuthRequest.sql" />
     <Build Include="dbo\Tables\Cipher.sql" />
@@ -385,14 +385,10 @@
     <Build Include="dbo\Tables\OrganizationSponsorship.sql" />
     <Build Include="dbo\Tables\OrganizationUser.sql" />
     <Build Include="dbo\Tables\Policy.sql" />
-    <Build Include="dbo\Tables\Project.sql" />
-    <Build Include="dbo\Tables\ProjectSecret.sql" />
     <Build Include="dbo\Tables\Provider.sql" />
     <Build Include="dbo\Tables\ProviderOrganization.sql" />
     <Build Include="dbo\Tables\ProviderUser.sql" />
-    <Build Include="dbo\Tables\Secret.sql" />
     <Build Include="dbo\Tables\Send.sql" />
-    <Build Include="dbo\Tables\ServiceAccount.sql" />
     <Build Include="dbo\Tables\SsoConfig.sql" />
     <Build Include="dbo\Tables\SsoUser.sql" />
     <Build Include="dbo\Tables\TaxRate.sql" />
@@ -436,5 +432,10 @@
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="SecretsManager\dbo\Tables\AccessPolicy.sql" />
+    <Build Include="SecretsManager\dbo\Tables\Project.sql" />
+    <Build Include="SecretsManager\dbo\Tables\ProjectSecret.sql" />
+    <Build Include="SecretsManager\dbo\Tables\Secret.sql" />
+    <Build Include="SecretsManager\dbo\Tables\ServiceAccount.sql" />
   </ItemGroup>
 </Project>

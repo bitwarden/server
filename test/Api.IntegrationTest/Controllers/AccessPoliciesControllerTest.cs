@@ -1,8 +1,8 @@
 ﻿using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Api.SecretManagerFeatures.Models.Request;
-using Bit.Api.SecretManagerFeatures.Models.Response;
+using Bit.Api.SecretsManager.Models.Request;
+using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;

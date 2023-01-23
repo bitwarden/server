@@ -1,5 +1,5 @@
-﻿using Bit.Api.Controllers;
-using Bit.Api.SecretManagerFeatures.Models.Request;
+﻿using Bit.Api.SecretsManager.Controllers;
+using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;

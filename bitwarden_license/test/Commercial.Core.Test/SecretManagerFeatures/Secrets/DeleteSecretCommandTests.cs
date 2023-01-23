@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.SecretManagerFeatures.Secrets;
+﻿using Bit.Commercial.Core.SecretManager.Secrets;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
