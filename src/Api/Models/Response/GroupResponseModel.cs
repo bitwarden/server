@@ -30,7 +30,7 @@ public class GroupResponseModel : ResponseModel
 
 public class GroupDetailsResponseModel : GroupResponseModel
 {
-    public GroupDetailsResponseModel(Group group, IEnumerable<SelectionReadOnly> collections)
+    public GroupDetailsResponseModel(Group group, IEnumerable<CollectionAccessSelection> collections)
         : base(group, "groupDetails")
     {
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));

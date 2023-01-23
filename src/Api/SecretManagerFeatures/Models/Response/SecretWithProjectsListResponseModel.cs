@@ -5,10 +5,16 @@ namespace Bit.Api.SecretManagerFeatures.Models.Response;
 
 public class SecretWithProjectsListResponseModel : ResponseModel
 {
-    public SecretWithProjectsListResponseModel(IEnumerable<Secret> secrets, string obj = "SecretsWithProjectsList") : base(obj)
+    private const string _objectName = "SecretsWithProjectsList";
+
+    public SecretWithProjectsListResponseModel(IEnumerable<Secret> secrets) : base(_objectName)
     {
         Secrets = secrets.Select(s => new InnerSecret(s));
         Projects = secrets.SelectMany(s => s.Projects).DistinctBy(p => p.Id).Select(p => new InnerProject(p));
+    }
+
+    public SecretWithProjectsListResponseModel() : base(_objectName)
+    {
     }
 
     public IEnumerable<InnerSecret> Secrets { get; set; }
@@ -20,6 +26,10 @@ public class SecretWithProjectsListResponseModel : ResponseModel
         {
             Id = project.Id;
             Name = project.Name;
+        }
+
+        public InnerProject()
+        {
         }
 
         public Guid Id { get; set; }
@@ -36,6 +46,10 @@ public class SecretWithProjectsListResponseModel : ResponseModel
             CreationDate = secret.CreationDate;
             RevisionDate = secret.RevisionDate;
             Projects = secret.Projects?.Select(p => new InnerProject(p));
+        }
+
+        public InnerSecret()
+        {
         }
 
         public string Id { get; set; }
