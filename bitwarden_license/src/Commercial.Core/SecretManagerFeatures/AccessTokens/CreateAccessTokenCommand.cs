@@ -32,7 +32,7 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
             throw new BadRequestException();
         }
 
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync((Guid)apiKey.ServiceAccountId);
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(apiKey.ServiceAccountId.Value);
         var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
@@ -40,7 +40,7 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
         {
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
-                (Guid)apiKey.ServiceAccountId, userId),
+                apiKey.ServiceAccountId.Value, userId),
             _ => false,
         };
 
