@@ -8,6 +8,9 @@ using Bit.Core.Entities;
 using Bit.Core.SecretManagerFeatures.Secrets.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Bit.Core.Services;
+using Bit.Core.Context;
+using Bit.Core.Enums;
 
 namespace Bit.Api.Controllers;
 
@@ -20,15 +23,18 @@ public class SecretsController : Controller
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
-    private readonly IUserRepository _userRepository;
+    private readonly IUserService _userService;
+    private readonly ICurrentContext _currentContext;
 
-    public SecretsController(ISecretRepository secretRepository, IProjectRepository projectRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand)
+    public SecretsController(ISecretRepository secretRepository, IProjectRepository projectRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand, IUserService userService, ICurrentContext currentContext)
     {
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
+        _userService = userService;
+        _currentContext = currentContext;
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
@@ -38,7 +44,7 @@ public class SecretsController : Controller
         
         foreach(Secret secret in secrets)
         {
-           userHasReadAccessToProject(secret);
+           await userHasReadAccessToProject(secret);
         }
  
         return new SecretWithProjectsListResponseModel(secrets);
@@ -48,13 +54,15 @@ public class SecretsController : Controller
     public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
     {
         var secret = await _secretRepository.GetByIdAsync(id);
-        if(userHasReadAccessToProject(secret)){
+        if(await userHasReadAccessToProject(secret)){
             if (secret == null)
             {
                 throw new NotFoundException();
             }
             return new SecretResponseModel(secret);
         }
+
+        return null;
     }
 
     [HttpGet("projects/{projectId}/secrets")]
@@ -62,32 +70,40 @@ public class SecretsController : Controller
     {
         var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId);
         var firstSecret = secrets.FirstOrDefault();
-        if(userHasReadAccessToProject(projectId, firstSecret.OrganizationId))
+        if(await userHasReadAccessToProject(projectId, firstSecret.OrganizationId))
         {
             var responses = secrets.Select(s => new SecretResponseModel(s));
             return new SecretWithProjectsListResponseModel(secrets);
         }
+
+        return null;
     }
 
     [HttpPost("organizations/{organizationId}/secrets")]
     public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
     {
+        var userId = _userService.GetProperUserId(User).Value;
         var secret = createRequest.ToSecret(organizationId);
-        if(userHasWriteAccessToProject(secret)){
-            var result = await _createSecretCommand.CreateAsync(secret);
+        if(await userHasWriteAccessToProject(secret)){
+            var result = await _createSecretCommand.CreateAsync(secret, userId);
             return new SecretResponseModel(result);
         }
+
+        return null;
     }
 
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
+        var userId = _userService.GetProperUserId(User).Value;
         var secret = updateRequest.ToSecret(id);
-        if(userHasWriteAccessToProject(secret))
+        if(await userHasWriteAccessToProject(secret))
         {
-            var result = await _updateSecretCommand.UpdateAsync(secret);
+            var result = await _updateSecretCommand.UpdateAsync(secret, userId);
             return new SecretResponseModel(result);
         }
+
+        return null;
     }
 
     [HttpPost("secrets/delete")]
@@ -102,21 +118,21 @@ public class SecretsController : Controller
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
-    public bool userHasReadAccessToProject(Guid projectId, Guid organizationId)
+    public async Task<bool> userHasReadAccessToProject(Guid projectId, Guid organizationId)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var accessType = AccessType.Read;
+        var hasAccess = false;
 
-        if(projectId)
+        if(projectId != Guid.Empty)
         {
-            var hasAccess = accessClient switch
+            hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => _projectRepository.UserHasReadAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId), 
-                _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+                AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
+                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId), 
+                _ => false,
             };
         } else 
         {
@@ -131,22 +147,22 @@ public class SecretsController : Controller
         return true;
     }
 
-    public bool userHasReadAccessToProject(Secret secret)
+    public async Task<bool> userHasReadAccessToProject(Secret secret)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.organizationId);
+        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var accessType = AccessType.Read;
+        var hasAccess = false;
 
         if(secret.Projects != null)
         {
-            var projectId = secret.Projects.FirstOrDefault().Id;
-            var hasAccess = accessClient switch
+            Guid projectId = secret.Projects.FirstOrDefault().Id;
+            hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => _projectRepository.UserHasReadAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId), 
-                _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+                AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
+                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId), 
+                _ => false,
             };
         } else 
         {
@@ -161,22 +177,22 @@ public class SecretsController : Controller
         return true;
     }
 
-    public bool userHasWriteAccessToProject(Secret secret)
+    public async Task<bool> userHasWriteAccessToProject(Secret secret)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.organizationId);
+        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var accessType = AccessType.Write;
+        var hasAccess = false;
 
         if(secret.Projects != null)
         {
             var projectId = secret.Projects.FirstOrDefault().Id;
-            var hasAccess = accessClient switch
+            hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => _projectRepository.UserHasWriteAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => _projectRepository.ServiceAccountHasWriteAccessToProject(projectId, userId), 
-                _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),
+                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(projectId, userId), 
+                _ => false,
             };
         } else 
         {
