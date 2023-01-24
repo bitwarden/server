@@ -27,6 +27,8 @@
     [LicenseKey]                       VARCHAR (100)    NULL,
     [Kdf]                              TINYINT          NOT NULL,
     [KdfIterations]                    INT              NOT NULL,
+    [KdfMemory]                        INT              NULL,
+    [KdfParallelism]                   INT              NULL,
     [CreationDate]                     DATETIME2 (7)    NOT NULL,
     [RevisionDate]                     DATETIME2 (7)    NOT NULL,
     [ApiKey]                           VARCHAR (30)     NOT NULL,
