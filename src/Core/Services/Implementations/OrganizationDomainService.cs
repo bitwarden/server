@@ -81,7 +81,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 domain.SetJobRunCount();
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                 await _domainRepository.ReplaceAsync(domain);
-                
+
                 await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_NotVerified,
                     EventSystemUser.DomainVerification);
 
