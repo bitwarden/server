@@ -74,7 +74,7 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
                     }
                     break;
                 case KdfType.Argon2id:
-                    if (!KdfIterations.HasValue || !(KdfIterations.Value > 0))
+                    if (!KdfIterations.HasValue || KdfIterations.Value < 0)
                     {
                         yield return new ValidationResult("Argon2 iterations must be greater than 0.");
                     }
