@@ -1,5 +1,6 @@
 ﻿using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -23,12 +24,36 @@ public class SecretsControllerTests
     [BitAutoData]
     public async void GetSecretsByOrganization_ReturnsEmptyList(SutProvider<SecretsController> sutProvider, Guid id)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
         var result = await sutProvider.Sut.GetSecretsByOrganizationAsync(id);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
                      .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
         Assert.Empty(result.Secrets);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void GetSecretsByOrganization_Success(SutProvider<SecretsController> sutProvider, Secret resultSecret)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByOrganizationIdAsync(default).ReturnsForAnyArgs(new List<Secret> { resultSecret });
+
+        var result = await sutProvider.Sut.GetSecretsByOrganizationAsync(resultSecret.OrganizationId);
+
+        await sutProvider.GetDependency<ISecretRepository>().Received(1)
+            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultSecret.OrganizationId)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void GetSecretsByOrganization_AccessDenied_Throws(SutProvider<SecretsController> sutProvider, Secret resultSecret)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetSecretsByOrganizationAsync(resultSecret.OrganizationId));
     }
 
     [Theory]
@@ -52,22 +77,11 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecretsByOrganization_Success(SutProvider<SecretsController> sutProvider, Secret resultSecret)
-    {
-        sutProvider.GetDependency<ISecretRepository>().GetManyByOrganizationIdAsync(default).ReturnsForAnyArgs(new List<Secret>() { resultSecret });
-
-        var result = await sutProvider.Sut.GetSecretsByOrganizationAsync(resultSecret.OrganizationId);
-
-        await sutProvider.GetDependency<ISecretRepository>().Received(1)
-                     .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultSecret.OrganizationId)));
-    }
-
-    [Theory]
-    [BitAutoData]
     public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId)
     {
         var resultSecret = data.ToSecret(organizationId);
 
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
 
         var result = await sutProvider.Sut.CreateSecretAsync(organizationId, data);

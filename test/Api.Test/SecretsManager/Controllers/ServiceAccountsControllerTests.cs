@@ -26,6 +26,7 @@ public class ServiceAccountsControllerTests
     [BitAutoData]
     public async void GetServiceAccountsByOrganization_ReturnsEmptyList(SutProvider<ServiceAccountsController> sutProvider, Guid id)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         var result = await sutProvider.Sut.GetServiceAccountsByOrganizationAsync(id);
 
@@ -39,6 +40,7 @@ public class ServiceAccountsControllerTests
     [BitAutoData]
     public async void GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccount resultServiceAccount)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default, default, default).ReturnsForAnyArgs(new List<ServiceAccount>() { resultServiceAccount });
 
@@ -50,16 +52,26 @@ public class ServiceAccountsControllerTests
         Assert.Single(result.Data);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async void GetServiceAccountsByOrganization_AccessDenied_Throws(SutProvider<ServiceAccountsController> sutProvider, Guid orgId)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetServiceAccountsByOrganizationAsync(orgId));
+    }
 
     [Theory]
     [BitAutoData]
     public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(true);
         var resultServiceAccount = data.ToServiceAccount(organizationId);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
 
-        var result = await sutProvider.Sut.CreateServiceAccountAsync(organizationId, data);
+        await sutProvider.Sut.CreateServiceAccountAsync(organizationId, data);
         await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
                      .CreateAsync(Arg.Any<ServiceAccount>());
     }
