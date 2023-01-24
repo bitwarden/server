@@ -1,9 +1,4 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER   VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+CREATE OR ALTER  VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -45,4 +40,10 @@ INNER JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
 INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
+
+IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetailsView]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
+END
 GO
