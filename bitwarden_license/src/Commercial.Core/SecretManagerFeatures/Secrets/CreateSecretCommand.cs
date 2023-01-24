@@ -13,7 +13,7 @@ public class CreateSecretCommand : ICreateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> CreateAsync(Secret secret)
+    public async Task<Secret> CreateAsync(Secret secret, Guid userId)
     {
         return await _secretRepository.CreateAsync(secret);
     }

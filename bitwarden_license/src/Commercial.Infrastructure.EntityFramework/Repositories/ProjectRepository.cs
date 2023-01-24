@@ -56,6 +56,9 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
     private static Expression<Func<Project, bool>> ServiceAccountHasReadAccessToProject(Guid serviceAccountId) => p =>
         p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read);
 
+    private static Expression<Func<Project, bool>> ServiceAccountHasWriteAccessToProject(Guid serviceAccountId) => p =>
+        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Write);
+
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -80,6 +83,28 @@ public class ProjectRepository : Repository<Core.Entities.Project, Project, Guid
                                     .ToListAsync();
             return Mapper.Map<List<Core.Entities.Project>>(projects);
         }
+    }
+
+    public async Task<bool> ServiceAccountHasReadAccessToProject(Guid id, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project
+            .Where(p => p.Id == id)
+            .Where(ServiceAccountHasReadAccessToProject(userId));
+
+        return await query.AnyAsync();
+    }
+
+    public async Task<bool> ServiceAccountHasWriteAccessToProject(Guid id, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project
+            .Where(p => p.Id == id)
+            .Where(ServiceAccountHasWriteAccessToProject(userId));
+
+        return await query.AnyAsync();
     }
 
     public async Task<bool> UserHasReadAccessToProject(Guid id, Guid userId)
