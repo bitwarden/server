@@ -92,7 +92,7 @@ public class CreateOrganizationDomainCommandTests
             .ReturnsNull();
         sutProvider.GetDependency<IDnsResolverService>()
             .ResolveAsync(orgDomain.DomainName, orgDomain.Txt)
-            .Throws(new TxtRecordNotFoundException());
+            .Throws(new DnsQueryException(""));
         sutProvider.GetDependency<IOrganizationDomainRepository>()
             .CreateAsync(orgDomain)
             .Returns(orgDomain);

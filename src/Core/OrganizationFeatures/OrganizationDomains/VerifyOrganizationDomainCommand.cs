@@ -60,7 +60,7 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         }
         catch (Exception e)
         {
-            _logger.LogError("Error verifying Organization domain.", e);
+            _logger.LogError("Error verifying Organization domain. {errorMessage}", e.Message);
         }
 
         domain.SetLastCheckedDate();
