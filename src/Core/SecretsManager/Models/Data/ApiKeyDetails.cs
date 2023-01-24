@@ -1,6 +1,6 @@
 ﻿using Bit.Core.SecretsManager.Entities;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.SecretsManager.Models.Data;
 
 public class ApiKeyDetails : ApiKey
 {

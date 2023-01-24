@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Bit.Core.Models.Data;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
