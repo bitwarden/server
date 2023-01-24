@@ -1,9 +1,4 @@
-SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON
-GO
-
-ALTER PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
+CREATE OR ALTER PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
 @ProviderId UNIQUEIDENTIFIER,
 @Status TINYINT = NULL  -- new: this is required to be backwards compatible
 AS
