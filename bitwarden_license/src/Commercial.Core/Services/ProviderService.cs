@@ -57,7 +57,7 @@ public class ProviderService : IProviderService
     {
         if (provider.Type == ProviderType.Reseller)
         {
-            await ProviderRepositoryCreateAsync(provider);
+            await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
             return;
         }
 
@@ -67,7 +67,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
         }
 
-        await ProviderRepositoryCreateAsync(provider);
+        await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Pending);
 
         var providerUser = new ProviderUser
         {
@@ -506,9 +506,9 @@ public class ProviderService : IProviderService
         }
     }
 
-    private async Task ProviderRepositoryCreateAsync(Provider provider)
+    private async Task ProviderRepositoryCreateAsync(Provider provider, ProviderStatusType status)
     {
-        provider.Status = ProviderStatusType.Pending;
+        provider.Status = status;
         provider.Enabled = true;
         provider.UseEvents = true;
         await _providerRepository.CreateAsync(provider);
