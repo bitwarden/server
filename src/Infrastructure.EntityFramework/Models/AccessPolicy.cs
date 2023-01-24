@@ -13,7 +13,10 @@ public class AccessPolicyMapperProfile : Profile
     {
         CreateMap<Core.Entities.UserProjectAccessPolicy, UserProjectAccessPolicy>().ReverseMap()
             .ForMember(dst => dst.User, opt => opt.MapFrom(src => src.OrganizationUser.User));
+        CreateMap<Core.Entities.UserServiceAccountAccessPolicy, UserServiceAccountAccessPolicy>().ReverseMap()
+            .ForMember(dst => dst.User, opt => opt.MapFrom(src => src.OrganizationUser.User));
         CreateMap<Core.Entities.GroupProjectAccessPolicy, GroupProjectAccessPolicy>().ReverseMap();
+        CreateMap<Core.Entities.GroupServiceAccountAccessPolicy, GroupServiceAccountAccessPolicy>().ReverseMap();
         CreateMap<Core.Entities.ServiceAccountProjectAccessPolicy, ServiceAccountProjectAccessPolicy>().ReverseMap();
     }
 }
