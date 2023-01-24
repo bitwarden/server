@@ -33,7 +33,7 @@ public class GroupsControllerTests
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
                 g.AccessAll == groupRequestModel.AccessAll && g.ExternalId == groupRequestModel.ExternalId),
             organization,
-            Arg.Any<IEnumerable<SelectionReadOnly>>());
+            Arg.Any<IEnumerable<CollectionAccessSelection>>());
 
         Assert.Equal(groupRequestModel.Name, responseValue.Name);
         Assert.Equal(groupRequestModel.AccessAll, responseValue.AccessAll);
@@ -58,7 +58,7 @@ public class GroupsControllerTests
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
                 g.AccessAll == groupRequestModel.AccessAll && g.ExternalId == groupRequestModel.ExternalId),
             Arg.Is<Organization>(o => o.Id == organization.Id),
-            Arg.Any<IEnumerable<SelectionReadOnly>>());
+            Arg.Any<IEnumerable<CollectionAccessSelection>>());
 
         Assert.Equal(groupRequestModel.Name, responseValue.Name);
         Assert.Equal(groupRequestModel.AccessAll, responseValue.AccessAll);

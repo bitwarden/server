@@ -679,6 +679,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("boolean");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("smallint");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 

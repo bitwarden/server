@@ -1,6 +1,10 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Core;
+using Bit.Infrastructure.EntityFramework.Converters;
+using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using DP = Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -13,6 +17,9 @@ public class DatabaseContext : DbContext
     { }
 
     public DbSet<AccessPolicy> AccessPolicies { get; set; }
+    public DbSet<UserProjectAccessPolicy> UserProjectAccessPolicy { get; set; }
+    public DbSet<GroupProjectAccessPolicy> GroupProjectAccessPolicy { get; set; }
+    public DbSet<ServiceAccountProjectAccessPolicy> ServiceAccountProjectAccessPolicy { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
@@ -112,6 +119,12 @@ public class DatabaseContext : DbContext
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
         eGrant.HasKey(x => x.Key);
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
+
+        var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
+            Constants.DatabaseFieldProtectorPurpose);
+        var dataProtectionConverter = new DataProtectionConverter(dataProtector);
+        eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
+        eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
 
         if (Database.IsNpgsql())
         {

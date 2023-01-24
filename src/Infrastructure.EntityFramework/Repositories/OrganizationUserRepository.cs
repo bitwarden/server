@@ -16,7 +16,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationUsers)
     { }
 
-    public async Task<Guid> CreateAsync(Core.Entities.OrganizationUser obj, IEnumerable<SelectionReadOnly> collections)
+    public async Task<Guid> CreateAsync(Core.Entities.OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
         var organizationUser = await base.CreateAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -123,7 +123,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<Core.Entities.OrganizationUser, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
     {
         var organizationUser = await base.GetByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -136,13 +136,13 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 where !ou.AccessAll &&
                     ou.Id == id
                 select cu).ToListAsync();
-            var collections = query.Select(cu => new SelectionReadOnly
+            var collections = query.Select(cu => new CollectionAccessSelection
             {
                 Id = cu.CollectionId,
                 ReadOnly = cu.ReadOnly,
                 HidePasswords = cu.HidePasswords,
             });
-            return new Tuple<Core.Entities.OrganizationUser, ICollection<SelectionReadOnly>>(
+            return new Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>(
                 organizationUser, collections.ToList());
         }
     }
@@ -214,7 +214,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>> GetDetailsByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>> GetDetailsByIdWithCollectionsAsync(Guid id)
     {
         var organizationUserUserDetails = await GetDetailsByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -224,13 +224,13 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         join cu in dbContext.CollectionUsers on ou.Id equals cu.OrganizationUserId
                         where !ou.AccessAll && ou.Id == id
                         select cu;
-            var collections = await query.Select(cu => new SelectionReadOnly
+            var collections = await query.Select(cu => new CollectionAccessSelection
             {
                 Id = cu.CollectionId,
                 ReadOnly = cu.ReadOnly,
                 HidePasswords = cu.HidePasswords,
             }).ToListAsync();
-            return new Tuple<OrganizationUserUserDetails, ICollection<SelectionReadOnly>>(organizationUserUserDetails, collections);
+            return new Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>(organizationUserUserDetails, collections);
         }
     }
 
@@ -299,16 +299,67 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId)
+    public async Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups, bool includeCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var view = new OrganizationUserUserDetailsViewQuery();
-            var query = from ou in view.Run(dbContext)
-                        where ou.OrganizationId == organizationId
-                        select ou;
-            return await query.ToListAsync();
+            var users = await (from ou in view.Run(dbContext)
+                               where ou.OrganizationId == organizationId
+                               select ou).ToListAsync();
+
+            if (!includeCollections && !includeGroups)
+            {
+                return users;
+            }
+
+            List<IGrouping<Guid, GroupUser>> groups = null;
+            List<IGrouping<Guid, CollectionUser>> collections = null;
+            var userIds = users.Select(u => u.Id);
+            var userIdEntities = dbContext.OrganizationUsers.Where(x => userIds.Contains(x.Id));
+
+            // Query groups/collections separately to avoid cartesian explosion 
+            if (includeGroups)
+            {
+                groups = (await (from gu in dbContext.GroupUsers
+                                 join ou in userIdEntities on gu.OrganizationUserId equals ou.Id
+                                 select gu).ToListAsync())
+                    .GroupBy(g => g.OrganizationUserId).ToList();
+            }
+
+            if (includeCollections)
+            {
+                collections = (await (from cu in dbContext.CollectionUsers
+                                      join ou in userIdEntities on cu.OrganizationUserId equals ou.Id
+                                      select cu).ToListAsync())
+                    .GroupBy(c => c.OrganizationUserId).ToList();
+            }
+
+            // Map any queried collections and groups to their respective users
+            foreach (var user in users)
+            {
+                if (groups != null)
+                {
+                    user.Groups = groups
+                        .FirstOrDefault(g => g.Key == user.Id)?
+                        .Select(g => g.GroupId).ToList() ?? new List<Guid>();
+                }
+
+                if (collections != null)
+                {
+                    user.Collections = collections
+                        .FirstOrDefault(c => c.Key == user.Id)?
+                        .Select(cu => new CollectionAccessSelection
+                        {
+                            Id = cu.CollectionId,
+                            ReadOnly = cu.ReadOnly,
+                            HidePasswords = cu.HidePasswords
+                        }).ToList() ?? new List<CollectionAccessSelection>();
+                }
+            }
+
+            return users;
         }
     }
 
@@ -360,7 +411,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<SelectionReadOnly> requestedCollections)
+    public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<CollectionAccessSelection> requestedCollections)
     {
         await ReplaceAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
