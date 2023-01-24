@@ -35,4 +35,3 @@ public class ServiceAccountResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 }
-
