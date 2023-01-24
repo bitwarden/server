@@ -941,6 +941,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("BillingEmail")
                         .HasColumnType("longtext");
 
+                    b.Property<string>("BillingPhone")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("BusinessAddress1")
                         .HasColumnType("longtext");
 
@@ -972,6 +975,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<byte>("Type")
                         .HasColumnType("tinyint unsigned");
 
                     b.Property<bool>("UseEvents")

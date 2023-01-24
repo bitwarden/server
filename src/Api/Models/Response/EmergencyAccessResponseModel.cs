@@ -54,11 +54,13 @@ public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessRespons
         GranteeId = emergencyAccess.GranteeId.ToString();
         Email = emergencyAccess.GranteeEmail;
         Name = emergencyAccess.GranteeName;
+        AvatarColor = emergencyAccess.GranteeAvatarColor;
     }
 
     public string GranteeId { get; private set; }
     public string Name { get; private set; }
     public string Email { get; private set; }
+    public string AvatarColor { get; private set; }
 }
 
 public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessResponseModel
@@ -74,11 +76,13 @@ public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessRespons
         GrantorId = emergencyAccess.GrantorId.ToString();
         Email = emergencyAccess.GrantorEmail;
         Name = emergencyAccess.GrantorName;
+        AvatarColor = emergencyAccess.GrantorAvatarColor;
     }
 
     public string GrantorId { get; private set; }
     public string Name { get; private set; }
     public string Email { get; private set; }
+    public string AvatarColor { get; private set; }
 }
 
 public class EmergencyAccessTakeoverResponseModel : ResponseModel

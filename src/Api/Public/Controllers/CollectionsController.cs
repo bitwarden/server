@@ -40,13 +40,12 @@ public class CollectionsController : Controller
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
     public async Task<IActionResult> Get(Guid id)
     {
-        var collectionWithGroups = await _collectionRepository.GetByIdWithGroupsAsync(id);
-        var collection = collectionWithGroups?.Item1;
+        (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id);
         if (collection == null || collection.OrganizationId != _currentContext.OrganizationId)
         {
             return new NotFoundResult();
         }
-        var response = new CollectionResponseModel(collection, collectionWithGroups.Item2);
+        var response = new CollectionResponseModel(collection, access.Groups);
         return new JsonResult(response);
     }
 

@@ -28,7 +28,7 @@ public class UpdateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task UpdateGroup_WithCollections_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Organization organization, List<SelectionReadOnly> collections)
+    public async Task UpdateGroup_WithCollections_Success(SutProvider<UpdateGroupCommand> sutProvider, Group group, Organization organization, List<CollectionAccessSelection> collections)
     {
         await sutProvider.Sut.UpdateGroupAsync(group, organization, collections);
 
