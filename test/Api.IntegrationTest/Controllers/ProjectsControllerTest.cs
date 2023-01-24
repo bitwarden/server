@@ -215,7 +215,6 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         response.EnsureSuccessStatusCode();
 
         var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
-
         Assert.NotNull(results);
 
         var index = 0;
