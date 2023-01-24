@@ -1,4 +1,9 @@
-﻿using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
+﻿using Bit.Commercial.Core.SecretManager.Commands.AccessPolicies;
+using Bit.Commercial.Core.SecretManager.Commands.AccessTokens;
+using Bit.Commercial.Core.SecretManager.Commands.Projects;
+using Bit.Commercial.Core.SecretManager.Commands.Secrets;
+using Bit.Commercial.Core.SecretManager.Commands.ServiceAccounts;
+using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
