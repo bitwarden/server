@@ -178,6 +178,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new ApplicationException("Use register method to create a new user.");
         }
 
+        // if the name is empty, set it to null
+        if (String.Equals(user.Name, String.Empty))
+        {
+            user.Name = null;
+        }
+
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
         await _userRepository.ReplaceAsync(user);
 
