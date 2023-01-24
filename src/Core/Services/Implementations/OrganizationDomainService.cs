@@ -82,7 +82,8 @@ public class OrganizationDomainService : IOrganizationDomainService
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
                 await _domainRepository.ReplaceAsync(domain);
 
-                _logger.LogError(ex, "Verification for organization {OrgId} with domain {Domain} threw an exception", domain.OrganizationId, domain.DomainName);
+                _logger.LogError(ex, "Verification for organization {OrgId} with domain {Domain} threw an exception: {errorMessage}",
+                    domain.OrganizationId, domain.DomainName, ex.Message);
             }
         }
     }
