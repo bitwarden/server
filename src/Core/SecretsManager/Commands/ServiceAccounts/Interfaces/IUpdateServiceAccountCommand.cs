@@ -4,5 +4,5 @@ namespace Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 
 public interface IUpdateServiceAccountCommand
 {
-    Task<ServiceAccount> UpdateAsync(ServiceAccount serviceAccount);
+    Task<ServiceAccount> UpdateAsync(ServiceAccount serviceAccount, Guid userId);
 }

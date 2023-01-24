@@ -31,9 +31,22 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                             await dbContext.AddAsync(entity);
                             break;
                         }
+                    case Core.SecretsManager.Entities.UserServiceAccountAccessPolicy accessPolicy:
+                        {
+                            var entity =
+                                Mapper.Map<UserServiceAccountAccessPolicy>(accessPolicy);
+                            await dbContext.AddAsync(entity);
+                            break;
+                        }
                     case Core.SecretsManager.Entities.GroupProjectAccessPolicy accessPolicy:
                         {
                             var entity = Mapper.Map<GroupProjectAccessPolicy>(accessPolicy);
+                            await dbContext.AddAsync(entity);
+                            break;
+                        }
+                    case Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy accessPolicy:
+                        {
+                            var entity = Mapper.Map<GroupServiceAccountAccessPolicy>(accessPolicy);
                             await dbContext.AddAsync(entity);
                             break;
                         }

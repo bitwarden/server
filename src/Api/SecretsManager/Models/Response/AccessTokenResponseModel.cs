@@ -17,11 +17,11 @@ public class AccessTokenResponseModel : ResponseModel
         RevisionDate = apiKey.RevisionDate;
     }
 
-    public Guid Id { get; }
-    public string Name { get; }
-    public ICollection<string> Scopes { get; }
+    public Guid Id { get; set; }
+    public string Name { get; set; }
+    public ICollection<string> Scopes { get; set; }
 
-    public DateTime? ExpireAt { get; }
-    public DateTime CreationDate { get; }
-    public DateTime RevisionDate { get; }
+    public DateTime? ExpireAt { get; set; }
+    public DateTime CreationDate { get; set; }
+    public DateTime RevisionDate { get; set; }
 }
