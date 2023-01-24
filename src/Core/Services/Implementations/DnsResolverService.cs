@@ -16,6 +16,6 @@ public class DnsResolverService : IDnsResolverService
                 .Any(t => t == txtRecord);
         }
 
-        throw new TxtRecordNotFoundException();
+        throw new DnsQueryException(result.ErrorMessage);
     }
 }
