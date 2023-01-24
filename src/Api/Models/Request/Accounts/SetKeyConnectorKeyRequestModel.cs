@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Accounts;
 
@@ -33,31 +34,6 @@ public class SetKeyConnectorKeyRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        switch (Kdf)
-        {
-            case KdfType.PBKDF2_SHA256:
-                if (KdfIterations < 5000 || KdfIterations > 2_000_000)
-                {
-                    yield return new ValidationResult("KDF iterations must be between 5000 and 2000000.");
-                }
-                break;
-            case KdfType.Argon2id:
-                if (KdfIterations < 0)
-                {
-                    yield return new ValidationResult("Argon2 iterations must be greater than 0.");
-                }
-                else if (!KdfMemory.HasValue || KdfMemory.Value < 15 || KdfMemory.Value > 1024)
-                {
-                    yield return new ValidationResult("Argon2 memory must be between 15mb and 1024mb.");
-                }
-                else if (!KdfParallelism.HasValue || KdfParallelism.Value < 1 || KdfParallelism.Value > 16)
-                {
-                    yield return new ValidationResult("Argon2 parallelism must be between 1 and 16.");
-                }
-                break;
-
-            default:
-                break;
-        }
+        return KdfSettingsValidator.Validate(Kdf, KdfIterations, KdfMemory, KdfParallelism);
     }
 }
