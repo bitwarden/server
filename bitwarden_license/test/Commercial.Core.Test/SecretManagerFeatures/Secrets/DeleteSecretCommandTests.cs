@@ -21,7 +21,6 @@ public class DeleteSecretCommandTests
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteSecrets(data));
 
-        //TODO check access level 
         await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().SoftDeleteManyByIdAsync(default);
     }
 

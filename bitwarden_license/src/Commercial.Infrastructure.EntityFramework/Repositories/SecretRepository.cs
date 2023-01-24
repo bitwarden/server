@@ -74,6 +74,7 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
             var dbContext = GetDatabaseContext(scope);
             secret.SetNewId();
             var entity = Mapper.Map<Secret>(secret);
+
             if (secret.Projects?.Count > 0)
             {
                 foreach (var p in entity.Projects)
@@ -81,6 +82,7 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
                     dbContext.Attach(p);
                 }
             }
+
             await dbContext.AddAsync(entity);
             await dbContext.SaveChangesAsync();
             secret.Id = entity.Id;
@@ -95,13 +97,16 @@ public class SecretRepository : Repository<Core.Entities.Secret, Secret, Guid>, 
         {
             var dbContext = GetDatabaseContext(scope);
             var mappedEntity = Mapper.Map<Secret>(secret);
+
             var entity = await dbContext.Secret
                 .Include("Projects")
                 .FirstAsync(s => s.Id == secret.Id);
+
             foreach (var p in entity.Projects?.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
             {
                 entity.Projects.Remove(p);
             }
+            
             // Add new relationships
             foreach (var project in mappedEntity.Projects?.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
             {

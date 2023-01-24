@@ -111,7 +111,6 @@ public class SecretsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         //TODO get orgId
-        //DeleteSecretCommand checks access
         Guid organizationId = new Guid();
         var results = await _deleteSecretCommand.DeleteSecrets(ids, userId, organizationId);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
