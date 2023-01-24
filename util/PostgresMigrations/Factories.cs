@@ -3,6 +3,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.PostgresMigrations;
 
@@ -22,6 +23,10 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
 {
     public DatabaseContext CreateDbContext(string[] args)
     {
+        var services = new ServiceCollection();
+        services.AddDataProtection();
+        var serviceProvider = services.BuildServiceProvider();
+
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         var connectionString = globalSettings.PostgreSql?.ConnectionString;
@@ -31,7 +36,8 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         }
         optionsBuilder.UseNpgsql(
             connectionString,
-            b => b.MigrationsAssembly("PostgresMigrations"));
+            b => b.MigrationsAssembly("PostgresMigrations"))
+           .UseApplicationServiceProvider(serviceProvider);
         return new DatabaseContext(optionsBuilder.Options);
     }
 }

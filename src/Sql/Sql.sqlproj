@@ -67,6 +67,7 @@
     <Folder Include="dbo\Functions\" />
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\User Defined Types\" />
+    <Folder Include="dbo\Stored Procedures\ApiKey\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Functions\CipherDetails.sql" />
