@@ -1,3 +1,4 @@
+-- SG-992 changes: add planType to provider orgs
 CREATE OR ALTER  VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
@@ -31,19 +32,40 @@ SELECT
     PO.[ProviderId],
     PU.[Id] ProviderUserId,
     P.[Name] ProviderName,
-    O.[PlanType]
+    O.[PlanType] -- new prop
 FROM
     [dbo].[ProviderUser] PU
-INNER JOIN
+    INNER JOIN
     [dbo].[ProviderOrganization] PO ON PO.[ProviderId] = PU.[ProviderId]
-INNER JOIN
+    INNER JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
-INNER JOIN
+    INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
-GO
+    GO
 
+        
+-- Refresh view metadata
 IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetailsView]') IS NOT NULL
 BEGIN
-    EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
+EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
+END
+GO
+
+
+-- EC-591 / SG-996 changes: add optional status to stored proc
+CREATE OR ALTER PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
+@ProviderId UNIQUEIDENTIFIER,
+@Status TINYINT = NULL  -- new: this is required to be backwards compatible
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    *
+FROM
+    [dbo].[ProviderUserUserDetailsView]
+WHERE
+    [ProviderId] = @ProviderId
+  AND [Status] = COALESCE(@Status, [Status])  -- new
 END
 GO
