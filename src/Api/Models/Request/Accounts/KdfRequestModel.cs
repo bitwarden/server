@@ -32,7 +32,8 @@ public class KdfRequestModel : PasswordRequestModel, IValidatableObject
                     else if (!KdfMemory.HasValue || KdfMemory.Value < 15 || KdfMemory.Value > 1024)
                     {
                         yield return new ValidationResult("Argon2 memory must be between 15mb and 1024mb.");
-                    } else if (!KdfParallelism.HasValue || KdfParallelism.Value < 1 || KdfParallelism.Value > 16)
+                    }
+                    else if (!KdfParallelism.HasValue || KdfParallelism.Value < 1 || KdfParallelism.Value > 16)
                     {
                         yield return new ValidationResult("Argon2 parallelism must be between 1 and 16.");
                     }
