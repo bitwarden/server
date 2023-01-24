@@ -14,8 +14,10 @@ public class Provider : ITableObject<Guid>
     public string BusinessCountry { get; set; }
     public string BusinessTaxNumber { get; set; }
     public string BillingEmail { get; set; }
+    public string BillingPhone { get; set; }
     public ProviderStatusType Status { get; set; }
     public bool UseEvents { get; set; }
+    public ProviderType Type { get; set; }
     public bool Enabled { get; set; } = true;
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
