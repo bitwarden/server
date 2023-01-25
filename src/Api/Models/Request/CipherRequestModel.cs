@@ -24,7 +24,7 @@ public class CipherRequestModel
     [EncryptedStringLength(1000)]
     public string Name { get; set; }
     [EncryptedString]
-    [EncryptedStringLength(10000)]
+    [EncryptedStringLength(50000)]
     public string Notes { get; set; }
     public IEnumerable<CipherFieldModel> Fields { get; set; }
     public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
