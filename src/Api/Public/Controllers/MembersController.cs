@@ -122,7 +122,7 @@ public class MembersController : Controller
             Collections = associations
         };
         var user = await _organizationService.InviteUserAsync(_currentContext.OrganizationId.Value, null,
-            model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations);
+            model.Email, model.Type.Value, model.AccessAll.Value, model.ExternalId, associations, model.Groups);
         var response = new MemberResponseModel(user, associations);
         return new JsonResult(response);
     }
@@ -149,7 +149,7 @@ public class MembersController : Controller
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-        await _organizationService.SaveUserAsync(updatedUser, null, associations);
+        await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {

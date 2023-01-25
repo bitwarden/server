@@ -1,5 +1,4 @@
-﻿using System.Data.SqlClient;
-using System.Globalization;
+﻿using System.Globalization;
 using Bit.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -7,6 +6,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 
 namespace Bit.Billing.Controllers;

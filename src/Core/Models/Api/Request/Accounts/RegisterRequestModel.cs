@@ -26,6 +26,8 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     public Guid? OrganizationUserId { get; set; }
     public KdfType? Kdf { get; set; }
     public int? KdfIterations { get; set; }
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
     public Dictionary<string, object> ReferenceData { get; set; }
 
     public User ToUser()
@@ -37,6 +39,8 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
             MasterPasswordHint = MasterPasswordHint,
             Kdf = Kdf.GetValueOrDefault(KdfType.PBKDF2_SHA256),
             KdfIterations = KdfIterations.GetValueOrDefault(5000),
+            KdfMemory = KdfMemory,
+            KdfParallelism = KdfParallelism
         };
 
         if (ReferenceData != null)
@@ -61,17 +65,9 @@ public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
     {
         if (Kdf.HasValue && KdfIterations.HasValue)
         {
-            switch (Kdf.Value)
-            {
-                case KdfType.PBKDF2_SHA256:
-                    if (KdfIterations.Value < 5000 || KdfIterations.Value > 1_000_000)
-                    {
-                        yield return new ValidationResult("KDF iterations must be between 5000 and 1000000.");
-                    }
-                    break;
-                default:
-                    break;
-            }
+            return KdfSettingsValidator.Validate(Kdf.Value, KdfIterations.Value, KdfMemory, KdfParallelism);
         }
+
+        return Enumerable.Empty<ValidationResult>();
     }
 }

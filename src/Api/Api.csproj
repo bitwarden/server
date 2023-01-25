@@ -26,13 +26,14 @@
     <When Condition="!$(DefineConstants.Contains('OSS'))">
       <ItemGroup>
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
       </ItemGroup>
     </When>
   </Choose>
 
   <ItemGroup>
     <PackageReference Include="Azure.Messaging.EventGrid" Version="4.10.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.1" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
 </Project>

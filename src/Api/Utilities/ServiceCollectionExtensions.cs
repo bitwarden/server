@@ -1,4 +1,5 @@
-﻿using Bit.Core.Settings;
+﻿using Bit.Core.IdentityServer;
+using Bit.Core.Settings;
 using Microsoft.OpenApi.Models;
 
 namespace Bit.Api.Utilities;
@@ -38,7 +39,7 @@ public static class ServiceCollectionExtensions
                         TokenUrl = new Uri($"{globalSettings.BaseServiceUri.Identity}/connect/token"),
                         Scopes = new Dictionary<string, string>
                         {
-                            { "api.organization", "Organization APIs" },
+                            { ApiScopes.ApiOrganization, "Organization APIs" },
                         },
                     }
                 },
@@ -55,7 +56,7 @@ public static class ServiceCollectionExtensions
                             Id = "oauth2-client-credentials"
                         },
                     },
-                    new[] { "api.organization" }
+                    new[] { ApiScopes.ApiOrganization }
                 }
             });
 

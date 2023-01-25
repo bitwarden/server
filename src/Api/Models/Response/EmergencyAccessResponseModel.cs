@@ -54,11 +54,13 @@ public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessRespons
         GranteeId = emergencyAccess.GranteeId.ToString();
         Email = emergencyAccess.GranteeEmail;
         Name = emergencyAccess.GranteeName;
+        AvatarColor = emergencyAccess.GranteeAvatarColor;
     }
 
     public string GranteeId { get; private set; }
     public string Name { get; private set; }
     public string Email { get; private set; }
+    public string AvatarColor { get; private set; }
 }
 
 public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessResponseModel
@@ -74,11 +76,13 @@ public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessRespons
         GrantorId = emergencyAccess.GrantorId.ToString();
         Email = emergencyAccess.GrantorEmail;
         Name = emergencyAccess.GrantorName;
+        AvatarColor = emergencyAccess.GrantorAvatarColor;
     }
 
     public string GrantorId { get; private set; }
     public string Name { get; private set; }
     public string Email { get; private set; }
+    public string AvatarColor { get; private set; }
 }
 
 public class EmergencyAccessTakeoverResponseModel : ResponseModel
@@ -93,9 +97,13 @@ public class EmergencyAccessTakeoverResponseModel : ResponseModel
         KeyEncrypted = emergencyAccess.KeyEncrypted;
         Kdf = grantor.Kdf;
         KdfIterations = grantor.KdfIterations;
+        KdfMemory = grantor.KdfMemory;
+        KdfParallelism = grantor.KdfParallelism;
     }
 
     public int KdfIterations { get; private set; }
+    public int? KdfMemory { get; private set; }
+    public int? KdfParallelism { get; private set; }
     public KdfType Kdf { get; private set; }
     public string KeyEncrypted { get; private set; }
 }

@@ -89,7 +89,7 @@ public class PolicyService : IPolicyService
                 var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
                     policy.OrganizationId);
                 var removableOrgUsers = orgUsers.Where(ou =>
-                    ou.Status != Enums.OrganizationUserStatusType.Invited &&
+                    ou.Status != Enums.OrganizationUserStatusType.Invited && ou.Status != Enums.OrganizationUserStatusType.Revoked &&
                     ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin &&
                     ou.UserId != savingUserId);
                 switch (policy.Type)
