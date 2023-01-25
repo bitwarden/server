@@ -939,6 +939,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("BillingEmail")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BillingPhone")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("BusinessAddress1")
                         .HasColumnType("TEXT");
 
@@ -970,6 +973,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<byte>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte>("Type")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseEvents")
@@ -1367,6 +1373,12 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("KdfIterations")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("KdfMemory")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("KdfParallelism")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Key")

@@ -946,6 +946,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("BillingEmail")
                         .HasColumnType("text");
 
+                    b.Property<string>("BillingPhone")
+                        .HasColumnType("text");
+
                     b.Property<string>("BusinessAddress1")
                         .HasColumnType("text");
 
@@ -977,6 +980,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<byte>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<byte>("Type")
                         .HasColumnType("smallint");
 
                     b.Property<bool>("UseEvents")
@@ -1380,6 +1386,12 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("smallint");
 
                     b.Property<int>("KdfIterations")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("KdfMemory")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("KdfParallelism")
                         .HasColumnType("integer");
 
                     b.Property<string>("Key")
