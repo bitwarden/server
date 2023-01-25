@@ -54,6 +54,11 @@ public class SecretsManagerPortingController : Controller
             throw new UnauthorizedAccessException();
         }
 
+        if (importRequest.Projects?.Count() > 2000 || importRequest.Secrets?.Count() > 6000)
+        {
+            throw new BadRequestException("You cannot import this much data at once.");
+        }
+
         var result = await _importCommand.ImportAsync(organizationId, importRequest.ToSMImport());
         return new SMImportResponseModel(result);
     }

@@ -141,13 +141,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
+            var dbContext = GetDatabaseContext(scope);
             var entities = new List<Secret>();
             foreach (var s in secrets)
             {
                 var entity = Mapper.Map<Secret>(s);
+
+                if (s.Projects?.Count > 0)
+                {
+                    foreach (var p in entity.Projects)
+                    {
+                        dbContext.Attach(p);
+                    }
+                }
+
                 entities.Add(entity);
             }
-            var dbContext = GetDatabaseContext(scope);
             await GetDbSet(dbContext).AddRangeAsync(entities);
             await dbContext.SaveChangesAsync();
             return secrets;

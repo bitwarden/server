@@ -19,7 +19,7 @@ public class ImportCommand : IImportCommand
     {
         try
         {
-            AssignNewIds(import);
+            import = AssignNewIds(import);
 
             if (import.Projects != null && import.Projects.Any())
             {
@@ -52,17 +52,23 @@ public class ImportCommand : IImportCommand
         return import;
     }
 
-    public void AssignNewIds(SMImport import)
+    public SMImport AssignNewIds(SMImport import)
     {
         Dictionary<Guid, Guid> oldNewProjectIds = new Dictionary<Guid, Guid>();
+        var projects = new List<SMImport.InnerProject>();
+        var secrets = new List<SMImport.InnerSecret>();
 
         if (import.Projects != null && import.Projects.Any())
         {
             foreach (var project in import.Projects)
             {
-                var newProjectId = new Guid();
+                var newProjectId = Guid.NewGuid();
                 oldNewProjectIds.Add(project.Id, newProjectId);
-                project.Id = newProjectId;
+                projects.Add(new SMImport.InnerProject
+                {
+                    Id = newProjectId,
+                    Name = project.Name,
+                });
             }
         }
 
@@ -70,9 +76,21 @@ public class ImportCommand : IImportCommand
         {
             foreach (var secret in import.Secrets)
             {
-                secret.Id = new Guid();
-                secret.ProjectIds = secret.ProjectIds?.Select(projectId => oldNewProjectIds[projectId]);
+                secrets.Add(new SMImport.InnerSecret
+                {
+                    Id = Guid.NewGuid(),
+                    Key = secret.Key,
+                    Value = secret.Value,
+                    Note = secret.Note,
+                    ProjectIds = secret.ProjectIds?.Select(projectId => oldNewProjectIds[projectId]),
+                });
             }
         }
+
+        return new SMImport
+        {
+            Projects = projects,
+            Secrets = secrets
+        };
     }
 }

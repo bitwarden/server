@@ -109,9 +109,9 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var entities = new List<Project>();
-            foreach (var s in projects)
+            foreach (var p in projects)
             {
-                var entity = Mapper.Map<Project>(s);
+                var entity = Mapper.Map<Project>(p);
                 entities.Add(entity);
             }
             var dbContext = GetDatabaseContext(scope);

@@ -11,6 +11,8 @@ public class SMImportRequestModel
 
     public class InnerProject
     {
+        public InnerProject() { }
+
         public InnerProject(Project project)
         {
             Id = project.Id;
@@ -28,6 +30,8 @@ public class SMImportRequestModel
 
     public class InnerSecret
     {
+        public InnerSecret() { }
+
         public InnerSecret(Secret secret)
         {
             Id = secret.Id;
