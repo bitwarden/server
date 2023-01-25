@@ -32,7 +32,9 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                 .Select(e => new DataModel.UserKdfInformation
                 {
                     Kdf = e.Kdf,
-                    KdfIterations = e.KdfIterations
+                    KdfIterations = e.KdfIterations,
+                    KdfMemory = e.KdfMemory,
+                    KdfParallelism = e.KdfParallelism
                 }).SingleOrDefaultAsync();
         }
     }

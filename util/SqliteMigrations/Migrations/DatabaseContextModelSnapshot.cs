@@ -1375,6 +1375,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int>("KdfIterations")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("KdfMemory")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("KdfParallelism")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
 
