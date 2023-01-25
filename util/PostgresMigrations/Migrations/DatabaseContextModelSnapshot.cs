@@ -1388,6 +1388,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int>("KdfIterations")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("KdfMemory")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("KdfParallelism")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Key")
                         .HasColumnType("text");
 
