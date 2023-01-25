@@ -1377,6 +1377,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int>("KdfIterations")
                         .HasColumnType("int");
 
+                    b.Property<int?>("KdfMemory")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("KdfParallelism")
+                        .HasColumnType("int");
+
                     b.Property<string>("Key")
                         .HasColumnType("longtext");
 
