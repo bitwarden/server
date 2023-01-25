@@ -19,6 +19,7 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             OrganizationId = x.ou.OrganizationId,
             Name = x.u.Name,
             Email = x.u.Email ?? x.ou.Email,
+            AvatarColor = x.u.AvatarColor,
             TwoFactorProviders = x.u.TwoFactorProviders,
             Premium = x.u.Premium,
             Status = x.ou.Status,
