@@ -4,5 +4,5 @@ namespace Bit.Core.SecretManagerFeatures.AccessPolicies.Interfaces;
 
 public interface ICreateAccessPoliciesCommand
 {
-    Task<List<BaseAccessPolicy>> CreateAsync(List<BaseAccessPolicy> accessPolicies);
+    Task<IEnumerable<BaseAccessPolicy>> CreateForProjectAsync(Guid projectId, List<BaseAccessPolicy> accessPolicies, Guid userId);
 }

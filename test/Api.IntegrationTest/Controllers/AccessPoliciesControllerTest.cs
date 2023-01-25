@@ -1,9 +1,11 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.SecretManagerFeatures.Models.Request;
 using Bit.Api.SecretManagerFeatures.Models.Response;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Helpers;
 using Xunit;
@@ -12,13 +14,12 @@ namespace Bit.Api.IntegrationTest.Controllers;
 
 public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
-    private readonly IAccessPolicyRepository _accessPolicyRepository;
+    private const string _mockEncryptedString =
+        "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
-
-    private const string _mockEncryptedString = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
-
+    private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private Organization _organization = null!;
@@ -35,14 +36,23 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
     public async Task InitializeAsync()
     {
         var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        var tokens = await _factory.LoginWithNewAccount(ownerEmail);
-        var (organization, _) =
+        await _factory.LoginWithNewAccount(ownerEmail);
+        (_organization, _) =
             await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: ownerEmail, billingEmail: ownerEmail);
+        var tokens = await _factory.LoginAsync(ownerEmail);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-        _organization = organization;
     }
 
     public Task DisposeAsync() => Task.CompletedTask;
+
+    public async Task LoginAsNewOrgUser(OrganizationUserType type = OrganizationUserType.User)
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, type);
+        var tokens = await _factory.LoginAsync(email);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+    }
 
     [Fact]
     public async Task CreateProjectAccessPolicies()
@@ -50,21 +60,21 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var initialProject = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = _organization.Id,
-            Name = _mockEncryptedString
+            Name = _mockEncryptedString,
         });
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = _organization.Id,
-            Name = _mockEncryptedString
+            Name = _mockEncryptedString,
         });
 
         var request = new AccessPoliciesCreateRequest
         {
             ServiceAccountAccessPolicyRequests = new List<AccessPolicyRequest>
             {
-                new() { GranteeId = initialServiceAccount.Id, Read = true, Write = true }
-            }
+                new() { GranteeId = initialServiceAccount.Id, Read = true, Write = true },
+            },
         };
 
         var response = await _client.PostAsJsonAsync($"/projects/{initialProject.Id}/access-policies", request);
@@ -87,6 +97,54 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         Assert.Equal(result.ServiceAccountAccessPolicies.First().Id, createdAccessPolicy.Id);
         AssertHelper.AssertRecent(createdAccessPolicy.CreationDate);
         AssertHelper.AssertRecent(createdAccessPolicy.RevisionDate);
+    }
+
+    [Fact]
+    public async Task CreateProjectAccessPolicies_NoPermission()
+    {
+        // Create a new account as a user
+        await LoginAsNewOrgUser();
+
+        var initialProject = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = _organization.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = _organization.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var request = new AccessPoliciesCreateRequest
+        {
+            ServiceAccountAccessPolicyRequests = new List<AccessPolicyRequest>
+            {
+                new() { GranteeId = initialServiceAccount.Id, Read = true, Write = true },
+            },
+        };
+
+        var response = await _client.PostAsJsonAsync($"/projects/{initialProject.Id}/access-policies", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateAccessPolicy_NoPermission()
+    {
+        // Create a new account as a user
+        await LoginAsNewOrgUser();
+
+        var initData = await SetupAccessPolicyRequest();
+
+        const bool expectedRead = true;
+        const bool expectedWrite = false;
+        var request = new AccessPolicyUpdateRequest { Read = expectedRead, Write = expectedWrite };
+
+        var response = await _client.PutAsJsonAsync($"/access-policies/{initData.InitialAccessPolicyId}", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
@@ -115,6 +173,18 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         AssertHelper.AssertRecent(updatedAccessPolicy.RevisionDate);
     }
 
+    [Fact]
+    public async Task DeleteAccessPolicy_NoPermission()
+    {
+        // Create a new account as a user
+        await LoginAsNewOrgUser();
+
+        var initData = await SetupAccessPolicyRequest();
+
+        var response = await _client.DeleteAsync($"/access-policies/{initData.InitialAccessPolicyId}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 
     [Fact]
     public async Task DeleteAccessPolicy()
@@ -126,6 +196,19 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var test = await _accessPolicyRepository.GetByIdAsync(initData.InitialAccessPolicyId);
         Assert.Null(test);
+    }
+
+
+    [Fact]
+    public async Task GetProjectAccessPolicies_NoPermission()
+    {
+        // Create a new account as a user
+        await LoginAsNewOrgUser();
+        var initData = await SetupAccessPolicyRequest();
+
+        var response = await _client.GetAsync($"/projects/{initData.InitialProjectId}/access-policies");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -165,7 +248,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
                     Write = true,
                     ServiceAccountId = initialServiceAccount.Id,
                     GrantedProjectId = initialProject.Id,
-                }
+                },
             });
 
         return new RequestSetupData
