@@ -15,11 +15,9 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Core.Models.Data;
-using LinqToDB.Tools;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Bit.Api.Test.Controllers;
 
