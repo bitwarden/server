@@ -40,8 +40,6 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             }
             else
             {
-                //Check if the Project this secret is associated with allows deletion (write permisison)
-                //Check if this secret has a projId
                 var hasAccess = false;
 
                 if(secret.Projects == null || secret.Projects?.Count == 0){
@@ -49,7 +47,6 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                 } else {
 
                     var projectId = secret.Projects.FirstOrDefault().Id;
-
 
                     hasAccess = accessClient switch
                     {

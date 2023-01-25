@@ -77,9 +77,9 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void UpdateSecret_Success(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId)
+    public async void UpdateSecret_Success(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId)
     {
-        var resultSecret = data.ToSecret(secretId);
+        var resultSecret = data.ToSecret(secretId, organizationId);
         sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultSecret);
 
         var result = await sutProvider.Sut.UpdateSecretAsync(secretId, data);
@@ -89,7 +89,7 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteSecret_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    public async void BulkDeleteSecret_Success(SutProvider<SecretsController> sutProvider, List<Secret> data, Guid organizationId)
     {
         var ids = data.Select(secret => secret.Id).ToList();
         var mockResult = new List<Tuple<Secret, string>>();
@@ -99,7 +99,7 @@ public class SecretsControllerTests
         }
         sutProvider.GetDependency<IDeleteSecretCommand>().DeleteSecrets(ids).ReturnsForAnyArgs(mockResult);
 
-        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids, organizationId);
         await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
                      .DeleteSecrets(Arg.Is(ids));
         Assert.Equal(data.Count, results.Data.Count());

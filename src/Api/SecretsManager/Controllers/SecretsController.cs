@@ -83,7 +83,6 @@ public class SecretsController : Controller
             var firstSecret = secrets.FirstOrDefault();
             if(await userHasReadAccessToProject(projectId, firstSecret.OrganizationId))
             {
-                //TODO what is going on here?
                 var responses = secrets.Select(s => new SecretResponseModel(s));
                 return new SecretWithProjectsListResponseModel(secrets);
             } 
@@ -114,14 +113,15 @@ public class SecretsController : Controller
         return null;
     }
 
-    [HttpPut("secrets/{id}")]
-    public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
+    [HttpPut("secrets/{organizationId}/{id}")]
+    public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid organizationId, [FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var secret = updateRequest.ToSecret(id);
+        var secret = updateRequest.ToSecret(id, organizationId);
+
         if(await userHasWriteAccessToProject(secret))
         {
-            var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id), userId);
+            var result = await _updateSecretCommand.UpdateAsync(secret, userId);
             return new SecretResponseModel(result);
         } else 
         {
@@ -131,12 +131,10 @@ public class SecretsController : Controller
         return null;
     }
 
-    [HttpPost("secrets/delete")]
-    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
+    [HttpPost("secrets/{organizationId}/delete")]
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids, [FromRoute] Guid organizationId)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        //TODO get orgId
-        Guid organizationId = new Guid();
         var results = await _deleteSecretCommand.DeleteSecrets(ids, userId, organizationId);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
