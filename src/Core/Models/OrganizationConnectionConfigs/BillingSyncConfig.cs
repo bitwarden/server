@@ -4,6 +4,7 @@ public class BillingSyncConfig : IConnectionConfig
 {
     public string BillingSyncKey { get; set; }
     public Guid CloudOrganizationId { get; set; }
+    public DateTime? LastLicenseSync { get; set; }
 
     public bool Validate(out string exception)
     {
