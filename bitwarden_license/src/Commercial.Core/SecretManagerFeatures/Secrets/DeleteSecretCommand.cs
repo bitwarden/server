@@ -44,11 +44,12 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                 //Check if this secret has a projId
                 var hasAccess = false;
 
-                if(secret.Projects == null){
+                if(secret.Projects == null || secret.Projects?.Count == 0){
                     hasAccess = orgAdmin;
                 } else {
+
                     var projectId = secret.Projects.FirstOrDefault().Id;
-                    //var hasAccess2 =  false; //await _projectRepository.UserHasWriteAccessToProject(projectId, userId).Response;
+
 
                     hasAccess = accessClient switch
                     {

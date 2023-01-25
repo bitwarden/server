@@ -41,25 +41,35 @@ public class SecretsController : Controller
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
     {
         var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
-        
+        var secretsAllowedToRead = new List<Secret>();
+
         foreach(Secret secret in secrets)
         {
-           await userHasReadAccessToProject(secret);
+           if(await userHasReadAccessToProject(secret))
+           {
+               secretsAllowedToRead.Add(secret);
+           }
         }
- 
-        return new SecretWithProjectsListResponseModel(secrets);
+
+        //Dont show an error message just go ahead and show only allowed to read secrets 
+        return new SecretWithProjectsListResponseModel(secretsAllowedToRead);
     }
 
     [HttpGet("secrets/{id}")]
     public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
     {
         var secret = await _secretRepository.GetByIdAsync(id);
-        if(await userHasReadAccessToProject(secret)){
+        if(await userHasReadAccessToProject(secret))
+        {
             if (secret == null)
             {
                 throw new NotFoundException();
             }
             return new SecretResponseModel(secret);
+        } 
+        else 
+        {
+            throw new UnauthorizedAccessException("You don't have read access");
         }
 
         return null;
@@ -69,11 +79,19 @@ public class SecretsController : Controller
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByProjectAsync([FromRoute] Guid projectId)
     {
         var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId);
-        var firstSecret = secrets.FirstOrDefault();
-        if(await userHasReadAccessToProject(projectId, firstSecret.OrganizationId))
-        {
-            var responses = secrets.Select(s => new SecretResponseModel(s));
-            return new SecretWithProjectsListResponseModel(secrets);
+        
+        if(secrets != null){
+            var firstSecret = secrets.FirstOrDefault();
+            if(await userHasReadAccessToProject(projectId, firstSecret.OrganizationId))
+            {
+                //TODO what is going on here?
+                var responses = secrets.Select(s => new SecretResponseModel(s));
+                return new SecretWithProjectsListResponseModel(secrets);
+            } 
+            else
+            {
+                throw new UnauthorizedAccessException("You don't have read access");
+            }
         }
 
         return null;
@@ -84,9 +102,14 @@ public class SecretsController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var secret = createRequest.ToSecret(organizationId);
-        if(await userHasWriteAccessToProject(secret)){
+        if(await userHasWriteAccessToProject(secret))
+        {
             var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
             return new SecretResponseModel(result);
+        }
+        else
+        {
+            throw new UnauthorizedAccessException("You don't have read access");
         }
 
         return null;
@@ -101,6 +124,9 @@ public class SecretsController : Controller
         {
             var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id), userId);
             return new SecretResponseModel(result);
+        } else 
+        {
+            throw new UnauthorizedAccessException("You don't have read access");
         }
 
         return null;
@@ -133,17 +159,13 @@ public class SecretsController : Controller
                 AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId), 
                 _ => false,
             };
-        } else 
+        } 
+        else 
         {
             hasAccess = orgAdmin;
         }
 
-        if(!hasAccess)
-        {
-            throw new UnauthorizedAccessException("You don't have read access");
-        }
-
-        return true;
+        return hasAccess;
     }
 
     public async Task<bool> userHasReadAccessToProject(Secret secret)
@@ -153,7 +175,7 @@ public class SecretsController : Controller
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         var hasAccess = false;
 
-        if(secret.Projects != null)
+        if(secret.Projects?.Count > 0)
         {
             Guid projectId = secret.Projects.FirstOrDefault().Id;
             hasAccess = accessClient switch
@@ -163,17 +185,13 @@ public class SecretsController : Controller
                 AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId), 
                 _ => false,
             };
-        } else 
+        } 
+        else 
         {
             hasAccess = orgAdmin;
         }
 
-        if(!hasAccess)
-        {
-            throw new UnauthorizedAccessException("You don't have read access");
-        }
-
-        return true;
+        return hasAccess;
     }
 
     public async Task<bool> userHasWriteAccessToProject(Secret secret)
@@ -183,7 +201,7 @@ public class SecretsController : Controller
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         var hasAccess = false;
 
-        if(secret.Projects != null)
+        if(secret.Projects?.Count > 0)
         {
             var projectId = secret.Projects.FirstOrDefault().Id;
             hasAccess = accessClient switch
@@ -198,11 +216,6 @@ public class SecretsController : Controller
             hasAccess = orgAdmin;
         }
 
-        if(!hasAccess)
-        {
-            throw new UnauthorizedAccessException("You don't have write access");
-        }
-
-        return true;
+        return hasAccess;
     }
 }
