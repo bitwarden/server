@@ -54,6 +54,23 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return await query.AnyAsync();
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.ServiceAccount>> GetPotentialGranteesAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.ServiceAccount.Where(c => c.OrganizationId == organizationId);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasWriteAccessToServiceAccount(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        var serviceAccounts = await query.OrderBy(c => c.RevisionDate).ToListAsync();
+        return Mapper.Map<List<Core.SecretsManager.Entities.ServiceAccount>>(serviceAccounts);
+    }
+
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>
         sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
         sa.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read));

@@ -44,46 +44,84 @@ public class DeleteAccessPolicyCommand : IDeleteAccessPolicyCommand
                 }
 
                 var project = await _projectRepository.GetByIdAsync(ap.GrantedProjectId.Value);
-                await CheckPermissionsAsync(project.OrganizationId, project.Id, userId);
-                await _accessPolicyRepository.DeleteAsync(id);
+                await DeleteProjectGrantAsync(ap.Id, userId, project.OrganizationId, project.Id);
                 break;
             case GroupProjectAccessPolicy ap:
-                if (ap.Group == null || ap.GrantedProjectId == null)
-                {
-                    throw new BadRequestException();
-                }
-
-                await CheckPermissionsAsync(ap.Group.OrganizationId, ap.GrantedProjectId.Value, userId);
-                await _accessPolicyRepository.DeleteAsync(id);
+                await DeleteProjectGrantAsync(ap.Id, userId, ap.Group?.OrganizationId, ap.GrantedProjectId);
                 break;
             case ServiceAccountProjectAccessPolicy ap:
-                if (ap.GrantedProjectId == null || ap.ServiceAccount == null)
-                {
-                    throw new BadRequestException();
-                }
-
-                await CheckPermissionsAsync(ap.ServiceAccount.OrganizationId, ap.GrantedProjectId.Value, userId);
-                await _accessPolicyRepository.DeleteAsync(id);
+                await DeleteProjectGrantAsync(ap.Id, userId, ap.ServiceAccount?.OrganizationId, ap.GrantedProjectId);
+                break;
+            case UserServiceAccountAccessPolicy ap:
+                await DeleteServiceAccountGrantAsync(ap.Id, userId, ap.GrantedServiceAccountId);
+                break;
+            case GroupServiceAccountAccessPolicy ap:
+                await DeleteServiceAccountGrantAsync(ap.Id, userId, ap.GrantedServiceAccountId);
                 break;
             default:
-                // FIX ME add in service account checks once service account permissions are done.
-                throw new ArgumentException("Unsupported access policy type provided.", nameof(accessPolicy));
+                throw new ArgumentException("Unsupported access policy type provided.");
         }
     }
 
+    private async Task DeleteProjectGrantAsync(Guid id, Guid userId, Guid? organizationId, Guid? projectId)
+    {
+        if (organizationId == null || projectId == null)
+        {
+            throw new BadRequestException();
+        }
 
-    private async Task CheckPermissionsAsync(Guid organizationId, Guid idToCheck, Guid userId)
+        await CheckPermissionsAsync(organizationId.Value, userId, projectIdToCheck: projectId.Value);
+        await _accessPolicyRepository.DeleteAsync(id);
+    }
+
+    private async Task DeleteServiceAccountGrantAsync(Guid id, Guid userId, Guid? serviceAccountId)
+    {
+        if (serviceAccountId == null)
+        {
+            throw new BadRequestException();
+        }
+
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId.Value);
+        await CheckPermissionsAsync(serviceAccount.OrganizationId, userId, serviceAccountIdToCheck: serviceAccount.Id);
+        await _accessPolicyRepository.DeleteAsync(id);
+    }
+
+    private async Task CheckPermissionsAsync(
+        Guid organizationId,
+        Guid userId,
+        Guid? projectIdToCheck = null,
+        Guid? serviceAccountIdToCheck = null)
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        // FIXME once service account permission checks are merged check service account here.
-        var hasAccess = accessClient switch
+        bool hasAccess;
+        switch (accessClient)
         {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(idToCheck, userId),
-            _ => false,
-        };
+            case AccessClientType.NoAccessCheck:
+                hasAccess = true;
+                break;
+            case AccessClientType.User:
+                if (projectIdToCheck != null)
+                {
+                    hasAccess = await _projectRepository.UserHasWriteAccessToProject(projectIdToCheck.Value, userId);
+                }
+                else if (serviceAccountIdToCheck != null)
+                {
+                    hasAccess =
+                        await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
+                            serviceAccountIdToCheck.Value, userId);
+
+                }
+                else
+                {
+                    throw new ArgumentException("No ID to check provided.");
+                }
+                break;
+            default:
+                hasAccess = false;
+                break;
+        }
 
         if (!hasAccess)
         {

@@ -27,18 +27,15 @@ public class UpdateAccessPolicyCommandTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false, true, false)]
-    [BitAutoData(false, true, false, true, false)]
-    [BitAutoData(false, false, true, true, false)]
-    [BitAutoData(true, false, false, false, true)]
-    [BitAutoData(false, true, false, false, true)]
-    [BitAutoData(false, false, true, false, true)]
-    public async Task UpdateAsync_PermissionsCheck_Success(
-        bool userProjectAccessPolicy,
-        bool groupProjectAccessPolicy,
-        bool serviceAccountProjectAccessPolicy,
-        bool runAsAdmin,
-        bool runAsUserWithPermission,
+    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
+    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
+    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
+    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
+    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
+    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
+    public async Task UpdateAsync_ProjectGrants_PermissionsCheck_Success(
+        TestAccessPolicyType testAccessPolicyType,
+        TestPermissionType testPermissionType,
         Guid data,
         bool read,
         bool write,
@@ -49,46 +46,47 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         BaseAccessPolicy policyToReturn = null;
-        if (userProjectAccessPolicy)
+        switch (testAccessPolicyType)
         {
-            policyToReturn =
-                new UserProjectAccessPolicy { Id = data, Read = true, Write = true, GrantedProjectId = project.Id };
-        }
-        else if (groupProjectAccessPolicy)
-        {
-            mockGroup.OrganizationId = project.OrganizationId;
-            policyToReturn =
-                new GroupProjectAccessPolicy
+            case TestAccessPolicyType.UserProjectAccessPolicy:
+                policyToReturn =
+                    new UserProjectAccessPolicy { Id = data, Read = true, Write = true, GrantedProjectId = project.Id };
+                break;
+            case TestAccessPolicyType.GroupProjectAccessPolicy:
+                mockGroup.OrganizationId = project.OrganizationId;
+                policyToReturn =
+                    new GroupProjectAccessPolicy
+                    {
+                        Id = data,
+                        GrantedProjectId = project.Id,
+                        Read = true,
+                        Write = true,
+                        Group = mockGroup,
+                    };
+                break;
+            case TestAccessPolicyType.ServiceAccountProjectAccessPolicy:
+                mockServiceAccount.OrganizationId = project.OrganizationId;
+                policyToReturn = new ServiceAccountProjectAccessPolicy
                 {
                     Id = data,
                     GrantedProjectId = project.Id,
                     Read = true,
                     Write = true,
-                    Group = mockGroup,
+                    ServiceAccount = mockServiceAccount,
                 };
-        }
-        else if (serviceAccountProjectAccessPolicy)
-        {
-            mockServiceAccount.OrganizationId = project.OrganizationId;
-            policyToReturn = new ServiceAccountProjectAccessPolicy
-            {
-                Id = data,
-                GrantedProjectId = project.Id,
-                Read = true,
-                Write = true,
-                ServiceAccount = mockServiceAccount,
-            };
+                break;
         }
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-        if (runAsAdmin)
+        switch (testPermissionType)
         {
-            sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
-        }
-        else if (runAsUserWithPermission)
-        {
-            sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId)
-                .Returns(true);
+            case TestPermissionType.RunAsAdmin:
+                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
+                break;
+            case TestPermissionType.RunAsUserWithPermission:
+                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId)
+                    .Returns(true);
+                break;
         }
 
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
@@ -101,13 +99,11 @@ public class UpdateAccessPolicyCommandTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false)]
-    [BitAutoData(false, true, false)]
-    [BitAutoData(false, false, true)]
+    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy)]
     public async Task UpdateAsync_PermissionsCheck_ThrowsNotAuthorized(
-        bool userProjectAccessPolicy,
-        bool groupProjectAccessPolicy,
-        bool serviceAccountProjectAccessPolicy,
+        TestAccessPolicyType testAccessPolicyType,
         Guid data,
         bool read,
         bool write,
@@ -118,35 +114,35 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         BaseAccessPolicy policyToReturn = null;
-        if (userProjectAccessPolicy)
+        switch (testAccessPolicyType)
         {
-            policyToReturn =
-                new UserProjectAccessPolicy { Id = data, Read = true, Write = true, GrantedProjectId = project.Id };
-        }
-        else if (groupProjectAccessPolicy)
-        {
-            mockGroup.OrganizationId = project.OrganizationId;
-            policyToReturn =
-                new GroupProjectAccessPolicy
+            case TestAccessPolicyType.UserProjectAccessPolicy:
+                policyToReturn =
+                    new UserProjectAccessPolicy { Id = data, Read = true, Write = true, GrantedProjectId = project.Id };
+                break;
+            case TestAccessPolicyType.GroupProjectAccessPolicy:
+                mockGroup.OrganizationId = project.OrganizationId;
+                policyToReturn =
+                    new GroupProjectAccessPolicy
+                    {
+                        Id = data,
+                        GrantedProjectId = project.Id,
+                        Read = true,
+                        Write = true,
+                        Group = mockGroup,
+                    };
+                break;
+            case TestAccessPolicyType.ServiceAccountProjectAccessPolicy:
+                mockServiceAccount.OrganizationId = project.OrganizationId;
+                policyToReturn = new ServiceAccountProjectAccessPolicy
                 {
                     Id = data,
                     GrantedProjectId = project.Id,
                     Read = true,
                     Write = true,
-                    Group = mockGroup,
+                    ServiceAccount = mockServiceAccount,
                 };
-        }
-        else if (serviceAccountProjectAccessPolicy)
-        {
-            mockServiceAccount.OrganizationId = project.OrganizationId;
-            policyToReturn = new ServiceAccountProjectAccessPolicy
-            {
-                Id = data,
-                GrantedProjectId = project.Id,
-                Read = true,
-                Write = true,
-                ServiceAccount = mockServiceAccount,
-            };
+                break;
         }
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);

@@ -28,18 +28,15 @@ public class DeleteAccessPolicyCommandTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false, true, false)]
-    [BitAutoData(false, true, false, true, false)]
-    [BitAutoData(false, false, true, true, false)]
-    [BitAutoData(true, false, false, false, true)]
-    [BitAutoData(false, true, false, false, true)]
-    [BitAutoData(false, false, true, false, true)]
-    public async Task DeleteAccessPolicy_PermissionsCheck_Success(
-        bool userProjectAccessPolicy,
-        bool groupProjectAccessPolicy,
-        bool serviceAccountProjectAccessPolicy,
-        bool runAsAdmin,
-        bool runAsUserWithPermission,
+    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
+    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
+    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
+    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
+    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
+    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
+    public async Task DeleteAccessPolicy_ProjectGrants_PermissionsCheck_Success(
+        TestAccessPolicyType testAccessPolicyType,
+        TestPermissionType testPermissionType,
         Guid data,
         Guid userId,
         Project project,
@@ -48,17 +45,17 @@ public class DeleteAccessPolicyCommandTests
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
         BaseAccessPolicy policyToReturn = null;
-        if (userProjectAccessPolicy)
+        if (testAccessPolicyType == TestAccessPolicyType.UserProjectAccessPolicy)
         {
             policyToReturn = new UserProjectAccessPolicy { Id = data, GrantedProjectId = project.Id };
         }
-        else if (groupProjectAccessPolicy)
+        else if (testAccessPolicyType == TestAccessPolicyType.GroupProjectAccessPolicy)
         {
             mockGroup.OrganizationId = project.OrganizationId;
             policyToReturn =
                 new GroupProjectAccessPolicy { Id = data, GrantedProjectId = project.Id, Group = mockGroup };
         }
-        else if (serviceAccountProjectAccessPolicy)
+        else if (testAccessPolicyType == TestAccessPolicyType.ServiceAccountProjectAccessPolicy)
         {
             mockServiceAccount.OrganizationId = project.OrganizationId;
             policyToReturn = new ServiceAccountProjectAccessPolicy
@@ -70,11 +67,16 @@ public class DeleteAccessPolicyCommandTests
         }
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-        if (runAsAdmin)
-            sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
-        else if (runAsUserWithPermission)
-            sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId)
-                .Returns(true);
+        switch (testPermissionType)
+        {
+            case TestPermissionType.RunAsAdmin:
+                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
+                break;
+            case TestPermissionType.RunAsUserWithPermission:
+                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId)
+                    .Returns(true);
+                break;
+        }
 
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
             .Returns(policyToReturn);
@@ -85,13 +87,11 @@ public class DeleteAccessPolicyCommandTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false)]
-    [BitAutoData(false, true, false)]
-    [BitAutoData(false, false, true)]
+    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy)]
     public async Task DeleteAccessPolicy_UserProjectAccessPolicy_PermissionsCheck_ThrowsNotAuthorized(
-        bool userProjectAccessPolicy,
-        bool groupProjectAccessPolicy,
-        bool serviceAccountProjectAccessPolicy,
+        TestAccessPolicyType testAccessPolicyType,
         Guid data,
         Guid userId,
         Group mockGroup,
@@ -101,18 +101,24 @@ public class DeleteAccessPolicyCommandTests
     {
         BaseAccessPolicy policyToReturn = null;
 
-        if (userProjectAccessPolicy)
-            policyToReturn = new UserProjectAccessPolicy { Id = data, GrantedProjectId = project.Id };
-        else if (groupProjectAccessPolicy)
-            policyToReturn =
-                new GroupProjectAccessPolicy { Id = data, GrantedProjectId = project.Id, Group = mockGroup };
-        else if (serviceAccountProjectAccessPolicy)
-            policyToReturn = new ServiceAccountProjectAccessPolicy
-            {
-                Id = data,
-                GrantedProjectId = project.Id,
-                ServiceAccount = mockServiceAccount,
-            };
+        switch (testAccessPolicyType)
+        {
+            case TestAccessPolicyType.UserProjectAccessPolicy:
+                policyToReturn = new UserProjectAccessPolicy { Id = data, GrantedProjectId = project.Id };
+                break;
+            case TestAccessPolicyType.GroupProjectAccessPolicy:
+                policyToReturn =
+                    new GroupProjectAccessPolicy { Id = data, GrantedProjectId = project.Id, Group = mockGroup };
+                break;
+            case TestAccessPolicyType.ServiceAccountProjectAccessPolicy:
+                policyToReturn = new ServiceAccountProjectAccessPolicy
+                {
+                    Id = data,
+                    GrantedProjectId = project.Id,
+                    ServiceAccount = mockServiceAccount,
+                };
+                break;
+        }
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)

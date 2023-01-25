@@ -18,6 +18,7 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class AccessPoliciesController : Controller
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ICreateAccessPoliciesCommand _createAccessPoliciesCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IDeleteAccessPolicyCommand _deleteAccessPolicyCommand;
@@ -31,6 +32,7 @@ public class AccessPoliciesController : Controller
         IUserService userService,
         ICurrentContext currentContext,
         IAccessPolicyRepository accessPolicyRepository,
+        IServiceAccountRepository serviceAccountRepository,
         IGroupRepository groupRepository,
         IProjectRepository projectRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -39,6 +41,7 @@ public class AccessPoliciesController : Controller
         IUpdateAccessPolicyCommand updateAccessPolicyCommand)
     {
         _userService = userService;
+        _serviceAccountRepository = serviceAccountRepository;
         _projectRepository = projectRepository;
         _currentContext = currentContext;
         _groupRepository = groupRepository;
@@ -49,7 +52,7 @@ public class AccessPoliciesController : Controller
         _updateAccessPolicyCommand = updateAccessPolicyCommand;
     }
 
-    [HttpPost("/projects/{id}/access-policies")]
+    [HttpPost("/projects/{id:guid}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> CreateProjectAccessPoliciesAsync([FromRoute] Guid id,
         [FromBody] AccessPoliciesCreateRequest request)
     {
@@ -59,7 +62,7 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpGet("/projects/{id}/access-policies")]
+    [HttpGet("/projects/{id:guid}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> GetProjectAccessPoliciesAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
@@ -69,7 +72,7 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpPut("{id}")]
+    [HttpPut("{id:guid}")]
     public async Task<BaseAccessPolicyResponseModel> UpdateAccessPolicyAsync([FromRoute] Guid id,
         [FromBody] AccessPolicyUpdateRequest request)
     {
@@ -93,8 +96,8 @@ public class AccessPoliciesController : Controller
         await _deleteAccessPolicyCommand.DeleteAsync(id, userId);
     }
 
-    [HttpGet("/projects/{id}/access-policies/people/potential-grantees")]
-    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectPotentialGranteesAsync(
+    [HttpGet("/projects/{id:guid}/access-policies/people/potential-grantees")]
+    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectPeoplePotentialGranteesAsync(
         [FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
@@ -103,6 +106,7 @@ public class AccessPoliciesController : Controller
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(project.OrganizationId);
         var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g.Item1));
 
+        // FIXME once users have AccessSecretsManager flag from SM-378 filter by that flag.
         var organizationUsers =
             await _organizationUserRepository.GetManyDetailsByOrganizationAsync(project.OrganizationId);
         var userResponses = organizationUsers.Select(userDetails => new PotentialGranteeResponseModel(userDetails));
@@ -110,7 +114,24 @@ public class AccessPoliciesController : Controller
         return new ListResponseModel<PotentialGranteeResponseModel>(groupResponses.Concat(userResponses));
     }
 
-    private async Task CheckUserHasWriteAccessToProjectAsync(Project project)
+    [HttpGet("/projects/{id:guid}/access-policies/service-accounts/potential-grantees")]
+    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectServiceAccountPotentialGranteesAsync(
+        [FromRoute] Guid id)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        var userContext = await CheckUserHasWriteAccessToProjectAsync(project);
+
+        var serviceAccounts =
+            await _serviceAccountRepository.GetPotentialGranteesAsync(project.OrganizationId,
+                userContext.UserId,
+                userContext.AccessClient);
+        var serviceAccountResponses =
+            serviceAccounts.Select(serviceAccount => new PotentialGranteeResponseModel(serviceAccount));
+
+        return new ListResponseModel<PotentialGranteeResponseModel>(serviceAccountResponses);
+    }
+
+    private async Task<(Guid UserId, AccessClientType AccessClient)> CheckUserHasWriteAccessToProjectAsync(Project project)
     {
         if (project == null)
         {
@@ -131,5 +152,7 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
+
+        return (userId, accessClient);
     }
 }

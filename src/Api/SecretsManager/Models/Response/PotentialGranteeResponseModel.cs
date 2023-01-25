@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
@@ -33,6 +34,19 @@ public class PotentialGranteeResponseModel : ResponseModel
         Name = user.Name;
         Email = user.Email;
         Type = "user";
+    }
+
+    public PotentialGranteeResponseModel(ServiceAccount serviceAccount)
+        : base(_objectName)
+    {
+        if (serviceAccount == null)
+        {
+            throw new ArgumentNullException(nameof(serviceAccount));
+        }
+
+        Id = serviceAccount.Id.ToString();
+        Name = serviceAccount.Name;
+        Type = "serviceAccount";
     }
 
     public PotentialGranteeResponseModel() : base(_objectName)
