@@ -1,6 +1,6 @@
-﻿using Bit.Core.SecretsManager.Entities;
+﻿using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.Porting;
 
