@@ -68,6 +68,12 @@
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\User Defined Types\" />
     <Folder Include="dbo\Stored Procedures\ApiKey\" />
+    <Folder Include="SecretsManager\" />
+    <Folder Include="SecretsManager\dbo\" />
+    <Folder Include="SecretsManager\dbo\Stored Procedures\" />
+    <Folder Include="SecretsManager\dbo\Stored Procedures\ApiKey\" />
+    <Folder Include="SecretsManager\dbo\Tables\" />
+    <Folder Include="SecretsManager\dbo\Views\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Functions\CipherDetails.sql" />
