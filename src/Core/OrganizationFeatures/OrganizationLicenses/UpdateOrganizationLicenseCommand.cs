@@ -1,7 +1,6 @@
 ﻿#nullable enable
 
 using System.Text.Json;
-using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -17,18 +16,15 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
     private readonly ILicensingService _licensingService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationService _organizationService;
-    private readonly IMapper _mapper;
 
     public UpdateOrganizationLicenseCommand(
         ILicensingService licensingService,
         IGlobalSettings globalSettings,
-        IOrganizationService organizationService,
-        IMapper mapper)
+        IOrganizationService organizationService)
     {
         _licensingService = licensingService;
         _globalSettings = globalSettings;
         _organizationService = organizationService;
-        _mapper = mapper;
     }
 
     public async Task UpdateLicenseAsync(SelfHostedOrganizationDetails selfHostedOrganization,
@@ -61,9 +57,10 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
 
     private async Task UpdateOrganizationAsync(SelfHostedOrganizationDetails selfHostedOrganizationDetails, OrganizationLicense license)
     {
-        var organization = _mapper.Map<Organization>(selfHostedOrganizationDetails);
-        organization.UpdateFromLicense(license, _mapper);
+        // TODO: map to new organization
+        // var organization = _mapper.Map<Organization>(selfHostedOrganizationDetails);
+        // organization.UpdateFromLicense(license, _mapper);
 
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        // await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 }

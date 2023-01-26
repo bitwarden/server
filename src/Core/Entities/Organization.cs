@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
@@ -200,9 +199,9 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return providers[provider];
     }
 
-    public void UpdateFromLicense(OrganizationLicense license, IMapper mapper)
+    public void UpdateFromLicense(OrganizationLicense license)
     {
-        mapper.Map(license, this);
+        //TODO: update from license
         RevisionDate = DateTime.UtcNow;
     }
 }

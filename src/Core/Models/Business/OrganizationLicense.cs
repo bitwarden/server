@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json.Serialization;
-using AutoMapper;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
@@ -412,23 +411,5 @@ public class OrganizationLicense : ILicense
         {
             return rsa.SignData(GetDataBytes(), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         }
-    }
-}
-
-public class OrganizationLicenseMapperProfile : Profile
-{
-    public OrganizationLicenseMapperProfile()
-    {
-        // Used to update an Organization from a license file
-
-        // Excluded props:
-        // Id - it's different between cloud and self-hosted
-        // MaxStorageGb - it's not enforced for self-hosted
-        string[] excludedProps = { "Id", "MaxStorageGb" };
-
-        ShouldMapField = fieldInfo => false;
-        ShouldMapProperty = propertyInfo => !excludedProps.Contains(propertyInfo.Name);
-
-        CreateMap<OrganizationLicense, Organization>();
     }
 }

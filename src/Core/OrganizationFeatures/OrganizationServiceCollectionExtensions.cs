@@ -31,7 +31,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
-        services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();

@@ -1,6 +1,4 @@
-﻿using AutoMapper;
-
-namespace Bit.Core.Entities;
+﻿namespace Bit.Core.Entities;
 
 public class SelfHostedOrganizationDetails : Organization
 {
@@ -11,12 +9,4 @@ public class SelfHostedOrganizationDetails : Organization
     public IEnumerable<Policy> Policies { get; set; }
     public SsoConfig SsoConfig { get; set; }
     public IEnumerable<OrganizationConnection> ScimConnections { get; set; }
-}
-
-public class SelfHostedOrganizationDetailsMapperProfile : Profile
-{
-    public SelfHostedOrganizationDetailsMapperProfile()
-    {
-        CreateMap<SelfHostedOrganizationDetails, Organization>();
-    }
 }
