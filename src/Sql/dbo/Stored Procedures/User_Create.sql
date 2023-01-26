@@ -27,6 +27,8 @@
     @LicenseKey VARCHAR(100),
     @Kdf TINYINT,
     @KdfIterations INT,
+    @KdfMemory INT = NULL,
+    @KdfParallelism INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
@@ -78,7 +80,9 @@ BEGIN
         [FailedLoginCount],
         [LastFailedLoginDate],
         [UnknownDeviceVerificationEnabled],
-        [AvatarColor]
+        [AvatarColor],
+        [KdfMemory],
+        [KdfParallelism]
     )
     VALUES
     (
@@ -118,6 +122,8 @@ BEGIN
         @FailedLoginCount,
         @LastFailedLoginDate,
         @UnknownDeviceVerificationEnabled,
-        @AvatarColor
+        @AvatarColor,
+        @KdfMemory,
+        @KdfParallelism
     )
 END

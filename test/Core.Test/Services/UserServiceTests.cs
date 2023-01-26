@@ -20,6 +20,14 @@ namespace Bit.Core.Test.Services;
 public class UserServiceTests
 {
     [Theory, BitAutoData]
+    public async Task SaveUserAsync_SetsNameToNull_WhenNameIsEmpty(SutProvider<UserService> sutProvider, User user)
+    {
+        user.Name = string.Empty;
+        await sutProvider.Sut.SaveUserAsync(user);
+        Assert.Null(user.Name);
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateLicenseAsync_Success(SutProvider<UserService> sutProvider,
         User user, UserLicense userLicense)
     {
