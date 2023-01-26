@@ -1,4 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
+using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
@@ -121,8 +122,10 @@ public class CreateAccessPoliciesCommandTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task CreateAsync_Admin_Success(
+    [BitAutoData(PermissionType.RunAsAdmin)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission)]
+    public async Task CreateAsync_Success(
+        PermissionType permissionType,
         Guid userId,
         Project project,
         List<UserProjectAccessPolicy> userProjectAccessPolicies,
@@ -136,31 +139,16 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(serviceAccountProjectAccessPolicies);
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId);
-
-        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task CreateAsync_User_WithPermission(
-        Guid userId,
-        Project project,
-        List<UserProjectAccessPolicy> userProjectAccessPolicies,
-        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
-        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
-        SutProvider<CreateAccessPoliciesCommand> sutProvider)
-    {
-        var data = new List<BaseAccessPolicy>();
-        data.AddRange(userProjectAccessPolicies);
-        data.AddRange(groupProjectAccessPolicies);
-        data.AddRange(serviceAccountProjectAccessPolicies);
-
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(true);
+        switch (permissionType)
+        {
+            case PermissionType.RunAsAdmin:
+                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
+                break;
+            case PermissionType.RunAsUserWithPermission:
+                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(true);
+                break;
+        }
 
         await sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId);
 
