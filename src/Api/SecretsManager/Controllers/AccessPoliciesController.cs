@@ -103,8 +103,8 @@ public class AccessPoliciesController : Controller
         var project = await _projectRepository.GetByIdAsync(id);
         await CheckUserHasWriteAccessToProjectAsync(project);
 
-        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(project.OrganizationId);
-        var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g.Item1));
+        var groups = await _groupRepository.GetManyByOrganizationIdAsync(project.OrganizationId);
+        var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g));
 
         // FIXME once users have AccessSecretsManager flag from SM-378 filter by that flag.
         var organizationUsers =
