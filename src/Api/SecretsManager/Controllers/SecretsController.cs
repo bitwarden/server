@@ -50,7 +50,6 @@ public class SecretsController : Controller
            }
         }
 
-        //Dont show an error message just go ahead and show only allowed to read secrets 
         return new SecretWithProjectsListResponseModel(secretsAllowedToRead);
     }
 
