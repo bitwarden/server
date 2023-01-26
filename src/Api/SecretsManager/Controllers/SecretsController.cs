@@ -1,7 +1,7 @@
 ﻿using Bit.Api.Models.Response;
-using Bit.Core.Context;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
@@ -35,7 +35,7 @@ public class SecretsController : Controller
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
-    public async Task<SecretWithProjectsListResponseModel> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
+    public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync([FromRoute] Guid organizationId)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
@@ -47,7 +47,7 @@ public class SecretsController : Controller
     }
 
     [HttpPost("organizations/{organizationId}/secrets")]
-    public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
+    public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
@@ -59,7 +59,7 @@ public class SecretsController : Controller
     }
 
     [HttpGet("secrets/{id}")]
-    public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
+    public async Task<SecretResponseModel> GetAsync([FromRoute] Guid id)
     {
         var secret = await _secretRepository.GetByIdAsync(id);
         if (secret == null)
@@ -78,7 +78,7 @@ public class SecretsController : Controller
     }
 
     [HttpPut("secrets/{id}")]
-    public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
+    public async Task<SecretResponseModel> UpdateAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
         var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id));
         return new SecretResponseModel(result);

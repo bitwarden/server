@@ -25,7 +25,7 @@ public class SecretsControllerTests
     public async void GetSecretsByOrganization_ReturnsEmptyList(SutProvider<SecretsController> sutProvider, Guid id)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
-        var result = await sutProvider.Sut.GetSecretsByOrganizationAsync(id);
+        var result = await sutProvider.Sut.ListByOrganizationAsync(id);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
                      .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
@@ -40,7 +40,7 @@ public class SecretsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetManyByOrganizationIdAsync(default).ReturnsForAnyArgs(new List<Secret> { resultSecret });
 
-        var result = await sutProvider.Sut.GetSecretsByOrganizationAsync(resultSecret.OrganizationId);
+        var result = await sutProvider.Sut.ListByOrganizationAsync(resultSecret.OrganizationId);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
             .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultSecret.OrganizationId)));
@@ -53,14 +53,14 @@ public class SecretsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetSecretsByOrganizationAsync(resultSecret.OrganizationId));
+            sutProvider.Sut.ListByOrganizationAsync(resultSecret.OrganizationId));
     }
 
     [Theory]
     [BitAutoData]
     public async void GetSecret_NotFound(SutProvider<SecretsController> sutProvider)
     {
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretAsync(Guid.NewGuid()));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(Guid.NewGuid()));
     }
 
     [Theory]
@@ -69,7 +69,7 @@ public class SecretsControllerTests
     {
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(default).ReturnsForAnyArgs(resultSecret);
 
-        var result = await sutProvider.Sut.GetSecretAsync(resultSecret.Id);
+        var result = await sutProvider.Sut.GetAsync(resultSecret.Id);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
                      .GetByIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultSecret.Id)));
@@ -84,7 +84,7 @@ public class SecretsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
 
-        var result = await sutProvider.Sut.CreateSecretAsync(organizationId, data);
+        var result = await sutProvider.Sut.CreateAsync(organizationId, data);
         await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
                      .CreateAsync(Arg.Any<Secret>());
     }
@@ -96,7 +96,7 @@ public class SecretsControllerTests
         var resultSecret = data.ToSecret(secretId);
         sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultSecret);
 
-        var result = await sutProvider.Sut.UpdateSecretAsync(secretId, data);
+        var result = await sutProvider.Sut.UpdateAsync(secretId, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
                      .UpdateAsync(Arg.Any<Secret>());
     }

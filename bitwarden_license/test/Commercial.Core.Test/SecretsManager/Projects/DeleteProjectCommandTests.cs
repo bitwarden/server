@@ -28,7 +28,7 @@ public class DeleteProjectCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteSecrets_OneIdNotFound_Throws_NotFoundException(List<Guid> data, Guid userId,
+    public async Task Delete_OneIdNotFound_Throws_NotFoundException(List<Guid> data, Guid userId,
       SutProvider<DeleteProjectCommand> sutProvider)
     {
         var project = new Project()
@@ -49,6 +49,7 @@ public class DeleteProjectCommandTests
     {
         var projects = data.Select(id => new Project { Id = id, OrganizationId = organizationId }).ToList();
 
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ClientType = ClientType.User;
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
         sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(Arg.Any<Guid>(), userId).Returns(true);
@@ -65,11 +66,12 @@ public class DeleteProjectCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteSecrets_User_No_Permission(List<Guid> data, Guid userId, Guid organizationId,
+    public async Task Delete_User_No_Permission(List<Guid> data, Guid userId, Guid organizationId,
         SutProvider<DeleteProjectCommand> sutProvider)
     {
         var projects = data.Select(id => new Project { Id = id, OrganizationId = organizationId }).ToList();
 
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ClientType = ClientType.User;
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
         sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(userId, userId).Returns(false);
@@ -86,11 +88,12 @@ public class DeleteProjectCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteSecrets_OrganizationAdmin_Success(List<Guid> data, Guid userId, Guid organizationId,
+    public async Task Delete_OrganizationAdmin_Success(List<Guid> data, Guid userId, Guid organizationId,
       SutProvider<DeleteProjectCommand> sutProvider)
     {
         var projects = data.Select(id => new Project { Id = id, OrganizationId = organizationId }).ToList();
 
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
         sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
 
