@@ -3,6 +3,7 @@ using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -16,17 +17,20 @@ public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICollectionService _collectionService;
+    private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
         ICollectionService collectionService,
+        IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
         ICurrentContext currentContext)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
+        _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
         _currentContext = currentContext;
     }
@@ -44,7 +48,7 @@ public class CollectionsController : Controller
     }
 
     [HttpGet("{id}/details")]
-    public async Task<CollectionGroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
+    public async Task<CollectionAccessDetailsResponseModel> GetDetails(Guid orgId, Guid id)
     {
         if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId))
         {
@@ -53,23 +57,56 @@ public class CollectionsController : Controller
 
         if (await _currentContext.ViewAllCollections(orgId))
         {
-            var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(id);
-            if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgId)
+            (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id);
+            if (collection == null || collection.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }
-            return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
         }
         else
         {
-            var collectionDetails = await _collectionRepository.GetByIdWithGroupsAsync(id,
+            (var collection, var access) = await _collectionRepository.GetByIdWithAccessAsync(id,
                 _currentContext.UserId.Value);
-            if (collectionDetails?.Item1 == null || collectionDetails.Item1.OrganizationId != orgId)
+            if (collection == null || collection.OrganizationId != orgId)
             {
                 throw new NotFoundException();
             }
-            return new CollectionGroupDetailsResponseModel(collectionDetails.Item1, collectionDetails.Item2);
+            return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
         }
+    }
+
+    [HttpGet("details")]
+    public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
+    {
+        if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        // We always need to know which collections the current user is assigned to
+        var assignedOrgCollections = await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
+
+        if (await _currentContext.ViewAllCollections(orgId))
+        {
+            // The user can view all collections, but they may not always be assigned to all of them
+            var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
+
+            return new ListResponseModel<CollectionAccessDetailsResponseModel>(allOrgCollections.Select(c =>
+                new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
+                {
+                    // Manually determine which collections they're assigned to
+                    Assigned = assignedOrgCollections.Any(ac => ac.Item1.Id == c.Item1.Id)
+                })
+            );
+        }
+
+        return new ListResponseModel<CollectionAccessDetailsResponseModel>(assignedOrgCollections.Select(c =>
+            new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
+            {
+                Assigned = true // Mapping from assignedOrgCollections implies they're all assigned
+            })
+        );
     }
 
     [HttpGet("")]
@@ -110,11 +147,13 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+
         var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgId)) &&
             await _currentContext.EditAssignedCollections(orgId);
 
-        await _collectionService.SaveAsync(collection, model.Groups?.Select(g => g.ToSelectionReadOnly()),
-            assignUserToCollection ? _currentContext.UserId : null);
+        await _collectionService.SaveAsync(collection, groups, users, assignUserToCollection ? _currentContext.UserId : null);
         return new CollectionResponseModel(collection);
     }
 
@@ -128,8 +167,9 @@ public class CollectionsController : Controller
         }
 
         var collection = await GetCollectionAsync(id, orgId);
-        await _collectionService.SaveAsync(model.ToCollection(collection),
-            model.Groups?.Select(g => g.ToSelectionReadOnly()));
+        var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+        await _collectionService.SaveAsync(model.ToCollection(collection), groups, users);
         return new CollectionResponseModel(collection);
     }
 
@@ -155,7 +195,29 @@ public class CollectionsController : Controller
         }
 
         var collection = await GetCollectionAsync(id, orgId);
-        await _collectionService.DeleteAsync(collection);
+        await _deleteCollectionCommand.DeleteAsync(collection);
+    }
+
+    [HttpDelete("")]
+    [HttpPost("delete")]
+    public async Task DeleteMany([FromBody] CollectionBulkDeleteRequestModel model)
+    {
+        var orgId = new Guid(model.OrganizationId);
+        var collectionIds = model.Ids.Select(i => new Guid(i));
+        if (!await _currentContext.DeleteAssignedCollections(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+        var filteredCollections = userCollections.Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == orgId);
+
+        if (!filteredCollections.Any())
+        {
+            throw new BadRequestException("No collections found.");
+        }
+
+        await _deleteCollectionCommand.DeleteManyAsync(filteredCollections);
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]

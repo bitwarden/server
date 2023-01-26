@@ -330,7 +330,7 @@ public class AccountsController : Controller
         }
 
         var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
-            model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value);
+            model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value, model.KdfMemory, model.KdfParallelism);
         if (result.Succeeded)
         {
             return;
@@ -467,6 +467,20 @@ public class AccountsController : Controller
         }
 
         await _userService.SaveUserAsync(model.ToUser(user));
+        var response = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user), await _userService.HasPremiumFromOrganization(user));
+        return response;
+    }
+
+    [HttpPut("avatar")]
+    [HttpPost("avatar")]
+    public async Task<ProfileResponseModel> PutAvatar([FromBody] UpdateAvatarRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+        await _userService.SaveUserAsync(model.ToUser(user), true);
         var response = new ProfileResponseModel(user, null, null, null, await _userService.TwoFactorIsEnabledAsync(user), await _userService.HasPremiumFromOrganization(user));
         return response;
     }

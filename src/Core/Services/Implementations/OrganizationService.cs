@@ -1027,7 +1027,8 @@ public class OrganizationService : IOrganizationService
         }
 
         var orgUsers = new List<OrganizationUser>();
-        var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<SelectionReadOnly>)>();
+        var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
+        var orgUserGroups = new List<(OrganizationUser, IEnumerable<Guid>)>();
         var orgUserInvitedCount = 0;
         var exceptions = new List<Exception>();
         var events = new List<(OrganizationUser, EventType, DateTime?)>();
@@ -1072,6 +1073,11 @@ public class OrganizationService : IOrganizationService
                         orgUsers.Add(orgUser);
                     }
 
+                    if (invite.Groups != null && invite.Groups.Any())
+                    {
+                        orgUserGroups.Add((orgUser, invite.Groups));
+                    }
+
                     events.Add((orgUser, EventType.OrganizationUser_Invited, DateTime.UtcNow));
                     orgUserInvitedCount++;
                 }
@@ -1094,6 +1100,11 @@ public class OrganizationService : IOrganizationService
             foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
             {
                 await _organizationUserRepository.CreateAsync(orgUser, collections);
+            }
+
+            foreach (var (orgUser, groups) in orgUserGroups)
+            {
+                await _organizationUserRepository.UpdateGroupsAsync(orgUser.Id, groups);
             }
 
             if (!await _currentContext.ManageUsers(organization.Id))
@@ -1479,7 +1490,8 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<SelectionReadOnly> collections)
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups)
     {
         if (user.Id.Equals(default(Guid)))
         {
@@ -1508,9 +1520,15 @@ public class OrganizationService : IOrganizationService
         if (user.AccessAll)
         {
             // We don't need any collections if we're flagged to have all access.
-            collections = new List<SelectionReadOnly>();
+            collections = new List<CollectionAccessSelection>();
         }
         await _organizationUserRepository.ReplaceAsync(user, collections);
+
+        if (groups != null)
+        {
+            await _organizationUserRepository.UpdateGroupsAsync(user.Id, groups);
+        }
+
         await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
     }
 
@@ -1711,19 +1729,21 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups)
     {
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId, systemUser: null, email, type, accessAll, externalId, collections);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId, systemUser: null, email, type, accessAll, externalId, collections, groups);
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups)
     {
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups);
     }
 
     private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
     {
         var invite = new OrganizationUserInvite()
         {
@@ -1731,6 +1751,7 @@ public class OrganizationService : IOrganizationService
             Type = type,
             AccessAll = accessAll,
             Collections = collections,
+            Groups = groups
         };
         var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
             new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
@@ -1844,7 +1865,7 @@ public class OrganizationService : IOrganizationService
                         Emails = new List<string> { user.Email },
                         Type = OrganizationUserType.User,
                         AccessAll = false,
-                        Collections = new List<SelectionReadOnly>(),
+                        Collections = new List<CollectionAccessSelection>(),
                     };
                     userInvites.Add((invite, user.ExternalId));
                 }

@@ -27,6 +27,8 @@
     @LicenseKey VARCHAR(100),
     @Kdf TINYINT,
     @KdfIterations INT,
+    @KdfMemory INT = NULL,
+    @KdfParallelism INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
@@ -34,7 +36,8 @@
     @UsesKeyConnector BIT = 0,
     @FailedLoginCount INT = 0,
     @LastFailedLoginDate DATETIME2(7),
-    @UnknownDeviceVerificationEnabled BIT = 1
+    @UnknownDeviceVerificationEnabled BIT = 1,
+    @AvatarColor VARCHAR(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -76,7 +79,10 @@ BEGIN
         [UsesKeyConnector],
         [FailedLoginCount],
         [LastFailedLoginDate],
-        [UnknownDeviceVerificationEnabled]
+        [UnknownDeviceVerificationEnabled],
+        [AvatarColor],
+        [KdfMemory],
+        [KdfParallelism]
     )
     VALUES
     (
@@ -115,6 +121,9 @@ BEGIN
         @UsesKeyConnector,
         @FailedLoginCount,
         @LastFailedLoginDate,
-        @UnknownDeviceVerificationEnabled
+        @UnknownDeviceVerificationEnabled,
+        @AvatarColor,
+        @KdfMemory,
+        @KdfParallelism
     )
 END

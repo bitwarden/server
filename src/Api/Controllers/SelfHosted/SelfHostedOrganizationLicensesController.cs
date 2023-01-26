@@ -6,6 +6,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -119,5 +120,10 @@ public class SelfHostedOrganizationLicensesController : Controller
         var currentOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
 
         await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, currentOrganization);
+
+        var config = billingSyncConnection.GetConfig<BillingSyncConfig>();
+        config.LastLicenseSync = DateTime.Now;
+        billingSyncConnection.SetConfig(config);
+        await _organizationConnectionRepository.ReplaceAsync(billingSyncConnection);
     }
 }

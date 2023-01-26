@@ -88,6 +88,7 @@ public class SelfHostedGetOrganizationLicenseQueryTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.GetLicenseAsync(organization, billingSyncConnection));
-        Assert.Contains("Organization License sync failed", exception.Message);
+        Assert.Contains("An error has occurred. Check your internet connection and ensure the billing token is correct.",
+            exception.Message);
     }
 }

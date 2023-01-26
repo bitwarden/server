@@ -15,14 +15,13 @@
   <ItemGroup>
     <Compile Include="..\EfShared\MigrationBuilderExtensions.cs" />
   </ItemGroup>
-
   <ItemGroup>
-    <None Remove="Scripts\2021-09-21_01_SplitManageCollectionsPermission.psql" />
-    <None Remove="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
+    <None Remove="HelperScripts\2021-09-21_01_SplitManageCollectionsPermission.psql" />
+    <None Remove="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Scripts\2021-09-21_01_SplitManageCollectionsPermission.psql" />
-    <EmbeddedResource Include="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
+    <EmbeddedResource Include="HelperScripts\2021-09-21_01_SplitManageCollectionsPermission.psql" />
+    <EmbeddedResource Include="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.psql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.psql" />
   </ItemGroup>

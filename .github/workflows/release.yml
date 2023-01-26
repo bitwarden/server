@@ -208,6 +208,8 @@ jobs:
             origin_docker_repo: bitwarden
           - project_name: Scim
             origin_docker_repo: bitwarden
+          - project_name: Billing
+            origin_docker_repo: bitwardenqa.azurecr.io
     steps:
       - name: Print environment
         env:
