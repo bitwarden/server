@@ -44,12 +44,12 @@ public class SecretsManagerOrganizationHelper
         return (_organization, _owner);
     }
 
-    public async Task<string> CreateNewUser(OrganizationUserType userType, bool accessSecrets)
+    public async Task<(string email, OrganizationUser orgUser)> CreateNewUser(OrganizationUserType userType, bool accessSecrets)
     {
         var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(email);
-        await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, userType, accessSecrets);
+        var orgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, userType, accessSecrets);
 
-        return email;
+        return (email, orgUser);
     }
 }

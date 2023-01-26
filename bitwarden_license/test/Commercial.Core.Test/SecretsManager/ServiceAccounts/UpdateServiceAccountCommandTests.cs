@@ -39,6 +39,7 @@ public class UpdateServiceAccountCommandTests
     [BitAutoData]
     public async Task UpdateAsync_User_Success(ServiceAccount data, Guid userId, SutProvider<UpdateServiceAccountCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).Returns(data);
         sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(data.Id, userId).Returns(true);
 
@@ -54,6 +55,7 @@ public class UpdateServiceAccountCommandTests
     public async Task UpdateAsync_Admin_Success(ServiceAccount data, Guid userId, SutProvider<UpdateServiceAccountCommand> sutProvider)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).Returns(data);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(true);
 
         await sutProvider.Sut.UpdateAsync(data, userId);
@@ -66,6 +68,7 @@ public class UpdateServiceAccountCommandTests
     [BitAutoData]
     public async Task UpdateAsync_DoesNotModifyOrganizationId(ServiceAccount existingServiceAccount, Guid userId, SutProvider<UpdateServiceAccountCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(existingServiceAccount.OrganizationId).Returns(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(existingServiceAccount.Id).Returns(existingServiceAccount);
         sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(existingServiceAccount.Id, userId).Returns(true);
 
@@ -87,6 +90,7 @@ public class UpdateServiceAccountCommandTests
     [BitAutoData]
     public async Task UpdateAsync_DoesNotModifyCreationDate(ServiceAccount existingServiceAccount, Guid userId, SutProvider<UpdateServiceAccountCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(existingServiceAccount.OrganizationId).Returns(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(existingServiceAccount.Id).Returns(existingServiceAccount);
         sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(existingServiceAccount.Id, userId).Returns(true);
 
@@ -108,6 +112,7 @@ public class UpdateServiceAccountCommandTests
     [BitAutoData]
     public async Task UpdateAsync_RevisionDateIsUpdatedToUtcNow(ServiceAccount existingServiceAccount, Guid userId, SutProvider<UpdateServiceAccountCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(existingServiceAccount.OrganizationId).Returns(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(existingServiceAccount.Id).Returns(existingServiceAccount);
         sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(existingServiceAccount.Id, userId).Returns(true);
 

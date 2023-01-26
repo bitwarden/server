@@ -39,16 +39,16 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         _organizationHelper = new SecretsManagerOrganizationHelper(_factory, _email);
     }
 
-    private async Task LoginAsync(string email)
-    {
-        var tokens = await _factory.LoginAsync(email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-    }
-
     public Task DisposeAsync()
     {
         _client.Dispose();
         return Task.CompletedTask;
+    }
+
+    private async Task LoginAsync(string email)
+    {
+        var tokens = await _factory.LoginAsync(email);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
     }
 
     [Theory]

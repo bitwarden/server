@@ -33,6 +33,12 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
         }
 
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(apiKey.ServiceAccountId.Value);
+
+        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 

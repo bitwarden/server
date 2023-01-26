@@ -26,6 +26,11 @@ public class UpdateServiceAccountCommand : IUpdateServiceAccountCommand
             throw new NotFoundException();
         }
 
+        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 

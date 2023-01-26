@@ -38,16 +38,16 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         _organizationHelper = new SecretsManagerOrganizationHelper(_factory, _email);
     }
 
-    private async Task LoginAsync(string email)
-    {
-        var tokens = await _factory.LoginAsync(email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-    }
-
     public Task DisposeAsync()
     {
         _client.Dispose();
         return Task.CompletedTask;
+    }
+
+    private async Task LoginAsync(string email)
+    {
+        var tokens = await _factory.LoginAsync(email);
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
     }
 
     [Theory]
@@ -206,7 +206,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task Update_MissingAccessPolicy_Throws_NotFound()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        var email = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
         var project = await _projectRepository.CreateAsync(new Project
@@ -271,7 +271,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
     public async Task Get_MissingAccessPolicy_Throws_NotFound()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        var email = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
         var createdProject = await _projectRepository.CreateAsync(new Project

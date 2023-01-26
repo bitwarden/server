@@ -28,7 +28,7 @@ public class ServiceAccountsControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        var result = await sutProvider.Sut.GetServiceAccountsByOrganizationAsync(id);
+        var result = await sutProvider.Sut.ListByOrganizationAsync(id);
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
                      .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
@@ -44,7 +44,7 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default, default, default).ReturnsForAnyArgs(new List<ServiceAccount>() { resultServiceAccount });
 
-        var result = await sutProvider.Sut.GetServiceAccountsByOrganizationAsync(resultServiceAccount.OrganizationId);
+        var result = await sutProvider.Sut.ListByOrganizationAsync(resultServiceAccount.OrganizationId);
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
                      .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
@@ -59,7 +59,7 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.GetServiceAccountsByOrganizationAsync(orgId));
+            sutProvider.Sut.ListByOrganizationAsync(orgId));
     }
 
     [Theory]
@@ -71,7 +71,7 @@ public class ServiceAccountsControllerTests
         var resultServiceAccount = data.ToServiceAccount(organizationId);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
 
-        await sutProvider.Sut.CreateServiceAccountAsync(organizationId, data);
+        await sutProvider.Sut.CreateAsync(organizationId, data);
         await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
                      .CreateAsync(Arg.Any<ServiceAccount>());
     }
@@ -84,7 +84,7 @@ public class ServiceAccountsControllerTests
         var resultServiceAccount = data.ToServiceAccount(organizationId);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateServiceAccountAsync(organizationId, data));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
 
         await sutProvider.GetDependency<ICreateServiceAccountCommand>().DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<ServiceAccount>());
     }
@@ -97,7 +97,7 @@ public class ServiceAccountsControllerTests
         var resultServiceAccount = data.ToServiceAccount(serviceAccountId);
         sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
 
-        var result = await sutProvider.Sut.UpdateServiceAccountAsync(serviceAccountId, data);
+        var result = await sutProvider.Sut.UpdateAsync(serviceAccountId, data);
         await sutProvider.GetDependency<IUpdateServiceAccountCommand>().Received(1)
                      .UpdateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
     }
@@ -133,6 +133,7 @@ public class ServiceAccountsControllerTests
     public async void GetAccessTokens_Admin_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccount data, Guid userId, ICollection<ApiKey> resultApiKeys)
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
         foreach (var apiKey in resultApiKeys)
@@ -152,6 +153,7 @@ public class ServiceAccountsControllerTests
     public async void GetAccessTokens_User_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccount data, Guid userId, ICollection<ApiKey> resultApiKeys)
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(false);
         sutProvider.GetDependency<IServiceAccountRepository>().UserHasReadAccessToServiceAccount(default, default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);

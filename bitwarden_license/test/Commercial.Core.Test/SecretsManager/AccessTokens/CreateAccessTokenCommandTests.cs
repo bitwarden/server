@@ -49,6 +49,7 @@ public class CreateServiceAccountCommandTests
         data.ServiceAccountId = saData.Id;
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(saData.Id).Returns(saData);
         sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(saData.Id, userId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(saData.OrganizationId).Returns(true);
 
         await sutProvider.Sut.CreateAsync(data, userId);
 
@@ -64,6 +65,7 @@ public class CreateServiceAccountCommandTests
         data.ServiceAccountId = saData.Id;
 
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(saData.Id).Returns(saData);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(saData.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(saData.OrganizationId).Returns(true);
 
         await sutProvider.Sut.CreateAsync(data, userId);
