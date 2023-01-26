@@ -6,7 +6,7 @@ BEGIN
 
     SELECT
         [Kdf],
-        [KdfIterations]
+        [KdfIterations],
         [KdfMemory],
         [KdfParallelism]
     FROM
