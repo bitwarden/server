@@ -191,62 +191,78 @@
         </div>
     </div>
     <h2>Features</h2>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseTotp">
-        <label class="form-check-label" asp-for="UseTotp"></label>
+    <div class="row mb-3">
+        <div class="col-4">
+            <h3>General</h3>
+            <div class="form-check mb-2">
+                <input type="checkbox" class="form-check-input" asp-for="SelfHost">
+                <label class="form-check-label" asp-for="SelfHost"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="Use2fa">
+                <label class="form-check-label" asp-for="Use2fa"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseApi">
+                <label class="form-check-label" asp-for="UseApi"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseGroups">
+                <label class="form-check-label" asp-for="UseGroups"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UsePolicies">
+                <label class="form-check-label" asp-for="UsePolicies"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseSso">
+                <label class="form-check-label" asp-for="UseSso"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseKeyConnector">
+                <label class="form-check-label" asp-for="UseKeyConnector"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseScim">
+                <label class="form-check-label" asp-for="UseScim"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseDirectory">
+                <label class="form-check-label" asp-for="UseDirectory"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseEvents">
+                <label class="form-check-label" asp-for="UseEvents"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseResetPassword">
+                <label class="form-check-label" asp-for="UseResetPassword"></label>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseCustomPermissions">
+                <label class="form-check-label" asp-for="UseCustomPermissions"></label>
+            </div>
+        </div>
+        <div class="col-4">
+            <h3>Password Manager</h3>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseTotp">
+                <label class="form-check-label" asp-for="UseTotp"></label>
+            </div>
+           <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium">
+                <label class="form-check-label" asp-for="UsersGetPremium"></label>
+            </div>
+        </div>
+        <div class="col-4">
+            <h3>Secrets Manager</h3>
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager">
+                <label class="form-check-label" asp-for="UseSecretsManager"></label>
+            </div>
+        </div>
     </div>
-    <div class="form-check mb-2">
-        <input type="checkbox" class="form-check-input" asp-for="SelfHost">
-        <label class="form-check-label" asp-for="SelfHost"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="Use2fa">
-        <label class="form-check-label" asp-for="Use2fa"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseApi">
-        <label class="form-check-label" asp-for="UseApi"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseGroups">
-        <label class="form-check-label" asp-for="UseGroups"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UsePolicies">
-        <label class="form-check-label" asp-for="UsePolicies"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseSso">
-        <label class="form-check-label" asp-for="UseSso"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseKeyConnector">
-        <label class="form-check-label" asp-for="UseKeyConnector"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseScim">
-        <label class="form-check-label" asp-for="UseScim"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseDirectory">
-        <label class="form-check-label" asp-for="UseDirectory"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseEvents">
-        <label class="form-check-label" asp-for="UseEvents"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UseResetPassword">
-        <label class="form-check-label" asp-for="UseResetPassword"></label>
-    </div>
-    <div class="form-check">
-        <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium">
-        <label class="form-check-label" asp-for="UsersGetPremium"></label>
-    </div>
-    <div class="form-check mb-3">
-        <input type="checkbox" class="form-check-input" asp-for="UseCustomPermissions">
-        <label class="form-check-label" asp-for="UseCustomPermissions"></label>
-    </div>
+
     <h2>Licensing</h2>
     <div class="row">
         <div class="col-sm">
