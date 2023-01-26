@@ -34,7 +34,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
-        services.AddOrganizationLicenseCommandQueries();
+        services.AddOrganizationLicenseCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -88,7 +88,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
     }
 
-    private static void AddOrganizationLicenseCommandQueries(this IServiceCollection services)
+    private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<ICloudGetOrganizationLicenseQuery, CloudGetOrganizationLicenseQuery>();
         services.AddScoped<ISelfHostedGetOrganizationLicenseQuery, SelfHostedGetOrganizationLicenseQuery>();
