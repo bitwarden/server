@@ -201,7 +201,30 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
 
     public void UpdateFromLicense(OrganizationLicense license)
     {
-        //TODO: update from license
+        Name = license.Name;
+        BusinessName = license.BusinessName;
+        BillingEmail = license.BillingEmail;
+        PlanType = license.PlanType;
+        Seats = license.Seats;
+        MaxCollections = license.MaxCollections;
+        UseGroups = license.UseGroups;
+        UseDirectory = license.UseDirectory;
+        UseEvents = license.UseEvents;
+        UseTotp = license.UseTotp;
+        Use2fa = license.Use2fa;
+        UseApi = license.UseApi;
+        UsePolicies = license.UsePolicies;
+        UseSso = license.UseSso;
+        UseKeyConnector = license.UseKeyConnector;
+        UseScim = license.UseScim;
+        UseResetPassword = license.UseResetPassword;
+        SelfHost = license.SelfHost;
+        UsersGetPremium = license.UsersGetPremium;
+        UseCustomPermissions = license.UseCustomPermissions;
+        Plan = license.Plan;
+        Enabled = license.Enabled;
+        ExpirationDate = license.Expires;
+        LicenseKey = license.LicenseKey;
         RevisionDate = DateTime.UtcNow;
     }
 }

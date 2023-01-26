@@ -57,10 +57,9 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
 
     private async Task UpdateOrganizationAsync(SelfHostedOrganizationDetails selfHostedOrganizationDetails, OrganizationLicense license)
     {
-        // TODO: map to new organization
-        // var organization = _mapper.Map<Organization>(selfHostedOrganizationDetails);
-        // organization.UpdateFromLicense(license, _mapper);
+        var organization = selfHostedOrganizationDetails.ToOrganization();
+        organization.UpdateFromLicense(license);
 
-        // await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 }
