@@ -38,7 +38,7 @@ public class UpdateServiceAccountCommand : IUpdateServiceAccountCommand
 
         if (!hasAccess)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         serviceAccount.Name = updatedServiceAccount.Name;

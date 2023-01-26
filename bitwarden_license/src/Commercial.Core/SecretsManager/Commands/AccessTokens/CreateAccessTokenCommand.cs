@@ -46,7 +46,7 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
 
         if (!hasAccess)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         apiKey.ClientSecret = CoreHelpers.SecureRandomString(_clientSecretMaxLength);

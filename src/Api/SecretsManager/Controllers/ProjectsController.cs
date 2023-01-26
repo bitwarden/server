@@ -40,9 +40,9 @@ public class ProjectsController : Controller
     }
 
     [HttpGet("organizations/{organizationId}/projects")]
-    public async Task<ListResponseModel<ProjectResponseModel>> GetProjectsByOrganizationAsync([FromRoute] Guid organizationId)
+    public async Task<ListResponseModel<ProjectResponseModel>> ListByOrganizationAsync([FromRoute] Guid organizationId)
     {
-        if (_currentContext.AccessSecretsManager(organizationId))
+        if (!_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
@@ -60,7 +60,7 @@ public class ProjectsController : Controller
     [HttpPost("organizations/{organizationId}/projects")]
     public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] ProjectCreateRequestModel createRequest)
     {
-        if (_currentContext.AccessSecretsManager(organizationId))
+        if (!_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
@@ -70,7 +70,7 @@ public class ProjectsController : Controller
     }
 
     [HttpPut("projects/{id}")]
-    public async Task<ProjectResponseModel> UpdateProjectAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
+    public async Task<ProjectResponseModel> UpdateAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
     {
         var userId = _userService.GetProperUserId(User).Value;
 
@@ -79,10 +79,15 @@ public class ProjectsController : Controller
     }
 
     [HttpGet("projects/{id}")]
-    public async Task<ProjectResponseModel> GetProjectAsync([FromRoute] Guid id)
+    public async Task<ProjectResponseModel> GetAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
         if (project == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!_currentContext.AccessSecretsManager(project.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -107,7 +112,7 @@ public class ProjectsController : Controller
     }
 
     [HttpPost("projects/delete")]
-    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteProjectsAsync([FromBody] List<Guid> ids)
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
         var userId = _userService.GetProperUserId(User).Value;
 

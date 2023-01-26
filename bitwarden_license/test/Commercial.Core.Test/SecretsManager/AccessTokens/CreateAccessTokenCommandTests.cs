@@ -36,7 +36,7 @@ public class CreateServiceAccountCommandTests
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(saData.Id).Returns(saData);
         sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(saData.Id, userId).Returns(false);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.CreateAsync(data, userId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(data, userId));
 
         await sutProvider.GetDependency<IApiKeyRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
     }

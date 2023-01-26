@@ -18,7 +18,7 @@ public class UpdateServiceAccountCommandTests
     [BitAutoData]
     public async Task UpdateAsync_ServiceAccountDoesNotExist_ThrowsNotFound(ServiceAccount data, Guid userId, SutProvider<UpdateServiceAccountCommand> sutProvider)
     {
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data, userId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data, userId));
 
         await sutProvider.GetDependency<IServiceAccountRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
     }
@@ -30,7 +30,7 @@ public class UpdateServiceAccountCommandTests
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).Returns(data);
         sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(data.Id, userId).Returns(false);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.UpdateAsync(data, userId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data, userId));
 
         await sutProvider.GetDependency<IServiceAccountRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
     }

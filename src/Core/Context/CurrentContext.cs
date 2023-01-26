@@ -157,6 +157,10 @@ public class CurrentContext : ICurrentContext
 
     private List<CurrentContentOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
     {
+        var accessSecretsManager = claimsDict.ContainsKey(Claims.SecretsManagerAccess)
+            ? claimsDict[Claims.SecretsManagerAccess].ToDictionary(s => s.Value, _ => true)
+            : new Dictionary<string, bool>();
+
         var organizations = new List<CurrentContentOrganization>();
         if (claimsDict.ContainsKey(Claims.OrganizationOwner))
         {
@@ -164,7 +168,8 @@ public class CurrentContext : ICurrentContext
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
-                    Type = OrganizationUserType.Owner
+                    Type = OrganizationUserType.Owner,
+                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
                 }));
         }
         else if (orgApi && OrganizationId.HasValue)
@@ -172,7 +177,7 @@ public class CurrentContext : ICurrentContext
             organizations.Add(new CurrentContentOrganization
             {
                 Id = OrganizationId.Value,
-                Type = OrganizationUserType.Owner
+                Type = OrganizationUserType.Owner,
             });
         }
 
@@ -182,7 +187,8 @@ public class CurrentContext : ICurrentContext
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
-                    Type = OrganizationUserType.Admin
+                    Type = OrganizationUserType.Admin,
+                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
                 }));
         }
 
@@ -192,7 +198,8 @@ public class CurrentContext : ICurrentContext
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
-                    Type = OrganizationUserType.User
+                    Type = OrganizationUserType.User,
+                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
                 }));
         }
 
@@ -202,7 +209,8 @@ public class CurrentContext : ICurrentContext
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
-                    Type = OrganizationUserType.Manager
+                    Type = OrganizationUserType.Manager,
+                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
                 }));
         }
 
@@ -213,7 +221,8 @@ public class CurrentContext : ICurrentContext
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Custom,
-                    Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict)
+                    Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict),
+                    AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
                 }));
         }
 
