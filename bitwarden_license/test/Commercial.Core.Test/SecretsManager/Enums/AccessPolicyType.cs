@@ -1,6 +1,6 @@
-﻿namespace Bit.Commercial.Core.Test.SecretsManager;
+﻿namespace Bit.Commercial.Core.Test.SecretsManager.Enums;
 
-public enum TestAccessPolicyType
+public enum AccessPolicyType
 {
     UserProjectAccessPolicy,
     GroupProjectAccessPolicy,
@@ -8,10 +8,4 @@ public enum TestAccessPolicyType
     UserServiceAccountAccessPolicy,
     GroupServiceAccountAccessPolicy,
 
-}
-
-public enum TestPermissionType
-{
-    RunAsAdmin,
-    RunAsUserWithPermission,
 }

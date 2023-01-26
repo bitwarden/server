@@ -1,4 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
+using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -27,15 +28,15 @@ public class UpdateAccessPolicyCommandTests
     }
 
     [Theory]
-    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
-    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
-    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
-    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
-    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy, TestPermissionType.RunAsAdmin)]
-    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
+    [BitAutoData(AccessPolicyType.UserProjectAccessPolicy, PermissionType.RunAsAdmin)]
+    [BitAutoData(AccessPolicyType.UserProjectAccessPolicy, PermissionType.RunAsUserWithPermission)]
+    [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy, PermissionType.RunAsAdmin)]
+    [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy, PermissionType.RunAsUserWithPermission)]
+    [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy, PermissionType.RunAsAdmin)]
+    [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy, PermissionType.RunAsUserWithPermission)]
     public async Task UpdateAsync_ProjectGrants_PermissionsCheck_Success(
-        TestAccessPolicyType testAccessPolicyType,
-        TestPermissionType testPermissionType,
+        AccessPolicyType accessPolicyType,
+        PermissionType permissionType,
         Guid data,
         bool read,
         bool write,
@@ -46,9 +47,9 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         BaseAccessPolicy policyToReturn = null;
-        switch (testAccessPolicyType)
+        switch (accessPolicyType)
         {
-            case TestAccessPolicyType.UserProjectAccessPolicy:
+            case AccessPolicyType.UserProjectAccessPolicy:
                 policyToReturn =
                     new UserProjectAccessPolicy
                     {
@@ -58,7 +59,7 @@ public class UpdateAccessPolicyCommandTests
                         GrantedProjectId = grantedProject.Id,
                     };
                 break;
-            case TestAccessPolicyType.GroupProjectAccessPolicy:
+            case AccessPolicyType.GroupProjectAccessPolicy:
                 mockGroup.OrganizationId = grantedProject.OrganizationId;
                 policyToReturn =
                     new GroupProjectAccessPolicy
@@ -70,7 +71,7 @@ public class UpdateAccessPolicyCommandTests
                         Group = mockGroup,
                     };
                 break;
-            case TestAccessPolicyType.ServiceAccountProjectAccessPolicy:
+            case AccessPolicyType.ServiceAccountProjectAccessPolicy:
                 mockServiceAccount.OrganizationId = grantedProject.OrganizationId;
                 policyToReturn = new ServiceAccountProjectAccessPolicy
                 {
@@ -84,13 +85,13 @@ public class UpdateAccessPolicyCommandTests
         }
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(grantedProject.Id).Returns(grantedProject);
-        switch (testPermissionType)
+        switch (permissionType)
         {
-            case TestPermissionType.RunAsAdmin:
+            case PermissionType.RunAsAdmin:
                 sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(grantedProject.OrganizationId)
                     .Returns(true);
                 break;
-            case TestPermissionType.RunAsUserWithPermission:
+            case PermissionType.RunAsUserWithPermission:
                 sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(grantedProject.Id, userId)
                     .Returns(true);
                 break;
@@ -106,11 +107,11 @@ public class UpdateAccessPolicyCommandTests
     }
 
     [Theory]
-    [BitAutoData(TestAccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(TestAccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(TestAccessPolicyType.ServiceAccountProjectAccessPolicy)]
+    [BitAutoData(AccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy)]
     public async Task UpdateAsync_ProjectGrants_PermissionsCheck_ThrowsNotAuthorized(
-        TestAccessPolicyType testAccessPolicyType,
+        AccessPolicyType accessPolicyType,
         Guid data,
         bool read,
         bool write,
@@ -121,9 +122,9 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         BaseAccessPolicy policyToReturn = null;
-        switch (testAccessPolicyType)
+        switch (accessPolicyType)
         {
-            case TestAccessPolicyType.UserProjectAccessPolicy:
+            case AccessPolicyType.UserProjectAccessPolicy:
                 policyToReturn =
                     new UserProjectAccessPolicy
                     {
@@ -133,7 +134,7 @@ public class UpdateAccessPolicyCommandTests
                         GrantedProjectId = grantedProject.Id,
                     };
                 break;
-            case TestAccessPolicyType.GroupProjectAccessPolicy:
+            case AccessPolicyType.GroupProjectAccessPolicy:
                 mockGroup.OrganizationId = grantedProject.OrganizationId;
                 policyToReturn =
                     new GroupProjectAccessPolicy
@@ -145,7 +146,7 @@ public class UpdateAccessPolicyCommandTests
                         Group = mockGroup,
                     };
                 break;
-            case TestAccessPolicyType.ServiceAccountProjectAccessPolicy:
+            case AccessPolicyType.ServiceAccountProjectAccessPolicy:
                 mockServiceAccount.OrganizationId = grantedProject.OrganizationId;
                 policyToReturn = new ServiceAccountProjectAccessPolicy
                 {
@@ -167,13 +168,13 @@ public class UpdateAccessPolicyCommandTests
     }
 
     [Theory]
-    [BitAutoData(TestAccessPolicyType.UserServiceAccountAccessPolicy, TestPermissionType.RunAsAdmin)]
-    [BitAutoData(TestAccessPolicyType.UserServiceAccountAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
-    [BitAutoData(TestAccessPolicyType.GroupServiceAccountAccessPolicy, TestPermissionType.RunAsAdmin)]
-    [BitAutoData(TestAccessPolicyType.GroupServiceAccountAccessPolicy, TestPermissionType.RunAsUserWithPermission)]
+    [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy, PermissionType.RunAsAdmin)]
+    [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy, PermissionType.RunAsUserWithPermission)]
+    [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy, PermissionType.RunAsAdmin)]
+    [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy, PermissionType.RunAsUserWithPermission)]
     public async Task UpdateAsync_ServiceAccountGrants_PermissionsCheck_Success(
-        TestAccessPolicyType testAccessPolicyType,
-        TestPermissionType testPermissionType,
+        AccessPolicyType accessPolicyType,
+        PermissionType permissionType,
         Guid data,
         bool read,
         bool write,
@@ -183,9 +184,9 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         BaseAccessPolicy policyToReturn = null;
-        switch (testAccessPolicyType)
+        switch (accessPolicyType)
         {
-            case TestAccessPolicyType.UserServiceAccountAccessPolicy:
+            case AccessPolicyType.UserServiceAccountAccessPolicy:
                 policyToReturn =
                     new UserServiceAccountAccessPolicy
                     {
@@ -195,7 +196,7 @@ public class UpdateAccessPolicyCommandTests
                         GrantedServiceAccountId = grantedServiceAccount.Id,
                     };
                 break;
-            case TestAccessPolicyType.GroupServiceAccountAccessPolicy:
+            case AccessPolicyType.GroupServiceAccountAccessPolicy:
                 mockGroup.OrganizationId = grantedServiceAccount.OrganizationId;
                 policyToReturn =
                     new GroupServiceAccountAccessPolicy
@@ -211,13 +212,13 @@ public class UpdateAccessPolicyCommandTests
 
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(grantedServiceAccount.Id)
             .Returns(grantedServiceAccount);
-        switch (testPermissionType)
+        switch (permissionType)
         {
-            case TestPermissionType.RunAsAdmin:
+            case PermissionType.RunAsAdmin:
                 sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(grantedServiceAccount.OrganizationId)
                     .Returns(true);
                 break;
-            case TestPermissionType.RunAsUserWithPermission:
+            case PermissionType.RunAsUserWithPermission:
                 sutProvider.GetDependency<IServiceAccountRepository>()
                     .UserHasWriteAccessToServiceAccount(grantedServiceAccount.Id, userId)
                     .Returns(true);
@@ -234,10 +235,10 @@ public class UpdateAccessPolicyCommandTests
     }
 
     [Theory]
-    [BitAutoData(TestAccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(TestAccessPolicyType.GroupServiceAccountAccessPolicy)]
+    [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy)]
+    [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy)]
     public async Task UpdateAsync_ServiceAccountGrants_PermissionsCheck_ThrowsNotAuthorized(
-        TestAccessPolicyType testAccessPolicyType,
+        AccessPolicyType accessPolicyType,
         Guid data,
         bool read,
         bool write,
@@ -247,9 +248,9 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         BaseAccessPolicy policyToReturn = null;
-        switch (testAccessPolicyType)
+        switch (accessPolicyType)
         {
-            case TestAccessPolicyType.UserServiceAccountAccessPolicy:
+            case AccessPolicyType.UserServiceAccountAccessPolicy:
                 policyToReturn =
                     new UserServiceAccountAccessPolicy
                     {
@@ -259,7 +260,7 @@ public class UpdateAccessPolicyCommandTests
                         GrantedServiceAccountId = grantedServiceAccount.Id,
                     };
                 break;
-            case TestAccessPolicyType.GroupServiceAccountAccessPolicy:
+            case AccessPolicyType.GroupServiceAccountAccessPolicy:
                 mockGroup.OrganizationId = grantedServiceAccount.OrganizationId;
                 policyToReturn =
                     new GroupServiceAccountAccessPolicy

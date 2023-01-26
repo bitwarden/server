@@ -25,7 +25,7 @@ namespace Bit.Api.Test.SecretsManager.Controllers;
 [JsonDocumentCustomize]
 public class AccessPoliciesControllerTests
 {
-    public enum TestPermission
+    public enum PermissionType
     {
         RunAsAdmin,
         RunAsUserWithPermission,
@@ -59,19 +59,19 @@ public class AccessPoliciesControllerTests
     }
 
     [Theory]
-    [BitAutoData(TestPermission.RunAsAdmin)]
-    [BitAutoData(TestPermission.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsAdmin)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void GetAccessPoliciesByProject_ReturnsEmptyList(
-        TestPermission testPermission,
+        PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id, Project data)
     {
-        switch (testPermission)
+        switch (permissionType)
         {
-            case TestPermission.RunAsAdmin:
+            case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data);
                 break;
-            case TestPermission.RunAsUserWithPermission:
+            case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data);
                 break;
         }
@@ -102,21 +102,21 @@ public class AccessPoliciesControllerTests
     }
 
     [Theory]
-    [BitAutoData(TestPermission.RunAsAdmin)]
-    [BitAutoData(TestPermission.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsAdmin)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void GetAccessPoliciesByProject_Admin_Success(
-        TestPermission testPermission,
+        PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project data,
         UserProjectAccessPolicy resultAccessPolicy)
     {
-        switch (testPermission)
+        switch (permissionType)
         {
-            case TestPermission.RunAsAdmin:
+            case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data);
                 break;
-            case TestPermission.RunAsUserWithPermission:
+            case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data);
                 break;
         }
@@ -203,19 +203,19 @@ public class AccessPoliciesControllerTests
     }
 
     [Theory]
-    [BitAutoData(TestPermission.RunAsAdmin)]
-    [BitAutoData(TestPermission.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsAdmin)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void GetProjectPeoplePotentialGranteesAsync_ReturnsEmptyList(
-        TestPermission testPermission,
+        PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id, Project data)
     {
-        switch (testPermission)
+        switch (permissionType)
         {
-            case TestPermission.RunAsAdmin:
+            case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data);
                 break;
-            case TestPermission.RunAsUserWithPermission:
+            case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data);
                 break;
         }
@@ -251,21 +251,21 @@ public class AccessPoliciesControllerTests
     }
 
     [Theory]
-    [BitAutoData(TestPermission.RunAsAdmin)]
-    [BitAutoData(TestPermission.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsAdmin)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void GetProjectPeoplePotentialGranteesAsync_Success(
-        TestPermission testPermission,
+        PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
         Project data,
         Group mockGroup)
     {
-        switch (testPermission)
+        switch (permissionType)
         {
-            case TestPermission.RunAsAdmin:
+            case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data);
                 break;
-            case TestPermission.RunAsUserWithPermission:
+            case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data);
                 break;
         }
@@ -285,19 +285,19 @@ public class AccessPoliciesControllerTests
     }
 
     [Theory]
-    [BitAutoData(TestPermission.RunAsAdmin)]
-    [BitAutoData(TestPermission.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsAdmin)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void GetProjectServiceAccountPotentialGranteesAsync_ReturnsEmptyList(
-        TestPermission testPermission,
+        PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id, Project data)
     {
-        switch (testPermission)
+        switch (permissionType)
         {
-            case TestPermission.RunAsAdmin:
+            case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data);
                 break;
-            case TestPermission.RunAsUserWithPermission:
+            case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data);
                 break;
         }
@@ -314,20 +314,20 @@ public class AccessPoliciesControllerTests
     }
 
     [Theory]
-    [BitAutoData(TestPermission.RunAsAdmin)]
-    [BitAutoData(TestPermission.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsAdmin)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void GetProjectServiceAccountPotentialGranteesAsync_Success(
-        TestPermission testPermission,
+        PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount mockServiceAccount,
         Guid id, Project data)
     {
-        switch (testPermission)
+        switch (permissionType)
         {
-            case TestPermission.RunAsAdmin:
+            case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data);
                 break;
-            case TestPermission.RunAsUserWithPermission:
+            case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data);
                 break;
         }
