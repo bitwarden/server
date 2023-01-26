@@ -92,4 +92,6 @@ public enum GlobalEquivalentDomainsType : byte
     TransferWise = 87,
     TakeawayEU = 88,
     Atlassian = 89,
+    DigitecGalaxus = 90,
+    GalaxusEU = 91,
 }

@@ -101,6 +101,8 @@ public class StaticStore
         GlobalDomains.Add(GlobalEquivalentDomainsType.TransferWise, new List<string> { "transferwise.com", "wise.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.TakeawayEU, new List<string> { "takeaway.com", "just-eat.dk", "just-eat.no", "just-eat.fr", "just-eat.ch", "lieferando.de", "lieferando.at", "thuisbezorgd.nl", "pyszne.pl" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Atlassian, new List<string> { "atlassian.com", "bitbucket.org", "trello.com", "statuspage.io", "atlassian.net", "jira.com" });
+        GlobalDomains.Add(GlobalEquivalentDomainsType.DigitecGalaxus, new List<string> { "digitec.ch", "digitecgalaxus.ch", "galaxus.ch"});
+        GlobalDomains.Add(GlobalEquivalentDomainsType.GalaxusEU, new List<string> { "galaxus.fr", "galaxus.it", "galaxus.eu", "galaxus.at", "galaxus.de" });
         #endregion
 
         #region Plans
