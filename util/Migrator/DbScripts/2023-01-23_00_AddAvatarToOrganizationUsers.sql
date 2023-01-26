@@ -25,17 +25,8 @@ LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
 GO
 
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationUserUserDetails_ReadByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER
-AS
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]') IS NOT NULL
 BEGIN
-    SET NOCOUNT ON
-
-    SELECT
-        *
-    FROM
-        [dbo].[OrganizationUserUserDetailsView]
-    WHERE
-        [OrganizationId] = @OrganizationId
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]';
 END
 GO
