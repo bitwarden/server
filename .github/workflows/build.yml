@@ -249,6 +249,14 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+      
+      - name: Set up Image Tag
+        run: |
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       ########## Build Docker Image ##########
       - name: Setup project name
@@ -277,13 +285,13 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: docker build -t $PROJECT_NAME ${{ matrix.base_path }}/${{ matrix.project_name }}
 
-      ########## ACR ##########
+      ########## QA ACR ##########
       - name: Login to Azure - QA Subscription
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
-      - name: Login to Azure ACR
+      - name: Login to Azure QA ACR
         run: az acr login -n bitwardenqa
 
       - name: Tag and Push image to Azure ACR QA registry
@@ -291,14 +299,27 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenqa.azurecr.io
         run: |
-          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-          if [[ "$IMAGE_TAG" == "master" ]]; then
-            IMAGE_TAG=dev
-          fi
-
           docker tag $PROJECT_NAME \
-            $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
-          docker push $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+            $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+
+      - name: Log out of Docker
+        run: docker logout
+
+      ########## PROD ACR ##########
+      - name: Login to Azure - PROD Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Login to Azure PROD ACR
+        run: az acr login -n bitwardenprod
+      
+      - name: Push image to Azure ACR QA registry
+        env:
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+          REGISTRY: bitwardenprod.azurecr.io
+        run: docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker
         run: docker logout
@@ -366,14 +387,9 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwarden
         run: |
-          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-          if [[ "$IMAGE_TAG" == "master" ]]; then
-            IMAGE_TAG=dev
-          fi
-
           docker tag $PROJECT_NAME \
-            $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
-          docker push $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+            $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker and disable Docker Notary
         if: |
