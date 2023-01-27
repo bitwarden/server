@@ -41,7 +41,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, policyService,
-              userRepository, captchaValidationService)
+              userRepository)
     {
         _userManager = userManager;
         _userService = userService;

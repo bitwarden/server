@@ -13,7 +13,7 @@
   </a>
 </p>
 
--------------------
+---
 
 The Bitwarden Server project contains the APIs, database, and other core infrastructure items needed for the "backend" of all bitwarden client applications.
 
@@ -40,13 +40,13 @@ Full documentation for deploying Bitwarden with Docker can be found in our help 
 - [Docker](https://www.docker.com/community-edition#/download)
 - [Docker Compose](https://docs.docker.com/compose/install/) (already included with some Docker installations)
 
-*These dependencies are free to use.*
+_These dependencies are free to use._
 
 ### Linux & macOS
 
 ```
-curl -s -o bitwarden.sh \
-    https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.sh \
+curl -s -L -o bitwarden.sh \
+    "https://func.bitwarden.com/api/dl/?app=self-host&platform=linux" \
     && chmod +x bitwarden.sh
 ./bitwarden.sh install
 ./bitwarden.sh start
@@ -56,7 +56,7 @@ curl -s -o bitwarden.sh \
 
 ```
 Invoke-RestMethod -OutFile bitwarden.ps1 `
-    -Uri https://raw.githubusercontent.com/bitwarden/server/master/scripts/bitwarden.ps1
+    -Uri "https://func.bitwarden.com/api/dl/?app=self-host&platform=windows"
 .\bitwarden.ps1 -install
 .\bitwarden.ps1 -start
 ```

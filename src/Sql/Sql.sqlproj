@@ -67,6 +67,13 @@
     <Folder Include="dbo\Functions\" />
     <Folder Include="dbo\Stored Procedures\" />
     <Folder Include="dbo\User Defined Types\" />
+    <Folder Include="dbo\Stored Procedures\ApiKey\" />
+    <Folder Include="SecretsManager\" />
+    <Folder Include="SecretsManager\dbo\" />
+    <Folder Include="SecretsManager\dbo\Stored Procedures\" />
+    <Folder Include="SecretsManager\dbo\Stored Procedures\ApiKey\" />
+    <Folder Include="SecretsManager\dbo\Tables\" />
+    <Folder Include="SecretsManager\dbo\Views\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Functions\CipherDetails.sql" />
@@ -117,8 +124,11 @@
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollections.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsAdmin.sql" />
     <Build Include="dbo\Stored Procedures\CollectionCipher_UpdateCollectionsForCiphers.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionGroup_ReadByCollectionId.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionGroup_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_Delete.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_ReadByCollectionId.sql" />
+    <Build Include="dbo\Stored Procedures\CollectionUser_ReadByOrganizationUserIds.sql" />
     <Build Include="dbo\Stored Procedures\CollectionUser_UpdateUsers.sql" />
     <Build Include="dbo\Stored Procedures\Collection_Create.sql" />
     <Build Include="dbo\Stored Procedures\Collection_CreateWithGroups.sql" />
@@ -128,6 +138,8 @@
     <Build Include="dbo\Stored Procedures\Collection_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadCountByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsAndUsersById.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsAndUsersByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsById.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadWithGroupsByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_Update.sql" />
@@ -171,6 +183,7 @@
     <Build Include="dbo\Stored Procedures\Grant_Save.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_Delete.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUser_ReadByOrganizationUserIds.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadGroupIdsByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadOrganizationUserIdsByGroupId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_UpdateGroups.sql" />
@@ -178,9 +191,12 @@
     <Build Include="dbo\Stored Procedures\Group_Create.sql" />
     <Build Include="dbo\Stored Procedures\Group_CreateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Group_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\Group_DeleteByIds.sql" />
     <Build Include="dbo\Stored Procedures\Group_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Group_ReadByIds.sql" />
     <Build Include="dbo\Stored Procedures\Group_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Group_ReadWithCollectionsById.sql" />
+    <Build Include="dbo\Stored Procedures\Group_ReadWithCollectionsByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Group_Update.sql" />
     <Build Include="dbo\Stored Procedures\Group_UpdateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Installation_Create.sql" />
@@ -328,6 +344,7 @@
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByCollectionId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByEmergencyAccessGranteeId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationIds.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByOrganizationUserIds.sql" />
     <Build Include="dbo\Stored Procedures\User_BumpAccountRevisionDateByProviderId.sql" />
@@ -416,5 +433,16 @@
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
+    <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
+    <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_ReadByServiceAccountId.sql" />
+    <Build Include="SecretsManager\dbo\Tables\AccessPolicy.sql" />
+    <Build Include="SecretsManager\dbo\Tables\ApiKey.sql" />
+    <Build Include="SecretsManager\dbo\Tables\Project.sql" />
+    <Build Include="SecretsManager\dbo\Tables\ProjectSecret.sql" />
+    <Build Include="SecretsManager\dbo\Tables\Secret.sql" />
+    <Build Include="SecretsManager\dbo\Tables\ServiceAccount.sql" />
+    <Build Include="SecretsManager\dbo\Views\ApiKeyDetailsView.sql" />
+    <Build Include="SecretsManager\dbo\Views\ApiKeyView.sql" />
   </ItemGroup>
 </Project>

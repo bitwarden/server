@@ -27,7 +27,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.11.0" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.9.0" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
-    <PackageReference Include="Fido2.AspNet" Version="3.0.0-beta2" />
+    <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
     <PackageReference Include="Handlebars.Net" Version="2.1.2" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />
     <PackageReference Include="MailKit" Version="3.2.0" />
@@ -35,7 +35,7 @@
     <PackageReference Include="Microsoft.Azure.Cosmos.Table" Version="1.0.8" />
     <PackageReference Include="Microsoft.Azure.NotificationHubs" Version="4.1.0" />
     <PackageReference Include="Microsoft.Azure.ServiceBus" Version="5.2.0" />
-    <PackageReference Include="Microsoft.Data.SqlClient" Version="4.1.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.4" />
