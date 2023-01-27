@@ -109,7 +109,7 @@ jobs:
         shell: pwsh
 
       - name: Test ${{ matrix.project}}
-        run: dotnet test ./${{ matrix.project }} --configuration Debug --logger "trx;LogFileName=oss-test-results.trx"
+        run: dotnet test ./${{ matrix.project }} --no-restore --configuration Debug --logger "trx;LogFileName=oss-test-results.trx"
         shell: pwsh
 
       - name: Report test results
