@@ -297,11 +297,11 @@ jobs:
       - name: Tag and Push image to Azure ACR QA registry
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          REGISTRY: bitwardenqa.azurecr.io
+          QA_REGISTRY: bitwardenqa.azurecr.io
         run: |
           docker tag $PROJECT_NAME \
-            $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
-          docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+            $QA_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push $QA_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker
         run: docker logout
@@ -318,8 +318,11 @@ jobs:
       - name: Push image to Azure ACR QA registry
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          REGISTRY: bitwardenprod.azurecr.io
-        run: docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          PROD_REGISTRY: bitwardenprod.azurecr.io
+        run: |
+          docker tag $QA_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }} \
+            $PROD_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push $PROD_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker
         run: docker logout
