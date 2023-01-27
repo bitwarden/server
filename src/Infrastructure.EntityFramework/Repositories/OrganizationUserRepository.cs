@@ -602,6 +602,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                             ou.UserId == userId || ou.Email == email
                         select new OrganizationUserPolicyDetails
                         {
+                            OrganizationUserId = ou.Id,
                             OrganizationId = p.OrganizationId,
                             PolicyType = p.Type,
                             PolicyEnabled = p.Enabled,

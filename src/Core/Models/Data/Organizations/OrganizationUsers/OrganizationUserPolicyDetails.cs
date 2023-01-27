@@ -4,6 +4,8 @@ namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 public class OrganizationUserPolicyDetails
 {
+    public Guid OrganizationUserId { get; set; }
+
     public Guid OrganizationId { get; set; }
 
     public PolicyType PolicyType { get; set; }

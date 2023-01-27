@@ -4,6 +4,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 SELECT
+    OU.[Id] as OrganizationUserId,
     P.[OrganizationId],
     P.[Type] as PolicyType,
     P.[Enabled] as PolicyEnabled,
