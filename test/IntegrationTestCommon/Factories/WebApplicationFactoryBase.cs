@@ -108,6 +108,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Fix IP Rate Limiting
             services.AddSingleton<IStartupFilter, CustomStartupFilter>();
+
+            // Disable logs
+            //services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
         });
     }
 
