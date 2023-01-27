@@ -56,34 +56,4 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
             return results.ToList();
         }
     }
-
-    [Obsolete("Use IPolicyService.GetPoliciesApplicableToUserAsync instead.")]
-    public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-        OrganizationUserStatusType minStatus)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<Policy>(
-                $"[{Schema}].[{Table}_ReadByTypeApplicableToUser]",
-                new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
-    [Obsolete("Use IPolicyService.GetPoliciesApplicableToUserAsync instead.")]
-    public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-        OrganizationUserStatusType minStatus)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var result = await connection.ExecuteScalarAsync<int>(
-                $"[{Schema}].[{Table}_CountByTypeApplicableToUser]",
-                new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
-                commandType: CommandType.StoredProcedure);
-
-            return result;
-        }
-    }
 }
