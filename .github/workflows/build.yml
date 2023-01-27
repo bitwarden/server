@@ -119,6 +119,7 @@ jobs:
           name: Test Results
           path: "**/*-test-results.trx"
           reporter: dotnet-trx
+          fail-on-error: true
 
   build-artifacts:
     name: Build artifacts
