@@ -110,7 +110,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.AddSingleton<IStartupFilter, CustomStartupFilter>();
 
             // Disable logs
-            //services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
+            services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
         });
     }
 
