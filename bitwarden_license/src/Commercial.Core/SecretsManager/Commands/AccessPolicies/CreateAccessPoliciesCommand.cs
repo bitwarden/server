@@ -44,7 +44,7 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
 
         if (!hasAccess)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         var distinctAccessPolicies = accessPolicies.DistinctBy(baseAccessPolicy =>

@@ -125,7 +125,7 @@ public class DeleteAccessPolicyCommand : IDeleteAccessPolicyCommand
 
         if (!hasAccess)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
     }
 }

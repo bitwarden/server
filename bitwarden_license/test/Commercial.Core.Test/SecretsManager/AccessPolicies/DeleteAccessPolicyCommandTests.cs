@@ -126,7 +126,7 @@ public class DeleteAccessPolicyCommandTests
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
             .Returns(policyToReturn);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.DeleteAsync(data, userId));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
@@ -195,7 +195,7 @@ public class DeleteAccessPolicyCommandTests
     [Theory]
     [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy)]
     [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy)]
-    public async Task DeleteAccessPolicy_ServiceAccountGrants_PermissionsCheck_ThrowsNotAuthorized(
+    public async Task DeleteAccessPolicy_ServiceAccountGrants_PermissionsCheck_Throws(
         AccessPolicyType accessPolicyType,
         Guid data,
         Guid userId,
@@ -231,7 +231,7 @@ public class DeleteAccessPolicyCommandTests
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
             .Returns(policyToReturn);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.DeleteAsync(data, userId));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);

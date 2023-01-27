@@ -110,7 +110,7 @@ public class UpdateAccessPolicyCommandTests
     [BitAutoData(AccessPolicyType.UserProjectAccessPolicy)]
     [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy)]
     [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy)]
-    public async Task UpdateAsync_ProjectGrants_PermissionsCheck_ThrowsNotAuthorized(
+    public async Task UpdateAsync_ProjectGrants_PermissionsCheck_Throws(
         AccessPolicyType accessPolicyType,
         Guid data,
         bool read,
@@ -162,7 +162,7 @@ public class UpdateAccessPolicyCommandTests
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(grantedProject.Id).Returns(grantedProject);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.UpdateAsync(data, read, write, userId));
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
     }
@@ -237,7 +237,7 @@ public class UpdateAccessPolicyCommandTests
     [Theory]
     [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy)]
     [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy)]
-    public async Task UpdateAsync_ServiceAccountGrants_PermissionsCheck_ThrowsNotAuthorized(
+    public async Task UpdateAsync_ServiceAccountGrants_PermissionsCheck_Throws(
         AccessPolicyType accessPolicyType,
         Guid data,
         bool read,
@@ -278,7 +278,7 @@ public class UpdateAccessPolicyCommandTests
             .Returns(grantedServiceAccount);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+        await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.UpdateAsync(data, read, write, userId));
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
     }

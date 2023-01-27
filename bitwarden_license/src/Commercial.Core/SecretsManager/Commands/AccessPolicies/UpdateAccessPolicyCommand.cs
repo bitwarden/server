@@ -126,7 +126,7 @@ public class UpdateAccessPolicyCommand : IUpdateAccessPolicyCommand
 
         if (!hasAccess)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
     }
 

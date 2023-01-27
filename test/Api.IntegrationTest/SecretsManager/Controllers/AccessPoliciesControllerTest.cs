@@ -147,7 +147,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var response = await _client.PostAsJsonAsync($"/projects/{initialProject.Id}/access-policies", request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -164,7 +164,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var response = await _client.PutAsJsonAsync($"/access-policies/{initData.InitialAccessPolicyId}", request);
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
@@ -221,7 +221,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var response = await _client.DeleteAsync($"/access-policies/{initData.InitialAccessPolicyId}");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
