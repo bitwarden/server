@@ -61,6 +61,9 @@ jobs:
         run: dotnet restore --locked-mode
         shell: pwsh
 
+      - name: Remove SQL proj
+        run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
+
       - name: Build OSS solution
         run: dotnet build bitwarden-server.sln -p:Configuration=Debug -p:DefineConstants="OSS" --verbosity minimal
         shell: pwsh
