@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Commands.Porting;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.SecretsManager.Models.Request;
@@ -13,7 +13,7 @@ public class SMImportRequestModel
     {
         public InnerProject() { }
 
-        public InnerProject(Project project)
+        public InnerProject(Core.SecretsManager.Entities.Project project)
         {
             Id = project.Id;
             Name = project.Name;
@@ -32,7 +32,7 @@ public class SMImportRequestModel
     {
         public InnerSecret() { }
 
-        public InnerSecret(Secret secret)
+        public InnerSecret(Core.SecretsManager.Entities.Secret secret)
         {
             Id = secret.Id;
             Key = secret.Key;

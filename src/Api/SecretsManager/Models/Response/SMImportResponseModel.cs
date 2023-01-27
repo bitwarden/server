@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Models.Api;
-using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Commands.Porting;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
@@ -30,7 +30,7 @@ public class SMImportResponseModel : ResponseModel
     {
         public InnerProject() { }
 
-        public InnerProject(Project project)
+        public InnerProject(Core.SecretsManager.Entities.Project project)
         {
             Id = project.Id;
             Name = project.Name;
@@ -46,7 +46,7 @@ public class SMImportResponseModel : ResponseModel
     {
         public InnerSecret() { }
 
-        public InnerSecret(Secret secret)
+        public InnerSecret(Core.SecretsManager.Entities.Secret secret)
         {
             Id = secret.Id;
             Key = secret.Key;

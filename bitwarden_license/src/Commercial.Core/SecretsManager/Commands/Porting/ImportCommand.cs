@@ -1,4 +1,5 @@
-﻿using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
+﻿using Bit.Core.SecretsManager.Commands.Porting;
+using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
@@ -17,23 +18,26 @@ public class ImportCommand : IImportCommand
 
     public async Task<SMImport> ImportAsync(Guid organizationId, SMImport import)
     {
+        var importedProjects = new List<Project>();
+        var importedSecrets = new List<Secret>();
+
         try
         {
             import = AssignNewIds(import);
 
             if (import.Projects != null && import.Projects.Any())
             {
-                await _projectRepository.ImportAsync(import.Projects.Select(p => new Project
+                importedProjects = (await _projectRepository.ImportAsync(import.Projects.Select(p => new Project
                 {
                     Id = p.Id,
                     OrganizationId = organizationId,
                     Name = p.Name,
-                }));
+                }))).ToList();
             }
 
             if (import.Secrets != null && import.Secrets.Any())
             {
-                await _secretRepository.ImportAsync(import.Secrets.Select(s => new Secret
+                importedSecrets = (await _secretRepository.ImportAsync(import.Secrets.Select(s => new Secret
                 {
                     Id = s.Id,
                     OrganizationId = organizationId,
@@ -41,11 +45,21 @@ public class ImportCommand : IImportCommand
                     Value = s.Value,
                     Note = s.Note,
                     Projects = s.ProjectIds != null && s.ProjectIds.Any() ? s.ProjectIds.Select(id => new Project { Id = id }).ToList() : null,
-                }));
+                }))).ToList();
             }
         }
         catch (Exception)
         {
+            if (importedProjects.Any())
+            {
+                // remove them
+            }
+
+            if (importedSecrets.Any())
+            {
+                // remove them
+            }
+
             throw new Exception("Error attempting import");
         }
 

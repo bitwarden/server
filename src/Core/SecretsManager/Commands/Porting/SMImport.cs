@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.SecretsManager.Entities;
+﻿namespace Bit.Core.SecretsManager.Commands.Porting;
 
 public class SMImport
 {
@@ -9,7 +9,7 @@ public class SMImport
     {
         public InnerProject() { }
 
-        public InnerProject(Project project)
+        public InnerProject(Core.SecretsManager.Entities.Project project)
         {
             Id = project.Id;
             Name = project.Name;
@@ -23,7 +23,7 @@ public class SMImport
     {
         public InnerSecret() { }
 
-        public InnerSecret(Secret secret)
+        public InnerSecret(Core.SecretsManager.Entities.Secret secret)
         {
             Id = secret.Id;
             Key = secret.Key;
