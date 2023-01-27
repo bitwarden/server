@@ -82,7 +82,9 @@ public class OrganizationDomainController : Controller
 
         var organizationDomain = new OrganizationDomain
         {
-            OrganizationId = orgIdGuid, Txt = model.Txt, DomainName = model.DomainName.ToLower()
+            OrganizationId = orgIdGuid,
+            Txt = model.Txt,
+            DomainName = model.DomainName.ToLower()
         };
 
         var domain = await _createOrganizationDomainCommand.CreateAsync(organizationDomain);
