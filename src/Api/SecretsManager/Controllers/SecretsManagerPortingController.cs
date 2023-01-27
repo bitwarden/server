@@ -31,12 +31,14 @@ public class SecretsManagerPortingController : Controller
     [HttpGet("sm/{organizationId}/export")]
     public async Task<SMExportResponseModel> Export([FromRoute] Guid organizationId, [FromRoute] string format = "json")
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        if (!await _currentContext.OrganizationAdmin(organizationId))
+        {
+            throw new UnauthorizedAccessException();
+        }
 
-        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
-        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId); // TODO: add access check for secrets here once it's supported
+        var userId = _userService.GetProperUserId(User).Value;
+        var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, AccessClientType.NoAccessCheck);
+        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
 
         if (projects == null && secrets == null)
         {
