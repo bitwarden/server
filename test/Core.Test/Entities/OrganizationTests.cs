@@ -32,7 +32,6 @@ public class OrganizationTests
 
         using var jsonDocument = JsonDocument.Parse(organization.TwoFactorProviders);
         var root = jsonDocument.RootElement;
-        Assert.False(true);
 
         var duo = AssertHelper.AssertJsonProperty(root, "6", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(duo, "Enabled", JsonValueKind.True);
