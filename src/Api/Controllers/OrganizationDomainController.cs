@@ -116,7 +116,7 @@ public class OrganizationDomainController : Controller
     [AllowAnonymous]
     [HttpPost("domain/sso/details")] // must be post to accept email cleanly
     public async Task<OrganizationDomainSsoDetailsResponseModel> GetOrgDomainSsoDetails(
-        [FromBody] OrganizationSsoDomainDetailsRequestModel model)
+        [FromBody] OrganizationDomainSsoDetailsRequestModel model)
     {
         var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetailsAsync(model.Email);
         if (ssoResult is null)

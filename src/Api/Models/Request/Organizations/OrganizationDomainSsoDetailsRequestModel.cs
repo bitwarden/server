@@ -2,7 +2,7 @@
 
 namespace Bit.Api.Models.Request.Organizations;
 
-public class OrganizationSsoDomainDetailsRequestModel
+public class OrganizationDomainSsoDetailsRequestModel
 {
     [Required]
     [EmailAddress]
