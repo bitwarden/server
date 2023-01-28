@@ -1,11 +1,8 @@
-using System;
+﻿namespace Bit.Core.Models.Mail;
 
-namespace Bit.Core.Models.Mail
+public class OrganizationSeatsAutoscaledViewModel : BaseMailModel
 {
-    public class OrganizationSeatsAutoscaledViewModel : BaseMailModel
-    {
-        public Guid OrganizationId { get; set; }
-        public int InitialSeatCount { get; set; }
-        public int CurrentSeatCount { get; set; }
-    }
+    public Guid OrganizationId { get; set; }
+    public int InitialSeatCount { get; set; }
+    public int CurrentSeatCount { get; set; }
 }

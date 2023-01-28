@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table.Provider;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories;
+
+public interface IProviderOrganizationRepository : IRepository<ProviderOrganization, Guid>
 {
-    public interface IProviderOrganizationRepository : IRepository<ProviderOrganization, Guid>
-    {
-        Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId);
-        Task<ProviderOrganization> GetByOrganizationId(Guid organizationId);
-    }
+    Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId);
+    Task<ProviderOrganization> GetByOrganizationId(Guid organizationId);
 }

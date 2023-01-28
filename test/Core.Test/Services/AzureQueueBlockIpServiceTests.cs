@@ -1,30 +1,27 @@
-using System;
-using Bit.Core.Services;
+﻿using Bit.Core.Services;
 using Bit.Core.Settings;
-using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services
+namespace Bit.Core.Test.Services;
+
+public class AzureQueueBlockIpServiceTests
 {
-    public class AzureQueueBlockIpServiceTests
+    private readonly AzureQueueBlockIpService _sut;
+
+    private readonly GlobalSettings _globalSettings;
+
+    public AzureQueueBlockIpServiceTests()
     {
-        private readonly AzureQueueBlockIpService _sut;
+        _globalSettings = new GlobalSettings();
 
-        private readonly GlobalSettings _globalSettings;
+        _sut = new AzureQueueBlockIpService(_globalSettings);
+    }
 
-        public AzureQueueBlockIpServiceTests()
-        {
-            _globalSettings = new GlobalSettings();
-
-            _sut = new AzureQueueBlockIpService(_globalSettings);
-        }
-
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
-        [Fact(Skip = "Needs additional work")]
-        public void ServiceExists()
-        {
-            Assert.NotNull(_sut);
-        }
+    // Remove this test when we add actual tests. It only proves that
+    // we've properly constructed the system under test.
+    [Fact(Skip = "Needs additional work")]
+    public void ServiceExists()
+    {
+        Assert.NotNull(_sut);
     }
 }

@@ -1,9 +1,8 @@
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
 
-namespace Bit.Admin.Models
+namespace Bit.Admin.Models;
+
+public class TaxRatesModel : PagedModel<TaxRate>
 {
-    public class TaxRatesModel: PagedModel<TaxRate>
-    {
-        public string Message { get; set; }
-    }
+    public string Message { get; set; }
 }

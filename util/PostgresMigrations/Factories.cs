@@ -1,40 +1,43 @@
-using System.Collections.Generic;
-using Bit.Core.Repositories.EntityFramework;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Bit.Core.Enums;
 using Microsoft.EntityFrameworkCore.Design;
-using System;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace MySqlMigrations
+namespace Bit.PostgresMigrations;
+
+public static class GlobalSettingsFactory
 {
-    public static class GlobalSettingsFactory
+    public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
+    static GlobalSettingsFactory()
     {
-        public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
-        static GlobalSettingsFactory()
-        {
-            var configBuilder = new ConfigurationBuilder().AddUserSecrets<Bit.Api.Startup>();
-            var Configuration = configBuilder.Build();
-            ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
-        }
+        // UserSecretsId here should match what is in Api.csproj
+        var configBuilder = new ConfigurationBuilder().AddUserSecrets("bitwarden-Api");
+        var Configuration = configBuilder.Build();
+        ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
     }
+}
 
-     public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
+public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContext>
+{
+    public DatabaseContext CreateDbContext(string[] args)
     {
-        public DatabaseContext CreateDbContext(string[] args)
+        var services = new ServiceCollection();
+        services.AddDataProtection();
+        var serviceProvider = services.BuildServiceProvider();
+
+        var globalSettings = GlobalSettingsFactory.GlobalSettings;
+        var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
+        var connectionString = globalSettings.PostgreSql?.ConnectionString;
+        if (string.IsNullOrWhiteSpace(connectionString))
         {
-            var globalSettings = GlobalSettingsFactory.GlobalSettings;
-            var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
-            var connectionString = globalSettings.PostgreSql?.ConnectionString;
-            if (string.IsNullOrWhiteSpace(connectionString)) 
-            {
-                throw new Exception("No Postgres connection string found.");
-            }
-            optionsBuilder.UseNpgsql(
-                connectionString,  
-                b => b.MigrationsAssembly("PostgresMigrations"));
-            return new DatabaseContext(optionsBuilder.Options);
+            throw new Exception("No Postgres connection string found.");
         }
+        optionsBuilder.UseNpgsql(
+            connectionString,
+            b => b.MigrationsAssembly("PostgresMigrations"))
+           .UseApplicationServiceProvider(serviceProvider);
+        return new DatabaseContext(optionsBuilder.Options);
     }
 }

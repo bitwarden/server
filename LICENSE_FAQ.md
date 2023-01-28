@@ -16,12 +16,12 @@ Our current software products have the following licenses:
 
 *Bitwarden server:* The main Bitwarden server code is licensed under the AGPL 3.0 license.
 
-*CommCore and SSO integration:* Code for certain new modules that are designed and developed for use by larger
+*Commercial.Core and SSO integration:* Code for certain new modules that are designed and developed for use by larger
 organizations and enterprise environments is released under the Bitwarden License, a "source available" license. The
 Bitwarden License provides users access to product source code for non-production purposes such as development and
 testing, but requires a paid subscription for production use of the product, and environments supporting production.
-Additionally the Api module by default includes CommCore which is under the Bitwarden License, however this can be
-disabled by using `/p:DefineConstants="OSS"` as an argument to `dotnet` while building the module.
+Additionally the Api module by default includes Commercial.Core which is under the Bitwarden License, however this can
+be disabled by using `/p:DefineConstants="OSS"` as an argument to `dotnet` while building the module.
 
 # Frequently Asked Questions
 

@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.Models.Data
+﻿namespace Bit.Core.Models.Data;
+
+public class PageOptions
 {
-    public class PageOptions
-    {
-        public string ContinuationToken { get; set; }
-        public int PageSize { get; set; } = 50;
-    }
+    public string ContinuationToken { get; set; }
+    public int PageSize { get; set; } = 50;
 }

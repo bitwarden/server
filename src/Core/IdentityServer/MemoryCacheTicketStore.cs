@@ -1,56 +1,53 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authentication;
+﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace Bit.Core.IdentityServer
+namespace Bit.Core.IdentityServer;
+
+public class MemoryCacheTicketStore : ITicketStore
 {
-    public class MemoryCacheTicketStore : ITicketStore
+    private const string _keyPrefix = "auth-";
+    private readonly IMemoryCache _cache;
+
+    public MemoryCacheTicketStore()
     {
-        private const string _keyPrefix = "auth-";
-        private readonly IMemoryCache _cache;
+        _cache = new MemoryCache(new MemoryCacheOptions());
+    }
 
-        public MemoryCacheTicketStore()
+    public async Task<string> StoreAsync(AuthenticationTicket ticket)
+    {
+        var key = $"{_keyPrefix}{Guid.NewGuid()}";
+        await RenewAsync(key, ticket);
+        return key;
+    }
+
+    public Task RenewAsync(string key, AuthenticationTicket ticket)
+    {
+        var options = new MemoryCacheEntryOptions();
+        var expiresUtc = ticket.Properties.ExpiresUtc;
+        if (expiresUtc.HasValue)
         {
-            _cache = new MemoryCache(new MemoryCacheOptions());
+            options.SetAbsoluteExpiration(expiresUtc.Value);
+        }
+        else
+        {
+            options.SetSlidingExpiration(TimeSpan.FromMinutes(15));
         }
 
-        public async Task<string> StoreAsync(AuthenticationTicket ticket)
-        {
-            var key = $"{_keyPrefix}{Guid.NewGuid()}";
-            await RenewAsync(key, ticket);
-            return key;
-        }
+        _cache.Set(key, ticket, options);
 
-        public Task RenewAsync(string key, AuthenticationTicket ticket)
-        {
-            var options = new MemoryCacheEntryOptions();
-            var expiresUtc = ticket.Properties.ExpiresUtc;
-            if (expiresUtc.HasValue)
-            {
-                options.SetAbsoluteExpiration(expiresUtc.Value);
-            }
-            else
-            {
-                options.SetSlidingExpiration(TimeSpan.FromMinutes(15));
-            }
+        return Task.FromResult(0);
+    }
 
-            _cache.Set(key, ticket, options);
+    public Task<AuthenticationTicket> RetrieveAsync(string key)
+    {
+        _cache.TryGetValue(key, out AuthenticationTicket ticket);
+        return Task.FromResult(ticket);
+    }
 
-            return Task.FromResult(0);
-        }
-
-        public Task<AuthenticationTicket> RetrieveAsync(string key)
-        {
-            _cache.TryGetValue(key, out AuthenticationTicket ticket);
-            return Task.FromResult(ticket);
-        }
-
-        public Task RemoveAsync(string key)
-        {
-            _cache.Remove(key);
-            return Task.FromResult(0);
-        }
+    public Task RemoveAsync(string key)
+    {
+        _cache.Remove(key);
+        return Task.FromResult(0);
     }
 }

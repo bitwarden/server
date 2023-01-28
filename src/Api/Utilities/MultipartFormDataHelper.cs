@@ -1,88 +1,43 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using System.Text.Json;
+using Bit.Api.Models.Request;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Net.Http.Headers;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Bit.Core.Models.Api;
-using Newtonsoft.Json;
+using Microsoft.Net.Http.Headers;
 
-namespace Bit.Api.Utilities
+namespace Bit.Api.Utilities;
+
+public static class MultipartFormDataHelper
 {
-    public static class MultipartFormDataHelper
+    private static readonly FormOptions _defaultFormOptions = new FormOptions();
+
+    public static async Task GetFileAsync(this HttpRequest request, Func<Stream, string, string, Task> callback)
     {
-        private static readonly FormOptions _defaultFormOptions = new FormOptions();
+        var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
+            _defaultFormOptions.MultipartBoundaryLengthLimit);
+        var reader = new MultipartReader(boundary, request.Body);
 
-        public static async Task GetFileAsync(this HttpRequest request, Func<Stream, string, string, Task> callback)
+        var firstSection = await reader.ReadNextSectionAsync();
+        if (firstSection != null)
         {
-            var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
-                _defaultFormOptions.MultipartBoundaryLengthLimit);
-            var reader = new MultipartReader(boundary, request.Body);
-
-            var firstSection = await reader.ReadNextSectionAsync();
-            if (firstSection != null)
+            if (ContentDispositionHeaderValue.TryParse(firstSection.ContentDisposition, out var firstContent))
             {
-                if (ContentDispositionHeaderValue.TryParse(firstSection.ContentDisposition, out var firstContent))
+                if (HasFileContentDisposition(firstContent))
                 {
-                    if (HasFileContentDisposition(firstContent))
+                    // Old style with just data
+                    var fileName = HeaderUtilities.RemoveQuotes(firstContent.FileName).ToString();
+                    using (firstSection.Body)
                     {
-                        // Old style with just data
-                        var fileName = HeaderUtilities.RemoveQuotes(firstContent.FileName).ToString();
-                        using (firstSection.Body)
-                        {
-                            await callback(firstSection.Body, fileName, null);
-                        }
-                    }
-                    else if (HasDispositionName(firstContent, "key"))
-                    {
-                        // New style with key, then data
-                        string key = null;
-                        using (var sr = new StreamReader(firstSection.Body))
-                        {
-                            key = await sr.ReadToEndAsync();
-                        }
-
-                        var secondSection = await reader.ReadNextSectionAsync();
-                        if (secondSection != null)
-                        {
-                            if (ContentDispositionHeaderValue.TryParse(secondSection.ContentDisposition,
-                                out var secondContent) && HasFileContentDisposition(secondContent))
-                            {
-                                var fileName = HeaderUtilities.RemoveQuotes(secondContent.FileName).ToString();
-                                using (secondSection.Body)
-                                {
-                                    await callback(secondSection.Body, fileName, key);
-                                }
-                            }
-
-                            secondSection = null;
-                        }
+                        await callback(firstSection.Body, fileName, null);
                     }
                 }
-
-                firstSection = null;
-            }
-        }
-
-        public static async Task GetSendFileAsync(this HttpRequest request, Func<Stream, string,
-            SendRequestModel, Task> callback)
-        {
-            var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
-                _defaultFormOptions.MultipartBoundaryLengthLimit);
-            var reader = new MultipartReader(boundary, request.Body);
-
-            var firstSection = await reader.ReadNextSectionAsync();
-            if (firstSection != null)
-            {
-                if (ContentDispositionHeaderValue.TryParse(firstSection.ContentDisposition, out _))
+                else if (HasDispositionName(firstContent, "key"))
                 {
-                    // Request model json, then data
-                    string requestModelJson = null;
+                    // New style with key, then data
+                    string key = null;
                     using (var sr = new StreamReader(firstSection.Body))
                     {
-                        requestModelJson = await sr.ReadToEndAsync();
+                        key = await sr.ReadToEndAsync();
                     }
 
                     var secondSection = await reader.ReadNextSectionAsync();
@@ -94,69 +49,102 @@ namespace Bit.Api.Utilities
                             var fileName = HeaderUtilities.RemoveQuotes(secondContent.FileName).ToString();
                             using (secondSection.Body)
                             {
-                                var model = JsonConvert.DeserializeObject<SendRequestModel>(requestModelJson);
-                                await callback(secondSection.Body, fileName, model);
+                                await callback(secondSection.Body, fileName, key);
                             }
                         }
 
                         secondSection = null;
                     }
-
                 }
-
-                firstSection = null;
             }
+
+            firstSection = null;
         }
+    }
 
-        public static async Task GetFileAsync(this HttpRequest request, Func<Stream, Task> callback)
+    public static async Task GetSendFileAsync(this HttpRequest request, Func<Stream, string,
+        SendRequestModel, Task> callback)
+    {
+        var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
+            _defaultFormOptions.MultipartBoundaryLengthLimit);
+        var reader = new MultipartReader(boundary, request.Body);
+
+        var firstSection = await reader.ReadNextSectionAsync();
+        if (firstSection != null)
         {
-            var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
-                _defaultFormOptions.MultipartBoundaryLengthLimit);
-            var reader = new MultipartReader(boundary, request.Body);
-
-            var dataSection = await reader.ReadNextSectionAsync();
-            if (dataSection != null)
+            if (ContentDispositionHeaderValue.TryParse(firstSection.ContentDisposition, out _))
             {
-                if (ContentDispositionHeaderValue.TryParse(dataSection.ContentDisposition, out var dataContent)
-                    && HasFileContentDisposition(dataContent))
+                var secondSection = await reader.ReadNextSectionAsync();
+                if (secondSection != null)
                 {
-                    using (dataSection.Body)
+                    if (ContentDispositionHeaderValue.TryParse(secondSection.ContentDisposition,
+                        out var secondContent) && HasFileContentDisposition(secondContent))
                     {
-                        await callback(dataSection.Body);
+                        var fileName = HeaderUtilities.RemoveQuotes(secondContent.FileName).ToString();
+                        using (secondSection.Body)
+                        {
+                            var model = await JsonSerializer.DeserializeAsync<SendRequestModel>(firstSection.Body);
+                            await callback(secondSection.Body, fileName, model);
+                        }
                     }
+
+                    secondSection = null;
                 }
-                dataSection = null;
+
             }
+
+            firstSection = null;
         }
+    }
 
+    public static async Task GetFileAsync(this HttpRequest request, Func<Stream, Task> callback)
+    {
+        var boundary = GetBoundary(MediaTypeHeaderValue.Parse(request.ContentType),
+            _defaultFormOptions.MultipartBoundaryLengthLimit);
+        var reader = new MultipartReader(boundary, request.Body);
 
-        private static string GetBoundary(MediaTypeHeaderValue contentType, int lengthLimit)
+        var dataSection = await reader.ReadNextSectionAsync();
+        if (dataSection != null)
         {
-            var boundary = HeaderUtilities.RemoveQuotes(contentType.Boundary);
-            if (StringSegment.IsNullOrEmpty(boundary))
+            if (ContentDispositionHeaderValue.TryParse(dataSection.ContentDisposition, out var dataContent)
+                && HasFileContentDisposition(dataContent))
             {
-                throw new InvalidDataException("Missing content-type boundary.");
+                using (dataSection.Body)
+                {
+                    await callback(dataSection.Body);
+                }
             }
-
-            if (boundary.Length > lengthLimit)
-            {
-                throw new InvalidDataException($"Multipart boundary length limit {lengthLimit} exceeded.");
-            }
-
-            return boundary.ToString();
+            dataSection = null;
         }
+    }
 
-        private static bool HasFileContentDisposition(ContentDispositionHeaderValue content)
+
+    private static string GetBoundary(MediaTypeHeaderValue contentType, int lengthLimit)
+    {
+        var boundary = HeaderUtilities.RemoveQuotes(contentType.Boundary);
+        if (StringSegment.IsNullOrEmpty(boundary))
         {
-            // Content-Disposition: form-data; name="data"; filename="Misc 002.jpg"
-            return content != null && content.DispositionType.Equals("form-data") &&
-                (!StringSegment.IsNullOrEmpty(content.FileName) || !StringSegment.IsNullOrEmpty(content.FileNameStar));
+            throw new InvalidDataException("Missing content-type boundary.");
         }
 
-        private static bool HasDispositionName(ContentDispositionHeaderValue content, string name)
+        if (boundary.Length > lengthLimit)
         {
-            // Content-Disposition: form-data; name="key";
-            return content != null && content.DispositionType.Equals("form-data") && content.Name == name;
+            throw new InvalidDataException($"Multipart boundary length limit {lengthLimit} exceeded.");
         }
+
+        return boundary.ToString();
+    }
+
+    private static bool HasFileContentDisposition(ContentDispositionHeaderValue content)
+    {
+        // Content-Disposition: form-data; name="data"; filename="Misc 002.jpg"
+        return content != null && content.DispositionType.Equals("form-data") &&
+            (!StringSegment.IsNullOrEmpty(content.FileName) || !StringSegment.IsNullOrEmpty(content.FileNameStar));
+    }
+
+    private static bool HasDispositionName(ContentDispositionHeaderValue content, string name)
+    {
+        // Content-Disposition: form-data; name="key";
+        return content != null && content.DispositionType.Equals("form-data") && content.Name == name;
     }
 }

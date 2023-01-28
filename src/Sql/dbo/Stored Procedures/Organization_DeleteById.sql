@@ -57,6 +57,36 @@ BEGIN
     WHERE
         [OrganizationId] = @Id
 
+    EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+
+    DELETE
+    FROM
+        [dbo].[Project]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[Secret]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE AK
+    FROM
+        [dbo].[ApiKey] AK
+    INNER JOIN
+        [dbo].[ServiceAccount] SA ON [AK].[ServiceAccountId] = [SA].[Id]
+    WHERE
+        [SA].[OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[ServiceAccount]
+    WHERE
+        [OrganizationId] = @Id
+
     DELETE
     FROM
         [dbo].[Organization]

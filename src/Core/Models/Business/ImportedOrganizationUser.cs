@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.Models.Business
+﻿namespace Bit.Core.Models.Business;
+
+public class ImportedOrganizationUser
 {
-    public class ImportedOrganizationUser
-    {
-        public string Email { get; set; }
-        public string ExternalId { get; set; }
-    }
+    public string Email { get; set; }
+    public string ExternalId { get; set; }
 }

@@ -5,9 +5,11 @@ SELECT
     OU.[OrganizationId],
     O.[Name],
     O.[Enabled],
+    O.[PlanType],
     O.[UsePolicies],
     O.[UseSso],
     O.[UseKeyConnector],
+    O.[UseScim],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],
@@ -17,6 +19,8 @@ SELECT
     O.[UseResetPassword],
     O.[SelfHost],
     O.[UsersGetPremium],
+    O.[UseCustomPermissions],
+    O.[UseSecretsManager],
     O.[Seats],
     O.[MaxCollections],
     O.[MaxStorageGb],
@@ -31,10 +35,14 @@ SELECT
     OU.[Permissions],
     PO.[ProviderId],
     P.[Name] ProviderName,
-    SS.[Data] SsoConfig
+    SS.[Data] SsoConfig,
+    OS.[FriendlyName] FamilySponsorshipFriendlyName,
+    OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
+    OS.[ToDelete] FamilySponsorshipToDelete,
+    OS.[ValidUntil] FamilySponsorshipValidUntil
 FROM
     [dbo].[OrganizationUser] OU
-INNER JOIN
+LEFT JOIN
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
@@ -44,3 +52,5 @@ LEFT JOIN
     [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
 LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
+LEFT JOIN
+    [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]

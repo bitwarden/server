@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail;
+
+public class AddedCreditViewModel : BaseMailModel
 {
-    public class AddedCreditViewModel : BaseMailModel
-    {
-        public decimal Amount { get; set; }
-    }
+    public decimal Amount { get; set; }
 }

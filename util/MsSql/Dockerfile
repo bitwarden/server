@@ -1,6 +1,8 @@
-FROM mcr.microsoft.com/mssql/server:2017-CU18-ubuntu-16.04
+FROM mcr.microsoft.com/mssql/server:2019-CU17-ubuntu-20.04
 
 LABEL com.bitwarden.product="bitwarden"
+
+USER root:root
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

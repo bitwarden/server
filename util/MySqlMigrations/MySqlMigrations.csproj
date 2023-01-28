@@ -1,28 +1,33 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
     <UserSecretsId>9f1cd3e0-70f2-4921-8068-b2538fd7c3f7</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
-    <ProjectReference Include="..\..\src\Api\Api.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.9">
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.4">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Scripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
-    <None Remove="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
+    <Compile Include="..\EfShared\MigrationBuilderExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="HelperScripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
+    <None Remove="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Scripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
-    <EmbeddedResource Include="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
+    <EmbeddedResource Include="HelperScripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
+    <EmbeddedResource Include="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
+    <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.sql" />
+    <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.sql" />
   </ItemGroup>
 </Project>

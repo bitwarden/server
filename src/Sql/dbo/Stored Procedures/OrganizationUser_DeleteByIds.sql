@@ -61,6 +61,7 @@ BEGIN
         COMMIT TRANSACTION GoupUser_DeleteMany_GroupUsers
     END
 
+    EXEC [dbo].[OrganizationSponsorship_OrganizationUsersDeleted] @Ids
     
     SET @BatchSize = 100;
 

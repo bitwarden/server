@@ -32,16 +32,18 @@
     [ReferenceData]                 NVARCHAR (MAX)   NULL,
     [Enabled]                       BIT              NOT NULL,
     [LicenseKey]                    VARCHAR (100)    NULL,
-    [ApiKey]                        VARCHAR (30)     NOT NULL,
     [PublicKey]                     VARCHAR (MAX)    NULL,
     [PrivateKey]                    VARCHAR (MAX)    NULL,
     [TwoFactorProviders]            NVARCHAR (MAX)   NULL,
     [ExpirationDate]                DATETIME2 (7)    NULL,
     [CreationDate]                  DATETIME2 (7)    NOT NULL,
-    [RevisionDate]                  DATETIME2 (7)   NOT NULL,
-    [OwnersNotifiedOfAutoscaling]   DATETIME2(7)    NULL,
-    [MaxAutoscaleSeats]             INT             NULL,
-    [UseKeyConnector]               BIT             NOT NULL,
+    [RevisionDate]                  DATETIME2 (7)    NOT NULL,
+    [OwnersNotifiedOfAutoscaling]   DATETIME2(7)     NULL,
+    [MaxAutoscaleSeats]             INT              NULL,
+    [UseKeyConnector]               BIT              NOT NULL,
+    [UseScim]                       BIT              NOT NULL CONSTRAINT [DF_Organization_UseScim] DEFAULT (0),
+    [UseCustomPermissions]          BIT              NOT NULL CONSTRAINT [DF_Organization_UseCustomPermissions] DEFAULT (0),
+    [UseSecretsManager]             BIT              NOT NULL CONSTRAINT [DF_Organization_UseSecretsManager] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
@@ -55,4 +57,3 @@ GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_Organization_Identifier]
     ON [dbo].[Organization]([Identifier] ASC)
     WHERE [Identifier] IS NOT NULL;
-

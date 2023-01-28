@@ -2,7 +2,7 @@
 
 const gulp = require('gulp');
 const merge = require('merge-stream');
-const sass = require('gulp-sass');
+const sass = require('gulp-sass')(require("sass"));
 const del = require('del');
 
 const paths = {};
@@ -50,6 +50,10 @@ function lib() {
             src: paths.npmDir + 'toastr/build/*',
             dest: paths.libDir + 'toastr'
         },
+        {
+            src: paths.sassDir + 'webfonts/*',
+            dest: paths.cssDir + 'webfonts'
+        }
     ];
 
     const tasks = libs.map((lib) => {

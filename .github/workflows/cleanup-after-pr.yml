@@ -1,0 +1,66 @@
+---
+name: Clean After PR
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  build-docker:
+    name: Remove feature branch docker images
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
+
+      ########## ACR ##########
+      - name: Login to Azure - QA Subscription
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+
+      - name: Login to Azure ACR
+        run: az acr login -n bitwardenqa
+
+      ########## Remove Docker images ##########
+      - name: Remove the docker image from ACR
+        env:
+          REGISTRY_NAME: bitwardenqa
+          SERVICES: |
+            services:
+              - Admin
+              - Api
+              - Attachments
+              - Events
+              - EventsProcessor
+              - Icons
+              - Identity
+              - K8S-Proxy
+              - MsSql
+              - Nginx
+              - Notifications
+              - Server
+              - Setup
+              - Sso
+        run: |
+          for SERVICE in $(echo "${{ env.SERVICES }}" | yq e ".services[]" - )
+          do
+            SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
+            IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+
+            echo "[*] Checking if remote exists: $REGISTRY_NAME.azurecr.io/$SERVICE_NAME:$IMAGE_TAG"
+            TAG_EXISTS=$(
+              az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
+              | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
+            )
+
+            if [[ "$TAG_EXISTS" == "true" ]]; then
+              echo "[*] Tag exists. Removing tag"
+              az acr repository delete --name $REGISTRY_NAME --image $SERVICE_NAME:$IMAGE_TAG --yes
+            else
+              echo "[*] Tag does not exist. No action needed"
+            fi
+          done
+
+      - name: Log out of Docker
+        run: docker logout

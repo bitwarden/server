@@ -1,10 +1,9 @@
-﻿using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
 
-namespace Bit.Admin.Models
+namespace Bit.Admin.Models;
+
+public class UsersModel : PagedModel<User>
 {
-    public class UsersModel : PagedModel<User>
-    {
-        public string Email { get; set; }
-        public string Action { get; set; }
-    }
+    public string Email { get; set; }
+    public string Action { get; set; }
 }

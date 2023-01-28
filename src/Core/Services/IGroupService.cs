@@ -1,15 +1,14 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Table;
-using System.Collections.Generic;
-using Bit.Core.Models.Data;
-using System;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 
-namespace Bit.Core.Services
+namespace Bit.Core.Services;
+
+public interface IGroupService
 {
-    public interface IGroupService
-    {
-        Task SaveAsync(Group group, IEnumerable<SelectionReadOnly> collections = null);
-        Task DeleteAsync(Group group);
-        Task DeleteUserAsync(Group group, Guid organizationUserId);
-    }
+    [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
+    Task DeleteAsync(Group group);
+    [Obsolete("IDeleteGroupCommand should be used instead. To be removed by EC-608.")]
+    Task DeleteAsync(Group group, EventSystemUser systemUser);
+    Task DeleteUserAsync(Group group, Guid organizationUserId);
+    Task DeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser systemUser);
 }

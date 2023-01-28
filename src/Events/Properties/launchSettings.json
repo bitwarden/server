@@ -22,6 +22,15 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "applicationUrl": "http://localhost:46273/"
+    },
+    "Events-SelfHost": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "developSelfHosted": "true"
+      },
+      "applicationUrl": "http://localhost:46274/"
     }
   }
 }

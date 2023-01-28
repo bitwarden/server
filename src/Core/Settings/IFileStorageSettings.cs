@@ -1,9 +1,8 @@
-namespace Bit.Core.Settings
+﻿namespace Bit.Core.Settings;
+
+public interface IFileStorageSettings
 {
-    public interface IFileStorageSettings
-    {
-        string ConnectionString { get; set; }
-        string BaseDirectory { get; set; }
-        string BaseUrl { get; set; }
-    }
+    string ConnectionString { get; set; }
+    string BaseDirectory { get; set; }
+    string BaseUrl { get; set; }
 }

@@ -1,30 +1,31 @@
-using System;
-using Bit.Core.Services;
+﻿using Bit.Core.Services;
 using Bit.Core.Settings;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services
+namespace Bit.Core.Test.Services;
+
+public class AzureAttachmentStorageServiceTests
 {
-    public class AzureAttachmentStorageServiceTests
+    private readonly AzureAttachmentStorageService _sut;
+
+    private readonly GlobalSettings _globalSettings;
+    private readonly ILogger<AzureAttachmentStorageService> _logger;
+
+    public AzureAttachmentStorageServiceTests()
     {
-        private readonly AzureAttachmentStorageService _sut;
+        _globalSettings = new GlobalSettings();
+        _logger = Substitute.For<ILogger<AzureAttachmentStorageService>>();
 
-        private readonly GlobalSettings _globalSettings;
+        _sut = new AzureAttachmentStorageService(_globalSettings, _logger);
+    }
 
-        public AzureAttachmentStorageServiceTests()
-        {
-            _globalSettings = new GlobalSettings();
-
-            _sut = new AzureAttachmentStorageService(_globalSettings);
-        }
-
-        // Remove this test when we add actual tests. It only proves that
-        // we've properly constructed the system under test.
-        [Fact(Skip = "Needs additional work")]
-        public void ServiceExists()
-        {
-            Assert.NotNull(_sut);
-        }
+    // Remove this test when we add actual tests. It only proves that
+    // we've properly constructed the system under test.
+    [Fact(Skip = "Needs additional work")]
+    public void ServiceExists()
+    {
+        Assert.NotNull(_sut);
     }
 }

@@ -3,9 +3,9 @@
 AS
 BEGIN
     SET NOCOUNT ON
-    
+
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationUserId] @Id
-    
+
     DECLARE @OrganizationId UNIQUEIDENTIFIER
     DECLARE @UserId UNIQUEIDENTIFIER
 
@@ -33,6 +33,14 @@ BEGIN
         [dbo].[GroupUser]
     WHERE
         [OrganizationUserId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[AccessPolicy]
+    WHERE
+        [OrganizationUserId] = @Id
+
+    EXEC [dbo].[OrganizationSponsorship_OrganizationUserDeleted] @Id
 
     DELETE
     FROM

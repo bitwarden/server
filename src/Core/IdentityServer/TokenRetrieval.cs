@@ -1,32 +1,29 @@
 ﻿using Microsoft.AspNetCore.Http;
-using System;
-using System.Linq;
 
-namespace Bit.Core.IdentityServer
+namespace Bit.Core.IdentityServer;
+
+public static class TokenRetrieval
 {
-    public static class TokenRetrieval
+    private static string _headerScheme = "Bearer ";
+    private static string _queuryScheme = "access_token";
+    private static string _authHeader = "Authorization";
+
+    public static Func<HttpRequest, string> FromAuthorizationHeaderOrQueryString()
     {
-        private static string _headerScheme = "Bearer ";
-        private static string _queuryScheme = "access_token";
-        private static string _authHeader = "Authorization";
-
-        public static Func<HttpRequest, string> FromAuthorizationHeaderOrQueryString()
+        return (request) =>
         {
-            return (request) =>
+            var authorization = request.Headers[_authHeader].FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(authorization))
             {
-                var authorization = request.Headers[_authHeader].FirstOrDefault();
-                if (string.IsNullOrWhiteSpace(authorization))
-                {
-                    return request.Query[_queuryScheme].FirstOrDefault();
-                }
+                return request.Query[_queuryScheme].FirstOrDefault();
+            }
 
-                if (authorization.StartsWith(_headerScheme, StringComparison.OrdinalIgnoreCase))
-                {
-                    return authorization.Substring(_headerScheme.Length).Trim();
-                }
+            if (authorization.StartsWith(_headerScheme, StringComparison.OrdinalIgnoreCase))
+            {
+                return authorization.Substring(_headerScheme.Length).Trim();
+            }
 
-                return null;
-            };
-        }
+            return null;
+        };
     }
 }

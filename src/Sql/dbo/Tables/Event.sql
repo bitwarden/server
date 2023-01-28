@@ -3,6 +3,7 @@
     [Type]                   INT              NOT NULL,
     [UserId]                 UNIQUEIDENTIFIER NULL,
     [OrganizationId]         UNIQUEIDENTIFIER NULL,
+    [InstallationId]         UNIQUEIDENTIFIER NULL,
     [CipherId]               UNIQUEIDENTIFIER NULL,
     [CollectionId]           UNIQUEIDENTIFIER NULL,
     [PolicyId]               UNIQUEIDENTIFIER NULL,
@@ -15,6 +16,7 @@
     [ProviderId]             UNIQUEIDENTIFIER NULL,
     [ProviderUserId]         UNIQUEIDENTIFIER NULL,
     [ProviderOrganizationId] UNIQUEIDENTIFIER NULL,
+    [SystemUser]             TINYINT          NULL,
     CONSTRAINT [PK_Event] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

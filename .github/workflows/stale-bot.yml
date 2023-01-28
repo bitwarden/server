@@ -1,0 +1,30 @@
+---
+name: 'Close stale issues and PRs'
+on:
+  workflow_dispatch:
+  schedule:   # Run once a day at 5.23am (arbitrary but should avoid peak loads on the hour)
+    - cron: '23 5 * * *'
+
+jobs:
+  stale:
+    name: 'Check for stale issues and PRs'
+    runs-on: ubuntu-20.04
+    steps:
+      - name: 'Run stale action'
+        uses: actions/stale@3cc123766321e9f15a6676375c154ccffb12a358  # v5.0.0
+        with:
+          stale-issue-label: 'needs-reply'
+          stale-pr-label: 'needs-changes'
+          days-before-stale: -1   # Do not apply the stale labels automatically, this is a manual process
+          days-before-issue-close: 14   # Close issue if no further activity after X days
+          days-before-pr-close: 21   # Close PR if no further activity after X days
+          close-issue-message: |
+            We need more information before we can help you with your problem. As we haven’t heard from you recently, this issue will be closed.
+
+            If this happens again or continues to be an problem, please respond to this issue with the information we’ve requested and anything else relevant.
+          close-pr-message: |
+            We can’t merge your pull request until you make the changes we’ve requested. As we haven’t heard from you recently, this pull request will be closed.
+
+            If you’re still working on this, please respond here after you’ve made the changes we’ve requested and our team will re-open it for further review.
+
+            Please make sure to resolve any conflicts with the master branch before requesting another review.

@@ -1,29 +1,26 @@
-﻿using System;
+﻿namespace Bit.Core.Models.Mail;
 
-namespace Bit.Core.Models.Mail
+public class BaseMailModel
 {
-    public class BaseMailModel
+    public string SiteName { get; set; }
+    public string WebVaultUrl { get; set; }
+    public string WebVaultUrlHostname
     {
-        public string SiteName { get; set; }
-        public string WebVaultUrl { get; set; }
-        public string WebVaultUrlHostname
+        get
         {
-            get
+            if (Uri.TryCreate(WebVaultUrl, UriKind.Absolute, out Uri uri))
             {
-                if (Uri.TryCreate(WebVaultUrl, UriKind.Absolute, out Uri uri))
-                {
-                    return uri.Host;
-                }
+                return uri.Host;
+            }
 
-                return WebVaultUrl;
-            }
+            return WebVaultUrl;
         }
-        public string CurrentYear
+    }
+    public string CurrentYear
+    {
+        get
         {
-            get
-            {
-                return DateTime.UtcNow.Year.ToString();
-            }
+            return DateTime.UtcNow.Year.ToString();
         }
     }
 }

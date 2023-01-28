@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Bit.Core.Models.Mail;
+﻿using Bit.Core.Models.Mail;
 
-namespace Bit.Core.Services
+namespace Bit.Core.Services;
+
+public interface IMailEnqueuingService
 {
-    public interface IMailEnqueuingService
-    {
-        Task EnqueueAsync(IMailQueueMessage message, Func<IMailQueueMessage, Task> fallback);
-        Task EnqueueManyAsync(IEnumerable<IMailQueueMessage> messages, Func<IMailQueueMessage, Task> fallback);
-    }
+    Task EnqueueAsync(IMailQueueMessage message, Func<IMailQueueMessage, Task> fallback);
+    Task EnqueueManyAsync(IEnumerable<IMailQueueMessage> messages, Func<IMailQueueMessage, Task> fallback);
 }

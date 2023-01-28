@@ -5,7 +5,7 @@
     [Email]                         NVARCHAR (256)      NULL,
     [Key]                           VARCHAR (MAX)       NULL,
     [ResetPasswordKey]              VARCHAR (MAX)       NULL,
-    [Status]                        TINYINT             NOT NULL,
+    [Status]                        SMALLINT            NOT NULL,
     [Type]                          TINYINT             NOT NULL,
     [AccessAll]                     BIT                 NOT NULL,
     [ExternalId]                    NVARCHAR (300)      NULL,

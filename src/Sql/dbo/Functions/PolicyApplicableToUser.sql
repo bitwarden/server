@@ -2,7 +2,7 @@ CREATE FUNCTION [dbo].[PolicyApplicableToUser]
 (
     @UserId UNIQUEIDENTIFIER,
     @PolicyType TINYINT,
-    @MinimumStatus TINYINT
+    @MinimumStatus SMALLINT
 )
 RETURNS TABLE
 AS RETURN
@@ -25,11 +25,11 @@ LEFT JOIN
 WHERE
     (
         (
-            OU.[Status] > 0
+            OU.[Status] != 0     -- OrgUsers who have accepted their invite and are linked to a UserId
             AND OU.[UserId] = @UserId 
         )
         OR (
-            OU.[Status] = 0 -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
+            OU.[Status] = 0     -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
             AND OU.[Email] IN (SELECT U.Email FROM [dbo].[UserView] U WHERE U.Id = @UserId)
         )
     )

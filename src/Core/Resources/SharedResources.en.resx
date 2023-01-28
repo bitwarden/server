@@ -434,10 +434,10 @@
     <value>Error</value>
   </data>
   <data name="SsoError" xml:space="preserve">
-    <value>There was an unexpected error during single sign-on. Please close this page and try again.</value>
+    <value>There was an unexpected error during single sign-on.</value>
   </data>
   <data name="SsoErrorWithRedirect" xml:space="preserve">
-    <value>There was an unexpected error during single sign-on. Please go back to &lt;a href="{0}"&gt;{0}&lt;/a&gt; or close this page and try again.</value>
+    <value>There was an unexpected error during single sign-on. Please go back to &lt;a href="{0}"&gt;{0}&lt;/a&gt;.</value>
   </data>
   <data name="RequestId" xml:space="preserve">
     <value>Request ID</value>
@@ -533,7 +533,10 @@
     <value>User, '{0}', has already been invited to this organization, '{1}'. Accept the invite in order to log in with SSO.</value>
   </data>
   <data name="UserAlreadyExistsInviteProcess" xml:space="preserve">
-    <value>In order to join this organization, contact an admin to send you an invite and follow the instructions within to accept.</value>
+    <value>You were removed from the organization managing single sign-on for your account. Contact the organization administrator for help regaining access to your account.</value>
+  </data>
+  <data name="UserAlreadyExistsKeyConnector" xml:space="preserve">
+    <value>You were removed from the organization managing single sign-on for your account. Create a new account to continue using Bitwarden.</value>
   </data>
   <data name="RedirectGet" xml:space="preserve">
     <value>Redirect GET</value>
@@ -675,5 +678,11 @@
   </data>
   <data name="IdpSingleSignOnServiceUrlInvalid" xml:space="preserve">
     <value>Single sign on service URL contains illegal characters.</value>
+  </data>
+  <data name="SsoRedirectTokenValidationMissing" xml:space="preserve">
+    <value>Single sign on redirect token is missing from the request.</value>
+  </data>
+  <data name="InvalidSsoRedirectToken" xml:space="preserve">
+    <value>Single sign on redirect token is invalid or expired.</value>
   </data>
 </root>

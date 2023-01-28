@@ -1,83 +1,105 @@
+﻿using System.Text.Json;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
+using Bit.Api.Models.Request;
+using Bit.Api.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
-using Bit.Core.Models.Table;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using NSubstitute;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using System;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers
+namespace Bit.Api.Test.Controllers;
+
+public class SendsControllerTests : IDisposable
 {
-    public class SendsControllerTests : IDisposable
+    private readonly SendsController _sut;
+    private readonly GlobalSettings _globalSettings;
+    private readonly IUserService _userService;
+    private readonly ISendRepository _sendRepository;
+    private readonly ISendService _sendService;
+    private readonly ISendFileStorageService _sendFileStorageService;
+    private readonly ILogger<SendsController> _logger;
+    private readonly ICurrentContext _currentContext;
+
+    public SendsControllerTests()
     {
+        _userService = Substitute.For<IUserService>();
+        _sendRepository = Substitute.For<ISendRepository>();
+        _sendService = Substitute.For<ISendService>();
+        _sendFileStorageService = Substitute.For<ISendFileStorageService>();
+        _globalSettings = new GlobalSettings();
+        _logger = Substitute.For<ILogger<SendsController>>();
+        _currentContext = Substitute.For<ICurrentContext>();
 
-        private readonly SendsController _sut;
-        private readonly GlobalSettings _globalSettings;
-        private readonly IUserService _userService;
-        private readonly ISendRepository _sendRepository;
-        private readonly ISendService _sendService;
-        private readonly ISendFileStorageService _sendFileStorageService;
-        private readonly ILogger<SendsController> _logger;
-        private readonly ICurrentContext _currentContext;
+        _sut = new SendsController(
+            _sendRepository,
+            _userService,
+            _sendService,
+            _sendFileStorageService,
+            _logger,
+            _globalSettings,
+            _currentContext
+        );
+    }
 
-        public SendsControllerTests()
-        {
-            _userService = Substitute.For<IUserService>();
-            _sendRepository = Substitute.For<ISendRepository>();
-            _sendService = Substitute.For<ISendService>();
-            _sendFileStorageService = Substitute.For<ISendFileStorageService>();
-            _globalSettings = new GlobalSettings();
-            _logger = Substitute.For<ILogger<SendsController>>();
-            _currentContext = Substitute.For<ICurrentContext>();
+    public void Dispose()
+    {
+        _sut?.Dispose();
+    }
 
-            _sut = new SendsController(
-                _sendRepository,
-                _userService,
-                _sendService,
-                _sendFileStorageService,
-                _logger,
-                _globalSettings,
-                _currentContext
-            );
-        }
+    [Theory, AutoData]
+    public async Task SendsController_WhenSendHidesEmail_CreatorIdentifierShouldBeNull(
+        Guid id, Send send, User user)
+    {
+        var accessId = CoreHelpers.Base64UrlEncode(id.ToByteArray());
 
-        public void Dispose()
-        {
-            _sut?.Dispose();
-        }
+        send.Id = default;
+        send.Type = SendType.Text;
+        send.Data = JsonSerializer.Serialize(new Dictionary<string, string>());
+        send.HideEmail = true;
 
-        [Theory, AutoData]
-        public async Task SendsController_WhenSendHidesEmail_CreatorIdentifierShouldBeNull(
-            Guid id, Send send, User user)
-        {
-            var accessId = CoreHelpers.Base64UrlEncode(id.ToByteArray());
+        _sendService.AccessAsync(id, null).Returns((send, false, false));
+        _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
 
-            send.Id = default;
-            send.Type = SendType.Text;
-            send.Data = JsonConvert.SerializeObject(new Dictionary<string, string>());
-            send.HideEmail = true;
+        var request = new SendAccessRequestModel();
+        var actionResult = await _sut.Access(accessId, request);
+        var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
 
-            _sendService.AccessAsync(id, null).Returns((send, false, false));
-            _userService.GetUserByIdAsync(Arg.Any<Guid>()).Returns(user);
+        Assert.NotNull(response);
+        Assert.Null(response.CreatorIdentifier);
+    }
 
-            var request = new SendAccessRequestModel();
-            var actionResult = await _sut.Access(accessId, request);
-            var response = (actionResult as ObjectResult)?.Value as SendAccessResponseModel;
+    [Fact]
+    public async Task Post_DeletionDateIsMoreThan31DaysFromNow_ThrowsBadRequest()
+    {
+        var now = DateTime.UtcNow;
+        var expected = "You cannot have a Send with a deletion date that far " +
+                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
+                    "and try again.";
+        var request = new SendRequestModel() { DeletionDate = now.AddDays(32) };
 
-            Assert.NotNull(response);
-            Assert.Null(response.CreatorIdentifier);
-        }
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.Post(request));
+        Assert.Equal(expected, exception.Message);
+    }
+
+    [Fact]
+    public async Task PostFile_DeletionDateIsMoreThan31DaysFromNow_ThrowsBadRequest()
+    {
+        var now = DateTime.UtcNow;
+        var expected = "You cannot have a Send with a deletion date that far " +
+                    "into the future. Adjust the Deletion Date to a value less than 31 days from now " +
+                    "and try again.";
+        var request = new SendRequestModel() { Type = SendType.File, FileLength = 1024L, DeletionDate = now.AddDays(32) };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => _sut.PostFile(request));
+        Assert.Equal(expected, exception.Message);
     }
 }
-

@@ -1,77 +1,75 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Utilities.Duo;
 using Bit.Core.Models;
 using Bit.Core.Settings;
+using Bit.Core.Utilities.Duo;
 
-namespace Bit.Core.Identity
+namespace Bit.Core.Identity;
+
+public interface IOrganizationDuoWebTokenProvider : IOrganizationTwoFactorTokenProvider { }
+
+public class OrganizationDuoWebTokenProvider : IOrganizationDuoWebTokenProvider
 {
-    public interface IOrganizationDuoWebTokenProvider : IOrganizationTwoFactorTokenProvider { }
+    private readonly GlobalSettings _globalSettings;
 
-    public class OrganizationDuoWebTokenProvider : IOrganizationDuoWebTokenProvider
+    public OrganizationDuoWebTokenProvider(GlobalSettings globalSettings)
     {
-        private readonly GlobalSettings _globalSettings;
+        _globalSettings = globalSettings;
+    }
 
-        public OrganizationDuoWebTokenProvider(GlobalSettings globalSettings)
+    public Task<bool> CanGenerateTwoFactorTokenAsync(Organization organization)
+    {
+        if (organization == null || !organization.Enabled || !organization.Use2fa)
         {
-            _globalSettings = globalSettings;
+            return Task.FromResult(false);
         }
 
-        public Task<bool> CanGenerateTwoFactorTokenAsync(Organization organization)
-        {
-            if (organization == null || !organization.Enabled || !organization.Use2fa)
-            {
-                return Task.FromResult(false);
-            }
+        var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
+        var canGenerate = organization.TwoFactorProviderIsEnabled(TwoFactorProviderType.OrganizationDuo)
+            && HasProperMetaData(provider);
+        return Task.FromResult(canGenerate);
+    }
 
-            var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-            var canGenerate = organization.TwoFactorProviderIsEnabled(TwoFactorProviderType.OrganizationDuo)
-                && HasProperMetaData(provider);
-            return Task.FromResult(canGenerate);
+    public Task<string> GenerateAsync(Organization organization, User user)
+    {
+        if (organization == null || !organization.Enabled || !organization.Use2fa)
+        {
+            return Task.FromResult<string>(null);
         }
 
-        public Task<string> GenerateAsync(Organization organization, User user)
+        var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
+        if (!HasProperMetaData(provider))
         {
-            if (organization == null || !organization.Enabled || !organization.Use2fa)
-            {
-                return Task.FromResult<string>(null);
-            }
-
-            var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-            if (!HasProperMetaData(provider))
-            {
-                return Task.FromResult<string>(null);
-            }
-
-            var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"],
-                (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, user.Email);
-            return Task.FromResult(signatureRequest);
+            return Task.FromResult<string>(null);
         }
 
-        public Task<bool> ValidateAsync(string token, Organization organization, User user)
+        var signatureRequest = DuoWeb.SignRequest(provider.MetaData["IKey"].ToString(),
+            provider.MetaData["SKey"].ToString(), _globalSettings.Duo.AKey, user.Email);
+        return Task.FromResult(signatureRequest);
+    }
+
+    public Task<bool> ValidateAsync(string token, Organization organization, User user)
+    {
+        if (organization == null || !organization.Enabled || !organization.Use2fa)
         {
-            if (organization == null || !organization.Enabled || !organization.Use2fa)
-            {
-                return Task.FromResult(false);
-            }
-
-            var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
-            if (!HasProperMetaData(provider))
-            {
-                return Task.FromResult(false);
-            }
-
-            var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"],
-                (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, token);
-
-            return Task.FromResult(response == user.Email);
+            return Task.FromResult(false);
         }
 
-        private bool HasProperMetaData(TwoFactorProvider provider)
+        var provider = organization.GetTwoFactorProvider(TwoFactorProviderType.OrganizationDuo);
+        if (!HasProperMetaData(provider))
         {
-            return provider?.MetaData != null && provider.MetaData.ContainsKey("IKey") &&
-                provider.MetaData.ContainsKey("SKey") && provider.MetaData.ContainsKey("Host");
+            return Task.FromResult(false);
         }
+
+        var response = DuoWeb.VerifyResponse(provider.MetaData["IKey"].ToString(),
+            provider.MetaData["SKey"].ToString(), _globalSettings.Duo.AKey, token);
+
+        return Task.FromResult(response == user.Email);
+    }
+
+    private bool HasProperMetaData(TwoFactorProvider provider)
+    {
+        return provider?.MetaData != null && provider.MetaData.ContainsKey("IKey") &&
+            provider.MetaData.ContainsKey("SKey") && provider.MetaData.ContainsKey("Host");
     }
 }

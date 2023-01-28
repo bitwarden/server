@@ -4,14 +4,13 @@
     <UserSecretsId>bitwarden-Sso</UserSecretsId>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Sso' " />
   <ItemGroup>
-    <PackageReference Include="NewRelic.Agent" Version="8.41.0" />
-    <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.8.0" />
+    <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.9.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
+    <ProjectReference Include="..\..\..\src\SharedWeb\SharedWeb.csproj" />
   </ItemGroup>
 
 </Project>

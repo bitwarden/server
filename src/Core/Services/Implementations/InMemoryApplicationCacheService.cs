@@ -1,103 +1,99 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
-using Bit.Core.Models.Table.Provider;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.Services
+namespace Bit.Core.Services;
+
+public class InMemoryApplicationCacheService : IApplicationCacheService
 {
-    public class InMemoryApplicationCacheService : IApplicationCacheService
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IProviderRepository _providerRepository;
+    private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
+    private IDictionary<Guid, OrganizationAbility> _orgAbilities;
+    private TimeSpan _orgAbilitiesRefreshInterval = TimeSpan.FromMinutes(10);
+
+    private IDictionary<Guid, ProviderAbility> _providerAbilities;
+
+    public InMemoryApplicationCacheService(
+        IOrganizationRepository organizationRepository, IProviderRepository providerRepository)
     {
-        private readonly IOrganizationRepository _organizationRepository;
-        private readonly IProviderRepository _providerRepository;
-        private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
-        private IDictionary<Guid, OrganizationAbility> _orgAbilities;
-        private TimeSpan _orgAbilitiesRefreshInterval = TimeSpan.FromMinutes(10);
+        _organizationRepository = organizationRepository;
+        _providerRepository = providerRepository;
+    }
 
-        private IDictionary<Guid, ProviderAbility> _providerAbilities;
+    public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
+    {
+        await InitOrganizationAbilitiesAsync();
+        return _orgAbilities;
+    }
 
-        public InMemoryApplicationCacheService(
-            IOrganizationRepository organizationRepository, IProviderRepository providerRepository)
+    public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
+    {
+        await InitProviderAbilitiesAsync();
+        return _providerAbilities;
+    }
+
+    public virtual async Task UpsertProviderAbilityAsync(Provider provider)
+    {
+        await InitProviderAbilitiesAsync();
+        var newAbility = new ProviderAbility(provider);
+
+        if (_providerAbilities.ContainsKey(provider.Id))
         {
-            _organizationRepository = organizationRepository;
-            _providerRepository = providerRepository;
+            _providerAbilities[provider.Id] = newAbility;
+        }
+        else
+        {
+            _providerAbilities.Add(provider.Id, newAbility);
+        }
+    }
+
+    public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
+    {
+        await InitOrganizationAbilitiesAsync();
+        var newAbility = new OrganizationAbility(organization);
+
+        if (_orgAbilities.ContainsKey(organization.Id))
+        {
+            _orgAbilities[organization.Id] = newAbility;
+        }
+        else
+        {
+            _orgAbilities.Add(organization.Id, newAbility);
+        }
+    }
+
+    public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
+    {
+        if (_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
+        {
+            _orgAbilities.Remove(organizationId);
         }
 
-        public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
+        return Task.FromResult(0);
+    }
+
+    private async Task InitOrganizationAbilitiesAsync()
+    {
+        var now = DateTime.UtcNow;
+        if (_orgAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
         {
-            await InitOrganizationAbilitiesAsync();
-            return _orgAbilities;
+            var abilities = await _organizationRepository.GetManyAbilitiesAsync();
+            _orgAbilities = abilities.ToDictionary(a => a.Id);
+            _lastOrgAbilityRefresh = now;
         }
+    }
 
-        public virtual async Task<IDictionary<Guid, ProviderAbility>> GetProviderAbilitiesAsync()
+    private async Task InitProviderAbilitiesAsync()
+    {
+        var now = DateTime.UtcNow;
+        if (_providerAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
         {
-            await InitProviderAbilitiesAsync();
-            return _providerAbilities;
-        }
-        
-        public virtual async Task UpsertProviderAbilityAsync(Provider provider)
-        {
-            await InitProviderAbilitiesAsync();
-            var newAbility = new ProviderAbility(provider);
-
-            if (_providerAbilities.ContainsKey(provider.Id))
-            {
-                _providerAbilities[provider.Id] = newAbility;
-            }
-            else
-            {
-                _providerAbilities.Add(provider.Id, newAbility);
-            }
-        }
-
-        public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
-        {
-            await InitOrganizationAbilitiesAsync();
-            var newAbility = new OrganizationAbility(organization);
-
-            if (_orgAbilities.ContainsKey(organization.Id))
-            {
-                _orgAbilities[organization.Id] = newAbility;
-            }
-            else
-            {
-                _orgAbilities.Add(organization.Id, newAbility);
-            }
-        }
-
-        public virtual Task DeleteOrganizationAbilityAsync(Guid organizationId)
-        {
-            if (_orgAbilities != null && _orgAbilities.ContainsKey(organizationId))
-            {
-                _orgAbilities.Remove(organizationId);
-            }
-
-            return Task.FromResult(0);
-        }
-
-        private async Task InitOrganizationAbilitiesAsync()
-        {
-            var now = DateTime.UtcNow;
-            if (_orgAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
-            {
-                var abilities = await _organizationRepository.GetManyAbilitiesAsync();
-                _orgAbilities = abilities.ToDictionary(a => a.Id);
-                _lastOrgAbilityRefresh = now;
-            }
-        }
-        
-        private async Task InitProviderAbilitiesAsync()
-        {
-            var now = DateTime.UtcNow;
-            if (_providerAbilities == null || (now - _lastOrgAbilityRefresh) > _orgAbilitiesRefreshInterval)
-            {
-                var abilities = await _providerRepository.GetManyAbilitiesAsync();
-                _providerAbilities = abilities.ToDictionary(a => a.Id);
-                _lastOrgAbilityRefresh = now;
-            }
+            var abilities = await _providerRepository.GetManyAbilitiesAsync();
+            _providerAbilities = abilities.ToDictionary(a => a.Id);
+            _lastOrgAbilityRefresh = now;
         }
     }
 }

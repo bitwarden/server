@@ -1,19 +1,16 @@
-﻿using Bit.Core.Models.Api;
+﻿namespace Bit.Core.Models.Data;
 
-namespace Bit.Core.Models.Data
+public class SendTextData : SendData
 {
-    public class SendTextData : SendData
+    public SendTextData() { }
+
+    public SendTextData(string name, string notes, string text, bool hidden)
+        : base(name, notes)
     {
-        public SendTextData() { }
-
-        public SendTextData(SendRequestModel send)
-            : base(send)
-        {
-            Text = send.Text.Text;
-            Hidden = send.Text.Hidden;
-        }
-
-        public string Text { get; set; }
-        public bool Hidden { get; set; }
+        Text = text;
+        Hidden = hidden;
     }
+
+    public string Text { get; set; }
+    public bool Hidden { get; set; }
 }

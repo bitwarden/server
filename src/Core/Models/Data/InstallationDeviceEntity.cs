@@ -1,36 +1,34 @@
-﻿using System;
-using Microsoft.Azure.Cosmos.Table;
+﻿using Microsoft.Azure.Cosmos.Table;
 
-namespace Bit.Core.Models.Data
+namespace Bit.Core.Models.Data;
+
+public class InstallationDeviceEntity : TableEntity
 {
-    public class InstallationDeviceEntity : TableEntity
+    public InstallationDeviceEntity() { }
+
+    public InstallationDeviceEntity(Guid installationId, Guid deviceId)
     {
-        public InstallationDeviceEntity() { }
+        PartitionKey = installationId.ToString();
+        RowKey = deviceId.ToString();
+    }
 
-        public InstallationDeviceEntity(Guid installationId, Guid deviceId)
+    public InstallationDeviceEntity(string prefixedDeviceId)
+    {
+        var parts = prefixedDeviceId.Split("_");
+        if (parts.Length < 2)
         {
-            PartitionKey = installationId.ToString();
-            RowKey = deviceId.ToString();
+            throw new ArgumentException("Not enough parts.");
         }
+        if (!Guid.TryParse(parts[0], out var installationId) || !Guid.TryParse(parts[1], out var deviceId))
+        {
+            throw new ArgumentException("Could not parse parts.");
+        }
+        PartitionKey = parts[0];
+        RowKey = parts[1];
+    }
 
-        public InstallationDeviceEntity(string prefixedDeviceId)
-        {
-            var parts = prefixedDeviceId.Split("_");
-            if (parts.Length < 2)
-            {
-                throw new ArgumentException("Not enough parts.");
-            }
-            if (!Guid.TryParse(parts[0], out var installationId) || !Guid.TryParse(parts[1], out var deviceId))
-            {
-                throw new ArgumentException("Could not parse parts.");
-            }
-            PartitionKey = parts[0];
-            RowKey = parts[1];
-        }
-
-        public static bool IsInstallationDeviceId(string deviceId)
-        {
-            return deviceId != null && deviceId.Length == 73 && deviceId[36] == '_';
-        }
+    public static bool IsInstallationDeviceId(string deviceId)
+    {
+        return deviceId != null && deviceId.Length == 73 && deviceId[36] == '_';
     }
 }

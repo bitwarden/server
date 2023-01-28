@@ -1,137 +1,134 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
 using Microsoft.Azure.Cosmos.Table;
 
-namespace Bit.Core.Models.Data
+namespace Bit.Core.Models.Data;
+
+public class DictionaryEntity : TableEntity, IDictionary<string, EntityProperty>
 {
-    public class DictionaryEntity : TableEntity, IDictionary<string, EntityProperty>
+    private IDictionary<string, EntityProperty> _properties = new Dictionary<string, EntityProperty>();
+
+    public ICollection<EntityProperty> Values => _properties.Values;
+
+    public EntityProperty this[string key]
     {
-        private IDictionary<string, EntityProperty> _properties = new Dictionary<string, EntityProperty>();
+        get => _properties[key];
+        set => _properties[key] = value;
+    }
 
-        public ICollection<EntityProperty> Values => _properties.Values;
+    public int Count => _properties.Count;
 
-        public EntityProperty this[string key]
-        {
-            get => _properties[key];
-            set => _properties[key] = value;
-        }
+    public bool IsReadOnly => _properties.IsReadOnly;
 
-        public int Count => _properties.Count;
+    public ICollection<string> Keys => _properties.Keys;
 
-        public bool IsReadOnly => _properties.IsReadOnly;
+    public override void ReadEntity(IDictionary<string, EntityProperty> properties,
+        OperationContext operationContext)
+    {
+        _properties = properties;
+    }
 
-        public ICollection<string> Keys => _properties.Keys;
+    public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
+    {
+        return _properties;
+    }
 
-        public override void ReadEntity(IDictionary<string, EntityProperty> properties,
-            OperationContext operationContext)
-        {
-            _properties = properties;
-        }
+    public void Add(string key, EntityProperty value)
+    {
+        _properties.Add(key, value);
+    }
 
-        public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
-        {
-            return _properties;
-        }
+    public void Add(string key, bool value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, EntityProperty value)
-        {
-            _properties.Add(key, value);
-        }
+    public void Add(string key, byte[] value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, bool value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public void Add(string key, DateTime? value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, byte[] value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public void Add(string key, DateTimeOffset? value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, DateTime? value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public void Add(string key, double value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, DateTimeOffset? value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public void Add(string key, Guid value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, double value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public void Add(string key, int value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, Guid value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public void Add(string key, long value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, int value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public void Add(string key, string value)
+    {
+        _properties.Add(key, new EntityProperty(value));
+    }
 
-        public void Add(string key, long value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public void Add(KeyValuePair<string, EntityProperty> item)
+    {
+        _properties.Add(item);
+    }
 
-        public void Add(string key, string value)
-        {
-            _properties.Add(key, new EntityProperty(value));
-        }
+    public bool ContainsKey(string key)
+    {
+        return _properties.ContainsKey(key);
+    }
 
-        public void Add(KeyValuePair<string, EntityProperty> item)
-        {
-            _properties.Add(item);
-        }
+    public bool Remove(string key)
+    {
+        return _properties.Remove(key);
+    }
 
-        public bool ContainsKey(string key)
-        {
-            return _properties.ContainsKey(key);
-        }
+    public bool TryGetValue(string key, out EntityProperty value)
+    {
+        return _properties.TryGetValue(key, out value);
+    }
 
-        public bool Remove(string key)
-        {
-            return _properties.Remove(key);
-        }
+    public void Clear()
+    {
+        _properties.Clear();
+    }
 
-        public bool TryGetValue(string key, out EntityProperty value)
-        {
-            return _properties.TryGetValue(key, out value);
-        }
+    public bool Contains(KeyValuePair<string, EntityProperty> item)
+    {
+        return _properties.Contains(item);
+    }
 
-        public void Clear()
-        {
-            _properties.Clear();
-        }
+    public void CopyTo(KeyValuePair<string, EntityProperty>[] array, int arrayIndex)
+    {
+        _properties.CopyTo(array, arrayIndex);
+    }
 
-        public bool Contains(KeyValuePair<string, EntityProperty> item)
-        {
-            return _properties.Contains(item);
-        }
+    public bool Remove(KeyValuePair<string, EntityProperty> item)
+    {
+        return _properties.Remove(item);
+    }
 
-        public void CopyTo(KeyValuePair<string, EntityProperty>[] array, int arrayIndex)
-        {
-            _properties.CopyTo(array, arrayIndex);
-        }
+    public IEnumerator<KeyValuePair<string, EntityProperty>> GetEnumerator()
+    {
+        return _properties.GetEnumerator();
+    }
 
-        public bool Remove(KeyValuePair<string, EntityProperty> item)
-        {
-            return _properties.Remove(item);
-        }
-
-        public IEnumerator<KeyValuePair<string, EntityProperty>> GetEnumerator()
-        {
-            return _properties.GetEnumerator();
-        }
-
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return _properties.GetEnumerator();
-        }
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return _properties.GetEnumerator();
     }
 }

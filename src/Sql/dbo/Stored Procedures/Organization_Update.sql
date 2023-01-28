@@ -32,7 +32,6 @@
     @ReferenceData VARCHAR(MAX),
     @Enabled BIT,
     @LicenseKey VARCHAR(100),
-    @ApiKey VARCHAR(30),
     @PublicKey VARCHAR(MAX),
     @PrivateKey VARCHAR(MAX),
     @TwoFactorProviders NVARCHAR(MAX),
@@ -41,7 +40,10 @@
     @RevisionDate DATETIME2(7),
     @OwnersNotifiedOfAutoscaling DATETIME2(7),
     @MaxAutoscaleSeats INT,
-    @UseKeyConnector BIT = 0
+    @UseKeyConnector BIT = 0,
+    @UseScim BIT = 0,
+    @UseCustomPermissions BIT = 0,
+    @UseSecretsManager BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -81,7 +83,6 @@ BEGIN
         [ReferenceData] = @ReferenceData,
         [Enabled] = @Enabled,
         [LicenseKey] = @LicenseKey,
-        [ApiKey] = @ApiKey,
         [PublicKey] = @PublicKey,
         [PrivateKey] = @PrivateKey,
         [TwoFactorProviders] = @TwoFactorProviders,
@@ -90,7 +91,10 @@ BEGIN
         [RevisionDate] = @RevisionDate,
         [OwnersNotifiedOfAutoscaling] = @OwnersNotifiedOfAutoscaling,
         [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
-        [UseKeyConnector] = @UseKeyConnector
+        [UseKeyConnector] = @UseKeyConnector,
+        [UseScim] = @UseScim,
+        [UseCustomPermissions] = @UseCustomPermissions,
+        [UseSecretsManager] = @UseSecretsManager
     WHERE
         [Id] = @Id
 END

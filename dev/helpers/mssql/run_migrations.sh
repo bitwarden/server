@@ -6,70 +6,89 @@
 sleep 0.1;
 
 MIGRATE_DIRECTORY="/mnt/migrator/DbScripts"
-LAST_MIGRATION_FILE="/mnt/data/last_migration"
-SERVER='localhost'
+SERVER='mssql'
 DATABASE="vault_dev"
 USER="SA"
-PASSWD=$SA_PASSWORD
+PASSWD=$MSSQL_PASSWORD
 
-if [ ! -f "$LAST_MIGRATION_FILE" ]; then
-  echo "$LAST_MIGRATION_FILE not found!"
-  echo "This will run all migrations which might cause unexpected behaviour if the database is not empty."
-  echo
-  read -p "Run all Migrations? (y/N) " -n 1 -r
-  echo
-  if [[ ! $REPLY =~ ^[Yy]$ ]]
-  then
-      exit 1
-  fi
-  LAST_MIGRATION=""
-else
-  LAST_MIGRATION=$(cat $LAST_MIGRATION_FILE)
-fi
-
-[ -z "$LAST_MIGRATION" ]
-PERFORM_MIGRATION=$?
-
-while getopts "r" arg; do
+while getopts "sp" arg; do
   case $arg in
-    r)
-      RERUN=1
+    s)
+      echo "Running for self-host environment"
+      DATABASE="vault_dev_self_host"
       ;;
+    p)
+      echo "Running for pipeline"
+      MIGRATE_DIRECTORY=$MSSQL_MIGRATIONS_DIRECTORY
+      SERVER=$MSSQL_HOST
+      DATABASE=$MSSQL_DATABASE
+      USER=$MSSQL_USER
+      PASSWD=$MSSQL_PASS
   esac
 done
 
-if [ -n "$RERUN" ]; then
-  echo "Rerunning the last migration"
-fi
-
-# Create database if it does not already exist
-QUERY="IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'vault_dev')
+# Create databases if they do not already exist
+QUERY="IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = '$DATABASE')
 BEGIN
-  CREATE DATABASE vault_dev;
-END;"
+  CREATE DATABASE $DATABASE;
+END;
 
+GO
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'migrations_$DATABASE')
+BEGIN
+  CREATE DATABASE migrations_$DATABASE;
+END;
+
+GO
+"
 /opt/mssql-tools/bin/sqlcmd -S $SERVER -d master -U $USER -P $PASSWD -I -Q "$QUERY"
+echo "Return code: $?"
+
+# Create migrations table if it does not already exist
+QUERY="IF OBJECT_ID('[migrations_$DATABASE].[dbo].[migrations]') IS NULL
+BEGIN
+    CREATE TABLE [migrations_$DATABASE].[dbo].[migrations] (
+      [Id]                   INT IDENTITY(1,1) PRIMARY KEY,
+      [Filename]             NVARCHAR(MAX) NOT NULL,
+      [CreationDate]         DATETIME2 (7)    NULL,
+    );
+END;
+GO
+"
+/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$QUERY"
+echo "Return code: $?"
+
+should_migrate () {
+  local file=$(basename $1)
+  local query="SELECT * FROM [migrations] WHERE [Filename] = '$file'"
+  local result=$(/opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query")
+  if [[ "$result" =~ .*"$file".* ]]; then
+    return 1;
+  else
+    return 0;
+  fi
+}
+
+record_migration () {
+  echo "recording $1"
+  local file=$(basename $1)
+  echo $file
+  local query="INSERT INTO [migrations] ([Filename], [CreationDate]) VALUES ('$file', GETUTCDATE())"
+  /opt/mssql-tools/bin/sqlcmd -S $SERVER -d migrations_$DATABASE -U $USER -P $PASSWD -I -Q "$query"
+}
 
 migrate () {
   local file=$1
   echo "Performing $file"
   /opt/mssql-tools/bin/sqlcmd -S $SERVER -d $DATABASE -U $USER -P $PASSWD -I -i $file
-  echo $file > $LAST_MIGRATION_FILE
 }
 
 for f in `ls -v $MIGRATE_DIRECTORY/*.sql`; do
-  if (( PERFORM_MIGRATION == 0 )); then
+  BASENAME=$(basename $f)
+  if should_migrate $f == 1 ; then
     migrate $f
+    record_migration $f
   else
-    echo "Skipping $f"
-    if [ "$LAST_MIGRATION" == "$f" ]; then
-      PERFORM_MIGRATION=0
-
-      # Rerun last migration
-      if [ -n "$RERUN" ]; then
-        migrate $f
-        unset RERUN
-      fi
-    fi
+    echo "Skipping $f, $BASENAME"
   fi
 done;

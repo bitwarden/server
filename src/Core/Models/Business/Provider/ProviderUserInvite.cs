@@ -1,39 +1,35 @@
-using System;
-using System.Collections.Generic;
-using Bit.Core.Enums.Provider;
-using Bit.Core.Models.Api;
+﻿using Bit.Core.Enums.Provider;
 
-namespace Bit.Core.Models.Business.Provider
+namespace Bit.Core.Models.Business.Provider;
+
+public class ProviderUserInvite<T>
 {
-    public class ProviderUserInvite<T>
+    public IEnumerable<T> UserIdentifiers { get; set; }
+    public ProviderUserType Type { get; set; }
+    public Guid InvitingUserId { get; set; }
+    public Guid ProviderId { get; set; }
+}
+
+public static class ProviderUserInviteFactory
+{
+    public static ProviderUserInvite<string> CreateIntialInvite(IEnumerable<string> inviteeEmails, ProviderUserType type, Guid invitingUserId, Guid providerId)
     {
-        public IEnumerable<T> UserIdentifiers { get; set; }
-        public ProviderUserType Type { get; set; }
-        public Guid InvitingUserId { get; set; }
-        public Guid ProviderId { get; set; }
+        return new ProviderUserInvite<string>
+        {
+            UserIdentifiers = inviteeEmails,
+            Type = type,
+            InvitingUserId = invitingUserId,
+            ProviderId = providerId
+        };
     }
 
-    public static class ProviderUserInviteFactory
+    public static ProviderUserInvite<Guid> CreateReinvite(IEnumerable<Guid> inviteeUserIds, Guid invitingUserId, Guid providerId)
     {
-        public static ProviderUserInvite<string> CreateIntialInvite(IEnumerable<string> inviteeEmails, ProviderUserType type, Guid invitingUserId, Guid providerId)
+        return new ProviderUserInvite<Guid>
         {
-            return new ProviderUserInvite<string>
-            {
-                UserIdentifiers = inviteeEmails,
-                Type = type,
-                InvitingUserId = invitingUserId,
-                ProviderId = providerId
-            };
-        }
-
-        public static ProviderUserInvite<Guid> CreateReinvite(IEnumerable<Guid> inviteeUserIds, Guid invitingUserId, Guid providerId)
-        {
-            return new ProviderUserInvite<Guid>
-            {
-                UserIdentifiers = inviteeUserIds,
-                InvitingUserId = invitingUserId,
-                ProviderId = providerId
-            };
-        }
+            UserIdentifiers = inviteeUserIds,
+            InvitingUserId = invitingUserId,
+            ProviderId = providerId
+        };
     }
 }

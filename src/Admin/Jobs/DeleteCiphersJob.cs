@@ -1,40 +1,36 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Core;
+﻿using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Quartz;
 
-namespace Bit.Admin.Jobs
+namespace Bit.Admin.Jobs;
+
+public class DeleteCiphersJob : BaseJob
 {
-    public class DeleteCiphersJob : BaseJob
+    private readonly ICipherRepository _cipherRepository;
+    private readonly AdminSettings _adminSettings;
+
+    public DeleteCiphersJob(
+        ICipherRepository cipherRepository,
+        IOptions<AdminSettings> adminSettings,
+        ILogger<DeleteCiphersJob> logger)
+        : base(logger)
     {
-        private readonly ICipherRepository _cipherRepository;
-        private readonly AdminSettings _adminSettings;
+        _cipherRepository = cipherRepository;
+        _adminSettings = adminSettings?.Value;
+    }
 
-        public DeleteCiphersJob(
-            ICipherRepository cipherRepository,
-            IOptions<AdminSettings> adminSettings,
-            ILogger<DeleteCiphersJob> logger)
-            : base(logger)
+    protected async override Task ExecuteJobAsync(IJobExecutionContext context)
+    {
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteDeletedAsync");
+        var deleteDate = DateTime.UtcNow.AddDays(-30);
+        var daysAgoSetting = (_adminSettings?.DeleteTrashDaysAgo).GetValueOrDefault();
+        if (daysAgoSetting > 0)
         {
-            _cipherRepository = cipherRepository;
-            _adminSettings = adminSettings?.Value;
+            deleteDate = DateTime.UtcNow.AddDays(-1 * daysAgoSetting);
         }
-
-        protected async override Task ExecuteJobAsync(IJobExecutionContext context)
-        {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteDeletedAsync");
-            var deleteDate = DateTime.UtcNow.AddDays(-30);
-            var daysAgoSetting = (_adminSettings?.DeleteTrashDaysAgo).GetValueOrDefault();
-            if (daysAgoSetting > 0)
-            {
-                deleteDate = DateTime.UtcNow.AddDays(-1 * daysAgoSetting);
-            }
-            await _cipherRepository.DeleteDeletedAsync(deleteDate);
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DeleteDeletedAsync");
-        }
+        await _cipherRepository.DeleteDeletedAsync(deleteDate);
+        _logger.LogInformation(Constants.BypassFiltersEventId, "Finished job task: DeleteDeletedAsync");
     }
 }

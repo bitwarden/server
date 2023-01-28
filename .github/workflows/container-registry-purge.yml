@@ -1,0 +1,121 @@
+---
+name: Container Registry Purge
+
+on:
+  schedule:
+    - cron: '0 0 * * SUN'
+  workflow_dispatch:
+    inputs: {}
+
+jobs:
+  purge:
+    name: Purge old images
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: bitwardenqa
+          - name: bitwardenprod
+    steps:
+      - name: Login to Azure
+        if: matrix.name == 'bitwardenprod'
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Login to Azure
+        if: matrix.name == 'bitwardenqa'
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+
+      - name: Purge images
+        env:
+          REGISTRY: ${{ matrix.name }}
+          AGO_DUR_VER: "180d"
+          AGO_DUR: "30d"
+        run: |
+          REPO_LIST=$(az acr repository list -n $REGISTRY -o tsv)
+          for REPO in $REPO_LIST
+          do
+
+            PURGE_LATEST=""
+            PURGE_VERSION=""
+            PURGE_ELSE=""
+
+            TAG_LIST=$(az acr repository show-tags -n $REGISTRY --repository $REPO -o tsv)
+            for TAG in $TAG_LIST
+            do
+              if [ $TAG = "latest" ] || [ $TAG = "dev" ]; then
+                PURGE_LATEST+="--filter '$REPO:$TAG' "
+              elif [[ $TAG =~ [0-9]+\.[0-9]+\.[0-9]+ ]]; then
+                PURGE_VERSION+="--filter '$REPO:$TAG' "
+              else
+                PURGE_ELSE+="--filter '$REPO:$TAG' "
+              fi
+            done
+
+            if [ ! -z "$PURGE_LATEST" ]
+            then
+              PURGE_LATEST_CMD="acr purge $PURGE_LATEST --ago $AGO_DUR_VER --untagged --keep 1"
+              az acr run --cmd "$PURGE_LATEST_CMD" --registry $REGISTRY /dev/null &
+            fi
+
+            if [ ! -z "$PURGE_VERSION" ]
+            then
+              PURGE_VERSION_CMD="acr purge $PURGE_VERSION --ago $AGO_DUR_VER --untagged"
+              az acr run --cmd "$PURGE_VERSION_CMD" --registry $REGISTRY /dev/null &
+            fi
+
+            if [ ! -z "$PURGE_ELSE" ]
+            then
+              PURGE_ELSE_CMD="acr purge $PURGE_ELSE --ago $AGO_DUR --untagged"
+              az acr run --cmd "$PURGE_ELSE_CMD" --registry $REGISTRY /dev/null &
+            fi
+
+            wait
+
+          done
+
+
+  check-failures:
+    name: Check for failures
+    if: always()
+    runs-on: ubuntu-20.04
+    needs:
+      - purge
+    steps:
+      - name: Check if any job failed
+        if: |
+          github.ref == 'refs/heads/master'
+          || github.ref == 'refs/heads/rc'
+          || github.ref == 'refs/heads/hotfix-rc'
+        env:
+          PURGE_STATUS: ${{ needs.purge.result }}
+        run: |
+          if [ "$PURGE_STATUS" = "failure" ]; then
+              exit 1
+          fi
+
+      - name: Login to Azure - Prod Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        if: failure()
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve secrets
+        id: retrieve-secrets
+        uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
+        if: failure()
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "devops-alerts-slack-webhook-url"
+
+      - name: Notify Slack on failure
+        uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}
+        with:
+          status: ${{ job.status }}

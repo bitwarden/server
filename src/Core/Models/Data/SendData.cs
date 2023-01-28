@@ -1,18 +1,15 @@
-﻿using Bit.Core.Models.Api;
+﻿namespace Bit.Core.Models.Data;
 
-namespace Bit.Core.Models.Data
+public abstract class SendData
 {
-    public abstract class SendData
+    public SendData() { }
+
+    public SendData(string name, string notes)
     {
-        public SendData() { }
-
-        public SendData(SendRequestModel send)
-        {
-            Name = send.Name;
-            Notes = send.Notes;
-        }
-
-        public string Name { get; set; }
-        public string Notes { get; set; }
+        Name = name;
+        Notes = notes;
     }
+
+    public string Name { get; set; }
+    public string Notes { get; set; }
 }

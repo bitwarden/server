@@ -1,55 +1,58 @@
-using System;
-using System.Text.Json;
-using AutoFixture.Xunit2;
+﻿using System.Text.Json;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Table;
 using Bit.Core.Utilities;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Xunit;
 
-namespace Bit.Core.Test.Models
+namespace Bit.Core.Test.Models;
+
+public class PermissionsTests
 {
-    public class PermissionsTests
+    private static readonly string _exampleSerializedPermissions = string.Concat(
+        "{",
+        "\"accessEventLogs\": false,",
+        "\"accessImportExport\": false,",
+        "\"accessReports\": false,",
+        "\"createNewCollections\": true,",
+        "\"editAnyCollection\": true,",
+        "\"deleteAnyCollection\": true,",
+        "\"editAssignedCollections\": false,",
+        "\"deleteAssignedCollections\": false,",
+        "\"manageGroups\": false,",
+        "\"managePolicies\": false,",
+        "\"manageSso\": false,",
+        "\"manageUsers\": false,",
+        "\"manageResetPassword\": false,",
+        "\"manageScim\": false",
+        "}");
+
+    [Fact]
+    public void Serialization_Success()
     {
-        private static readonly string _exampleSerializedPermissions = string.Concat(
-            "{",
-            "\"accessEventLogs\": false,",
-            "\"accessImportExport\": false,",
-            "\"accessReports\": false,",
-            "\"manageAllCollections\": true,", // exists for backwards compatibility
-            "\"createNewCollections\": true,",
-            "\"editAnyCollection\": true,",
-            "\"deleteAnyCollection\": true,",
-            "\"manageAssignedCollections\": false,", // exists for backwards compatibility
-            "\"editAssignedCollections\": false,",
-            "\"deleteAssignedCollections\": false,",
-            "\"manageGroups\": false,",
-            "\"managePolicies\": false,",
-            "\"manageSso\": false,",
-            "\"manageUsers\": false,",
-            "\"manageResetPassword\": false",
-            "}");
-
-        [Fact]
-        public void Serialization_Success()
+        var permissions = new Permissions
         {
-            // minify expected json
-            var expected = JsonConvert.SerializeObject(JsonConvert.DeserializeObject(_exampleSerializedPermissions));
+            AccessEventLogs = false,
+            AccessImportExport = false,
+            AccessReports = false,
+            CreateNewCollections = true,
+            EditAnyCollection = true,
+            DeleteAnyCollection = true,
+            EditAssignedCollections = false,
+            DeleteAssignedCollections = false,
+            ManageGroups = false,
+            ManagePolicies = false,
+            ManageSso = false,
+            ManageUsers = false,
+            ManageResetPassword = false,
+            ManageScim = false,
+        };
 
-            DefaultContractResolver contractResolver = new DefaultContractResolver
-            {
-                NamingStrategy = new CamelCaseNamingStrategy()
-            };
+        // minify expected json
+        var expected = JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase);
 
-            var actual = JsonConvert.SerializeObject(
-                CoreHelpers.LoadClassFromJsonData<Permissions>(_exampleSerializedPermissions), new JsonSerializerSettings
-                {
-                    ContractResolver = contractResolver,
-                });
+        var actual = JsonSerializer.Serialize(
+            JsonHelpers.DeserializeOrNew<Permissions>(_exampleSerializedPermissions, JsonHelpers.CamelCase),
+            JsonHelpers.CamelCase);
 
-            Console.WriteLine(actual);
-            Assert.Equal(expected, actual);
-        }
+        Assert.Equal(expected, actual);
     }
 }

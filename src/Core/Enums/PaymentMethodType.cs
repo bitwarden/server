@@ -1,26 +1,27 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Enums
+namespace Bit.Core.Enums;
+
+public enum PaymentMethodType : byte
 {
-    public enum PaymentMethodType : byte
-    {
-        [Display(Name = "Card")]
-        Card = 0,
-        [Display(Name = "Bank Account")]
-        BankAccount = 1,
-        [Display(Name = "PayPal")]
-        PayPal = 2,
-        [Display(Name = "BitPay")]
-        BitPay = 3,
-        [Display(Name = "Credit")]
-        Credit = 4,
-        [Display(Name = "Wire Transfer")]
-        WireTransfer = 5,
-        [Display(Name = "Apple In-App Purchase")]
-        AppleInApp = 6,
-        [Display(Name = "Google In-App Purchase")]
-        GoogleInApp = 7,
-        [Display(Name = "Check")]
-        Check = 8,
-    }
+    [Display(Name = "Card")]
+    Card = 0,
+    [Display(Name = "Bank Account")]
+    BankAccount = 1,
+    [Display(Name = "PayPal")]
+    PayPal = 2,
+    [Display(Name = "BitPay")]
+    BitPay = 3,
+    [Display(Name = "Credit")]
+    Credit = 4,
+    [Display(Name = "Wire Transfer")]
+    WireTransfer = 5,
+    [Display(Name = "Apple In-App Purchase")]
+    AppleInApp = 6,
+    [Display(Name = "Google In-App Purchase")]
+    GoogleInApp = 7,
+    [Display(Name = "Check")]
+    Check = 8,
+    [Display(Name = "None")]
+    None = 255,
 }

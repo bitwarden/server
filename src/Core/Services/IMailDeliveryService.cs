@@ -1,10 +1,8 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Mail;
+﻿using Bit.Core.Models.Mail;
 
-namespace Bit.Core.Services
+namespace Bit.Core.Services;
+
+public interface IMailDeliveryService
 {
-    public interface IMailDeliveryService
-    {
-        Task SendEmailAsync(MailMessage message);
-    }
+    Task SendEmailAsync(MailMessage message);
 }

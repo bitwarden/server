@@ -1,10 +1,10 @@
-namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum SupportedDatabaseProviders
 {
-    public enum SupportedDatabaseProviders 
-    {
-        SqlServer,
-        MySql,
-        Postgres,
-    }
+    SqlServer,
+    MySql,
+    Postgres,
+    Sqlite,
 }
 

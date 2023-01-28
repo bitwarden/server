@@ -1,0 +1,64 @@
+---
+name: Automatic responses
+on:
+  issues:
+    types:
+      - labeled
+jobs:
+  close-issue:
+    name: 'Close issue with automatic response'
+    runs-on: ubuntu-20.04
+    permissions:
+      issues: write
+    steps:
+      # Feature request
+      - if: github.event.label.name == 'feature-request'
+        name: Feature request
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        with:
+          comment: |
+            We use GitHub issues as a place to track bugs and other development related issues. The [Bitwarden Community Forums](https://community.bitwarden.com/) has a [Feature Requests](https://community.bitwarden.com/c/feature-requests) section for submitting, voting for, and discussing requests like this one.
+
+            Please [sign up on our forums](https://community.bitwarden.com/signup) and search to see if this request already exists. If so, you can vote for it and contribute to any discussions about it. If not, you can re-create the request there so that it can be properly tracked.
+
+            This issue will now be closed. Thanks!
+      # Intended behavior
+      - if: github.event.label.name == 'intended-behavior'
+        name: Intended behaviour
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        with:
+          comment: |
+            Your issue appears to be describing the intended behavior of the software. If you want this to be changed, it would be a feature request.
+
+            We use GitHub issues as a place to track bugs and other development related issues. The [Bitwarden Community Forums](https://community.bitwarden.com/) has a [Feature Requests](https://community.bitwarden.com/c/feature-requests) section for submitting, voting for, and discussing requests like this one.
+
+            Please [sign up on our forums](https://community.bitwarden.com/signup) and search to see if this request already exists. If so, you can vote for it and contribute to any discussions about it. If not, you can re-create the request there so that it can be properly tracked.
+
+            This issue will now be closed. Thanks!
+      # Customer support request
+      - if: github.event.label.name == 'customer-support'
+        name: Customer Support request
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        with:
+          comment: |
+            We use GitHub issues as a place to track bugs and other development related issues. Your issue appears to be a support request, or would otherwise be better handled by our dedicated Customer Success team.
+
+            Please contact us using our [Contact page](https://bitwarden.com/contact). You can include a link to this issue in the message content.
+
+            Alternatively, you can also search for an answer in our [help documentation](https://bitwarden.com/help/) or get help from other Bitwarden users on our [community forums](https://community.bitwarden.com/c/support/). The issue here will be closed.
+      # Resolved
+      - if: github.event.label.name == 'resolved'
+        name: Resolved
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        with:
+          comment: |
+            We’ve closed this issue, as it appears the original problem has been resolved. If this happens again or continues to be an problem, please respond to this issue with any additional detail to assist with reproduction and root cause analysis.
+      # Stale
+      - if: github.event.label.name == 'stale'
+        name: Stale
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        with:
+          comment: |
+            As we haven’t heard from you about this problem in some time, this issue will now be closed.
+
+            If this happens again or continues to be an problem, please respond to this issue with any additional detail to assist with reproduction and root cause analysis.

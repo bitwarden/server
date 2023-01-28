@@ -1,9 +1,71 @@
-﻿<Project>
+<Project>
 
-	<PropertyGroup>
-		<TargetFramework>net5.0</TargetFramework>
-		<Version>1.44.1</Version>
-		<RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
-	</PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <!--2022.6.2-->
+    <Version>2023.1.0</Version>
+    <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+
+  <!--
+    This section is for packages that we use multiple times throughout the solution
+    It gives us a single place to manage the version to ensure we are using the same version
+    across the solution.
+  -->
+  <PropertyGroup>
+    <!--
+      NuGet: https://www.nuget.org/packages/Microsoft.NET.Test.Sdk
+    -->
+    <MicrosoftNetTestSdkVersion>17.1.0</MicrosoftNetTestSdkVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/xunit
+    -->
+    <XUnitVersion>2.4.1</XUnitVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/xunit
+    -->
+    <XUnitRunnerVisualStudioVersion>2.4.3</XUnitRunnerVisualStudioVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/coverlet.collector/
+    -->
+    <CoverletCollectorVersion>3.1.2</CoverletCollectorVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/Swashbuckle.AspNetCore/
+    -->
+    <MicrosoftVisualStudioWebCodeGenerationDesignVersion>6.0.3</MicrosoftVisualStudioWebCodeGenerationDesignVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/NSubstitute/
+    -->
+    <NSubstitueVersion>4.3.0</NSubstitueVersion>
+    <!--
+      NuGet: https://www.nuget.org/packages/AutoFixture.Xunit2/
+    -->
+    <AutoFixtureXUnit2Version>4.17.0</AutoFixtureXUnit2Version>
+    <!--
+      NuGet: https://www.nuget.org/packages/AutoFixture.AutoNSubstitute/
+    -->
+    <AutoFixtureAutoNSubstituteVersion>4.17.0</AutoFixtureAutoNSubstituteVersion>
+  </PropertyGroup>
+
+  <!--
+    This section is for getting & setting the gitHash value, which can easily be accessed
+    via the Core.Utilities.AssemblyHelpers class.
+  -->
+  <Target Name="SetSourceRevisionId" BeforeTargets="CoreGenerateAssemblyInfo">
+    <Exec Command="git describe --long --always --dirty --exclude=* --abbrev=8" ConsoleToMSBuild="True" IgnoreExitCode="False">
+      <Output PropertyName="SourceRevisionId" TaskParameter="ConsoleOutput"/>
+    </Exec>
+  </Target>
+  <Target Name="WriteRevision" AfterTargets="SetSourceRevisionId">
+    <ItemGroup>
+      <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+        <_Parameter1>GitHash</_Parameter1>
+        <_Parameter2>$(SourceRevisionId)</_Parameter2>
+      </AssemblyAttribute>
+    </ItemGroup>
+  </Target>
 
 </Project>

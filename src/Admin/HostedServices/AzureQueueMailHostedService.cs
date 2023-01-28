@@ -1,108 +1,101 @@
-using System;
-using Microsoft.Extensions.Hosting;
+﻿using System.Text.Json;
 using Azure.Storage.Queues;
-using Microsoft.Extensions.Logging;
-using Bit.Core.Settings;
-using System.Threading.Tasks;
-using System.Threading;
-using Bit.Core.Services;
-using Newtonsoft.Json;
-using Bit.Core.Models.Mail;
 using Azure.Storage.Queues.Models;
-using System.Linq;
-using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
+using Bit.Core.Models.Mail;
+using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 
-namespace Bit.Admin.HostedServices
+namespace Bit.Admin.HostedServices;
+
+public class AzureQueueMailHostedService : IHostedService
 {
-    public class AzureQueueMailHostedService : IHostedService
+    private readonly ILogger<AzureQueueMailHostedService> _logger;
+    private readonly GlobalSettings _globalSettings;
+    private readonly IMailService _mailService;
+    private CancellationTokenSource _cts;
+    private Task _executingTask;
+
+    private QueueClient _mailQueueClient;
+
+    public AzureQueueMailHostedService(
+        ILogger<AzureQueueMailHostedService> logger,
+        IMailService mailService,
+        GlobalSettings globalSettings)
     {
-        private readonly ILogger<AzureQueueMailHostedService> _logger;
-        private readonly GlobalSettings _globalSettings;
-        private readonly IMailService _mailService;
-        private CancellationTokenSource _cts;
-        private Task _executingTask;
+        _logger = logger;
+        _mailService = mailService;
+        _globalSettings = globalSettings;
+    }
 
-        private QueueClient _mailQueueClient;
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _executingTask = ExecuteAsync(_cts.Token);
+        return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
+    }
 
-        public AzureQueueMailHostedService(
-            ILogger<AzureQueueMailHostedService> logger,
-            IMailService mailService,
-            GlobalSettings globalSettings)
-        { 
-            _logger = logger;
-            _mailService = mailService;
-            _globalSettings = globalSettings;
-        }
-
-        public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        if (_executingTask == null)
         {
-            _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            _executingTask = ExecuteAsync(_cts.Token);
-            return _executingTask.IsCompleted ? _executingTask : Task.CompletedTask;
+            return;
         }
+        _cts.Cancel();
+        await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
+        cancellationToken.ThrowIfCancellationRequested();
+    }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
+    private async Task ExecuteAsync(CancellationToken cancellationToken)
+    {
+        _mailQueueClient = new QueueClient(_globalSettings.Mail.ConnectionString, "mail");
+
+        QueueMessage[] mailMessages;
+        while (!cancellationToken.IsCancellationRequested)
         {
-            if (_executingTask == null)
+            if (!(mailMessages = await RetrieveMessagesAsync()).Any())
             {
-                return;
+                await Task.Delay(TimeSpan.FromSeconds(15));
             }
-            _cts.Cancel();
-            await Task.WhenAny(_executingTask, Task.Delay(-1, cancellationToken));
-            cancellationToken.ThrowIfCancellationRequested();
-        }
 
-        private async Task ExecuteAsync(CancellationToken cancellationToken)
-        {
-            _mailQueueClient = new QueueClient(_globalSettings.Mail.ConnectionString, "mail");
-
-            QueueMessage[] mailMessages;
-            while (!cancellationToken.IsCancellationRequested)
+            foreach (var message in mailMessages)
             {
-                if (!(mailMessages = await RetrieveMessagesAsync()).Any())
+                try
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(15));
-                }
+                    using var document = JsonDocument.Parse(message.DecodeMessageText());
+                    var root = document.RootElement;
 
-                foreach (var message in mailMessages)
-                {
-                    try
+                    if (root.ValueKind == JsonValueKind.Array)
                     {
-                        var token = JToken.Parse(message.DecodeMessageText());
-                        if (token is JArray)
+                        foreach (var mailQueueMessage in root.ToObject<List<MailQueueMessage>>())
                         {
-                            foreach (var mailQueueMessage in token.ToObject<List<MailQueueMessage>>())
-                            {
-                                await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
-                            }
-                        }
-                        else if (token is JObject)
-                        {
-                            var mailQueueMessage = token.ToObject<MailQueueMessage>();
                             await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                         }
                     }
-                    catch (Exception e)
+                    else if (root.ValueKind == JsonValueKind.Object)
                     {
-                        _logger.LogError(e, "Failed to send email");
-                        // TODO: retries?
+                        var mailQueueMessage = root.ToObject<MailQueueMessage>();
+                        await _mailService.SendEnqueuedMailMessageAsync(mailQueueMessage);
                     }
-                    
-                    await _mailQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Failed to send email");
+                    // TODO: retries?
+                }
 
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        break;
-                    }
+                await _mailQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
                 }
             }
         }
+    }
 
-        private async Task<QueueMessage[]> RetrieveMessagesAsync()
-        {
-            return (await _mailQueueClient.ReceiveMessagesAsync(maxMessages: 32))?.Value ?? new QueueMessage[] { };
-        }
+    private async Task<QueueMessage[]> RetrieveMessagesAsync()
+    {
+        return (await _mailQueueClient.ReceiveMessagesAsync(maxMessages: 32))?.Value ?? new QueueMessage[] { };
     }
 }

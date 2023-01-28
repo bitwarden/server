@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail;
+
+public class EmergencyAccessConfirmedViewModel : BaseMailModel
 {
-    public class EmergencyAccessConfirmedViewModel : BaseMailModel
-    {
-        public string Name { get; set; }
-    }
+    public string Name { get; set; }
 }

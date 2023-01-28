@@ -1,7 +1,7 @@
 CREATE PROCEDURE [dbo].[Policy_CountByTypeApplicableToUser]
     @UserId UNIQUEIDENTIFIER,
     @PolicyType TINYINT,
-    @MinimumStatus TINYINT
+    @MinimumStatus SMALLINT
 AS
 BEGIN
     SET NOCOUNT ON

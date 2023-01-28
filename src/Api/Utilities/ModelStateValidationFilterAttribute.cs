@@ -1,39 +1,28 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Bit.Api.Models.Public.Response;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using InternalApi = Bit.Core.Models.Api;
-using PublicApi = Bit.Core.Models.Api.Public;
-using System.Linq;
 
-namespace Bit.Api.Utilities
+namespace Bit.Api.Utilities;
+
+public class ModelStateValidationFilterAttribute : SharedWeb.Utilities.ModelStateValidationFilterAttribute
 {
-    public class ModelStateValidationFilterAttribute : ActionFilterAttribute
+    private readonly bool _publicApi;
+
+    public ModelStateValidationFilterAttribute(bool publicApi)
     {
-        private readonly bool _publicApi;
+        _publicApi = publicApi;
+    }
 
-        public ModelStateValidationFilterAttribute(bool publicApi)
+    protected override void OnModelStateInvalid(ActionExecutingContext context)
+    {
+        if (_publicApi)
         {
-            _publicApi = publicApi;
+            context.Result = new BadRequestObjectResult(new ErrorResponseModel(context.ModelState));
         }
-
-        public override void OnActionExecuting(ActionExecutingContext context)
+        else
         {
-            var model = context.ActionArguments.FirstOrDefault(a => a.Key == "model");
-            if (model.Key == "model" && model.Value == null)
-            {
-                context.ModelState.AddModelError(string.Empty, "Body is empty.");
-            }
-
-            if (!context.ModelState.IsValid)
-            {
-                if (_publicApi)
-                {
-                    context.Result = new BadRequestObjectResult(new PublicApi.ErrorResponseModel(context.ModelState));
-                }
-                else
-                {
-                    context.Result = new BadRequestObjectResult(new InternalApi.ErrorResponseModel(context.ModelState));
-                }
-            }
+            context.Result = new BadRequestObjectResult(new InternalApi.ErrorResponseModel(context.ModelState));
         }
     }
 }

@@ -58,6 +58,16 @@ BEGIN
     WHERE
         OU.[UserId] = @Id
 
+    -- Delete AccessPolicy
+    DELETE
+        AP
+    FROM
+        [dbo].[AccessPolicy] AP
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON OU.[Id] = AP.[OrganizationUserId]
+    WHERE
+        [UserId] = @Id
+
     -- Delete organization users
     DELETE
     FROM
@@ -69,13 +79,6 @@ BEGIN
     DELETE
     FROM
         [dbo].[ProviderUser]
-    WHERE
-        [UserId] = @Id
-
-    -- Delete U2F logins
-    DELETE
-    FROM
-        [dbo].[U2f]
     WHERE
         [UserId] = @Id
 

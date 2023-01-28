@@ -1,69 +1,63 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using Azure.Storage.Queues;
 using Bit.Core.Settings;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Azure.Storage.Queues;
 
-namespace Bit.Admin.HostedServices
+namespace Bit.Admin.HostedServices;
+
+public class AzureQueueBlockIpHostedService : BlockIpHostedService
 {
-    public class AzureQueueBlockIpHostedService : BlockIpHostedService
+    private QueueClient _blockIpQueueClient;
+    private QueueClient _unblockIpQueueClient;
+
+    public AzureQueueBlockIpHostedService(
+        ILogger<AzureQueueBlockIpHostedService> logger,
+        IOptions<AdminSettings> adminSettings,
+        GlobalSettings globalSettings)
+        : base(logger, adminSettings, globalSettings)
+    { }
+
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken)
     {
-        private QueueClient _blockIpQueueClient;
-        private QueueClient _unblockIpQueueClient;
+        _blockIpQueueClient = new QueueClient(_globalSettings.Storage.ConnectionString, "blockip");
+        _unblockIpQueueClient = new QueueClient(_globalSettings.Storage.ConnectionString, "unblockip");
 
-        public AzureQueueBlockIpHostedService(
-            ILogger<AzureQueueBlockIpHostedService> logger,
-            IOptions<AdminSettings> adminSettings,
-            GlobalSettings globalSettings)
-            : base(logger, adminSettings, globalSettings)
-        { }
-
-        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
+        while (!cancellationToken.IsCancellationRequested)
         {
-            _blockIpQueueClient = new QueueClient(_globalSettings.Storage.ConnectionString, "blockip");
-            _unblockIpQueueClient = new QueueClient(_globalSettings.Storage.ConnectionString, "unblockip");
-
-            while (!cancellationToken.IsCancellationRequested)
+            var blockMessages = await _blockIpQueueClient.ReceiveMessagesAsync(maxMessages: 32);
+            if (blockMessages.Value?.Any() ?? false)
             {
-                var blockMessages = await _blockIpQueueClient.ReceiveMessagesAsync(maxMessages: 32);
-                if (blockMessages.Value?.Any() ?? false)
+                foreach (var message in blockMessages.Value)
                 {
-                    foreach (var message in blockMessages.Value)
+                    try
                     {
-                        try
-                        {
-                            await BlockIpAsync(message.MessageText, cancellationToken);
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogError(e, "Failed to block IP.");
-                        }
-                        await _blockIpQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                        await BlockIpAsync(message.MessageText, cancellationToken);
                     }
-                }
-
-                var unblockMessages = await _unblockIpQueueClient.ReceiveMessagesAsync(maxMessages: 32);
-                if (unblockMessages.Value?.Any() ?? false)
-                {
-                    foreach (var message in unblockMessages.Value)
+                    catch (Exception e)
                     {
-                        try
-                        {
-                            await UnblockIpAsync(message.MessageText, cancellationToken);
-                        }
-                        catch (Exception e)
-                        {
-                            _logger.LogError(e, "Failed to unblock IP.");
-                        }
-                        await _unblockIpQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                        _logger.LogError(e, "Failed to block IP.");
                     }
+                    await _blockIpQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
                 }
-
-                await Task.Delay(TimeSpan.FromSeconds(15));
             }
+
+            var unblockMessages = await _unblockIpQueueClient.ReceiveMessagesAsync(maxMessages: 32);
+            if (unblockMessages.Value?.Any() ?? false)
+            {
+                foreach (var message in unblockMessages.Value)
+                {
+                    try
+                    {
+                        await UnblockIpAsync(message.MessageText, cancellationToken);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Failed to unblock IP.");
+                    }
+                    await _unblockIpQueueClient.DeleteMessageAsync(message.MessageId, message.PopReceipt);
+                }
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(15));
         }
     }
 }

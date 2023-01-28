@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail;
+
+public class OrganizationUserConfirmedViewModel : BaseMailModel
 {
-    public class OrganizationUserConfirmedViewModel : BaseMailModel
-    {
-        public string OrganizationName { get; set; }
-    }
+    public string OrganizationName { get; set; }
 }

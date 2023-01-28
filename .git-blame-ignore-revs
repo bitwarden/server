@@ -1,0 +1,11 @@
+# Apply .NET format https://github.com/bitwarden/server/pull/1764
+23b0a1f9df25058ab29785ecad9a233113c10889
+
+# Turn on file scoped namespaces (gets reverted) https://github.com/bitwarden/server/pull/2225
+34fb4cca2aa78deb84d4cbc359992a7c6bba7ea5
+
+# Revert filescoped https://github.com/bitwarden/server/pull/2227
+bae03feffecbef488cb52f5f5bc133dfdbbaa316
+
+# Run formatting for file scoped namespaces https://github.com/bitwarden/server/pull/2230
+7f5f010e1eea400300c47f776604ecf46c4b4f2d

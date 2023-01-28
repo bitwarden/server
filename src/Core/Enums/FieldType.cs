@@ -1,10 +1,9 @@
-﻿namespace Bit.Core.Enums
+﻿namespace Bit.Core.Enums;
+
+public enum FieldType : byte
 {
-    public enum FieldType : byte
-    {
-        Text = 0,
-        Hidden = 1,
-        Boolean = 2,
-        Linked = 3,
-    }
+    Text = 0,
+    Hidden = 1,
+    Boolean = 2,
+    Linked = 3,
 }

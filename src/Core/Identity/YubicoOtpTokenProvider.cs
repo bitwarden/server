@@ -1,79 +1,75 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using YubicoDotNetClient;
-using System.Linq;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using System;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using YubicoDotNetClient;
 
-namespace Bit.Core.Identity
+namespace Bit.Core.Identity;
+
+public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
 {
-    public class YubicoOtpTokenProvider : IUserTwoFactorTokenProvider<User>
+    private readonly IServiceProvider _serviceProvider;
+    private readonly GlobalSettings _globalSettings;
+
+    public YubicoOtpTokenProvider(
+        IServiceProvider serviceProvider,
+        GlobalSettings globalSettings)
     {
-        private readonly IServiceProvider _serviceProvider;
-        private readonly GlobalSettings _globalSettings;
+        _serviceProvider = serviceProvider;
+        _globalSettings = globalSettings;
+    }
 
-        public YubicoOtpTokenProvider(
-            IServiceProvider serviceProvider,
-            GlobalSettings globalSettings)
+    public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+    {
+        var userService = _serviceProvider.GetRequiredService<IUserService>();
+        if (!(await userService.CanAccessPremium(user)))
         {
-            _serviceProvider = serviceProvider;
-            _globalSettings = globalSettings;
+            return false;
         }
 
-        public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
+        if (!provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
         {
-            var userService = _serviceProvider.GetRequiredService<IUserService>();
-            if (!(await userService.CanAccessPremium(user)))
-            {
-                return false;
-            }
-
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
-            if (!provider?.MetaData.Values.Any(v => !string.IsNullOrWhiteSpace((string)v)) ?? true)
-            {
-                return false;
-            }
-
-            return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, user);
+            return false;
         }
 
-        public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
+        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.YubiKey, user);
+    }
+
+    public Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
+    {
+        return Task.FromResult<string>(null);
+    }
+
+    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    {
+        var userService = _serviceProvider.GetRequiredService<IUserService>();
+        if (!(await userService.CanAccessPremium(user)))
         {
-            return Task.FromResult<string>(null);
+            return false;
         }
 
-        public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+        if (string.IsNullOrWhiteSpace(token) || token.Length < 32 || token.Length > 48)
         {
-            var userService = _serviceProvider.GetRequiredService<IUserService>();
-            if (!(await userService.CanAccessPremium(user)))
-            {
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(token) || token.Length < 32 || token.Length > 48)
-            {
-                return false;
-            }
-
-            var id = token.Substring(0, 12);
-
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
-            if (!provider.MetaData.ContainsValue(id))
-            {
-                return false;
-            }
-
-            var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
-            if (_globalSettings.Yubico.ValidationUrls != null && _globalSettings.Yubico.ValidationUrls.Length > 0)
-            {
-                client.SetUrls(_globalSettings.Yubico.ValidationUrls);
-            }
-            var response = await client.VerifyAsync(token);
-            return response.Status == YubicoResponseStatus.Ok;
+            return false;
         }
+
+        var id = token.Substring(0, 12);
+
+        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.YubiKey);
+        if (!provider.MetaData.ContainsValue(id))
+        {
+            return false;
+        }
+
+        var client = new YubicoClient(_globalSettings.Yubico.ClientId, _globalSettings.Yubico.Key);
+        if (_globalSettings.Yubico.ValidationUrls != null && _globalSettings.Yubico.ValidationUrls.Length > 0)
+        {
+            client.SetUrls(_globalSettings.Yubico.ValidationUrls);
+        }
+        var response = await client.VerifyAsync(token);
+        return response.Status == YubicoResponseStatus.Ok;
     }
 }

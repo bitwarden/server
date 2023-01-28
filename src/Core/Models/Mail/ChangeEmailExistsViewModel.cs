@@ -1,8 +1,7 @@
-﻿namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail;
+
+public class ChangeEmailExistsViewModel : BaseMailModel
 {
-    public class ChangeEmailExistsViewModel : BaseMailModel
-    {
-        public string FromEmail { get; set; }
-        public string ToEmail { get; set; }
-    }
+    public string FromEmail { get; set; }
+    public string ToEmail { get; set; }
 }

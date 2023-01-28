@@ -7,11 +7,15 @@
 <h1 class="text-danger">@i18nService.T("Error")@(string.IsNullOrWhiteSpace(Model?.Message) ? null : $": {Model.Message}")</h1>
 @if (!string.IsNullOrWhiteSpace(Model?.RedirectUri))
 {
-    <p class="text-danger">@Html.Raw(i18nService.T("SsoErrorWithRedirect", Model?.RedirectUri)) @Model?.Description</p>
+    <p class="text-danger">@Html.Raw(i18nService.T("SsoErrorWithRedirect", Model?.RedirectUri))</p>
 }
 else
 {
-    <p class="text-danger">@i18nService.T("SsoError") @Model?.Description</p>
+    <p class="text-danger">@i18nService.T("SsoError")</p>
+}
+@if (!string.IsNullOrWhiteSpace(Model?.Description))
+{
+    <p class="text-danger">@Model?.Description</p>
 }
 @if (!string.IsNullOrWhiteSpace(Model?.RequestId))
 {

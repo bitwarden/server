@@ -2,7 +2,7 @@
 
 const gulp = require('gulp');
 const merge = require('merge-stream');
-const sass = require('gulp-sass');
+const sass = require('gulp-sass')(require("sass"));
 const del = require('del');
 
 const paths = {};

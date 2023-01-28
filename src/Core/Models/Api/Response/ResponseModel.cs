@@ -1,21 +1,19 @@
-﻿using System;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 
-namespace Bit.Core.Models.Api
+namespace Bit.Core.Models.Api;
+
+public abstract class ResponseModel
 {
-    public abstract class ResponseModel
+    public ResponseModel(string obj)
     {
-        public ResponseModel(string obj)
+        if (string.IsNullOrWhiteSpace(obj))
         {
-            if (string.IsNullOrWhiteSpace(obj))
-            {
-                throw new ArgumentNullException(nameof(obj));
-            }
-
-            Object = obj;
+            throw new ArgumentNullException(nameof(obj));
         }
 
-        [JsonProperty(Order = -200)] // Always the first property
-        public string Object { get; private set; }
+        Object = obj;
     }
+
+    [JsonProperty(Order = -200)] // Always the first property
+    public string Object { get; private set; }
 }

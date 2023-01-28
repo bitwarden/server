@@ -1,13 +1,11 @@
-﻿using System.Threading.Tasks;
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Models.Business;
 
-namespace Bit.Core.Services
+namespace Bit.Core.Services;
+
+public class NoopReferenceEventService : IReferenceEventService
 {
-    public class NoopReferenceEventService : IReferenceEventService
+    public Task RaiseEventAsync(ReferenceEvent referenceEvent)
     {
-        public Task RaiseEventAsync(ReferenceEvent referenceEvent)
-        {
-            return Task.CompletedTask;
-        }
+        return Task.CompletedTask;
     }
 }

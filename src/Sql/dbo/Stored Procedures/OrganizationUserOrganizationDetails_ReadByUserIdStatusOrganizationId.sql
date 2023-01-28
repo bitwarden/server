@@ -1,6 +1,6 @@
 CREATE PROCEDURE [dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]
     @UserId UNIQUEIDENTIFIER,
-    @Status TINYINT,
+    @Status SMALLINT,
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN

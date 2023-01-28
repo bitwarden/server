@@ -8,6 +8,7 @@ SELECT
     O.[UsePolicies],
     O.[UseSso],
     O.[UseKeyConnector],
+    O.[UseScim],
     O.[UseGroups],
     O.[UseDirectory],
     O.[UseEvents],
@@ -17,6 +18,7 @@ SELECT
     O.[UseResetPassword],
     O.[SelfHost],
     O.[UsersGetPremium],
+    O.[UseCustomPermissions],
     O.[Seats],
     O.[MaxCollections],
     O.[MaxStorageGb],
@@ -28,7 +30,8 @@ SELECT
     PU.[Type],
     PO.[ProviderId],
     PU.[Id] ProviderUserId,
-    P.[Name] ProviderName
+    P.[Name] ProviderName,
+    O.[PlanType]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN

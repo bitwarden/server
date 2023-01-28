@@ -1,46 +1,56 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Reflection;
+﻿using System.Reflection;
+using System.Text;
 using AutoFixture;
 using AutoFixture.Kernel;
-using AutoMapper;
-using Bit.Core.Enums;
-using Bit.Core.Models;
-using Bit.Core.Models.Table;
-using Bit.Core.Settings;
+using AutoFixture.Xunit2;
+using Bit.Core;
 using Bit.Core.Test.Helpers.Factories;
+using Microsoft.AspNetCore.DataProtection;
+using Moq;
 
-namespace Bit.Core.Test.AutoFixture.GlobalSettingsFixtures
+namespace Bit.Test.Common.AutoFixture;
+
+public class GlobalSettingsBuilder : ISpecimenBuilder
 {
-    internal class GlobalSettingsBuilder: ISpecimenBuilder
+    public object Create(object request, ISpecimenContext context)
     {
-        public object Create(object request, ISpecimenContext context)
+        if (context == null)
         {
-            if (context == null)
-            {
-                throw new ArgumentNullException(nameof(context));
-            }
+            throw new ArgumentNullException(nameof(context));
+        }
 
-            var pi = request as ParameterInfo;
-            var fixture = new Fixture();
+        var fixture = new Fixture();
 
-            if (pi == null || pi.ParameterType != typeof(Settings.GlobalSettings))
-                return new NoSpecimen();
+        if (request is not ParameterInfo pi)
+        {
+            return new NoSpecimen();
+        }
 
+        if (pi.ParameterType == typeof(Bit.Core.Settings.GlobalSettings))
+        {
             return GlobalSettingsFactory.GlobalSettings;
         }
-    }
 
-    internal class GlobalSettings : ICustomization
-    {
-        public void Customize(IFixture fixture)
+        if (pi.ParameterType == typeof(IDataProtectionProvider))
         {
-            fixture.Customize<Settings.GlobalSettings>(composer => composer
-                .Without(s => s.BaseServiceUri)
-                .Without(s => s.Attachment)
-                .Without(s => s.Send)
-                .Without(s => s.DataProtection));
+            var dataProtector = new Mock<IDataProtector>();
+            dataProtector
+                .Setup(d => d.Unprotect(It.IsAny<byte[]>()))
+                .Returns<byte[]>(data => Encoding.UTF8.GetBytes(Constants.DatabaseFieldProtectedPrefix + Encoding.UTF8.GetString(data)));
+
+            var dataProtectionProvider = new Mock<IDataProtectionProvider>();
+            dataProtectionProvider
+                .Setup(x => x.CreateProtector(Constants.DatabaseFieldProtectorPurpose))
+                .Returns(dataProtector.Object);
+
+            return dataProtectionProvider.Object;
         }
+
+        return new NoSpecimen();
     }
+}
+
+public class GlobalSettingsCustomizeAttribute : CustomizeAttribute
+{
+    public override ICustomization GetCustomization(ParameterInfo parameter) => new GlobalSettings();
 }

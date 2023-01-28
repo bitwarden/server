@@ -1,0 +1,273 @@
+@model StripeSubscriptionsModel
+@{
+    ViewData["Title"] = "Stripe Subscriptions";
+}
+
+@section Scripts {
+    <script>
+        function onRowSelect(selectingPage = false) {
+            var checkboxes = document.getElementsByClassName('row-check');
+            var checkedCheckboxCount = 0;
+            var bulkActions = document.getElementById('bulkActions');
+
+            var selectPage = document.getElementById('selectPage');
+            for(var i = 0; i < checkboxes.length; i++){
+                if((checkboxes[i].checked && !selectingPage) || selectingPage && selectPage.checked) {
+                    checkboxes[i].checked = true;
+                    checkedCheckboxCount += 1;
+                } else {
+                    checkboxes[i].checked = false;
+                }
+            }
+
+            if(checkedCheckboxCount > 0) {
+                bulkActions.classList.remove("d-none");
+            } else {
+                bulkActions.classList.add("d-none");
+            }
+
+            var selectPage = document.getElementById('selectPage');
+            var selectAll = document.getElementById('selectAll');
+            if (checkedCheckboxCount == checkboxes.length) {
+                selectPage.checked = true;
+                selectAll.classList.remove("d-none");
+
+                var selectAllElement = document.getElementById('selectAllElement');
+                selectAllElement.classList.remove('d-none');
+
+                var selectedAllConfirmation = document.getElementById('selectedAllConfirmation');
+                selectedAllConfirmation.classList.add('d-none');
+            } else {
+                selectPage.checked = false;
+                selectAll.classList.add("d-none");
+                var selectAllInput = document.getElementById('selectAllInput');
+                selectAllInput.checked = false;
+            }
+        }
+
+        function onSelectAll() {
+            var selectAllInput = document.getElementById('selectAllInput');
+            selectAllInput.checked = true;
+
+            var selectAllElement = document.getElementById('selectAllElement');
+            selectAllElement.classList.add('d-none');
+
+            var selectedAllConfirmation = document.getElementById('selectedAllConfirmation');
+            selectedAllConfirmation.classList.remove('d-none');
+        }
+
+        function exportSelectedSubscriptions() {
+            var selectAll = document.getElementById('selectAll');
+            var httpRequest = new XMLHttpRequest();
+            httpRequest.open('POST');
+            httpRequest.send();
+        }
+
+        function cancelSelectedSubscriptions() {
+
+        }
+    </script>
+}
+
+<h2>Manage Stripe Subscriptions</h2>
+@if (!string.IsNullOrWhiteSpace(Model.Message))
+{
+    <div class="alert alert-success"></div>
+}
+        <form method="post">
+        <div asp-validation-summary="All" class="alert alert-danger"></div>
+        <div class="row">
+            <div class="col-6">
+                <label asp-for="Filter.Status">Status</label>
+                <select asp-for="Filter.Status" name="filter.Status" class="form-control mr-2">
+                    <option asp-selected="Model.Filter.Status == null" value="all">All</option>
+                    <option asp-selected='Model.Filter.Status == "active"' value="active">Active</option>
+                    <option asp-selected='Model.Filter.Status == "unpaid"' value="unpaid">Unpaid</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label asp-for="Filter.CurrentPeriodEnd">Current Period End</label>
+                <div class="input-group">
+                    <div class="input-group-append">
+                        <div class="input-group-text">
+                            <span class="mr-1">
+                                <input type="radio" class="mr-1" asp-for="Filter.CurrentPeriodEndRange" name="filter.CurrentPeriodEndRange" value="lt">Before
+                            </span>
+                            <input type="radio" asp-for="Filter.CurrentPeriodEndRange" name="filter.CurrentPeriodEndRange" value="gt">After
+                        </div>
+                    </div>
+                    @{
+                        var date = @Model.Filter.CurrentPeriodEndDate.HasValue ? @Model.Filter.CurrentPeriodEndDate.Value.ToString("yyyy-MM-dd") : string.Empty;
+                        <input type="date" class="form-control" asp-for="Filter.CurrentPeriodEndDate" name="filter.CurrentPeriodEndDate" value="@date">
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-6">
+                <label asp-for="Filter.Price">Price ID</label>
+                <select asp-for="Filter.Price" name="filter.Price" class="form-control mr-2">
+                    <option asp-selected="Model.Filter.Price == null" value="@null">All</option>
+                    @foreach (var price in Model.Prices)
+                    {<option asp-selected='@Model.Filter.Price == @price.Id' value="@price.Id">@price.Id</option>}
+                </select>
+            </div>
+            <div class="col-6">
+                <label asp-for="Filter.TestClock">Test Clock</label>
+                <select asp-for="Filter.TestClock" name="filter.TestClock" class="form-control mr-2">
+                    <option asp-selected="Model.Filter.TestClock == null" value="@null">All</option>
+                    @foreach (var clock in Model.TestClocks)
+                    {<option asp-selected='@Model.Filter.TestClock == @clock.Id' value="@clock.Id">@clock.Name</option>}
+                </select>
+            </div>
+        </div>
+        <div class="row col-12 d-flex justify-content-end my-3">
+                <button type="submit" class="btn btn-primary" title="Search" name="action" asp-for="Action" value="@StripeSubscriptionsAction.Search"><i class="fa fa-search"></i> Search</button>
+        </div>
+    <hr/>
+    <input type="checkbox" class="d-none" asp-for="Filter.SelectAll" name="filter.SelectAll" id="selectAllInput" asp-for="Model.Filter.SelectAll">
+    <div class="text-center row d-flex justify-content-center">
+        <div id="selectAll" class="d-none col-8"> 
+            All @Model.Items.Count subscriptions on this page are selected.<br/>
+            <button type="button" id="selectAllElement" class="btn btn-link p-0 pb-1" onclick="onSelectAll()">Click here to select all subscriptions for this search.</button>
+            <span id="selectedAllConfirmation" class="d-none text-muted">✔ All subscriptions for this search are selected.</span><br/>
+            <div class="alert alert-warning" role="alert">Please be aware that bulk operations may take several minutes to complete.</div>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                     <th>
+                        <div class="form-check form-check-inline">
+                            <input id="selectPage" class="form-check-input" type="checkbox" onchange="onRowSelect(true)">
+                        </div>
+                    </th>
+                    <th>Id</th>
+                    <th>Customer Email</th>
+                    <th>Status</th>
+                    <th>Product</th>
+                    <th>Current Period End</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if(!Model.Items.Any())
+                {
+                    <tr>
+                        <td colspan="6">No results to list.</td>
+                    </tr>
+                }
+                else
+                {
+                    @for(var i = 0; i < Model.Items.Count; i++)
+                    {
+                        <tr>
+                            <td>
+                                <input type="hidden" asp-for="@Model.Items[i].Subscription.Id" value="@Model.Items[i].Subscription.Id">
+                                <input type="hidden" asp-for="@Model.Items[i].Subscription.Status" value="@Model.Items[i].Subscription.Status">
+                                <input type="hidden" asp-for="@Model.Items[i].Subscription.CurrentPeriodEnd" value="@Model.Items[i].Subscription.CurrentPeriodEnd">
+                                <input type="hidden" asp-for="@Model.Items[i].Subscription.Customer.Email" value="@Model.Items[i].Subscription.Customer.Email">
+                                <input type="hidden" asp-for="@Model.Items[i].Subscription.LatestInvoice.Status" value="@Model.Items[i].Subscription.LatestInvoice.Status">
+                                <input type="hidden" asp-for="@Model.Items[i].Subscription.LatestInvoice.Id" value="@Model.Items[i].Subscription.LatestInvoice.Id">
+
+                                @for(var j = 0; j < Model.Items[i].Subscription.Items.Data.Count; j++)
+                                {
+                                    <input 
+                                        type="hidden"
+                                        asp-for="@Model.Items[i].Subscription.Items.Data[j].Plan.Id"
+                                        value="@Model.Items[i].Subscription.Items.Data[j].Plan.Id"
+                                    >
+                                }
+                                <div class="form-check">
+                                    <input class="form-check-input row-check" onchange="onRowSelect()" asp-for="@Model.Items[i].Selected">
+                                </div>
+                            </td>
+                            <td>
+                                @Model.Items[i].Subscription.Id
+                            </td>
+                            <td>
+                                @Model.Items[i].Subscription.Customer?.Email
+                            </td>
+                            <td>
+                                @Model.Items[i].Subscription.Status
+                            </td>
+                            <td>
+                                @string.Join(",", Model.Items[i].Subscription.Items.Data.Select(product => product.Plan.Id).ToArray())
+                            </td>
+                            <td>
+                                @Model.Items[i].Subscription.CurrentPeriodEnd.ToShortDateString()
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+    <nav class="d-inline-flex">
+        <ul class="pagination">
+            @if(!string.IsNullOrWhiteSpace(Model.Filter.EndingBefore))
+            {
+                <input type="hidden" asp-for="@Model.Filter.EndingBefore" value="@Model.Filter.EndingBefore">
+                <li class="page-item">
+                    <button 
+                    type="submit"
+                    class="page-link"
+                    name="action"
+                    asp-for="Action"
+                    value="@StripeSubscriptionsAction.PreviousPage"
+                    >
+                        Previous
+                    </button>
+                </li>
+            }
+            else
+            {
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Previous</a>
+                </li>
+            }
+            @if(!string.IsNullOrWhiteSpace(Model.Filter.StartingAfter))
+            {
+                <input type="hidden" asp-for="@Model.Filter.StartingAfter" value="@Model.Filter.StartingAfter">
+                <li class="page-item">
+                    <button class="page-link"
+                    type="submit"
+                    name="action"
+                    asp-for="Action"
+                    value="@StripeSubscriptionsAction.NextPage"
+                    >
+                        Next
+                    </button>
+                </li>
+            }
+            else
+            {
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">Next</a>
+                </li>
+            }
+        </ul>
+        <span id="bulkActions" class="d-none ml-2">
+            <span class="d-inline-flex">
+                <button 
+                    type="submit"
+                    class="btn btn-primary mr-1"
+                    name="action"
+                    asp-for="Action"
+                    value="@StripeSubscriptionsAction.Export"
+                >
+                    Export 
+                </button>
+                <button 
+                    type="submit"
+                    class="btn btn-danger"
+                    name="action"
+                    asp-for="Action"
+                    value="@StripeSubscriptionsAction.BulkCancel"
+                    >
+                    Bulk Cancel
+                </button>
+            </span>
+        </span>
+    </nav>
+    </form>

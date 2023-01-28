@@ -46,7 +46,7 @@
         body {
             background-color: #f6f6f6;
         }
-
+        
         @media only screen and (max-width: 600px) {
             body {
                 padding: 0 !important;
@@ -99,6 +99,24 @@
                 width: 600px !important;
             }
         }
+        
+        /* Component styling - these are explicitly applied via classes so that they can be 
+            gradually introduced as we update templates.*/
+        a.inline-link {
+            font-weight: bold;
+            color: #175DDC;
+            text-decoration: none;
+        }
+
+        br.line-break {
+            margin: 0;
+            box-sizing: border-box;
+            color: #333;
+            line-height: 25px;
+            -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: none;
+        }
+
     </style>
     {{! Yahoo center fix }}
     <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6"><tr><td class="container" width="100%" align="center">

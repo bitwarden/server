@@ -1,0 +1,11 @@
+---
+name: Workflow Linter
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/**
+
+jobs:
+  call-workflow:
+    uses: bitwarden/gh-actions/.github/workflows/workflow-linter.yml@master

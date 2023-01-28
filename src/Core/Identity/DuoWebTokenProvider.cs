@@ -1,89 +1,86 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Utilities.Duo;
 using Bit.Core.Models;
-using System;
-using Microsoft.Extensions.DependencyInjection;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Utilities.Duo;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Identity
+namespace Bit.Core.Identity;
+
+public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
 {
-    public class DuoWebTokenProvider : IUserTwoFactorTokenProvider<User>
+    private readonly IServiceProvider _serviceProvider;
+    private readonly GlobalSettings _globalSettings;
+
+    public DuoWebTokenProvider(
+        IServiceProvider serviceProvider,
+        GlobalSettings globalSettings)
     {
-        private readonly IServiceProvider _serviceProvider;
-        private readonly GlobalSettings _globalSettings;
+        _serviceProvider = serviceProvider;
+        _globalSettings = globalSettings;
+    }
 
-        public DuoWebTokenProvider(
-            IServiceProvider serviceProvider,
-            GlobalSettings globalSettings)
+    public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+    {
+        var userService = _serviceProvider.GetRequiredService<IUserService>();
+        if (!(await userService.CanAccessPremium(user)))
         {
-            _serviceProvider = serviceProvider;
-            _globalSettings = globalSettings;
+            return false;
         }
 
-        public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
+        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+        if (!HasProperMetaData(provider))
         {
-            var userService = _serviceProvider.GetRequiredService<IUserService>();
-            if (!(await userService.CanAccessPremium(user)))
-            {
-                return false;
-            }
-
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-            if (!HasProperMetaData(provider))
-            {
-                return false;
-            }
-
-            return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, user);
+            return false;
         }
 
-        public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
+        return await userService.TwoFactorProviderIsEnabledAsync(TwoFactorProviderType.Duo, user);
+    }
+
+    public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
+    {
+        var userService = _serviceProvider.GetRequiredService<IUserService>();
+        if (!(await userService.CanAccessPremium(user)))
         {
-            var userService = _serviceProvider.GetRequiredService<IUserService>();
-            if (!(await userService.CanAccessPremium(user)))
-            {
-                return null;
-            }
-
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-            if (!HasProperMetaData(provider))
-            {
-                return null;
-            }
-
-            var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"],
-                (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, user.Email);
-            return signatureRequest;
+            return null;
         }
 
-        public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+        if (!HasProperMetaData(provider))
         {
-            var userService = _serviceProvider.GetRequiredService<IUserService>();
-            if (!(await userService.CanAccessPremium(user)))
-            {
-                return false;
-            }
-
-            var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
-            if (!HasProperMetaData(provider))
-            {
-                return false;
-            }
-
-            var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
-                _globalSettings.Duo.AKey, token);
-
-            return response == user.Email;
+            return null;
         }
 
-        private bool HasProperMetaData(TwoFactorProvider provider)
+        var signatureRequest = DuoWeb.SignRequest((string)provider.MetaData["IKey"],
+            (string)provider.MetaData["SKey"], _globalSettings.Duo.AKey, user.Email);
+        return signatureRequest;
+    }
+
+    public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
+    {
+        var userService = _serviceProvider.GetRequiredService<IUserService>();
+        if (!(await userService.CanAccessPremium(user)))
         {
-            return provider?.MetaData != null && provider.MetaData.ContainsKey("IKey") &&
-                provider.MetaData.ContainsKey("SKey") && provider.MetaData.ContainsKey("Host");
+            return false;
         }
+
+        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Duo);
+        if (!HasProperMetaData(provider))
+        {
+            return false;
+        }
+
+        var response = DuoWeb.VerifyResponse((string)provider.MetaData["IKey"], (string)provider.MetaData["SKey"],
+            _globalSettings.Duo.AKey, token);
+
+        return response == user.Email;
+    }
+
+    private bool HasProperMetaData(TwoFactorProvider provider)
+    {
+        return provider?.MetaData != null && provider.MetaData.ContainsKey("IKey") &&
+            provider.MetaData.ContainsKey("SKey") && provider.MetaData.ContainsKey("Host");
     }
 }

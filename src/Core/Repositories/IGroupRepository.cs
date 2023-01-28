@@ -1,21 +1,21 @@
-﻿using System;
-using Bit.Core.Models.Table;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 
-namespace Bit.Core.Repositories
+namespace Bit.Core.Repositories;
+
+public interface IGroupRepository : IRepository<Group, Guid>
 {
-    public interface IGroupRepository : IRepository<Group, Guid>
-    {
-        Task<Tuple<Group, ICollection<SelectionReadOnly>>> GetByIdWithCollectionsAsync(Guid id);
-        Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId);
-        Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId);
-        Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id);
-        Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId);
-        Task CreateAsync(Group obj, IEnumerable<SelectionReadOnly> collections);
-        Task ReplaceAsync(Group obj, IEnumerable<SelectionReadOnly> collections);
-        Task DeleteUserAsync(Guid groupId, Guid organizationUserId);
-        Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
-    }
+    Task<Tuple<Group, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
+    Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId);
+    Task<ICollection<Tuple<Group, ICollection<CollectionAccessSelection>>>> GetManyWithCollectionsByOrganizationIdAsync(
+        Guid organizationId);
+    Task<ICollection<Group>> GetManyByManyIds(IEnumerable<Guid> groupIds);
+    Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId);
+    Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id);
+    Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId);
+    Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
+    Task ReplaceAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
+    Task DeleteUserAsync(Guid groupId, Guid organizationUserId);
+    Task UpdateUsersAsync(Guid groupId, IEnumerable<Guid> organizationUserIds);
+    Task DeleteManyAsync(IEnumerable<Guid> groupIds);
 }

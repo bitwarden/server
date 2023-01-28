@@ -1,118 +1,119 @@
-﻿using System;
-using System.Threading.Tasks;
-using Bit.Core.Exceptions;
-using Bit.Core.Models.Table;
-using Bit.Core.Repositories;
-using System.Collections.Generic;
-using Bit.Core.Models.Data;
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 
-namespace Bit.Core.Services
+namespace Bit.Core.Services;
+
+public class CollectionService : ICollectionService
 {
-    public class CollectionService : ICollectionService
+    private readonly IEventService _eventService;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly ICollectionRepository _collectionRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IMailService _mailService;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly ICurrentContext _currentContext;
+
+    public CollectionService(
+        IEventService eventService,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository,
+        IUserRepository userRepository,
+        IMailService mailService,
+        IReferenceEventService referenceEventService,
+        ICurrentContext currentContext)
     {
-        private readonly IEventService _eventService;
-        private readonly IOrganizationRepository _organizationRepository;
-        private readonly IOrganizationUserRepository _organizationUserRepository;
-        private readonly ICollectionRepository _collectionRepository;
-        private readonly IUserRepository _userRepository;
-        private readonly IMailService _mailService;
-        private readonly IReferenceEventService _referenceEventService;
+        _eventService = eventService;
+        _organizationRepository = organizationRepository;
+        _organizationUserRepository = organizationUserRepository;
+        _collectionRepository = collectionRepository;
+        _userRepository = userRepository;
+        _mailService = mailService;
+        _referenceEventService = referenceEventService;
+        _currentContext = currentContext;
+    }
 
-        public CollectionService(
-            IEventService eventService,
-            IOrganizationRepository organizationRepository,
-            IOrganizationUserRepository organizationUserRepository,
-            ICollectionRepository collectionRepository,
-            IUserRepository userRepository,
-            IMailService mailService,
-            IReferenceEventService referenceEventService)
+    public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
+        IEnumerable<CollectionAccessSelection> users = null, Guid? assignUserId = null)
+    {
+        var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
+        if (org == null)
         {
-            _eventService = eventService;
-            _organizationRepository = organizationRepository;
-            _organizationUserRepository = organizationUserRepository;
-            _collectionRepository = collectionRepository;
-            _userRepository = userRepository;
-            _mailService = mailService;
-            _referenceEventService = referenceEventService;
+            throw new BadRequestException("Organization not found");
         }
 
-        public async Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null,
-            Guid? assignUserId = null)
+        if (collection.Id == default(Guid))
         {
-            var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
-            if (org == null)
+            if (org.MaxCollections.HasValue)
             {
-                throw new BadRequestException("Organization not found");
+                var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
+                if (org.MaxCollections.Value <= collectionCount)
+                {
+                    throw new BadRequestException("You have reached the maximum number of collections " +
+                    $"({org.MaxCollections.Value}) for this organization.");
+                }
             }
 
-            if (collection.Id == default(Guid))
+            await _collectionRepository.CreateAsync(collection, org.UseGroups ? groups : null, users);
+
+            // Assign a user to the newly created collection.
+            if (assignUserId.HasValue)
             {
-                if (org.MaxCollections.HasValue)
+                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, assignUserId.Value);
+                if (orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
                 {
-                    var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
-                    if (org.MaxCollections.Value <= collectionCount)
-                    {
-                        throw new BadRequestException("You have reached the maximum number of collections " +
-                        $"({org.MaxCollections.Value}) for this organization.");
-                    }
+                    await _collectionRepository.UpdateUsersAsync(collection.Id,
+                        new List<CollectionAccessSelection> {
+                            new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = false } });
                 }
-
-                if (groups == null || !org.UseGroups)
-                {
-                    await _collectionRepository.CreateAsync(collection);
-                }
-                else
-                {
-                    await _collectionRepository.CreateAsync(collection, groups);
-                }
-
-                // Assign a user to the newly created collection.
-                if (assignUserId.HasValue)
-                {
-                    var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, assignUserId.Value);
-                    if (orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
-                    {
-                        await _collectionRepository.UpdateUsersAsync(collection.Id,
-                            new List<SelectionReadOnly> {
-                                new SelectionReadOnly { Id = orgUser.Id, ReadOnly = false } });
-                    }
-                }
-
-                await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
-                await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.CollectionCreated, org));
             }
-            else
-            {
-                if (!org.UseGroups)
-                {
-                    await _collectionRepository.ReplaceAsync(collection);
-                }
-                else
-                {
-                    await _collectionRepository.ReplaceAsync(collection, groups ?? new List<SelectionReadOnly>());
-                }
 
-                await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
-            }
+            await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.CollectionCreated, org));
+        }
+        else
+        {
+            await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groups : null, users);
+            await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
+        }
+    }
+
+    public async Task DeleteUserAsync(Collection collection, Guid organizationUserId)
+    {
+        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
+        if (orgUser == null || orgUser.OrganizationId != collection.OrganizationId)
+        {
+            throw new NotFoundException();
+        }
+        await _collectionRepository.DeleteUserAsync(collection.Id, organizationUserId);
+        await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_Updated);
+    }
+
+    public async Task<IEnumerable<Collection>> GetOrganizationCollections(Guid organizationId)
+    {
+        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.ManageUsers(organizationId))
+        {
+            throw new NotFoundException();
         }
 
-        public async Task DeleteAsync(Collection collection)
+        IEnumerable<Collection> orgCollections;
+        if (await _currentContext.OrganizationAdmin(organizationId) || await _currentContext.ViewAllCollections(organizationId))
         {
-            await _collectionRepository.DeleteAsync(collection);
-            await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted);
+            // Admins, Owners, Providers and Custom (with collection management permissions) can access all items even if not assigned to them
+            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
+        }
+        else
+        {
+            var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+            orgCollections = collections.Where(c => c.OrganizationId == organizationId);
         }
 
-        public async Task DeleteUserAsync(Collection collection, Guid organizationUserId)
-        {
-            var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-            if (orgUser == null || orgUser.OrganizationId != collection.OrganizationId)
-            {
-                throw new NotFoundException();
-            }
-            await _collectionRepository.DeleteUserAsync(collection.Id, organizationUserId);
-            await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_Updated);
-        }
+        return orgCollections;
     }
 }

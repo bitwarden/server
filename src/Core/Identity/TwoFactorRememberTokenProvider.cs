@@ -1,21 +1,20 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Bit.Core.Models.Table;
-using Microsoft.Extensions.Options;
+﻿using Bit.Core.Entities;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
-namespace Bit.Core.Identity
+namespace Bit.Core.Identity;
+
+public class TwoFactorRememberTokenProvider : DataProtectorTokenProvider<User>
 {
-    public class TwoFactorRememberTokenProvider : DataProtectorTokenProvider<User>
-    {
-        public TwoFactorRememberTokenProvider(
-            IDataProtectionProvider dataProtectionProvider,
-            IOptions<TwoFactorRememberTokenProviderOptions> options,
-            ILogger<DataProtectorTokenProvider<User>> logger)
-            : base(dataProtectionProvider, options, logger)
-        { }
-    }
-
-    public class TwoFactorRememberTokenProviderOptions : DataProtectionTokenProviderOptions
+    public TwoFactorRememberTokenProvider(
+        IDataProtectionProvider dataProtectionProvider,
+        IOptions<TwoFactorRememberTokenProviderOptions> options,
+        ILogger<DataProtectorTokenProvider<User>> logger)
+        : base(dataProtectionProvider, options, logger)
     { }
 }
+
+public class TwoFactorRememberTokenProviderOptions : DataProtectionTokenProviderOptions
+{ }

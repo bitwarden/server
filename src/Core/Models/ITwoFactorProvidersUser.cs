@@ -1,14 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 
-namespace Bit.Core.Models
+namespace Bit.Core.Models;
+
+public interface ITwoFactorProvidersUser
 {
-    public interface ITwoFactorProvidersUser
-    {
-        string TwoFactorProviders { get; }
-        Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders();
-        Guid? GetUserId();
-        bool GetPremium();
-    }
+    string TwoFactorProviders { get; }
+    Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders();
+    Guid? GetUserId();
+    bool GetPremium();
 }

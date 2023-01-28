@@ -1,7 +1,6 @@
-﻿namespace Bit.Core.Models.Mail
+﻿namespace Bit.Core.Models.Mail;
+
+public class PasswordlessSignInModel
 {
-    public class PasswordlessSignInModel
-    {
-        public string Url { get; set; }
-    }
+    public string Url { get; set; }
 }
