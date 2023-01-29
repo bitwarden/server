@@ -2,6 +2,7 @@
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Services;
 
@@ -104,8 +105,7 @@ public class OrganizationDomainService : IOrganizationDomainService
             foreach (var domain in expiredDomains)
             {
                 //get admin emails of organization
-                var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(domain.OrganizationId, OrganizationUserType.Admin);
-                var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
+                var adminEmails = await GetAdminEmailsAsync(domain.OrganizationId);
 
                 //Send email to administrators
                 if (adminEmails.Count > 0)
@@ -124,5 +124,15 @@ public class OrganizationDomainService : IOrganizationDomainService
         {
             _logger.LogError(ex, "Organization domain maintenance failed");
         }
+    }
+
+    private async Task<List<string>> GetAdminEmailsAsync(Guid organizationId)
+    {
+        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
+        var emailList = orgUsers.Where(o => o.Type <= OrganizationUserType.Admin 
+                                        || o.GetPermissions()?.ManageSso == true)
+            .Select(a => a.Email).Distinct().ToList();
+        
+        return emailList;
     }
 }
