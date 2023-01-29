@@ -67,10 +67,10 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
             return Status != OrganizationUserStatusType.Revoked;
         }
     }
-    
+
     public Permissions GetPermissions()
     {
-        return string.IsNullOrWhiteSpace(Permissions) ? null 
+        return string.IsNullOrWhiteSpace(Permissions) ? null
             : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
     }
 }

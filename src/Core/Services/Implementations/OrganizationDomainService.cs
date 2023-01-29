@@ -2,7 +2,6 @@
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 
 namespace Bit.Core.Services;
 
@@ -129,10 +128,10 @@ public class OrganizationDomainService : IOrganizationDomainService
     private async Task<List<string>> GetAdminEmailsAsync(Guid organizationId)
     {
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organizationId);
-        var emailList = orgUsers.Where(o => o.Type <= OrganizationUserType.Admin 
+        var emailList = orgUsers.Where(o => o.Type <= OrganizationUserType.Admin
                                         || o.GetPermissions()?.ManageSso == true)
             .Select(a => a.Email).Distinct().ToList();
-        
+
         return emailList;
     }
 }
