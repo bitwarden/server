@@ -56,7 +56,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
         
-        if(!await userHasReadAccessToProject(secret)
+        if(!await userHasReadAccessToProject(secret))
         {
             throw new UnauthorizedAccessException();
         }
@@ -67,7 +67,11 @@ public class SecretsController : Controller
     [HttpGet("projects/{projectId}/{organizationId}/secrets")]
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByProjectAsync([FromRoute] Guid projectId, [FromRoute] Guid organizationId)
     {
-        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId);
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId, userId, accessClient);
         
         if(secrets != null){
             if(!await userHasReadAccessToProject(projectId, organizationId))
@@ -124,7 +128,7 @@ public class SecretsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        hasAccess = accessClient switch
+        var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
@@ -140,6 +144,7 @@ public class SecretsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var hasAccess = orgAdmin;
 
         if(secret.Projects?.Count > 0)
         {
@@ -161,6 +166,7 @@ public class SecretsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var hasAccess = orgAdmin;
 
         if(secret.Projects?.Count > 0)
         {

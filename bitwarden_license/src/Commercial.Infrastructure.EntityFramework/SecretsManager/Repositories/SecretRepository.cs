@@ -66,12 +66,12 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByProjectIdAsync(Guid projectId, AccessClientType accessType)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByProjectIdAsync(Guid projectId, Guid userId, AccessClientType accessType)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = await dbContext.Secret
+            var query = dbContext.Secret
                 .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null);
                 
             query = accessType switch

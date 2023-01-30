@@ -40,11 +40,9 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             }
             else
             {
-                var hasAccess = false;
+                var hasAccess = orgAdmin;
 
-                if(secret.Projects == null || secret.Projects?.Count == 0){
-                    hasAccess = orgAdmin;
-                } else {
+                if(secret.Projects != null || secret.Projects?.Count > 0){
 
                     var projectId = secret.Projects.FirstOrDefault().Id;
 
