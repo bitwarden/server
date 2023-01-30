@@ -348,9 +348,7 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // Check if user belongs to any organization with an active SSO policy 
-        // If 'EnforceSsoPolicyForAllUsers' is set to true then SSO policy applies to all user types otherwise it does not apply to Owner or Admin
-        var minSsoPolicyUserType = _globalSettings.Sso.EnforceSsoPolicyForAllUsers ? OrganizationUserType.Owner : OrganizationUserType.User;
-        var anySsoPoliciesApplicableToUser = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, minSsoPolicyUserType, OrganizationUserStatusType.Confirmed);
+        var anySsoPoliciesApplicableToUser = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
         {
             return false;

@@ -9,6 +9,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
 
 namespace Bit.Core.Test.Services;
@@ -393,7 +394,7 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsNoPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
+    public async Task GetPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsNoPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         SetupUserPolicies(userId, sutProvider);
 
@@ -404,12 +405,14 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithOwnerUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsOnePolicy(Guid userId, SutProvider<PolicyService> sutProvider)
+    public async Task GetPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsOnePolicy(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         SetupUserPolicies(userId, sutProvider);
 
+        sutProvider.GetDependency<GlobalSettings>().Sso.EnforceSsoPolicyForAllUsers.Returns(true);
+
         var result = await sutProvider.Sut
-            .GetPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso, OrganizationUserType.Owner);
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
 
         Assert.Single(result);
         Assert.True(result.All(details => details.PolicyEnabled));
@@ -420,7 +423,7 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPoliciesApplicableToUserAsync_WithDisableTypeFilter_WithDefaultUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsNoPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
+    public async Task GetPoliciesApplicableToUserAsync_WithDisableTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsNoPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         SetupUserPolicies(userId, sutProvider);
 
@@ -431,12 +434,12 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetPoliciesApplicableToUserAsync_WithDisableSendTypeFilter_WithOwnerUserTypeFilter_WithInvitedUserStatusFilter_ReturnsOnePolicy(Guid userId, SutProvider<PolicyService> sutProvider)
+    public async Task GetPoliciesApplicableToUserAsync_WithDisableSendTypeFilter_WithInvitedUserStatusFilter_ReturnsOnePolicy(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         SetupUserPolicies(userId, sutProvider);
 
         var result = await sutProvider.Sut
-            .GetPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserType.User, OrganizationUserStatusType.Invited);
+            .GetPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserStatusType.Invited);
 
         Assert.Single(result);
         Assert.True(result.All(details => details.PolicyEnabled));
@@ -447,7 +450,7 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AnyPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsFalse(Guid userId, SutProvider<PolicyService> sutProvider)
+    public async Task AnyPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsFalse(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         SetupUserPolicies(userId, sutProvider);
 
@@ -458,18 +461,20 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AnyPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithOwnerUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsTrue(Guid userId, SutProvider<PolicyService> sutProvider)
+    public async Task AnyPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsTrue(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         SetupUserPolicies(userId, sutProvider);
 
+        sutProvider.GetDependency<GlobalSettings>().Sso.EnforceSsoPolicyForAllUsers.Returns(true);
+
         var result = await sutProvider.Sut
-            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso, OrganizationUserType.Owner);
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
 
         Assert.True(result);
     }
 
     [Theory, BitAutoData]
-    public async Task AnyPoliciesApplicableToUserAsync_WithDisableTypeFilter_WithDefaultUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsFalse(Guid userId, SutProvider<PolicyService> sutProvider)
+    public async Task AnyPoliciesApplicableToUserAsync_WithDisableTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsFalse(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         SetupUserPolicies(userId, sutProvider);
 
@@ -480,12 +485,12 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AnyPoliciesApplicableToUserAsync_WithDisableSendTypeFilter_WithOwnerUserTypeFilter_WithInvitedUserStatusFilter_ReturnsTrue(Guid userId, SutProvider<PolicyService> sutProvider)
+    public async Task AnyPoliciesApplicableToUserAsync_WithDisableSendTypeFilter_WithInvitedUserStatusFilter_ReturnsTrue(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         SetupUserPolicies(userId, sutProvider);
 
         var result = await sutProvider.Sut
-            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserType.User, OrganizationUserStatusType.Invited);
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserStatusType.Invited);
 
         Assert.True(result);
     }

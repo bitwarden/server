@@ -1471,7 +1471,7 @@ public class OrganizationService : IOrganizationService
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
         var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
         var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg, OrganizationUserType.User, OrganizationUserStatusType.Invited);
+            PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
 
         if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
         {
@@ -1492,7 +1492,7 @@ public class OrganizationService : IOrganizationService
         if (!await userService.TwoFactorIsEnabledAsync(user))
         {
             var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserType.User, OrganizationUserStatusType.Invited);
+                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
                 throw new BadRequestException("You cannot join this organization until you enable " +
@@ -2583,7 +2583,7 @@ public class OrganizationService : IOrganizationService
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
         var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
         var singleOrgPoliciesApplyingToRevokedUsers = await _policyService.GetPoliciesApplicableToUserAsync(userId,
-            PolicyType.SingleOrg, OrganizationUserType.User, OrganizationUserStatusType.Revoked);
+            PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
         var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
 
         if (hasOtherOrgs && singleOrgPolicyApplies)
@@ -2606,7 +2606,7 @@ public class OrganizationService : IOrganizationService
         if (!await userService.TwoFactorIsEnabledAsync(user))
         {
             var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
-                PolicyType.TwoFactorAuthentication, OrganizationUserType.User, OrganizationUserStatusType.Invited);
+                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
                 throw new BadRequestException("You cannot restore this user until they enable " +
