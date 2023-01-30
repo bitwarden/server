@@ -129,7 +129,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         AssertHelper.AssertRecent(createdServiceAccount.CreationDate);
 
         // Check permissions have been bootstrapped.
-        var accessPolicies = await _accessPolicyRepository.GetManyByServiceAccountAsync(createdServiceAccount.Id);
+        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(createdServiceAccount.Id);
         Assert.NotNull(accessPolicies);
         var ap = accessPolicies!.First();
         Assert.True(ap.Read);

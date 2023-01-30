@@ -25,7 +25,7 @@ public class AccessPoliciesControllerTests
         var result = await sutProvider.Sut.GetProjectAccessPoliciesAsync(id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetManyByProjectId(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+            .GetManyByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
         Assert.Empty(result.GroupAccessPolicies);
         Assert.Empty(result.UserAccessPolicies);
@@ -37,13 +37,13 @@ public class AccessPoliciesControllerTests
     public async void GetAccessPoliciesByProject_Success(SutProvider<AccessPoliciesController> sutProvider, Guid id,
         UserProjectAccessPolicy resultAccessPolicy)
     {
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByProjectId(default)
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByGrantedProjectIdAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
 
         var result = await sutProvider.Sut.GetProjectAccessPoliciesAsync(id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetManyByProjectId(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+            .GetManyByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
         Assert.Empty(result.GroupAccessPolicies);
         Assert.NotEmpty(result.UserAccessPolicies);

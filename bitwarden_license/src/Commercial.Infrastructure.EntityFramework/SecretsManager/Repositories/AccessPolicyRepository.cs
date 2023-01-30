@@ -138,7 +138,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>?> GetManyByProjectId(Guid id)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>?> GetManyByGrantedProjectIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -157,14 +157,14 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>?> GetManyByServiceAccountAsync(Guid serviceAcountId)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>?> GetManyByGrantedServiceAccountIdAsync(Guid id)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
         var entities = await dbContext.AccessPolicies.Where(ap =>
-                ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId == serviceAcountId ||
-                ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == serviceAcountId)
+                ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id ||
+                ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id)
             .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
             .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
             .ToListAsync();
