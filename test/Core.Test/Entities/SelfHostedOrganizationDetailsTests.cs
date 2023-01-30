@@ -7,9 +7,9 @@ using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Business;
+namespace Bit.Core.Test.Entities;
 
-public class OrganizationLicenseTests
+public class SelfHostedOrganizationDetailsTests
 {
     [Theory]
     [BitAutoData]
@@ -19,7 +19,7 @@ public class OrganizationLicenseTests
     {
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -34,7 +34,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.Seats = 1;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Remove some users", exception);
@@ -49,7 +49,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.MaxCollections = 1;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Remove some collections", exception);
@@ -64,7 +64,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseGroups = false;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Your new license does not allow for the use of groups", exception);
@@ -79,7 +79,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UsePolicies = false;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Your new license does not allow for the use of policies", exception);
@@ -95,7 +95,7 @@ public class OrganizationLicenseTests
         orgLicense.UsePolicies = false;
         ((List<Policy>)orgDetails.Policies).ForEach(p => p.Enabled = false);
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -110,7 +110,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseSso = false;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Your new license does not allow for the use of SSO", exception);
@@ -126,7 +126,7 @@ public class OrganizationLicenseTests
         orgLicense.UseSso = false;
         orgDetails.SsoConfig.Enabled = false;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -142,7 +142,7 @@ public class OrganizationLicenseTests
         orgLicense.UseSso = false;
         orgDetails.SsoConfig = null;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -157,7 +157,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseKeyConnector = false;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Your new license does not allow for the use of Key Connector", exception);
@@ -173,7 +173,7 @@ public class OrganizationLicenseTests
         orgLicense.UseKeyConnector = false;
         orgDetails.SsoConfig.SetData(new SsoConfigurationData() { KeyConnectorEnabled = false });
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -189,7 +189,7 @@ public class OrganizationLicenseTests
         orgLicense.UseKeyConnector = false;
         orgDetails.SsoConfig = null;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -204,7 +204,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseScim = false;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Your new plan does not allow the SCIM feature", exception);
@@ -221,7 +221,7 @@ public class OrganizationLicenseTests
         ((List<OrganizationConnection<ScimConfig>>)orgDetails.ScimConnections)
             .ForEach(c => c.SetConfig(new ScimConfig() { Enabled = false }));
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -237,7 +237,7 @@ public class OrganizationLicenseTests
         orgLicense.UseScim = false;
         orgDetails.ScimConnections = null;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -252,7 +252,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseCustomPermissions = false;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Your new plan does not allow the Custom Permissions feature", exception);
@@ -268,7 +268,7 @@ public class OrganizationLicenseTests
         orgLicense.UseCustomPermissions = false;
         ((List<OrganizationUser>)orgDetails.OrganizationUsers).ForEach(ou => ou.Type = OrganizationUserType.User);
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));
@@ -283,7 +283,7 @@ public class OrganizationLicenseTests
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseResetPassword = false;
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.False(result);
         Assert.Contains("Your new license does not allow the Password Reset feature", exception);
@@ -299,7 +299,7 @@ public class OrganizationLicenseTests
         orgLicense.UseResetPassword = false;
         ((List<Policy>)orgDetails.Policies).ForEach(p => p.Enabled = false);
 
-        var result = orgLicense.ValidateForOrganization(orgDetails, out var exception);
+        var result = orgDetails.CanUseLicense(license, out var exception);
 
         Assert.True(result);
         Assert.True(string.IsNullOrEmpty(exception));

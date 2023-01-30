@@ -35,8 +35,8 @@ public class UpdateOrganizationLicenseCommand : IUpdateOrganizationLicenseComman
             throw new BadRequestException("License is already in use by another organization.");
         }
 
-        var canUse = license.ValidateForInstallation(_globalSettings, _licensingService, out var exception) &&
-            license.ValidateForOrganization(selfHostedOrganization, out exception);
+        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception) &&
+            selfHostedOrganization.CanUseLicense(license, out exception);
 
         if (!canUse)
         {
