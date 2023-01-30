@@ -25,13 +25,10 @@ public class UpdateSecretCommand : IUpdateSecretCommand
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(updatedSecret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var hasAccess = false;
+        var hasAccess = orgAdmin;
 
         var project = updatedSecret.Projects?.FirstOrDefault();
-        if(project == null){
-            hasAccess = orgAdmin;
-        } else {
-
+        if(project != null){
             hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
@@ -45,18 +42,19 @@ public class UpdateSecretCommand : IUpdateSecretCommand
             throw new UnauthorizedAccessException();
         }
 
-        var existingSecret = await _secretRepository.GetByIdAsync(updatedSecret.Id);
-        if (existingSecret == null)
+        var secret = await _secretRepository.GetByIdAsync(updatedSecret.Id);
+        if (secret == null)
         {
             throw new NotFoundException();
         }
+        
+        secret.Key = updatedSecret.Key;
+        secret.Value = updatedSecret.Value;
+        secret.Note = updatedSecret.Note;
+        secret.Projects = updatedSecret.Projects;
+        secret.RevisionDate = DateTime.UtcNow;
 
-        updatedSecret.OrganizationId = existingSecret.OrganizationId;
-        updatedSecret.CreationDate = existingSecret.CreationDate;
-        updatedSecret.DeletedDate = existingSecret.DeletedDate;
-        updatedSecret.RevisionDate = DateTime.UtcNow;
-
-        await _secretRepository.UpdateAsync(updatedSecret);
-        return updatedSecret;
+        await _secretRepository.UpdateAsync(secret);
+        return secret;
     }
 }
