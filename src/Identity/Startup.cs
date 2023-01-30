@@ -138,9 +138,6 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
 
-        // Automapper
-        services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
             CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ApplicationCacheTopicName))
         {

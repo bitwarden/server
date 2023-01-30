@@ -74,9 +74,6 @@ public class Startup
         // BitPay
         services.AddSingleton<BitPayClient>();
 
-        // Automapper
-        services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
-
         if (!globalSettings.SelfHosted)
         {
             services.AddIpRateLimiting(globalSettings);
