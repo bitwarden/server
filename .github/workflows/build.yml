@@ -250,7 +250,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
       
-      - name: Set up Image Tag
+      - name: Set up image tag
         run: |
           IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
           if [[ "$IMAGE_TAG" == "master" ]]; then
@@ -291,17 +291,17 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
-      - name: Login to Azure QA ACR
+      - name: Login to QA ACR
         run: az acr login -n bitwardenqa
 
-      - name: Tag and Push image to Azure ACR QA registry
+      - name: Tag and push image to QA ACR
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          QA_REGISTRY: bitwardenqa.azurecr.io
+          REGISTRY: bitwardenqa.azurecr.io
         run: |
           docker tag $PROJECT_NAME \
-            $QA_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
-          docker push $QA_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+            $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker
         run: docker logout
@@ -312,17 +312,17 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to Azure PROD ACR
+      - name: Login to PROD ACR
         run: az acr login -n bitwardenprod
-      
-      - name: Push image to Azure ACR QA registry
+       #TODO Start here tomorrow
+      - name: Tag and push image to PROD ACR
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          PROD_REGISTRY: bitwardenprod.azurecr.io
+          REGISTRY: bitwardenprod.azurecr.io
         run: |
-          docker tag $QA_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }} \
-            $PROD_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
-          docker push $PROD_REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker tag $PROJECT_NAME \
+            $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker
         run: docker logout
