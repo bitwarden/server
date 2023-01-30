@@ -19,7 +19,7 @@ public class SelfHostedOrganizationDetails : Organization
         if (license.Seats.HasValue && OccupiedSeatCount > license.Seats.Value)
         {
             exception = $"Your organization currently has {OccupiedSeatCount} seats filled. " +
-                $"Your new license only has ({Seats.Value}) seats. Remove some users.";
+                $"Your new license only has ({license.Seats.Value}) seats. Remove some users.";
             return false;
         }
 
