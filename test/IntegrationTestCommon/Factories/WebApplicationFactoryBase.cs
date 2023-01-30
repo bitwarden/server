@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bit.IntegrationTestCommon.Factories;
 
@@ -108,6 +110,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Fix IP Rate Limiting
             services.AddSingleton<IStartupFilter, CustomStartupFilter>();
+
+            // Disable logs
+            services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
         });
     }
 

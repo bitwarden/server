@@ -30,7 +30,8 @@ SELECT
     PU.[Type],
     PO.[ProviderId],
     PU.[Id] ProviderUserId,
-    P.[Name] ProviderName
+    P.[Name] ProviderName,
+    O.[PlanType]
 FROM
     [dbo].[ProviderUser] PU
 INNER JOIN
