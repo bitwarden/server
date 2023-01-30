@@ -2,6 +2,7 @@
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
@@ -43,6 +44,8 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IProviderUserRepository _providerUserRepository;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -69,7 +72,9 @@ public class OrganizationService : IOrganizationService
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
         ICurrentContext currentContext,
-        ILogger<OrganizationService> logger)
+        ILogger<OrganizationService> logger,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IProviderUserRepository providerUserRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -96,6 +101,8 @@ public class OrganizationService : IOrganizationService
         _organizationConnectionRepository = organizationConnectionRepository;
         _currentContext = currentContext;
         _logger = logger;
+        _providerOrganizationRepository = providerOrganizationRepository;
+        _providerUserRepository = providerUserRepository;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1635,8 +1642,19 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException(failureMessage);
         }
 
-        var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
-            OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+        var providerOrg = await this._providerOrganizationRepository.GetByOrganizationId(organization.Id);
+
+        IEnumerable<string> ownerEmails;
+        if (providerOrg != null)
+        {
+            ownerEmails = (await _providerUserRepository.GetManyDetailsByProviderAsync(providerOrg.ProviderId, ProviderUserStatusType.Confirmed))
+                .Select(u => u.Email).Distinct();
+        }
+        else
+        {
+            ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
+                OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+        }
         var initialSeatCount = organization.Seats.Value;
 
         await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
