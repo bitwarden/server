@@ -127,6 +127,15 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         Assert.Equal(request.Name, createdServiceAccount.Name);
         AssertHelper.AssertRecent(createdServiceAccount.RevisionDate);
         AssertHelper.AssertRecent(createdServiceAccount.CreationDate);
+
+        // Check permissions have been bootstrapped.
+        var accessPolicies = await _accessPolicyRepository.GetManyByServiceAccountAsync(createdServiceAccount.Id);
+        Assert.NotNull(accessPolicies);
+        var ap = accessPolicies!.First();
+        Assert.True(ap.Read);
+        Assert.True(ap.Write);
+        AssertHelper.AssertRecent(ap.CreationDate);
+        AssertHelper.AssertRecent(ap.RevisionDate);
     }
 
     [Fact]

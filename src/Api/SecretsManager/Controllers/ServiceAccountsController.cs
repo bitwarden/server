@@ -64,8 +64,8 @@ public class ServiceAccountsController : Controller
         {
             throw new NotFoundException();
         }
-
-        var result = await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId));
+        var userId = _userService.GetProperUserId(User).Value;
+        var result = await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
         return new ServiceAccountResponseModel(result);
     }
 
