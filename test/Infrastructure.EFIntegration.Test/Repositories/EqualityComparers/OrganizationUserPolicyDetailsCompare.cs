@@ -6,11 +6,34 @@ public class OrganizationUserPolicyDetailsCompare : IEqualityComparer<Organizati
 {
     public bool Equals(OrganizationUserPolicyDetails x, OrganizationUserPolicyDetails y)
     {
-        if (ReferenceEquals(x, y)) return true;
-        if (ReferenceEquals(x, null)) return false;
-        if (ReferenceEquals(y, null)) return false;
-        if (x.GetType() != y.GetType()) return false;
-        return x.OrganizationId.Equals(y.OrganizationId) && x.PolicyType == y.PolicyType && x.PolicyEnabled == y.PolicyEnabled && x.PolicyData == y.PolicyData && x.OrganizationUserType == y.OrganizationUserType && x.OrganizationUserStatus == y.OrganizationUserStatus && x.CanManagePolicies == y.CanManagePolicies && x.IsProvider == y.IsProvider;
+        if (ReferenceEquals(x, y))
+        {
+            return true;
+        }
+
+        if (ReferenceEquals(x, null))
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(y, null))
+        {
+            return false;
+        }
+
+        if (x.GetType() != y.GetType())
+        {
+            return false;
+        }
+
+        return x.OrganizationId.Equals(y.OrganizationId) &&
+               x.PolicyType == y.PolicyType &&
+               x.PolicyEnabled == y.PolicyEnabled &&
+               x.PolicyData == y.PolicyData &&
+               x.OrganizationUserType == y.OrganizationUserType &&
+               x.OrganizationUserStatus == y.OrganizationUserStatus &&
+               x.CanManagePolicies == y.CanManagePolicies &&
+               x.IsProvider == y.IsProvider;
     }
 
     public int GetHashCode(OrganizationUserPolicyDetails obj)
