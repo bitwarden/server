@@ -311,6 +311,7 @@ public class OrganizationServiceTests
     public async Task InviteUser_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 10;
         organization.UseCustomPermissions = true;
 
         invite.Permissions = null;
@@ -336,6 +337,7 @@ public class OrganizationServiceTests
     public async Task InviteUser_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 10;
         organization.UseCustomPermissions = false;
 
         invite.Type = inviteUserType;
