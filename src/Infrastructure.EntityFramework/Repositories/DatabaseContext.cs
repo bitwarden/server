@@ -1,6 +1,11 @@
-﻿using Bit.Infrastructure.EntityFramework.Models;
+﻿using Bit.Core;
+using Bit.Infrastructure.EntityFramework.Converters;
+using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using DP = Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -12,6 +17,11 @@ public class DatabaseContext : DbContext
         : base(options)
     { }
 
+    public DbSet<AccessPolicy> AccessPolicies { get; set; }
+    public DbSet<UserProjectAccessPolicy> UserProjectAccessPolicy { get; set; }
+    public DbSet<GroupProjectAccessPolicy> GroupProjectAccessPolicy { get; set; }
+    public DbSet<ServiceAccountProjectAccessPolicy> ServiceAccountProjectAccessPolicy { get; set; }
+    public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }
     public DbSet<CollectionCipher> CollectionCiphers { get; set; }
@@ -32,6 +42,9 @@ public class DatabaseContext : DbContext
     public DbSet<OrganizationUser> OrganizationUsers { get; set; }
     public DbSet<Policy> Policies { get; set; }
     public DbSet<Provider> Providers { get; set; }
+    public DbSet<Secret> Secret { get; set; }
+    public DbSet<ServiceAccount> ServiceAccount { get; set; }
+    public DbSet<Project> Project { get; set; }
     public DbSet<ProviderUser> ProviderUsers { get; set; }
     public DbSet<ProviderOrganization> ProviderOrganizations { get; set; }
     public DbSet<Send> Sends { get; set; }
@@ -44,6 +57,13 @@ public class DatabaseContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+        // Scans and loads all configurations implementing the `IEntityTypeConfiguration` from the
+        //  `Infrastructure.EntityFramework` Module. Note to get the assembly we can use a random class
+        //   from this module.
+        builder.ApplyConfigurationsFromAssembly(typeof(DatabaseContext).Assembly);
+
+        // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
+        // Entity Framework code first database configurations.
         var eCipher = builder.Entity<Cipher>();
         var eCollection = builder.Entity<Collection>();
         var eCollectionCipher = builder.Entity<CollectionCipher>();
@@ -101,6 +121,11 @@ public class DatabaseContext : DbContext
         eGrant.HasKey(x => x.Key);
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
+        var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
+            Constants.DatabaseFieldProtectorPurpose);
+        var dataProtectionConverter = new DataProtectionConverter(dataProtector);
+        eUser.Property(c => c.Key).HasConversion(dataProtectionConverter);
+        eUser.Property(c => c.MasterPassword).HasConversion(dataProtectionConverter);
 
         if (Database.IsNpgsql())
         {
@@ -141,11 +166,11 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eAuthRequest.ToTable(nameof(AuthRequest));
 
-        ConfigureDateTimeUTCQueries(builder);
+        ConfigureDateTimeUtcQueries(builder);
     }
 
     // Make sure this is called after configuring all the entities as it iterates through all setup entities.
-    private static void ConfigureDateTimeUTCQueries(ModelBuilder builder)
+    private void ConfigureDateTimeUtcQueries(ModelBuilder builder)
     {
         foreach (var entityType in builder.Model.GetEntityTypes())
         {

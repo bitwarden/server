@@ -17,7 +17,6 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.Dapper;
-using Bit.Infrastructure.EntityFramework;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
@@ -52,6 +51,7 @@ public static class ServiceCollectionExtensions
         var selectedDatabaseProvider = globalSettings.DatabaseProvider;
         var provider = SupportedDatabaseProviders.SqlServer;
         var connectionString = string.Empty;
+
         if (!string.IsNullOrWhiteSpace(selectedDatabaseProvider))
         {
             switch (selectedDatabaseProvider.ToLowerInvariant())
@@ -66,16 +66,28 @@ public static class ServiceCollectionExtensions
                     provider = SupportedDatabaseProviders.MySql;
                     connectionString = globalSettings.MySql.ConnectionString;
                     break;
+                case "sqlite":
+                    provider = SupportedDatabaseProviders.Sqlite;
+                    connectionString = globalSettings.Sqlite.ConnectionString;
+                    break;
+                case "sqlserver":
+                    connectionString = globalSettings.SqlServer.ConnectionString;
+                    break;
                 default:
                     break;
             }
         }
-
-        var useEf = (provider != SupportedDatabaseProviders.SqlServer);
-
-        if (useEf)
+        else
         {
-            services.AddEFRepositories(globalSettings.SelfHosted, connectionString, provider);
+            // Default to attempting to use SqlServer connection string if globalSettings.DatabaseProvider has no value.
+            connectionString = globalSettings.SqlServer.ConnectionString;
+        }
+
+        services.SetupEntityFramework(connectionString, provider);
+
+        if (provider != SupportedDatabaseProviders.SqlServer)
+        {
+            services.AddPasswordManagerEFRepositories(globalSettings.SelfHosted);
         }
         else
         {
@@ -333,9 +345,9 @@ public static class ServiceCollectionExtensions
             };
             options.ClaimsIdentity = new ClaimsIdentityOptions
             {
-                SecurityStampClaimType = "sstamp",
+                SecurityStampClaimType = Claims.SecurityStamp,
                 UserNameClaimType = JwtClaimTypes.Email,
-                UserIdClaimType = JwtClaimTypes.Subject
+                UserIdClaimType = JwtClaimTypes.Subject,
             };
             options.Tokens.ChangeEmailTokenProvider = TokenOptions.DefaultEmailProvider;
         });
@@ -396,7 +408,7 @@ public static class ServiceCollectionExtensions
     public static void AddCustomDataProtectionServices(
         this IServiceCollection services, IWebHostEnvironment env, GlobalSettings globalSettings)
     {
-        var builder = services.AddDataProtection(options => options.ApplicationDiscriminator = "Bitwarden");
+        var builder = services.AddDataProtection().SetApplicationName("Bitwarden");
         if (env.IsDevelopment())
         {
             return;
@@ -421,7 +433,6 @@ public static class ServiceCollectionExtensions
                     "dataprotection.pfx", globalSettings.DataProtection.CertificatePassword)
                     .GetAwaiter().GetResult();
             }
-            //TODO djsmith85 Check if this is the correct container name
             builder
                 .PersistKeysToAzureBlobStorage(globalSettings.Storage.ConnectionString, "aspnet-dataprotection", "keys.xml")
                 .ProtectKeysWithCertificate(dataProtectionCert);
@@ -619,7 +630,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IConnectionMultiplexer>(
             _ => ConnectionMultiplexer.Connect(globalSettings.Redis.ConnectionString));
 
-        // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer 
+        // Explicitly register IDistributedCache to re-use existing IConnectionMultiplexer
         // to reduce the number of redundant connections to the Redis instance
         services.AddSingleton<IDistributedCache>(s =>
         {

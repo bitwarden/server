@@ -66,9 +66,10 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             CreationDate = c.CreationDate,
             RevisionDate = c.RevisionDate,
             DeletedDate = c.DeletedDate,
-            Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.Contains($"\"{_userId}\":true"),
+            Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.ToLowerInvariant().Contains($"\"{_userId}\":true"),
             FolderId = GetFolderId(_userId, c),
             Edit = true,
+            Reprompt = c.Reprompt,
             ViewPassword = true,
             OrganizationUseTotp = false,
         });

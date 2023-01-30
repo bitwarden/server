@@ -178,6 +178,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new ApplicationException("Use register method to create a new user.");
         }
 
+        // if the name is empty, set it to null
+        if (String.Equals(user.Name, String.Empty))
+        {
+            user.Name = null;
+        }
+
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
         await _userRepository.ReplaceAsync(user);
 
@@ -442,9 +448,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var options = CredentialCreateOptions.FromJson((string)provider.MetaData["pending"]);
 
-        // Callback to ensure credential id is unique. Always return true since we don't care if another
-        // account uses the same 2fa key.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = args => Task.FromResult(true);
+        // Callback to ensure credential ID is unique. Always return true since we don't care if another
+        // account uses the same 2FA key.
+        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
 
         var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 
@@ -824,7 +830,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     }
 
     public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
-        string key, KdfType kdf, int kdfIterations)
+        string key, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         if (user == null)
         {
@@ -843,6 +849,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             user.Key = key;
             user.Kdf = kdf;
             user.KdfIterations = kdfIterations;
+            user.KdfMemory = kdfMemory;
+            user.KdfParallelism = kdfParallelism;
             await _userRepository.ReplaceAsync(user);
             await _pushService.PushLogOutAsync(user.Id);
             return IdentityResult.Success;

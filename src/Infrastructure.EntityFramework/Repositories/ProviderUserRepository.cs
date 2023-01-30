@@ -16,6 +16,17 @@ public class ProviderUserRepository :
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.ProviderUsers)
     { }
 
+    public override async Task DeleteAsync(ProviderUser providerUser)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.UserBumpAccountRevisionDateByProviderUserIdAsync(providerUser.Id);
+            await dbContext.SaveChangesAsync();
+        }
+        await base.DeleteAsync(providerUser);
+    }
+
     public async Task<int> GetCountByProviderAsync(Guid providerId, string email, bool onlyRegisteredUsers)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -59,7 +70,10 @@ public class ProviderUserRepository :
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            await UserBumpAccountRevisionDateByProviderUserIds(providerUserIds.ToArray());
+            foreach (var providerUserId in providerUserIds)
+            {
+                await dbContext.UserBumpAccountRevisionDateByProviderUserIdAsync(providerUserId);
+            }
             var entities = dbContext.ProviderUsers.Where(pu => providerUserIds.Contains(pu.Id));
             dbContext.ProviderUsers.RemoveRange(entities);
             await dbContext.SaveChangesAsync();
@@ -89,7 +103,7 @@ public class ProviderUserRepository :
             return await query.FirstOrDefaultAsync();
         }
     }
-    public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId)
+    public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId, ProviderUserStatusType? status)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -99,17 +113,19 @@ public class ProviderUserRepository :
                            on pu.UserId equals u.Id into u_g
                        from u in u_g.DefaultIfEmpty()
                        select new { pu, u };
-            var data = await view.Where(e => e.pu.ProviderId == providerId).Select(e => new ProviderUserUserDetails
-            {
-                Id = e.pu.Id,
-                UserId = e.pu.UserId,
-                ProviderId = e.pu.ProviderId,
-                Name = e.u.Name,
-                Email = e.u.Email ?? e.pu.Email,
-                Status = e.pu.Status,
-                Type = e.pu.Type,
-                Permissions = e.pu.Permissions,
-            }).ToArrayAsync();
+            var data = await view
+                .Where(e => e.pu.ProviderId == providerId && (status == null || e.pu.Status == status))
+                .Select(e => new ProviderUserUserDetails
+                {
+                    Id = e.pu.Id,
+                    UserId = e.pu.UserId,
+                    ProviderId = e.pu.ProviderId,
+                    Name = e.u.Name,
+                    Email = e.u.Email ?? e.pu.Email,
+                    Status = e.pu.Status,
+                    Type = e.pu.Type,
+                    Permissions = e.pu.Permissions,
+                }).ToArrayAsync();
             return data;
         }
     }
@@ -153,7 +169,15 @@ public class ProviderUserRepository :
 
     public async Task<int> GetCountByOnlyOwnerAsync(Guid userId)
     {
-        var query = new ProviderUserReadCountByOnlyOwnerQuery(userId);
-        return await GetCountFromQuery(query);
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.ProviderUsers
+                .Where(pu => pu.Type == ProviderUserType.ProviderAdmin && pu.Status == ProviderUserStatusType.Confirmed)
+                .GroupBy(pu => pu.UserId)
+                .Select(g => new { UserId = g.Key, ConfirmedOwnerCount = g.Count() })
+                .Where(oc => oc.UserId == userId && oc.ConfirmedOwnerCount == 1)
+                .CountAsync();
+        }
     }
 }

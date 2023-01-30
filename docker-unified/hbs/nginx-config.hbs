@@ -1,15 +1,15 @@
 server {
-  listen 80 default_server;
-  #listen [::]:80 default_server;
+  listen {{{String.Coalesce env.BW_PORT_HTTP "8080"}}} default_server;
+  #listen [::]:{{{String.Coalesce env.BW_PORT_HTTP "8080"}}} default_server;
   server_name {{{String.Coalesce env.BW_DOMAIN "localhost"}}};
 {{#if (String.Equal env.BW_ENABLE_SSL "true")}}
 
-  return 301 https://{{{String.Coalesce env.BW_DOMAIN "localhost"}}}$request_uri;
+  return 301 https://{{{String.Coalesce env.BW_DOMAIN "localhost"}}}:{{{String.Coalesce env.BW_PORT_HTTPS "8443"}}}$request_uri;
 }
 
 server {
-  listen 443 ssl http2;
-  #listen [::]:443 ssl http2;
+  listen {{{String.Coalesce env.BW_PORT_HTTPS "8443"}}} ssl http2;
+  #listen [::]:{{{String.Coalesce env.BW_PORT_HTTPS "8443"}}} ssl http2;
   server_name {{{String.Coalesce env.BW_DOMAIN "localhost"}}};
 
   ssl_certificate /etc/bitwarden/{{{String.Coalesce env.BW_SSL_CERT "ssl.crt"}}};
@@ -57,7 +57,7 @@ server {
     include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
     include /etc/nginx/security-headers.conf;
-    add_header Content-Security-Policy "{{{String.Coalesce env.BW_CSP "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; child-src 'self' https://*.duosecurity.com https://*.duofederal.com; frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; connect-src 'self' https://api.pwnedpasswords.com https://2fa.directory; object-src 'self' blob:;"}}}";
+    add_header Content-Security-Policy "{{{String.Coalesce env.BW_CSP "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; child-src 'self' https://*.duosecurity.com https://*.duofederal.com; frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; connect-src 'self' https://api.pwnedpasswords.com https://api.2fa.directory; object-src 'self' blob:;"}}}";
     add_header X-Frame-Options SAMEORIGIN;
     add_header X-Robots-Tag "noindex, nofollow";
   }
@@ -77,13 +77,40 @@ server {
     add_header Content-Type $fido_content_type;
   }
 
-  location /attachments {
+  location = /duo-connector.html {
+    root /app/Web;
+  }
+
+  location = /webauthn-connector.html {
+    root /app/Web;
+  }
+
+  location = /webauthn-fallback-connector.html {
+    root /app/Web;
+  }
+
+  location = /sso-connector.html {
+    root /app/Web;
+  }
+
+  location = /captcha-connector.html {
+    root /app/Web;
+  }
+
+  location = /captcha-mobile-connector.html {
+    root /app/Web;
+  }
+
+  location /attachments/ {
     alias /etc/bitwarden/attachments/;
   }
+{{#if (String.Equal env.BW_ENABLE_API "true")}}
 
   location /api/ {
     proxy_pass http://localhost:5001/;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_ICONS "true")}}
 
   location /icons/ {
 {{#if (String.Equal env.BW_ICONS_PROXY_TO_CLOUD "true")}}
@@ -95,6 +122,8 @@ server {
     proxy_pass http://localhost:5004/;
 {{/if}}
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_NOTIFICATIONS "true")}}
 
   location /notifications/ {
     proxy_pass http://localhost:5006/;
@@ -105,10 +134,14 @@ server {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_EVENTS "true")}}
 
   location /events/ {
     proxy_pass http://localhost:5003/;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_SSO "true")}}
 
   location /sso {
     proxy_pass http://localhost:5007;
@@ -118,6 +151,8 @@ server {
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_IDENTITY "true")}}
 
   location /identity {
     proxy_pass http://localhost:5005;
@@ -127,6 +162,8 @@ server {
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_ADMIN "true")}}
 
   location /admin {
     proxy_pass http://localhost:5000;
@@ -136,10 +173,13 @@ server {
     include /etc/nginx/security-headers.conf;
     add_header X-Frame-Options SAMEORIGIN;
   }
+{{/if}}
+{{#if (String.Equal env.BW_ENABLE_SCIM "true")}}
 
   location /scim/ {
     proxy_pass http://localhost:5002/;
   }
+{{/if}}
 {{#if (String.Equal env.BW_ENABLE_KEY_CONNECTOR "true")}}
 
   location /key-connector/ {

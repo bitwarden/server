@@ -31,12 +31,12 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IMailService _mailService;
-    private readonly ILogger<ResourceOwnerPasswordValidator> _logger;
+    private readonly ILogger _logger;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserRepository _userRepository;
-    private readonly ICaptchaValidationService _captchaValidationService;
+
     public BaseRequestValidator(
         UserManager<User> userManager,
         IDeviceRepository deviceRepository,
@@ -48,12 +48,11 @@ public abstract class BaseRequestValidator<T> where T : class
         IOrganizationUserRepository organizationUserRepository,
         IApplicationCacheService applicationCacheService,
         IMailService mailService,
-        ILogger<ResourceOwnerPasswordValidator> logger,
+        ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
-        IUserRepository userRepository,
-        ICaptchaValidationService captchaValidationService)
+        IUserRepository userRepository)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -70,7 +69,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _globalSettings = globalSettings;
         _policyRepository = policyRepository;
         _userRepository = userRepository;
-        _captchaValidationService = captchaValidationService;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -171,7 +169,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (device != null)
         {
-            claims.Add(new Claim("device", device.Identifier));
+            claims.Add(new Claim(Claims.Device, device.Identifier));
         }
 
         var customResponse = new Dictionary<string, object>();
@@ -189,6 +187,8 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
         customResponse.Add("Kdf", (byte)user.Kdf);
         customResponse.Add("KdfIterations", user.KdfIterations);
+        customResponse.Add("KdfMemory", user.KdfMemory);
+        customResponse.Add("KdfParallelism", user.KdfParallelism);
 
         if (sendRememberToken)
         {
@@ -367,7 +367,7 @@ public abstract class BaseRequestValidator<T> where T : class
                         PolicyType.RequireSso);
                     // Owners and Admins are exempt from this policy
                     if (orgPolicy != null && orgPolicy.Enabled &&
-                        userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)
+                        (_globalSettings.Sso.EnforceSsoPolicyForAllUsers || (userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)))
                     {
                         return false;
                     }
@@ -544,16 +544,19 @@ public abstract class BaseRequestValidator<T> where T : class
 
     private async Task<Device> SaveDeviceAsync(User user, ValidatedTokenRequest request)
     {
-        var deviceFromRequest = GetDeviceFromRequest(request);
-        if (deviceFromRequest != null)
+        var device = GetDeviceFromRequest(request);
+        if (device != null)
         {
             var existingDevice = await GetKnownDeviceAsync(user, request);
             if (existingDevice == null)
             {
+                device.UserId = user.Id;
+                await _deviceService.SaveAsync(device);
+
                 var now = DateTime.UtcNow;
                 if (now - user.CreationDate > TimeSpan.FromMinutes(10))
                 {
-                    var deviceType = deviceFromRequest.Type.GetType().GetMember(deviceFromRequest.Type.ToString())
+                    var deviceType = device.Type.GetType().GetMember(device.Type.ToString())
                         .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
                     if (!_globalSettings.DisableEmailNewDevice)
                     {
@@ -561,17 +564,14 @@ public abstract class BaseRequestValidator<T> where T : class
                             _currentContext.IpAddress);
                     }
                 }
-            }
-            else
-            {
-                deviceFromRequest.Id = existingDevice.Id;
+
+                return device;
             }
 
-            deviceFromRequest.UserId = user.Id;
-            await _deviceService.SaveAsync(deviceFromRequest);
+            return existingDevice;
         }
 
-        return deviceFromRequest;
+        return null;
     }
 
     private async Task ResetFailedAuthDetailsAsync(User user)

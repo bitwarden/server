@@ -6,7 +6,7 @@ namespace Bit.Commercial.Core.Utilities;
 
 public static class ServiceCollectionExtensions
 {
-    public static void AddCommCoreServices(this IServiceCollection services)
+    public static void AddCommercialCoreServices(this IServiceCollection services)
     {
         services.AddScoped<IProviderService, ProviderService>();
     }

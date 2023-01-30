@@ -38,7 +38,7 @@ jobs:
 
   testing:
     name: Testing
-    runs-on: windows-2022
+    runs-on: ubuntu-22.04
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
@@ -46,13 +46,10 @@ jobs:
         uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
         with:
           dotnet-version: "6.0.x"
-      - name: Set up MSBuild
-        uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
 
       - name: Print environment
         run: |
           dotnet --info
-          msbuild -version
           nuget help | grep Version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
@@ -64,21 +61,33 @@ jobs:
         run: dotnet restore --locked-mode
         shell: pwsh
 
+      - name: Remove SQL proj
+        run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
+
       - name: Build OSS solution
-        run: msbuild bitwarden-server.sln /p:Configuration=Debug /p:DefineConstants="OSS" /verbosity:minimal
+        run: dotnet build bitwarden-server.sln -p:Configuration=Debug -p:DefineConstants="OSS" --verbosity minimal
         shell: pwsh
 
       - name: Build solution
-        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
+        run: dotnet build bitwarden-server.sln -p:Configuration=Debug --verbosity minimal
         shell: pwsh
 
       - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --no-build
+        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx"
         shell: pwsh
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build
+        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx"
         shell: pwsh
+
+      - name: Report test results
+        uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226
+        if: always()
+        with:
+          name: Test Results
+          path: "**/*-test-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: true
 
   build-artifacts:
     name: Build artifacts
@@ -233,7 +242,10 @@ jobs:
             base_path: ./bitwarden_license/src
             docker_repos: [bitwarden, bitwardenqa.azurecr.io]
             dotnet: true
-            skip_dct: true
+          - project_name: Billing
+            base_path: ./src
+            docker_repos: [bitwardenqa.azurecr.io]
+            dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
@@ -245,7 +257,7 @@ jobs:
           PROJECT_NAME=$(echo "${{ matrix.project_name }}" | awk '{print tolower($0)}')
           echo "Matrix name: ${{ matrix.project_name }}"
           echo "PROJECT_NAME: $PROJECT_NAME"
-          echo "::set-output name=project_name::$PROJECT_NAME"
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
@@ -334,7 +346,6 @@ jobs:
           && (github.ref == 'refs/heads/master' ||
             github.ref == 'refs/heads/rc' ||
             github.ref == 'refs/heads/hotfix-rc')
-          && (!matrix.skip_dct)
         env:
           DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
           DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
@@ -379,6 +390,11 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
+        with:
+          dotnet-version: "6.0.x"
+
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
@@ -444,6 +460,7 @@ jobs:
           ASPNETCORE_ENVIRONMENT: Production
           swaggerGen: "True"
           DOTNET_ROLL_FORWARD_ON_NO_CANDIDATE_FX: 2
+          GLOBALSETTINGS__SQLSERVER__CONNECTIONSTRING: "placeholder"
 
       - name: Upload Swagger artifact
         uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535

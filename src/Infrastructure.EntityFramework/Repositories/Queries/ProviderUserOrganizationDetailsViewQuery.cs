@@ -29,6 +29,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             UseApi = x.o.UseApi,
             SelfHost = x.o.SelfHost,
             UsersGetPremium = x.o.UsersGetPremium,
+            UseCustomPermissions = x.o.UseCustomPermissions,
             Seats = x.o.Seats,
             MaxCollections = x.o.MaxCollections,
             MaxStorageGb = x.o.MaxStorageGb,
@@ -40,6 +41,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             PrivateKey = x.o.PrivateKey,
             ProviderId = x.p.Id,
             ProviderName = x.p.Name,
+            PlanType = x.o.PlanType
         });
     }
 }

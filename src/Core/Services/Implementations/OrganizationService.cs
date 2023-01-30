@@ -2,6 +2,7 @@
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
@@ -43,6 +44,8 @@ public class OrganizationService : IOrganizationService
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IProviderUserRepository _providerUserRepository;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -69,7 +72,9 @@ public class OrganizationService : IOrganizationService
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
         ICurrentContext currentContext,
-        ILogger<OrganizationService> logger)
+        ILogger<OrganizationService> logger,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IProviderUserRepository providerUserRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -96,6 +101,8 @@ public class OrganizationService : IOrganizationService
         _organizationConnectionRepository = organizationConnectionRepository;
         _currentContext = currentContext;
         _logger = logger;
+        _providerOrganizationRepository = providerOrganizationRepository;
+        _providerUserRepository = providerUserRepository;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -280,6 +287,18 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        if (!newPlan.HasCustomPermissions && organization.UseCustomPermissions)
+        {
+            var organizationCustomUsers =
+                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
+                    OrganizationUserType.Custom);
+            if (organizationCustomUsers.Any())
+            {
+                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
+                                              "Disable your Custom Permissions configuration.");
+            }
+        }
+
         // TODO: Check storage?
 
         string paymentIntentClientSecret = null;
@@ -322,6 +341,7 @@ public class OrganizationService : IOrganizationService
         organization.UseResetPassword = newPlan.HasResetPassword;
         organization.SelfHost = newPlan.HasSelfHost;
         organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
+        organization.UseCustomPermissions = newPlan.HasCustomPermissions;
         organization.Plan = newPlan.Name;
         organization.Enabled = success;
         organization.PublicKey = upgrade.PublicKey;
@@ -621,6 +641,7 @@ public class OrganizationService : IOrganizationService
             UseResetPassword = plan.HasResetPassword,
             SelfHost = plan.HasSelfHost,
             UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
+            UseCustomPermissions = plan.HasCustomPermissions,
             UseScim = plan.HasScim,
             Plan = plan.Name,
             Gateway = null,
@@ -700,7 +721,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey)))
+        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey)))
         {
             throw new BadRequestException("License is already in use by another organization.");
         }
@@ -730,6 +751,7 @@ public class OrganizationService : IOrganizationService
             Plan = license.Plan,
             SelfHost = license.SelfHost,
             UsersGetPremium = license.UsersGetPremium,
+            UseCustomPermissions = license.UseCustomPermissions,
             Gateway = null,
             GatewayCustomerId = null,
             GatewaySubscriptionId = null,
@@ -852,7 +874,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => o.LicenseKey.Equals(license.LicenseKey) && o.Id != organizationId))
+        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey) && o.Id != organizationId))
         {
             throw new BadRequestException("License is already in use by another organization.");
         }
@@ -931,6 +953,18 @@ public class OrganizationService : IOrganizationService
             }
         }
 
+        if (!license.UseCustomPermissions && organization.UseCustomPermissions)
+        {
+            var organizationCustomUsers =
+                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
+                    OrganizationUserType.Custom);
+            if (organizationCustomUsers.Any())
+            {
+                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
+                                              "Disable your Custom Permissions configuration.");
+            }
+        }
+
         if (!license.UseResetPassword && organization.UseResetPassword)
         {
             var resetPasswordPolicy =
@@ -966,6 +1000,7 @@ public class OrganizationService : IOrganizationService
         organization.UseResetPassword = license.UseResetPassword;
         organization.SelfHost = license.SelfHost;
         organization.UsersGetPremium = license.UsersGetPremium;
+        organization.UseCustomPermissions = license.UseCustomPermissions;
         organization.Plan = license.Plan;
         organization.Enabled = license.Enabled;
         organization.ExpirationDate = license.Expires;
@@ -1122,6 +1157,7 @@ public class OrganizationService : IOrganizationService
             foreach (var type in inviteTypes)
             {
                 await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
+                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, type);
             }
         }
 
@@ -1178,7 +1214,8 @@ public class OrganizationService : IOrganizationService
         }
 
         var orgUsers = new List<OrganizationUser>();
-        var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<SelectionReadOnly>)>();
+        var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
+        var orgUserGroups = new List<(OrganizationUser, IEnumerable<Guid>)>();
         var orgUserInvitedCount = 0;
         var exceptions = new List<Exception>();
         var events = new List<(OrganizationUser, EventType, DateTime?)>();
@@ -1223,6 +1260,11 @@ public class OrganizationService : IOrganizationService
                         orgUsers.Add(orgUser);
                     }
 
+                    if (invite.Groups != null && invite.Groups.Any())
+                    {
+                        orgUserGroups.Add((orgUser, invite.Groups));
+                    }
+
                     events.Add((orgUser, EventType.OrganizationUser_Invited, DateTime.UtcNow));
                     orgUserInvitedCount++;
                 }
@@ -1245,6 +1287,11 @@ public class OrganizationService : IOrganizationService
             foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
             {
                 await _organizationUserRepository.CreateAsync(orgUser, collections);
+            }
+
+            foreach (var (orgUser, groups) in orgUserGroups)
+            {
+                await _organizationUserRepository.UpdateGroupsAsync(orgUser.Id, groups);
             }
 
             if (!await _currentContext.ManageUsers(organization.Id))
@@ -1595,8 +1642,19 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException(failureMessage);
         }
 
-        var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
-            OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+        var providerOrg = await this._providerOrganizationRepository.GetByOrganizationId(organization.Id);
+
+        IEnumerable<string> ownerEmails;
+        if (providerOrg != null)
+        {
+            ownerEmails = (await _providerUserRepository.GetManyDetailsByProviderAsync(providerOrg.ProviderId, ProviderUserStatusType.Confirmed))
+                .Select(u => u.Email).Distinct();
+        }
+        else
+        {
+            ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
+                OrganizationUserType.Owner)).Select(u => u.Email).Distinct();
+        }
         var initialSeatCount = organization.Seats.Value;
 
         await AdjustSeatsAsync(organization, seatsToAdd, prorationDate, ownerEmails);
@@ -1630,7 +1688,8 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<SelectionReadOnly> collections)
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups)
     {
         if (user.Id.Equals(default(Guid)))
         {
@@ -1648,6 +1707,8 @@ public class OrganizationService : IOrganizationService
             await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
         }
 
+        await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
+
         if (user.Type != OrganizationUserType.Owner &&
             !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
         {
@@ -1657,9 +1718,15 @@ public class OrganizationService : IOrganizationService
         if (user.AccessAll)
         {
             // We don't need any collections if we're flagged to have all access.
-            collections = new List<SelectionReadOnly>();
+            collections = new List<CollectionAccessSelection>();
         }
         await _organizationUserRepository.ReplaceAsync(user, collections);
+
+        if (groups != null)
+        {
+            await _organizationUserRepository.UpdateGroupsAsync(user.Id, groups);
+        }
+
         await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
     }
 
@@ -1884,19 +1951,21 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups)
     {
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId, systemUser: null, email, type, accessAll, externalId, collections);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId, systemUser: null, email, type, accessAll, externalId, collections, groups);
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, EventSystemUser systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups)
     {
-        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections);
+        return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups);
     }
 
     private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<SelectionReadOnly> collections)
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
     {
         var invite = new OrganizationUserInvite()
         {
@@ -1904,6 +1973,7 @@ public class OrganizationService : IOrganizationService
             Type = type,
             AccessAll = accessAll,
             Collections = collections,
+            Groups = groups
         };
         var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
             new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
@@ -2017,7 +2087,7 @@ public class OrganizationService : IOrganizationService
                         Emails = new List<string> { user.Email },
                         Type = OrganizationUserType.User,
                         AccessAll = false,
-                        Collections = new List<SelectionReadOnly>(),
+                        Collections = new List<CollectionAccessSelection>(),
                     };
                     userInvites.Add((invite, user.ExternalId));
                 }
@@ -2253,6 +2323,25 @@ public class OrganizationService : IOrganizationService
         if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
         {
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
+        }
+    }
+
+    private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
+    {
+        if (newType != OrganizationUserType.Custom)
+        {
+            return;
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!organization.UseCustomPermissions)
+        {
+            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
         }
     }
 

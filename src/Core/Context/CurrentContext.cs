@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -33,6 +34,7 @@ public class CurrentContext : ICurrentContext
     public virtual int? BotScore { get; set; }
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
+    public virtual ClientType ClientType { get; set; }
 
     public CurrentContext(IProviderUserRepository providerUserRepository)
     {
@@ -82,9 +84,9 @@ public class CurrentContext : ICurrentContext
             MaybeBot = httpContext.Request.Headers["X-Cf-Maybe-Bot"] == "1";
         }
 
-        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version"))
+        if (httpContext.Request.Headers.ContainsKey("Bitwarden-Client-Version") && Version.TryParse(httpContext.Request.Headers["Bitwarden-Client-Version"], out var cVersion))
         {
-            ClientVersion = new Version(httpContext.Request.Headers["Bitwarden-Client-Version"]);
+            ClientVersion = cVersion;
         }
     }
 
@@ -137,7 +139,14 @@ public class CurrentContext : ICurrentContext
             }
         }
 
-        DeviceIdentifier = GetClaimValue(claimsDict, "device");
+        var clientType = GetClaimValue(claimsDict, Claims.Type);
+        if (clientType != null)
+        {
+            Enum.TryParse(clientType, out ClientType c);
+            ClientType = c;
+        }
+
+        DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
 
         Organizations = GetOrganizations(claimsDict, orgApi);
 
@@ -149,9 +158,9 @@ public class CurrentContext : ICurrentContext
     private List<CurrentContentOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
     {
         var organizations = new List<CurrentContentOrganization>();
-        if (claimsDict.ContainsKey("orgowner"))
+        if (claimsDict.ContainsKey(Claims.OrganizationOwner))
         {
-            organizations.AddRange(claimsDict["orgowner"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationOwner].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -167,9 +176,9 @@ public class CurrentContext : ICurrentContext
             });
         }
 
-        if (claimsDict.ContainsKey("orgadmin"))
+        if (claimsDict.ContainsKey(Claims.OrganizationAdmin))
         {
-            organizations.AddRange(claimsDict["orgadmin"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationAdmin].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -177,9 +186,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey("orguser"))
+        if (claimsDict.ContainsKey(Claims.OrganizationUser))
         {
-            organizations.AddRange(claimsDict["orguser"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationUser].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -187,9 +196,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey("orgmanager"))
+        if (claimsDict.ContainsKey(Claims.OrganizationManager))
         {
-            organizations.AddRange(claimsDict["orgmanager"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationManager].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -197,9 +206,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey("orgcustom"))
+        if (claimsDict.ContainsKey(Claims.OrganizationCustom))
         {
-            organizations.AddRange(claimsDict["orgcustom"].Select(c =>
+            organizations.AddRange(claimsDict[Claims.OrganizationCustom].Select(c =>
                 new CurrentContentOrganization
                 {
                     Id = new Guid(c.Value),
@@ -214,9 +223,9 @@ public class CurrentContext : ICurrentContext
     private List<CurrentContentProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
     {
         var providers = new List<CurrentContentProvider>();
-        if (claimsDict.ContainsKey("providerprovideradmin"))
+        if (claimsDict.ContainsKey(Claims.ProviderAdmin))
         {
-            providers.AddRange(claimsDict["providerprovideradmin"].Select(c =>
+            providers.AddRange(claimsDict[Claims.ProviderAdmin].Select(c =>
                 new CurrentContentProvider
                 {
                     Id = new Guid(c.Value),
@@ -224,9 +233,9 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey("providerserviceuser"))
+        if (claimsDict.ContainsKey(Claims.ProviderServiceUser))
         {
-            providers.AddRange(claimsDict["providerserviceuser"].Select(c =>
+            providers.AddRange(claimsDict[Claims.ProviderServiceUser].Select(c =>
                 new CurrentContentProvider
                 {
                     Id = new Guid(c.Value),

@@ -20,6 +20,7 @@ public class ProviderUserOrganizationDetails
     public bool UseResetPassword { get; set; }
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
+    public bool UseCustomPermissions { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
     public short? MaxStorageGb { get; set; }
@@ -33,4 +34,5 @@ public class ProviderUserOrganizationDetails
     public Guid? ProviderId { get; set; }
     public Guid? ProviderUserId { get; set; }
     public string ProviderName { get; set; }
+    public Enums.PlanType PlanType { get; set; }
 }

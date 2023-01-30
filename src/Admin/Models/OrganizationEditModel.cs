@@ -39,9 +39,11 @@ public class OrganizationEditModel : OrganizationViewModel
         UseTotp = org.UseTotp;
         Use2fa = org.Use2fa;
         UseApi = org.UseApi;
+        UseSecretsManager = org.UseSecretsManager;
         UseResetPassword = org.UseResetPassword;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
+        UseCustomPermissions = org.UseCustomPermissions;
         MaxStorageGb = org.MaxStorageGb;
         Gateway = org.Gateway;
         GatewayCustomerId = org.GatewayCustomerId;
@@ -97,10 +99,14 @@ public class OrganizationEditModel : OrganizationViewModel
     public bool UseResetPassword { get; set; }
     [Display(Name = "SCIM")]
     public bool UseScim { get; set; }
+    [Display(Name = "Secrets Manager")]
+    public bool UseSecretsManager { get; set; }
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]
     public bool UsersGetPremium { get; set; }
+    [Display(Name = "Custom Permissions")]
+    public bool UseCustomPermissions { get; set; }
     [Display(Name = "Max. Storage GB")]
     public short? MaxStorageGb { get; set; }
     [Display(Name = "Gateway")]
@@ -136,9 +142,11 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.UseTotp = UseTotp;
         existingOrganization.Use2fa = Use2fa;
         existingOrganization.UseApi = UseApi;
+        existingOrganization.UseSecretsManager = UseSecretsManager;
         existingOrganization.UseResetPassword = UseResetPassword;
         existingOrganization.SelfHost = SelfHost;
         existingOrganization.UsersGetPremium = UsersGetPremium;
+        existingOrganization.UseCustomPermissions = UseCustomPermissions;
         existingOrganization.MaxStorageGb = MaxStorageGb;
         existingOrganization.Gateway = Gateway;
         existingOrganization.GatewayCustomerId = GatewayCustomerId;

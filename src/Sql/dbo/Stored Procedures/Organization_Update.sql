@@ -41,7 +41,9 @@
     @OwnersNotifiedOfAutoscaling DATETIME2(7),
     @MaxAutoscaleSeats INT,
     @UseKeyConnector BIT = 0,
-    @UseScim BIT = 0
+    @UseScim BIT = 0,
+    @UseCustomPermissions BIT = 0,
+    @UseSecretsManager BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -90,7 +92,9 @@ BEGIN
         [OwnersNotifiedOfAutoscaling] = @OwnersNotifiedOfAutoscaling,
         [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
         [UseKeyConnector] = @UseKeyConnector,
-        [UseScim] = @UseScim
+        [UseScim] = @UseScim,
+        [UseCustomPermissions] = @UseCustomPermissions,
+        [UseSecretsManager] = @UseSecretsManager
     WHERE
         [Id] = @Id
 END

@@ -19,6 +19,7 @@ public class OrganizationUserInviteRequestModel
     public bool AccessAll { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 
     public OrganizationUserInviteData ToData()
     {
@@ -28,6 +29,7 @@ public class OrganizationUserInviteRequestModel
             Type = Type,
             AccessAll = AccessAll,
             Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
+            Groups = Groups,
             Permissions = Permissions,
         };
     }
@@ -73,6 +75,7 @@ public class OrganizationUserUpdateRequestModel
     public bool AccessAll { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {

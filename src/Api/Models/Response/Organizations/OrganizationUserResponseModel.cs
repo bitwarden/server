@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
@@ -57,13 +58,16 @@ public class OrganizationUserResponseModel : ResponseModel
 public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserDetailsResponseModel(OrganizationUser organizationUser,
-        IEnumerable<SelectionReadOnly> collections)
+        IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
         Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
     }
 
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IEnumerable<Guid> Groups { get; set; }
 }
 
 public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponseModel
@@ -81,6 +85,8 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Email = organizationUser.Email;
         TwoFactorEnabled = twoFactorEnabled;
         SsoBound = !string.IsNullOrWhiteSpace(organizationUser.SsoExternalId);
+        Collections = organizationUser.Collections.Select(c => new SelectionReadOnlyResponseModel(c));
+        Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
     }
@@ -89,6 +95,8 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string Email { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+    public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 }
 
 public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
@@ -103,12 +111,16 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
 
         Kdf = orgUser.Kdf;
         KdfIterations = orgUser.KdfIterations;
+        KdfMemory = orgUser.KdfMemory;
+        KdfParallelism = orgUser.KdfParallelism;
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
     }
 
     public KdfType Kdf { get; set; }
     public int KdfIterations { get; set; }
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
 }
