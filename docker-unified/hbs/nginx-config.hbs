@@ -101,7 +101,7 @@ server {
     root /app/Web;
   }
 
-  location /attachments {
+  location /attachments/ {
     alias /etc/bitwarden/attachments/;
   }
 {{#if (String.Equal env.BW_ENABLE_API "true")}}
