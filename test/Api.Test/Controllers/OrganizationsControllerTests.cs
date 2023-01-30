@@ -50,12 +50,11 @@ public class OrganizationsControllerTests : IDisposable
         _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
         _userService = Substitute.For<IUserService>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
-        _organizationDomainRepository = Substitute.For<IOrganizationDomainRepository>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
-            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _organizationDomainRepository, _globalSettings);
+            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _globalSettings);
     }
 
     public void Dispose()

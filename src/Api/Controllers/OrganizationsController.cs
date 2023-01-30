@@ -37,7 +37,6 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -54,7 +53,6 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IOrganizationDomainRepository organizationDomainRepository,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -70,7 +68,6 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _organizationDomainRepository = organizationDomainRepository;
         _globalSettings = globalSettings;
     }
 
@@ -134,6 +131,7 @@ public class OrganizationsController : Controller
             {
                 throw new NotFoundException();
             }
+
             return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo);
         }
         else
@@ -252,7 +250,7 @@ public class OrganizationsController : Controller
         }
 
         var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
-            model.BillingEmail != organization.BillingEmail);
+                                                            model.BillingEmail != organization.BillingEmail);
 
         var hasRequiredPermissions = updateBilling
             ? await _currentContext.ManageBilling(orgIdGuid)
@@ -301,11 +299,7 @@ public class OrganizationsController : Controller
         }
 
         var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
-        return new PaymentResponseModel
-        {
-            Success = result.Item1,
-            PaymentIntentClientSecret = result.Item2
-        };
+        return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
     }
 
     [HttpPost("{id}/subscription")]
@@ -332,11 +326,7 @@ public class OrganizationsController : Controller
         }
 
         var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
-        return new PaymentResponseModel
-        {
-            Success = true,
-            PaymentIntentClientSecret = result
-        };
+        return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
     [HttpPost("{id}/storage")]
@@ -350,11 +340,7 @@ public class OrganizationsController : Controller
         }
 
         var result = await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
-        return new PaymentResponseModel
-        {
-            Success = true,
-            PaymentIntentClientSecret = result
-        };
+        return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
     [HttpPost("{id}/verify-bank")]
@@ -544,7 +530,8 @@ public class OrganizationsController : Controller
     }
 
     [HttpGet("{id}/api-key-information/{type?}")]
-    public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id, [FromRoute] OrganizationApiKeyType? type)
+    public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id,
+        [FromRoute] OrganizationApiKeyType? type)
     {
         if (!await HasApiKeyAccessAsync(id, type))
         {
@@ -573,8 +560,8 @@ public class OrganizationsController : Controller
         }
 
         var organizationApiKey = await _getOrganizationApiKeyQuery
-                                    .GetOrganizationApiKeyAsync(organization.Id, model.Type) ??
-                                await _createOrganizationApiKeyCommand.CreateAsync(organization.Id, model.Type);
+                                     .GetOrganizationApiKeyAsync(organization.Id, model.Type) ??
+                                 await _createOrganizationApiKeyCommand.CreateAsync(organization.Id, model.Type);
 
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -675,7 +662,8 @@ public class OrganizationsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey, model.EncryptedPrivateKey);
+        var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey,
+            model.EncryptedPrivateKey);
         return new OrganizationKeysResponseModel(org);
     }
 
@@ -720,18 +708,5 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateAsync(organization);
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
-    }
-
-    [AllowAnonymous]
-    [HttpPost("sso/details")]
-    public async Task<OrganizationDomainSsoDetailsResponseModel> GetSso([FromBody] OrganisationSsoDomainDetailsRequestModel model)
-    {
-        var ssoResult = await _organizationDomainRepository.GetOrganizationDomainSsoDetailsAsync(model.Email);
-        if (ssoResult is null)
-        {
-            throw new NotFoundException();
-        }
-
-        return new OrganizationDomainSsoDetailsResponseModel(ssoResult);
     }
 }
