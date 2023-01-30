@@ -314,7 +314,7 @@ jobs:
 
       - name: Login to PROD ACR
         run: az acr login -n bitwardenprod
-       #TODO Start here tomorrow
+
       - name: Tag and push image to PROD ACR
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
