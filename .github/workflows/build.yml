@@ -38,7 +38,7 @@ jobs:
 
   testing:
     name: Testing
-    runs-on: windows-2022
+    runs-on: ubuntu-22.04
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
@@ -46,13 +46,10 @@ jobs:
         uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
         with:
           dotnet-version: "6.0.x"
-      - name: Set up MSBuild
-        uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
 
       - name: Print environment
         run: |
           dotnet --info
-          msbuild -version
           nuget help | grep Version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
@@ -64,20 +61,23 @@ jobs:
         run: dotnet restore --locked-mode
         shell: pwsh
 
+      - name: Remove SQL proj
+        run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
+
       - name: Build OSS solution
-        run: msbuild bitwarden-server.sln /p:Configuration=Debug /p:DefineConstants="OSS" /verbosity:minimal
+        run: dotnet build bitwarden-server.sln -p:Configuration=Debug -p:DefineConstants="OSS" --verbosity minimal
         shell: pwsh
 
       - name: Build solution
-        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
+        run: dotnet build bitwarden-server.sln -p:Configuration=Debug --verbosity minimal
         shell: pwsh
 
       - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx" || true
+        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx"
         shell: pwsh
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx" || true
+        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx"
         shell: pwsh
 
       - name: Report test results
