@@ -121,11 +121,12 @@ public class DuoApi
                 query = "?" + canonParams;
             }
         }
-        var url = string.Format("{0}://{1}{2}{3}", UrlScheme, _host, path, query);
+        var url = $"{UrlScheme}://{_host}{path}{query}";
 
         var dateString = RFC822UtcNow();
         var auth = Sign(method, path, canonParams, dateString);
-
+        
+        //TODO: Change to httpclient
         var request = (HttpWebRequest)WebRequest.Create(url);
         request.Method = method;
         request.Accept = "application/json";
