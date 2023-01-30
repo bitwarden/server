@@ -688,8 +688,8 @@ public class OrganizationService : IOrganizationService
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
-        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
-        if (singleOrgPolicies.Any())
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
+        if (anySingleOrgPolicies)
         {
             throw new BadRequestException("You may not create an organization. You belong to an organization " +
                 "which has a policy that prohibits you from being a member of any other organization.");
@@ -1480,9 +1480,9 @@ public class OrganizationService : IOrganizationService
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
-        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
             PolicyType.SingleOrg);
-        if (singleOrgPolicies.Any())
+        if (anySingleOrgPolicies)
         {
             throw new BadRequestException("You cannot join this organization because you are a member of " +
                 "another organization which forbids it");
@@ -2593,9 +2593,9 @@ public class OrganizationService : IOrganizationService
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
-        var singleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId,
             PolicyType.SingleOrg);
-        if (singleOrgPolicies.Any())
+        if (anySingleOrgPolicies)
         {
             throw new BadRequestException("You cannot restore this user because they are a member of " +
                 "another organization which forbids it");

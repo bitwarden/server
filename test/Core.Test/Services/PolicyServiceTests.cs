@@ -446,6 +446,50 @@ public class PolicyServiceTests
         Assert.True(result.All(details => !details.IsProvider));
     }
 
+    [Theory, BitAutoData]
+    public async Task AnyPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsFalse(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(userId, sutProvider);
+
+        var result = await sutProvider.Sut
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
+
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AnyPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithOwnerUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsTrue(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(userId, sutProvider);
+
+        var result = await sutProvider.Sut
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso, OrganizationUserType.Owner);
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AnyPoliciesApplicableToUserAsync_WithDisableTypeFilter_WithDefaultUserTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsFalse(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(userId, sutProvider);
+
+        var result = await sutProvider.Sut
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend);
+
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AnyPoliciesApplicableToUserAsync_WithDisableSendTypeFilter_WithOwnerUserTypeFilter_WithInvitedUserStatusFilter_ReturnsTrue(Guid userId, SutProvider<PolicyService> sutProvider)
+    {
+        SetupUserPolicies(userId, sutProvider);
+
+        var result = await sutProvider.Sut
+            .AnyPoliciesApplicableToUserAsync(userId, PolicyType.DisableSend, OrganizationUserType.User, OrganizationUserStatusType.Invited);
+
+        Assert.True(result);
+    }
+
     private static void SetupOrg(SutProvider<PolicyService> sutProvider, Guid organizationId, Organization organization)
     {
         sutProvider.GetDependency<IOrganizationRepository>()

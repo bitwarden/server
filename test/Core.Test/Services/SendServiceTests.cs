@@ -30,8 +30,8 @@ public class SendServiceTests
         send.Id = default;
         send.Type = sendType;
 
-        sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(
-            Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser ? new List<OrganizationUserPolicyDetails> { new OrganizationUserPolicyDetails { PolicyType = PolicyType.DisableSend } } : new List<OrganizationUserPolicyDetails>());
+        sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(
+            Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser);
     }
 
     // Disable Send policy check

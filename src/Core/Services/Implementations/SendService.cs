@@ -281,9 +281,9 @@ public class SendService : ISendService
             return;
         }
 
-        var disableSendPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value,
+        var anyDisableSendPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value,
             PolicyType.DisableSend);
-        if (disableSendPolicies.Any())
+        if (anyDisableSendPolicies)
         {
             throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
         }

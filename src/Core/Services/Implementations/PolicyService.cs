@@ -135,13 +135,29 @@ public class PolicyService : IPolicyService
 
     public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserType minUserType = OrganizationUserType.User, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
+        var result = await QueryOrganizationUserPolicyDetailsAsync(userId, policyType, minUserType, minStatus);
+        return result.ToList();
+    }
+
+    public async Task<bool> AnyPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType,
+        OrganizationUserType minUserType = OrganizationUserType.User,
+        OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    {
+        var result = await QueryOrganizationUserPolicyDetailsAsync(userId, policyType, minUserType, minStatus);
+        return result.Any();
+    }
+
+    private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType,
+        OrganizationUserType minUserType = OrganizationUserType.User,
+        OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId);
         return organizationUserPolicyDetails.Where(o =>
-                     o.PolicyType == policyType &&
-                     o.PolicyEnabled &&
-                     o.OrganizationUserType >= minUserType &&
-                     o.OrganizationUserStatus >= minStatus &&
-                     !o.IsProvider).ToList();
+            o.PolicyType == policyType &&
+            o.PolicyEnabled &&
+            o.OrganizationUserType >= minUserType &&
+            o.OrganizationUserStatus >= minStatus &&
+            !o.IsProvider);
     }
 
     private async Task DependsOnSingleOrgAsync(Organization org)

@@ -130,8 +130,8 @@ public class CipherService : ICipherService
             else
             {
                 // Make sure the user can save new ciphers to their personal vault
-                var personalOwnershipPolicies = await _policyService.GetPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
-                if (personalOwnershipPolicies.Any())
+                var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(savingUserId, PolicyType.PersonalOwnership);
+                if (anyPersonalOwnershipPolicies)
                 {
                     throw new BadRequestException("Due to an Enterprise Policy, you are restricted from saving items to your personal vault.");
                 }
@@ -627,8 +627,8 @@ public class CipherService : ICipherService
         var userId = folders.FirstOrDefault()?.UserId ?? ciphers.FirstOrDefault()?.UserId;
 
         // Make sure the user can save new ciphers to their personal vault
-        var personalOwnershipPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.PersonalOwnership);
-        if (personalOwnershipPolicies.Any())
+        var anyPersonalOwnershipPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value, PolicyType.PersonalOwnership);
+        if (anyPersonalOwnershipPolicies)
         {
             throw new BadRequestException("You cannot import items into your personal vault because you are " +
                 "a member of an organization which forbids it.");

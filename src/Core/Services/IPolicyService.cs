@@ -10,4 +10,6 @@ public interface IPolicyService
         Guid? savingUserId);
     Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType,
         OrganizationUserType minUserType = OrganizationUserType.User, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted);
+    Task<bool> AnyPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType,
+        OrganizationUserType minUserType = OrganizationUserType.User, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted);
 }
