@@ -21,6 +21,8 @@ public class DatabaseContext : DbContext
     public DbSet<UserProjectAccessPolicy> UserProjectAccessPolicy { get; set; }
     public DbSet<GroupProjectAccessPolicy> GroupProjectAccessPolicy { get; set; }
     public DbSet<ServiceAccountProjectAccessPolicy> ServiceAccountProjectAccessPolicy { get; set; }
+    public DbSet<UserServiceAccountAccessPolicy> UserServiceAccountAccessPolicy { get; set; }
+    public DbSet<GroupServiceAccountAccessPolicy> GroupServiceAccountAccessPolicy { get; set; }
     public DbSet<ApiKey> ApiKeys { get; set; }
     public DbSet<Cipher> Ciphers { get; set; }
     public DbSet<Collection> Collections { get; set; }

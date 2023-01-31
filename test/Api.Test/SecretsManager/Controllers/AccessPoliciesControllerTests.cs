@@ -82,7 +82,7 @@ public class AccessPoliciesControllerTests
         var result = await sutProvider.Sut.GetProjectAccessPoliciesAsync(id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetManyByProjectId(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+            .GetManyByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
         Assert.Empty(result.GroupAccessPolicies);
         Assert.Empty(result.UserAccessPolicies);
@@ -101,7 +101,7 @@ public class AccessPoliciesControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectAccessPoliciesAsync(id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByProjectId(Arg.Any<Guid>());
+            .GetManyByGrantedProjectIdAsync(Arg.Any<Guid>());
     }
 
     [Theory]
@@ -124,13 +124,13 @@ public class AccessPoliciesControllerTests
                 break;
         }
 
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByProjectId(default)
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByGrantedProjectIdAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
 
         var result = await sutProvider.Sut.GetProjectAccessPoliciesAsync(id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetManyByProjectId(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+            .GetManyByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
 
         Assert.Empty(result.GroupAccessPolicies);
         Assert.NotEmpty(result.UserAccessPolicies);
@@ -146,13 +146,13 @@ public class AccessPoliciesControllerTests
         UserProjectAccessPolicy resultAccessPolicy)
     {
         SetupUserWithoutPermission(sutProvider, data);
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByProjectId(default)
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByGrantedProjectIdAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectAccessPoliciesAsync(id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByProjectId(Arg.Any<Guid>());
+            .GetManyByGrantedProjectIdAsync(Arg.Any<Guid>());
     }
 
     [Theory]
