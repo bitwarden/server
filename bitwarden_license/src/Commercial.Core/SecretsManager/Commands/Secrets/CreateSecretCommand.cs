@@ -23,24 +23,18 @@ public class CreateSecretCommand : ICreateSecretCommand
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = false;
-
         var project = secret.Projects?.FirstOrDefault();
-        if(project == null){
-            hasAccess = orgAdmin;
-        } else {
-            hasAccess = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
-                _ => false,
-            };
-        }
 
+        var hasAccess = accessClient switch
+        {
+            AccessClientType.NoAccessCheck => true,
+            AccessClientType.User => project != null && await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
+            _ => false,
+        };
+        
         if (!hasAccess)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         return await _secretRepository.CreateAsync(secret);

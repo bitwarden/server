@@ -49,14 +49,14 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                     hasAccess = accessClient switch
                     {
                         AccessClientType.NoAccessCheck => true,
-                        AccessClientType.User => false,
+                        AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),,
                         _ => false,
                     };
                 }
 
                 if (!hasAccess)
                 {
-                    throw new UnauthorizedAccessException();
+                    throw new NotFoundException();
                 }
 
                 return new Tuple<Secret, string>(secret, "");

@@ -39,7 +39,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 
         if (!hasAccess)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         var secret = await _secretRepository.GetByIdAsync(updatedSecret.Id);
