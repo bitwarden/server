@@ -106,10 +106,11 @@ public class AccessPoliciesController : Controller
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(project.OrganizationId);
         var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g));
 
-        // FIXME once users have AccessSecretsManager flag from SM-378 filter by that flag.
         var organizationUsers =
             await _organizationUserRepository.GetManyDetailsByOrganizationAsync(project.OrganizationId);
-        var userResponses = organizationUsers.Select(userDetails => new PotentialGranteeResponseModel(userDetails));
+        var userResponses = organizationUsers
+            .Where(user => user.AccessSecretsManager)
+            .Select(userDetails => new PotentialGranteeResponseModel(userDetails));
 
         return new ListResponseModel<PotentialGranteeResponseModel>(groupResponses.Concat(userResponses));
     }
