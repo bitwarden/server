@@ -153,7 +153,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
                 .ToListAsync();
 
-            return !entities.Any() ? null : entities.Select(MapToCore);
+            return entities.Select(MapToCore);
         }
     }
 
@@ -169,7 +169,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
             .ToListAsync();
 
-        return !entities.Any() ? null : entities.Select(MapToCore);
+        return entities.Select(MapToCore);
     }
 
     public async Task DeleteAsync(Guid id)
