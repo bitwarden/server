@@ -1,9 +1,11 @@
 ﻿using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
+using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -238,5 +240,29 @@ public class OrganizationDomainControllerTests
 
         await sutProvider.GetDependency<IDeleteOrganizationDomainCommand>().Received(1)
             .DeleteAsync(id);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrgDomainSsoDetails_ShouldThrowNotFound_WhenEmailHasNotClaimedDomain(
+        OrganizationDomainSsoDetailsRequestModel model, SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetOrganizationDomainSsoDetailsAsync(model.Email).ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.GetOrgDomainSsoDetails(model);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetails_WhenEmailHasClaimedDomain(
+        OrganizationDomainSsoDetailsRequestModel model, OrganizationDomainSsoDetailsData ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
+
+        var result = await sutProvider.Sut.GetOrgDomainSsoDetails(model);
+
+        Assert.IsType<OrganizationDomainSsoDetailsResponseModel>(result);
     }
 }
