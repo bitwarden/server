@@ -324,3 +324,102 @@ BEGIN
         [Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE])
 END
 GO
+
+IF TYPE_ID(N'[dbo].[OrganizationUserType2]') IS NULL
+BEGIN
+    CREATE TYPE [dbo].[OrganizationUserType2] AS TABLE(
+        [Id] UNIQUEIDENTIFIER,
+        [OrganizationId] UNIQUEIDENTIFIER,
+        [UserId] UNIQUEIDENTIFIER,
+        [Email] NVARCHAR(256),
+        [Key] VARCHAR(MAX),
+        [Status] SMALLINT,
+        [Type] TINYINT,
+        [AccessAll] BIT,
+        [ExternalId] NVARCHAR(300),
+        [CreationDate] DATETIME2(7),
+        [RevisionDate] DATETIME2(7),
+        [Permissions] NVARCHAR(MAX),
+        [ResetPasswordKey] VARCHAR(MAX),
+        [AccessSecretsManager] BIT
+    )
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_CreateMany2]
+    @OrganizationUsersInput [dbo].[OrganizationUserType2] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    INSERT INTO [dbo].[OrganizationUser]
+        (
+        [Id],
+        [OrganizationId],
+        [UserId],
+        [Email],
+        [Key],
+        [Status],
+        [Type],
+        [AccessAll],
+        [ExternalId],
+        [CreationDate],
+        [RevisionDate],
+        [Permissions],
+        [ResetPasswordKey],
+        [AccessSecretsManager]
+        )
+    SELECT
+        OU.[Id],
+        OU.[OrganizationId],
+        OU.[UserId],
+        OU.[Email],
+        OU.[Key],
+        OU.[Status],
+        OU.[Type],
+        OU.[AccessAll],
+        OU.[ExternalId],
+        OU.[CreationDate],
+        OU.[RevisionDate],
+        OU.[Permissions],
+        OU.[ResetPasswordKey],
+        OU.[AccessSecretsManager]
+    FROM
+        @OrganizationUsersInput OU
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateMany2]
+    @OrganizationUsersInput [dbo].[OrganizationUserType2] READONLY
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    UPDATE
+        OU
+    SET
+        [OrganizationId] = OUI.[OrganizationId],
+        [UserId] = OUI.[UserId],
+        [Email] = OUI.[Email],
+        [Key] = OUI.[Key],
+        [Status] = OUI.[Status],
+        [Type] = OUI.[Type],
+        [AccessAll] = OUI.[AccessAll],
+        [ExternalId] = OUI.[ExternalId],
+        [CreationDate] = OUI.[CreationDate],
+        [RevisionDate] = OUI.[RevisionDate],
+        [Permissions] = OUI.[Permissions],
+        [ResetPasswordKey] = OUI.[ResetPasswordKey],
+        [AccessSecretsManager] = OUI.[AccessSecretsManager]
+    FROM
+        [dbo].[OrganizationUser] OU
+    INNER JOIN
+        @OrganizationUsersInput OUI ON OU.Id = OUI.Id
+
+    EXEC [dbo].[User_BumpManyAccountRevisionDates]
+    (
+        SELECT UserId
+        FROM @OrganizationUsersInput
+    )
+END
+GO
