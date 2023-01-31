@@ -17,38 +17,58 @@ namespace Bit.Api.SecretsManager.Controllers;
 [Authorize("secrets")]
 public class SecretsController : Controller
 {
+    private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
     private readonly IUserService _userService;
-    private readonly ICurrentContext _currentContext;
 
     public SecretsController(ISecretRepository secretRepository, IProjectRepository projectRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand, IUserService userService, ICurrentContext currentContext)
     {
+        _currentContext = currentContext;
         _secretRepository = secretRepository;
-        _projectRepository = projectRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
+        _projectRepository = projectRepository;
         _userService = userService;
         _currentContext = currentContext;
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
-    public async Task<SecretWithProjectsListResponseModel> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
+    public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync([FromRoute] Guid organizationId)
     {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
+
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
+    [HttpPost("organizations/{organizationId}/secrets")]
+    public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
+    {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
+        return new SecretResponseModel(result);
+    }
+
     [HttpGet("secrets/{id}")]
-    public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
+    public async Task<SecretResponseModel> GetAsync([FromRoute] Guid id)
     {
         var secret = await _secretRepository.GetByIdAsync(id);
         if (secret == null)

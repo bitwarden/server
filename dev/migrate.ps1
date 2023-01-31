@@ -6,7 +6,15 @@
 #  in the future and investigate if we can migrate back.
 # docker-compose --profile mssql exec mssql bash /mnt/helpers/run_migrations.sh @args
 
-param([switch]$all = $false, [switch]$postgres = $false, [switch]$mysql = $false, [switch]$mssql = $false, [switch]$sqlite = $false)
+param(
+  [switch]$all = $false,
+  [switch]$postgres = $false,
+  [switch]$mysql = $false,
+  [switch]$mssql = $false,
+  [switch]$sqlite = $false,
+  [switch]$selfhost = $false,
+  [switch]$pipeline = $false
+)
 
 if (!$all -and !$postgres -and !$mysql -and !$sqlite) {
   $mssql = $true;
@@ -21,6 +29,12 @@ if ($all -or $postgres -or $mysql -or $sqlite) {
 }
 
 if ($all -or $mssql) {
+  if ($selfhost) {
+    $migrationArgs = "-s"
+  } elseif ($pipeline) {
+    $migrationArgs = "-p"
+  }
+
   Write-Host "Starting Microsoft SQL Server Migrations"
   docker run `
     -v "$(pwd)/helpers/mssql:/mnt/helpers" `
@@ -30,7 +44,7 @@ if ($all -or $mssql) {
     --network=bitwardenserver_default `
     --rm `
     mcr.microsoft.com/mssql-tools `
-    /mnt/helpers/run_migrations.sh @args
+    /mnt/helpers/run_migrations.sh $migrationArgs
 }
 
 $currentDir = Get-Location

@@ -33,6 +33,7 @@ public class UpdateProjectCommandTests
     public async Task UpdateAsync_Admin_Succeeds(Project project, Guid userId, SutProvider<UpdateProjectCommand> sutProvider)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
 
         var project2 = new Project { Id = project.Id, Name = "newName" };
@@ -51,8 +52,9 @@ public class UpdateProjectCommandTests
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(false);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId).Returns(true);
 
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.UpdateAsync(project, userId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(project, userId));
 
         await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
     }
@@ -63,6 +65,7 @@ public class UpdateProjectCommandTests
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId).Returns(true);
 
         var project2 = new Project { Id = project.Id, Name = "newName" };
         var result = await sutProvider.Sut.UpdateAsync(project2, userId);

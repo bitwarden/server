@@ -9,12 +9,13 @@ namespace Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 
 public class DeleteSecretCommand : IDeleteSecretCommand
 {
+    private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
-    private readonly ICurrentContext _currentContext;
 
     public DeleteSecretCommand(ISecretRepository secretRepository, IProjectRepository projectRepository, ICurrentContext currentContext)
     {
+        _currentContext = currentContext;
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _currentContext = currentContext;
@@ -30,13 +31,26 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         {
             throw new NotFoundException();
         }
+        
+        // Ensure all secrets belongs to the same organization
+        if (secrets.Any(p => p.OrganizationId != organizationId))
+        {
+            throw new BadRequestException();
+        }
+
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
 
         var results = new List<Tuple<Secret, string>>();
-        var deleteIds = new List<Guid>();
-        
+        var deleteIds = new List<Guid>(); 
+
         foreach(var id in ids)
         {
             var secret = secrets.FirstOrDefault(secret => secret.Id == id);
+
+
             if (secret == null)
             {
                 throw new NotFoundException();

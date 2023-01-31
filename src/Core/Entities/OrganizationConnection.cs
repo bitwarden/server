@@ -1,15 +1,16 @@
 ﻿using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
 
-public class OrganizationConnection<T> : OrganizationConnection where T : new()
+public class OrganizationConnection<T> : OrganizationConnection where T : IConnectionConfig
 {
     public new T Config
     {
         get => base.GetConfig<T>();
-        set => base.SetConfig<T>(value);
+        set => base.SetConfig(value);
     }
 }
 
@@ -26,7 +27,7 @@ public class OrganizationConnection : ITableObject<Guid>
         Id = CoreHelpers.GenerateComb();
     }
 
-    public T GetConfig<T>() where T : new()
+    public T GetConfig<T>() where T : IConnectionConfig
     {
         try
         {
@@ -38,8 +39,32 @@ public class OrganizationConnection : ITableObject<Guid>
         }
     }
 
-    public void SetConfig<T>(T config) where T : new()
+    public void SetConfig<T>(T config) where T : IConnectionConfig
     {
         Config = JsonSerializer.Serialize(config);
+    }
+
+    public bool Validate<T>(out string exception) where T : IConnectionConfig
+    {
+        if (!Enabled)
+        {
+            exception = $"Connection disabled for organization {OrganizationId}";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(Config))
+        {
+            exception = $"No saved Connection config for organization {OrganizationId}";
+            return false;
+        }
+
+        var config = GetConfig<T>();
+        if (config == null)
+        {
+            exception = $"Error parsing Connection config for organization {OrganizationId}";
+            return false;
+        }
+
+        return config.Validate(out exception);
     }
 }
