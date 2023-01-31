@@ -52,6 +52,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         FamilySponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
+        AccessSecretsManager = organization.AccessSecretsManager;
 
         if (organization.SsoConfig != null)
         {
@@ -101,4 +102,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
+    public bool AccessSecretsManager { get; set; }
 }

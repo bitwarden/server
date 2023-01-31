@@ -29,6 +29,7 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             Permissions = x.ou.Permissions,
             ResetPasswordKey = x.ou.ResetPasswordKey,
             UsesKeyConnector = x.u != null && x.u.UsesKeyConnector,
+            AccessSecretsManager = x.ou.AccessSecretsManager,
         });
     }
 }

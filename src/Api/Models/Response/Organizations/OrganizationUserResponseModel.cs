@@ -23,6 +23,7 @@ public class OrganizationUserResponseModel : ResponseModel
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
+        AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
     }
@@ -40,6 +41,7 @@ public class OrganizationUserResponseModel : ResponseModel
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
+        AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
@@ -50,6 +52,7 @@ public class OrganizationUserResponseModel : ResponseModel
     public OrganizationUserType Type { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public bool AccessAll { get; set; }
+    public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }
