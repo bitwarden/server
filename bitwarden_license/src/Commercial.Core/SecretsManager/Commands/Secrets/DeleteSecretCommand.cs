@@ -1,6 +1,6 @@
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Context;
-﻿using Bit.Core.Exceptions;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -42,7 +42,8 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             {
                 var hasAccess = orgAdmin;
 
-                if(secret.Projects != null || secret.Projects?.Count > 0){
+                if (secret.Projects != null || secret.Projects?.Count > 0)
+                {
 
                     var projectId = secret.Projects.FirstOrDefault().Id;
 

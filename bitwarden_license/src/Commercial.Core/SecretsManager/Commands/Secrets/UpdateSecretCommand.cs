@@ -1,6 +1,6 @@
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -27,7 +27,8 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         var hasAccess = orgAdmin;
 
         var project = updatedSecret.Projects?.FirstOrDefault();
-        if(project != null){
+        if (project != null)
+        {
             hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
@@ -46,7 +47,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         {
             throw new NotFoundException();
         }
-        
+
         secret.Key = updatedSecret.Key;
         secret.Value = updatedSecret.Value;
         secret.Note = updatedSecret.Note;

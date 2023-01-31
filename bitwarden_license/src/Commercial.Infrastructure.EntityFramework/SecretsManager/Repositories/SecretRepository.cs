@@ -1,12 +1,12 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using System.Linq.Expressions;
-using Bit.Core.Enums;
 
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
@@ -54,14 +54,14 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var query = dbContext.Secret.Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
-        
+
         query = accessType switch
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
-        
+
         var secrets = await query.Include(c => c.Projects).OrderBy(c => c.RevisionDate).ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
     }
@@ -73,14 +73,14 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             var dbContext = GetDatabaseContext(scope);
             var query = dbContext.Secret
                 .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null);
-                
+
             query = accessType switch
             {
                 AccessClientType.NoAccessCheck => query,
                 AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
                 _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
             };
-            
+
             var secrets = await query.Include(s => s.Projects).OrderBy(s => s.RevisionDate).ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
         }
@@ -125,7 +125,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             {
                 entity.Projects.Remove(p);
             }
-            
+
             // Add new relationships
             foreach (var project in mappedEntity.Projects?.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
             {

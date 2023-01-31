@@ -1,9 +1,9 @@
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Exceptions;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 
@@ -32,7 +32,7 @@ public class CreateSecretCommand : ICreateSecretCommand
             AccessClientType.User => project != null && await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
             _ => false,
         };
-        
+
         if (!hasAccess)
         {
             throw new NotFoundException();

@@ -1,5 +1,5 @@
-﻿using Bit.Core.SecretsManager.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.SecretsManager.Repositories;
 

@@ -1,15 +1,15 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
-using Bit.Core.Exceptions;
-using Bit.Core.SecretsManager.Entities;
-using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
-using Bit.Core.SecretsManager.Repositories;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Bit.Core.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
@@ -42,7 +42,7 @@ public class SecretsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        
+
         var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
         return new SecretWithProjectsListResponseModel(secrets);
     }
@@ -55,8 +55,8 @@ public class SecretsController : Controller
         {
             throw new NotFoundException();
         }
-        
-        if(!await userHasReadAccessToProject(secret))
+
+        if (!await userHasReadAccessToProject(secret))
         {
             throw new NotFoundException();
         }
@@ -114,10 +114,10 @@ public class SecretsController : Controller
         {
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
-            AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId), 
+            AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId),
             _ => false,
         };
-        
+
         return hasAccess;
     }
 
@@ -128,17 +128,17 @@ public class SecretsController : Controller
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         var hasAccess = orgAdmin;
 
-        if(secret.Projects?.Count > 0)
+        if (secret.Projects?.Count > 0)
         {
             Guid projectId = secret.Projects.FirstOrDefault().Id;
             hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
                 AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId), 
+                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId),
                 _ => false,
             };
-        } 
+        }
 
         return hasAccess;
     }
@@ -150,17 +150,17 @@ public class SecretsController : Controller
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         var hasAccess = orgAdmin;
 
-        if(secret.Projects?.Count > 0)
+        if (secret.Projects?.Count > 0)
         {
             var projectId = secret.Projects.FirstOrDefault().Id;
             hasAccess = accessClient switch
             {
                 AccessClientType.NoAccessCheck => true,
                 AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(projectId, userId), 
+                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(projectId, userId),
                 _ => false,
             };
-        } 
+        }
 
         return hasAccess;
     }
