@@ -256,10 +256,10 @@ public class OrganizationDomainControllerTests
 
     [Theory, BitAutoData]
     public async Task GetOrgDomainSsoDetails_ShouldReturnOrganizationDomainSsoDetails_WhenEmailHasClaimedDomain(
-        OrganizationDomainSsoDetailsRequestModel model, OrganizationDomainSsoDetailsData ssdDetailsData, SutProvider<OrganizationDomainController> sutProvider)
+        OrganizationDomainSsoDetailsRequestModel model, OrganizationDomainSsoDetailsData ssoDetailsData, SutProvider<OrganizationDomainController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssdDetailsData);
+            .GetOrganizationDomainSsoDetailsAsync(model.Email).Returns(ssoDetailsData);
 
         var result = await sutProvider.Sut.GetOrgDomainSsoDetails(model);
 
