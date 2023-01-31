@@ -138,7 +138,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>?> GetManyByGrantedProjectIdAsync(Guid id)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedProjectIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -157,7 +157,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>?> GetManyByGrantedServiceAccountIdAsync(Guid id)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedServiceAccountIdAsync(Guid id)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
