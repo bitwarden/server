@@ -31,7 +31,10 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             throw new NotFoundException();
         }
 
-        var results = ids.Select(async id =>
+        var results = new List<Tuple<Secret, string>>();
+        var deleteIds = new List<Guid>();
+        
+        foreach(var id in ids)
         {
             var secret = secrets.FirstOrDefault(secret => secret.Id == id);
             if (secret == null)
@@ -42,9 +45,8 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             {
                 var hasAccess = orgAdmin;
 
-                if (secret.Projects != null || secret.Projects?.Count > 0)
+                if (secret.Projects != null && secret.Projects?.Count > 0)
                 {
-
                     var projectId = secret.Projects.FirstOrDefault().Id;
 
                     hasAccess = accessClient switch
@@ -60,12 +62,16 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                     throw new NotFoundException();
                 }
 
-                return new Tuple<Secret, string>(secret, "");
+                deleteIds.Add(id);
+                results.Add(new Tuple<Secret, string>(secret, ""));
             }
-        }).ToList();
+        };
 
-        await _secretRepository.SoftDeleteManyByIdAsync(ids);
-        return await results;
+        if(deleteIds.Count > 0){
+            await _secretRepository.SoftDeleteManyByIdAsync(deleteIds);
+        }
+       
+        return results;
     }
 }
 
