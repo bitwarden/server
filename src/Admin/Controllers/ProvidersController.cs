@@ -1,5 +1,6 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Entities.Provider;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -76,7 +77,15 @@ public class ProvidersController : Controller
         }
 
         var provider = model.ToProvider();
-        await _providerService.CreateAsync(provider, model.OwnerEmail);
+        switch (provider.Type)
+        {
+            case ProviderType.Msp:
+                await _providerService.CreateMspAsync(provider, model.OwnerEmail);
+                break;
+            case ProviderType.Reseller:
+                await _providerService.CreateResellerAsync(provider);
+                break;
+        }
 
         return RedirectToAction(_globalSettings.SelfHosted ? "View" : "Edit", new { id = provider.Id });
     }
