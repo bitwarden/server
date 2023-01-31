@@ -3,6 +3,7 @@ using Bit.Core.Context;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Exceptions;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 

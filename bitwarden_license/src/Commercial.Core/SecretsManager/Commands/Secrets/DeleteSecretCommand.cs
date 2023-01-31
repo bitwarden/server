@@ -31,7 +31,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             throw new NotFoundException();
         }
 
-        var results = ids.Select(id =>
+        var results = ids.Select(async id =>
         {
             var secret = secrets.FirstOrDefault(secret => secret.Id == id);
             if (secret == null)
@@ -49,7 +49,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                     hasAccess = accessClient switch
                     {
                         AccessClientType.NoAccessCheck => true,
-                        AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),,
+                        AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),
                         _ => false,
                     };
                 }
@@ -64,7 +64,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         }).ToList();
 
         await _secretRepository.SoftDeleteManyByIdAsync(ids);
-        return results;
+        return await results;
     }
 }
 
