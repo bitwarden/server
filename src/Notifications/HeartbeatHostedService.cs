@@ -49,7 +49,7 @@ public class HeartbeatHostedService : IHostedService, IDisposable
         while (!cancellationToken.IsCancellationRequested)
         {
             await _hubContext.Clients.All.SendAsync("Heartbeat");
-            await Task.Delay(120000);
+            await Task.Delay(120000, cancellationToken);
         }
         _logger.LogWarning("Done with heartbeat.");
     }
