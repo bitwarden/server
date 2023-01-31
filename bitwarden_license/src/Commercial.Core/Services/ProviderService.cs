@@ -53,14 +53,8 @@ public class ProviderService : IProviderService
         _currentContext = currentContext;
     }
 
-    public async Task CreateAsync(Provider provider, string ownerEmail)
+    public async Task CreateMspAsync(Provider provider, string ownerEmail)
     {
-        if (provider.Type == ProviderType.Reseller)
-        {
-            await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
-            return;
-        }
-
         var owner = await _userRepository.GetByEmailAsync(ownerEmail);
         if (owner == null)
         {
@@ -78,6 +72,11 @@ public class ProviderService : IProviderService
         };
         await _providerUserRepository.CreateAsync(providerUser);
         await SendProviderSetupInviteEmailAsync(provider, owner.Email);
+    }
+
+    public async Task CreateResellerAsync(Provider provider)
+    {
+        await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
