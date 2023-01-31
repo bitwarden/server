@@ -4,13 +4,8 @@ BEGIN
     ALTER TABLE
         [dbo].[Organization]
     ADD
-        [Status] TINYINT NOT NULL CONSTRAINT [DF_Organization_Status] DEFAULT (0)
+        [Status] TINYINT NOT NULL CONSTRAINT [DF_Organization_Status] DEFAULT (1)
 END
-GO
-    
---Updating existing Organizations to Status = Created
-UPDATE [dbo].[Organization]
-SET [Status] = 1
 GO
 
 --Insert value in column 'Status'
