@@ -1,4 +1,5 @@
-﻿using Bit.Core.SecretsManager.Entities;
+﻿#nullable enable
+using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.SecretsManager.Repositories;
 
