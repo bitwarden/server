@@ -36,7 +36,12 @@ public class DeleteProjectCommand : IDeleteProjectCommand
         var organizationId = projects.First().OrganizationId;
         if (projects.Any(p => p.OrganizationId != organizationId))
         {
-            throw new UnauthorizedAccessException();
+            throw new BadRequestException();
+        }
+
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
         }
 
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);

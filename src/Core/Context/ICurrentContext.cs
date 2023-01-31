@@ -68,4 +68,5 @@ public interface ICurrentContext
         IProviderUserRepository providerUserRepository, Guid userId);
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
+    bool AccessSecretsManager(Guid organizationId);
 }

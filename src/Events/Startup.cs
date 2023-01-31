@@ -29,6 +29,9 @@ public class Startup
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
 
+        // Data Protection
+        services.AddCustomDataProtectionServices(Environment, globalSettings);
+
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 

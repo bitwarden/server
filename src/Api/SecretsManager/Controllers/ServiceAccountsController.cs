@@ -8,43 +8,50 @@ using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [SecretsManager]
+[Authorize("secrets")]
 [Route("service-accounts")]
 public class ServiceAccountsController : Controller
 {
+    private readonly ICurrentContext _currentContext;
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
     private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
-    private readonly ICurrentContext _currentContext;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
     private readonly IUserService _userService;
 
     public ServiceAccountsController(
+        ICurrentContext currentContext,
         IUserService userService,
         IServiceAccountRepository serviceAccountRepository,
         ICreateAccessTokenCommand createAccessTokenCommand,
         IApiKeyRepository apiKeyRepository, ICreateServiceAccountCommand createServiceAccountCommand,
-        IUpdateServiceAccountCommand updateServiceAccountCommand,
-        ICurrentContext currentContext)
+        IUpdateServiceAccountCommand updateServiceAccountCommand)
     {
+        _currentContext = currentContext;
         _userService = userService;
         _serviceAccountRepository = serviceAccountRepository;
         _apiKeyRepository = apiKeyRepository;
         _createServiceAccountCommand = createServiceAccountCommand;
         _updateServiceAccountCommand = updateServiceAccountCommand;
         _createAccessTokenCommand = createAccessTokenCommand;
-        _currentContext = currentContext;
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
-    public async Task<ListResponseModel<ServiceAccountResponseModel>> GetServiceAccountsByOrganizationAsync(
+    public async Task<ListResponseModel<ServiceAccountResponseModel>> ListByOrganizationAsync(
         [FromRoute] Guid organizationId)
     {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
@@ -57,10 +64,10 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpPost("/organizations/{organizationId}/service-accounts")]
-    public async Task<ServiceAccountResponseModel> CreateServiceAccountAsync([FromRoute] Guid organizationId,
+    public async Task<ServiceAccountResponseModel> CreateAsync([FromRoute] Guid organizationId,
         [FromBody] ServiceAccountCreateRequestModel createRequest)
     {
-        if (!await _currentContext.OrganizationUser(organizationId))
+        if (!_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
@@ -70,7 +77,7 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpPut("{id}")]
-    public async Task<ServiceAccountResponseModel> UpdateServiceAccountAsync([FromRoute] Guid id,
+    public async Task<ServiceAccountResponseModel> UpdateAsync([FromRoute] Guid id,
         [FromBody] ServiceAccountUpdateRequestModel updateRequest)
     {
         var userId = _userService.GetProperUserId(User).Value;
@@ -85,6 +92,11 @@ public class ServiceAccountsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
         if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
         {
             throw new NotFoundException();
         }
