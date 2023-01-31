@@ -23,6 +23,18 @@ public class DeleteAccessPolicyCommandTests
     public async Task DeleteAccessPolicy_Throws_NotFoundException(Guid data, Guid userId,
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).ReturnsNull();
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAsync(data, userId));
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task DeleteAccessPolicy_SmNotEnabled_Throws_NotFoundException(Guid data, Guid userId,
+        SutProvider<DeleteAccessPolicyCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(false);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).ReturnsNull();
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAsync(data, userId));
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
@@ -45,6 +57,7 @@ public class DeleteAccessPolicyCommandTests
         ServiceAccount mockServiceAccount,
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         BaseAccessPolicy policyToReturn = null;
         switch (accessPolicyType)
         {
@@ -101,6 +114,7 @@ public class DeleteAccessPolicyCommandTests
         Project grantedProject,
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         BaseAccessPolicy policyToReturn = null;
 
         switch (accessPolicyType)
@@ -146,6 +160,7 @@ public class DeleteAccessPolicyCommandTests
         Group mockGroup,
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         BaseAccessPolicy policyToReturn = null;
         switch (accessPolicyType)
         {
@@ -203,6 +218,7 @@ public class DeleteAccessPolicyCommandTests
         Group mockGroup,
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         BaseAccessPolicy policyToReturn = null;
 
         switch (accessPolicyType)

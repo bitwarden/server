@@ -134,7 +134,7 @@ public class AccessPoliciesController : Controller
 
     private async Task<(Guid UserId, AccessClientType AccessClient)> CheckUserHasWriteAccessToProjectAsync(Project project)
     {
-        if (project == null)
+        if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
         {
             throw new NotFoundException();
         }

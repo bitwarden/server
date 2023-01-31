@@ -92,6 +92,10 @@ public class DeleteAccessPolicyCommand : IDeleteAccessPolicyCommand
         Guid? projectIdToCheck = null,
         Guid? serviceAccountIdToCheck = null)
     {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 

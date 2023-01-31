@@ -23,6 +23,17 @@ public class UpdateAccessPolicyCommandTests
     public async Task UpdateAsync_Throws_NotFoundException(Guid data, bool read, bool write, Guid userId,
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data, read, write, userId));
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateAsync_SmNotEnabled_Throws_NotFoundException(Guid data, bool read, bool write, Guid userId,
+        SutProvider<UpdateAccessPolicyCommand> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(false);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(data, read, write, userId));
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
     }
@@ -46,6 +57,7 @@ public class UpdateAccessPolicyCommandTests
         ServiceAccount mockServiceAccount,
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         BaseAccessPolicy policyToReturn = null;
         switch (accessPolicyType)
         {
@@ -121,6 +133,7 @@ public class UpdateAccessPolicyCommandTests
         ServiceAccount mockServiceAccount,
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         BaseAccessPolicy policyToReturn = null;
         switch (accessPolicyType)
         {
@@ -183,6 +196,7 @@ public class UpdateAccessPolicyCommandTests
         Group mockGroup,
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         BaseAccessPolicy policyToReturn = null;
         switch (accessPolicyType)
         {
@@ -247,6 +261,7 @@ public class UpdateAccessPolicyCommandTests
         Group mockGroup,
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         BaseAccessPolicy policyToReturn = null;
         switch (accessPolicyType)
         {

@@ -19,6 +19,29 @@ public class CreateAccessPoliciesCommandTests
 {
     [Theory]
     [BitAutoData]
+    public async Task CreateAsync_SmNotEnabled_Throws(
+        Guid userId,
+        Project project,
+        List<UserProjectAccessPolicy> userProjectAccessPolicies,
+        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
+        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
+        SutProvider<CreateAccessPoliciesCommand> sutProvider)
+    {
+        var data = new List<BaseAccessPolicy>();
+        data.AddRange(userProjectAccessPolicies);
+        data.AddRange(groupProjectAccessPolicies);
+        data.AddRange(serviceAccountProjectAccessPolicies);
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId));
+
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task CreateAsync_AlreadyExists_Throws_BadRequestException(
         Guid userId,
         Project project,
@@ -32,6 +55,7 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
 
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
 
@@ -69,6 +93,7 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
 
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
 
@@ -138,6 +163,7 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
 
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
 
         switch (permissionType)
@@ -171,6 +197,7 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
 
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(false);
 

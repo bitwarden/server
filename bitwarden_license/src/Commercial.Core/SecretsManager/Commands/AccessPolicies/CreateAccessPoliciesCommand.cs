@@ -27,7 +27,7 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
         List<BaseAccessPolicy> accessPolicies, Guid userId)
     {
         var project = await _projectRepository.GetByIdAsync(projectId);
-        if (project == null)
+        if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
         {
             throw new NotFoundException();
         }
