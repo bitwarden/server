@@ -13,7 +13,7 @@ public class HeartbeatHostedService : IHostedService, IDisposable
     private CancellationTokenSource _cts;
 
     public HeartbeatHostedService(
-        ILogger<AzureQueueHostedService> logger,
+        ILogger<HeartbeatHostedService> logger,
         IHubContext<NotificationsHub> hubContext,
         GlobalSettings globalSettings)
     {
