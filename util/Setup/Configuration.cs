@@ -76,8 +76,9 @@ public class Configuration
     [Description("Nginx Header Content-Security-Policy parameter\n" +
         "WARNING: Reconfiguring this parameter may break features. By changing this parameter\n" +
         "you become responsible for maintaining this value.")]
-    public string NginxHeaderContentSecurityPolicy { get; set; } = "default-src 'self'; style-src 'self' " +
-        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; " +
+    public string NginxHeaderContentSecurityPolicy { get; set; } = "default-src 'self'; " +
+        "script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https://haveibeenpwned.com; " +
         "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
         "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
         "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
