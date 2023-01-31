@@ -13,7 +13,7 @@ public partial class OrganizationStatus : Migration
             table: "Organization",
             type: "INTEGER",
             nullable: false,
-            defaultValue: (byte)0);
+            defaultValue: (byte)1);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
