@@ -4,7 +4,7 @@ BEGIN
     ALTER TABLE
         [dbo].[Organization]
     ADD
-        [Status] SMALLINT NOT NULL CONSTRAINT [DF_Organization_Status] DEFAULT (0)
+        [Status] TINYINT NOT NULL CONSTRAINT [DF_Organization_Status] DEFAULT (0)
 END
 GO
     
@@ -60,7 +60,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseScim BIT = 0,
     @UseCustomPermissions BIT = 0,
     @UseSecretsManager BIT = 0,
-    @Status SMALLINT = 0
+    @Status TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -213,7 +213,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseScim BIT = 0,
     @UseCustomPermissions BIT = 0,
     @UseSecretsManager BIT = 0,
-    @Status SMALLINT = 0
+    @Status TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON

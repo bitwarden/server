@@ -44,7 +44,7 @@
     @UseScim BIT = 0,
     @UseCustomPermissions BIT = 0,
     @UseSecretsManager BIT = 0,
-    @Status SMALLINT = 0
+    @Status TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON
