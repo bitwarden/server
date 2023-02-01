@@ -15,7 +15,8 @@ BEGIN
         [Key] = @Key,
         [PrivateKey] = @PrivateKey,
         [RevisionDate] = @RevisionDate,
-        [AccountRevisionDate] = @RevisionDate
+        [AccountRevisionDate] = @RevisionDate,
+        [LastKeyRotationDate] = @RevisionDate
     WHERE
         [Id] = @Id
 END
