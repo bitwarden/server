@@ -272,10 +272,14 @@ FROM
     [dbo].[OrganizationView] O
     INNER JOIN [dbo].[OrganizationDomainView] OD
 ON O.Id = OD.OrganizationId
-    INNER JOIN [dbo].[PolicyView] P
+    -- use left join instead of inner join so that results
+    -- come back even if org doesn't have a policy yet for
+    -- requiring SSO 
+    LEFT JOIN [dbo].[PolicyView] P
     ON O.Id = P.OrganizationId
 WHERE OD.DomainName = @Domain
   AND O.Enabled = 1
-  AND P.[Type] = 4 -- SSO Type
+  -- Handle null results 
+  AND (P.Id is NULL OR (P.Id IS NOT NULL AND P.[Type] = 4)) -- SSO Type
 END
 GO
