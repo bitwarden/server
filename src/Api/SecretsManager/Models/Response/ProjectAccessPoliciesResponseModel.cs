@@ -16,6 +16,7 @@ public class ProjectAccessPoliciesResponseModel : ResponseModel
         }
 
         foreach (var baseAccessPolicy in baseAccessPolicies)
+        {
             switch (baseAccessPolicy)
             {
                 case UserProjectAccessPolicy accessPolicy:
@@ -29,6 +30,7 @@ public class ProjectAccessPoliciesResponseModel : ResponseModel
                         new ServiceAccountProjectAccessPolicyResponseModel(accessPolicy));
                     break;
             }
+        }
     }
 
     public ProjectAccessPoliciesResponseModel() : base(_objectName)

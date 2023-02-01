@@ -16,6 +16,7 @@ public class ServiceAccountAccessPoliciesResponseModel : ResponseModel
         }
 
         foreach (var baseAccessPolicy in baseAccessPolicies)
+        {
             switch (baseAccessPolicy)
             {
                 case UserServiceAccountAccessPolicy accessPolicy:
@@ -25,6 +26,7 @@ public class ServiceAccountAccessPoliciesResponseModel : ResponseModel
                     GroupAccessPolicies.Add(new GroupServiceAccountAccessPolicyResponseModel(accessPolicy));
                     break;
             }
+        }
     }
 
     public ServiceAccountAccessPoliciesResponseModel() : base(_objectName)

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿#nullable enable
+using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.SecretsManager.Entities;
@@ -39,7 +40,7 @@ public class PotentialGranteeResponseModel : ResponseModel
     public PotentialGranteeResponseModel(ServiceAccount serviceAccount)
         : base(_objectName)
     {
-        if (serviceAccount == null)
+        if (serviceAccount == null || serviceAccount.Name == null)
         {
             throw new ArgumentNullException(nameof(serviceAccount));
         }
