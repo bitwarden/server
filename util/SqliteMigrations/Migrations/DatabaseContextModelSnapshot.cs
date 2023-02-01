@@ -672,6 +672,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("INTEGER");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("INTEGER");
 
@@ -1373,6 +1376,12 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("KdfIterations")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("KdfMemory")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("KdfParallelism")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Key")

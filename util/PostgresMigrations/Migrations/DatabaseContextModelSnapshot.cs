@@ -679,6 +679,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("boolean");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("smallint");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
@@ -1386,6 +1389,12 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("smallint");
 
                     b.Property<int>("KdfIterations")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("KdfMemory")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("KdfParallelism")
                         .HasColumnType("integer");
 
                     b.Property<string>("Key")

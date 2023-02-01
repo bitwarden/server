@@ -674,6 +674,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
@@ -1375,6 +1378,12 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint unsigned");
 
                     b.Property<int>("KdfIterations")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("KdfMemory")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("KdfParallelism")
                         .HasColumnType("int");
 
                     b.Property<string>("Key")
