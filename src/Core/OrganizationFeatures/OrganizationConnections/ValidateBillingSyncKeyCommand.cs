@@ -1,20 +1,17 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
+namespace Bit.Core.OrganizationFeatures.OrganizationConnections;
 
 public class ValidateBillingSyncKeyCommand : IValidateBillingSyncKeyCommand
 {
-    private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
     private readonly IOrganizationApiKeyRepository _apiKeyRepository;
 
     public ValidateBillingSyncKeyCommand(
-        IOrganizationSponsorshipRepository organizationSponsorshipRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository)
     {
-        _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _apiKeyRepository = organizationApiKeyRepository;
     }
 

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 
@@ -14,7 +15,7 @@ public class CreateOrganizationConnectionCommand : ICreateOrganizationConnection
         _organizationConnectionRepository = organizationConnectionRepository;
     }
 
-    public async Task<OrganizationConnection> CreateAsync<T>(OrganizationConnectionData<T> connectionData) where T : new()
+    public async Task<OrganizationConnection> CreateAsync<T>(OrganizationConnectionData<T> connectionData) where T : IConnectionConfig
     {
         return await _organizationConnectionRepository.CreateAsync(connectionData.ToEntity());
     }
