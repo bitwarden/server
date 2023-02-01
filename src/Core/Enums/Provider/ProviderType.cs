@@ -4,8 +4,8 @@ namespace Bit.Core.Enums.Provider;
 
 public enum ProviderType : byte
 {
-    [Display(Name = "MSP")]
+    [Display(ShortName = "MSP", Name = "Managed Service Provider", Description = "Access to clients organization")]
     Msp = 0,
-    [Display(Name = "Reseller")]
+    [Display(ShortName = "Reseller", Name = "Reseller", Description = "Access to clients billing")]
     Reseller = 1,
 }
