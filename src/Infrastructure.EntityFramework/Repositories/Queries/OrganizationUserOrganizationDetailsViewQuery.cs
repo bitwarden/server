@@ -37,6 +37,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         Use2fa = o.Use2fa,
                         UseApi = o.UseApi,
                         UseResetPassword = o.UseResetPassword,
+                        UseSecretsManager = o.UseSecretsManager,
                         SelfHost = o.SelfHost,
                         UsersGetPremium = o.UsersGetPremium,
                         UseCustomPermissions = o.UseCustomPermissions,
@@ -58,7 +59,8 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         FamilySponsorshipFriendlyName = os.FriendlyName,
                         FamilySponsorshipLastSyncDate = os.LastSyncDate,
                         FamilySponsorshipToDelete = os.ToDelete,
-                        FamilySponsorshipValidUntil = os.ValidUntil
+                        FamilySponsorshipValidUntil = os.ValidUntil,
+                        AccessSecretsManager = ou.AccessSecretsManager,
                     };
         return query;
     }
