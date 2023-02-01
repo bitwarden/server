@@ -674,6 +674,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint unsigned");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("bigint");
 
