@@ -31,7 +31,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         {
             throw new NotFoundException();
         }
-        
+
         // Ensure all secrets belongs to the same organization
         if (secrets.Any(p => p.OrganizationId != organizationId))
         {
@@ -44,9 +44,9 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         }
 
         var results = new List<Tuple<Secret, string>>();
-        var deleteIds = new List<Guid>(); 
+        var deleteIds = new List<Guid>();
 
-        foreach(var id in ids)
+        foreach (var id in ids)
         {
             var secret = secrets.FirstOrDefault(secret => secret.Id == id);
 
@@ -81,10 +81,11 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             }
         };
 
-        if(deleteIds.Count > 0){
+        if (deleteIds.Count > 0)
+        {
             await _secretRepository.SoftDeleteManyByIdAsync(deleteIds);
         }
-       
+
         return results;
     }
 }
