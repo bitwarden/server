@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Admin.IdentityServer;
+using Bit.Admin.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -81,6 +82,7 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddProviderCommands();
 
 #if OSS
         services.AddOosServices();
