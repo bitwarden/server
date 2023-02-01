@@ -1217,7 +1217,19 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("LastEmailChangeDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("LastFailedLoginDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastKdfChangeDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastKeyRotationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastPasswordChangeDate")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LicenseKey")
