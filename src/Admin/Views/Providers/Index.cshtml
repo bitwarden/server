@@ -1,5 +1,4 @@
-﻿@using System.ComponentModel.DataAnnotations
-@using System.Reflection
+﻿@using Bit.SharedWeb.Utilities
 @model ProvidersModel
 @{
     ViewData["Title"] = "Providers";
@@ -47,8 +46,7 @@
                         <td>
                             <a asp-action="@Model.Action" asp-route-id="@provider.Id">@(provider.Name ?? "Pending")</a>
                         </td>
-                        <td>@(provider.Type.GetType().GetMember(provider.Type.ToString())
-                                .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName())</td>
+                        <td>@provider.Type.GetDisplayAttribute()?.GetShortName()</td>
                         <td>@provider.Status</td>
                         <td>
                             <span title="@provider.CreationDate.ToString()">

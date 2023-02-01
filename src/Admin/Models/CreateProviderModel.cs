@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
+using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.Models;
 
@@ -37,17 +38,20 @@ public class CreateProviderModel : IValidatableObject
             case ProviderType.Msp:
                 if (string.IsNullOrWhiteSpace(OwnerEmail))
                 {
-                    yield return new ValidationResult("The Owner Email field is required.");
+                    var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName();
+                    yield return new ValidationResult($"The {ownerEmailDisplayName} field is required.");
                 }
                 break;
             case ProviderType.Reseller:
                 if (string.IsNullOrWhiteSpace(BusinessName))
                 {
-                    yield return new ValidationResult("The Business Name field is required.");
+                    var businessNameDisplayName = nameof(BusinessName).GetDisplayAttribute<CreateProviderModel>()?.GetName();
+                    yield return new ValidationResult($"The {businessNameDisplayName} field is required.");
                 }
                 if (string.IsNullOrWhiteSpace(BillingEmail))
                 {
-                    yield return new ValidationResult("The Primary Billing Email field is required.");
+                    var billingEmailDisplayName = nameof(BillingEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName();
+                    yield return new ValidationResult($"The {billingEmailDisplayName} field is required.");
                 }
                 break;
         }

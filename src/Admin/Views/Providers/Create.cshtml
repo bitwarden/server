@@ -1,4 +1,5 @@
-﻿@model CreateProviderModel
+﻿@using Bit.SharedWeb.Utilities
+@model CreateProviderModel
 @{
     ViewData["Title"] = "Create Provider";
 }
@@ -18,30 +19,20 @@
     <div asp-validation-summary="All" class="alert alert-danger"></div>
     
     <div class="form-group">
-        <h2>Provider Type</h2>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" asp-for="Type" name="Type" value="@((int)ProviderType.Msp)" id="radioMsp" onclick="toggleProviderTypeInfo(@((int)ProviderType.Msp))" checked>
-            <label class="form-check-label align-middle" for="radioMsp">
-                Managed Service Provider
-            </label>
-            <br/>
-            <label class="form-check-label small text-muted ml-3 align-top" for="radioMsp">
-                Access to clients organization
-            </label>
-        </div>
-        <div class="form-check">
-            <input class="form-check-input" type="radio" asp-for="Type" name="Type" value="@((int)ProviderType.Reseller)" id="radioReseller" onclick="toggleProviderTypeInfo(@((int)ProviderType.Reseller))">
-            <label class="form-check-label align-middle" for="radioReseller">
-                Reseller
-            </label>
-            <br/>
-            <label class="form-check-label small text-muted ml-3 align-top" for="radioReseller">
-                Access to clients billing
-            </label>
-        </div>
+        <label asp-for="Type" class="h2"></label>
+        @foreach(ProviderType providerType in Enum.GetValues(typeof(ProviderType)))
+        {
+            var providerTypeValue = (int)providerType;
+            <div class="form-check">
+                @Html.RadioButtonFor(m => m.Type, providerType, new { id = $"providerType-{providerTypeValue}", @class = "form-check-input", onclick=$"toggleProviderTypeInfo({providerTypeValue})" })
+                @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetName(), new { @class = "form-check-label align-middle", @for = $"providerType-{providerTypeValue}" })
+                <br/>
+                @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetDescription(), new { @class = "form-check-label small text-muted ml-3 align-top", @for = $"providerType-{providerTypeValue}" })
+            </div>
+        }
     </div>
     
-    <div id="info-0" class="form-group @(Model.Type != ProviderType.Msp ? "d-none" : string.Empty)">
+    <div id="@($"info-{(int)ProviderType.Msp}")" class="form-group @(Model.Type != ProviderType.Msp ? "d-none" : string.Empty)">
         <h2>MSP Info</h2>
         <div class="form-group">
             <label asp-for="OwnerEmail"></label>
@@ -49,7 +40,7 @@
         </div>
     </div>
     
-    <div id="info-1" class="form-group @(Model.Type != ProviderType.Reseller ? "d-none" : string.Empty)">
+    <div id="@($"info-{(int)ProviderType.Reseller}")" class="form-group @(Model.Type != ProviderType.Reseller ? "d-none" : string.Empty)">
         <h2>Reseller Info</h2>
         <div class="form-group">
             <label asp-for="BusinessName"></label>
