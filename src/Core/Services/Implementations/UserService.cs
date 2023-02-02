@@ -561,10 +561,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return result;
         }
 
+        var now = DateTime.UtcNow;
+
         user.Key = key;
         user.Email = newEmail;
         user.EmailVerified = true;
-        var now = DateTime.UtcNow;
         user.RevisionDate = user.AccountRevisionDate = now;
         user.LastEmailChangeDate = now;
         await _userRepository.ReplaceAsync(user);
