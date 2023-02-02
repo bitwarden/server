@@ -34,6 +34,14 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER VIEW [dbo].[UserView]
+AS
+SELECT
+   *
+FROM
+   [dbo].[User]
+GO
+
 CREATE OR ALTER PROCEDURE [dbo].[User_UpdateKeys]
     @Id UNIQUEIDENTIFIER,
     @SecurityStamp NVARCHAR(50),
