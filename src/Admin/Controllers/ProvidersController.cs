@@ -1,6 +1,7 @@
 ﻿using Bit.Admin.Models;
-using Bit.Admin.Providers.Interfaces;
+using Bit.Core.AdminFeatures.Providers.Interfaces;
 using Bit.Core.Entities.Provider;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -83,9 +84,18 @@ public class ProvidersController : Controller
             return View(model);
         }
 
-        var provider = await _createProviderCommand.Create(model);
+        var provider = model.ToProvider();
+        switch (provider.Type)
+        {
+            case ProviderType.Msp:
+                await _createProviderCommand.CreateMspAsync(provider, model.OwnerEmail);
+                break;
+            case ProviderType.Reseller:
+                await _createProviderCommand.CreateResellerAsync(provider);
+                break;
+        }
 
-        return RedirectToAction(_globalSettings.SelfHosted ? "View" : "Edit", new { id = provider.Id });
+        return RedirectToAction("Edit", new { id = provider.Id });
     }
 
     public async Task<IActionResult> View(Guid id)
