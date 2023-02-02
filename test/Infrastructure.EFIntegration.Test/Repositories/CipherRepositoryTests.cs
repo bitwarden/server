@@ -159,7 +159,7 @@ public class CipherRepositoryTests
             var postEfCipher = await sut.CreateAsync(cipher);
             sut.ClearChangeTracking();
 
-            var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipher);
+            var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipher, cipher.OrganizationId.Value);
             var modifiedUsers = await sut.Run(query).ToListAsync();
             Assert.True(modifiedUsers
                 .All(u => u.AccountRevisionDate.ToShortDateString() ==
