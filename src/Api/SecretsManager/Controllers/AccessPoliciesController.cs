@@ -68,7 +68,7 @@ public class AccessPoliciesController : Controller
         var project = await _projectRepository.GetByIdAsync(id);
         await CheckUserHasWriteAccessToProjectAsync(project);
 
-        var results = await _accessPolicyRepository.GetManyByProjectId(id);
+        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
         return new ProjectAccessPoliciesResponseModel(results);
     }
 

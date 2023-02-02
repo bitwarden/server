@@ -1230,7 +1230,19 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("Key")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("LastEmailChangeDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("LastFailedLoginDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastKdfChangeDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastKeyRotationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastPasswordChangeDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LicenseKey")

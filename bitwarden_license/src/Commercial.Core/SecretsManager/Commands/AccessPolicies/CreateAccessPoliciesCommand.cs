@@ -72,6 +72,6 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
             }
         }
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-        return await _accessPolicyRepository.GetManyByProjectId(projectId);
+        return await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(projectId);
     }
 }
