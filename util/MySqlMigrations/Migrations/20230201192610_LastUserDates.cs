@@ -2,6 +2,8 @@
 
 #nullable disable
 
+namespace Bit.MySqlMigrations.Migrations;
+
 public partial class LastUserDates : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
