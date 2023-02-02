@@ -3,7 +3,9 @@
     @SecurityStamp NVARCHAR(50),
     @Key NVARCHAR(MAX),
     @PrivateKey VARCHAR(MAX),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @AccountRevisionDate DATETIME2(7) = NULL,
+    @LastKeyRotationDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -15,8 +17,8 @@ BEGIN
         [Key] = @Key,
         [PrivateKey] = @PrivateKey,
         [RevisionDate] = @RevisionDate,
-        [AccountRevisionDate] = @RevisionDate,
-        [LastKeyRotationDate] = @RevisionDate
+        [AccountRevisionDate] = ISNULL(@AccountRevisionDate, @RevisionDate),
+        [LastKeyRotationDate] = @LastKeyRotationDate
     WHERE
         [Id] = @Id
 END

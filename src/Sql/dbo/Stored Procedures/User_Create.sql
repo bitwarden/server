@@ -86,7 +86,7 @@ BEGIN
         [UnknownDeviceVerificationEnabled],
         [AvatarColor],
         [KdfMemory],
-        [KdfParallelism].
+        [KdfParallelism],
         [LastPasswordChangeDate],
         [LastKdfChangeDate],
         [LastKeyRotationDate],

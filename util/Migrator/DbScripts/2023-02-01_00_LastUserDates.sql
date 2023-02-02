@@ -25,12 +25,23 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[User_UpdateKeys]
+IF COL_LENGTH('dbo.User', 'LastEmailChangeDate') IS NULL
+BEGIN
+    ALTER TABLE
+        [dbo].[User]
+    ADD
+        [LastEmailChangeDate] DATETIME2 (7) NULL
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[User_UpdateKeys]
     @Id UNIQUEIDENTIFIER,
     @SecurityStamp NVARCHAR(50),
     @Key NVARCHAR(MAX),
     @PrivateKey VARCHAR(MAX),
-    @RevisionDate DATETIME2(7)
+    @RevisionDate DATETIME2(7),
+    @AccountRevisionDate DATETIME2(7) = NULL,
+    @LastKeyRotationDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -42,14 +53,14 @@ BEGIN
         [Key] = @Key,
         [PrivateKey] = @PrivateKey,
         [RevisionDate] = @RevisionDate,
-        [AccountRevisionDate] = @RevisionDate,
-        [LastKeyRotationDate] = @RevisionDate
+        [AccountRevisionDate] = ISNULL(@AccountRevisionDate, @RevisionDate),
+        [LastKeyRotationDate] = @LastKeyRotationDate
     WHERE
         [Id] = @Id
 END
 GO
 
-CREATE PROCEDURE [dbo].[User_Create]
+CREATE OR ALTER PROCEDURE [dbo].[User_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Name NVARCHAR(50),
     @Email NVARCHAR(256),
@@ -137,7 +148,7 @@ BEGIN
         [UnknownDeviceVerificationEnabled],
         [AvatarColor],
         [KdfMemory],
-        [KdfParallelism].
+        [KdfParallelism],
         [LastPasswordChangeDate],
         [LastKdfChangeDate],
         [LastKeyRotationDate],
@@ -192,7 +203,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[User_Update]
+CREATE OR ALTER PROCEDURE [dbo].[User_Update]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @Email NVARCHAR(256),
