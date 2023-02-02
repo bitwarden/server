@@ -309,7 +309,7 @@ public class AccessPoliciesControllerTests
         var result = await sutProvider.Sut.GetProjectServiceAccountPotentialGranteesAsync(id);
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetPotentialGranteesAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
+            .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
                 Arg.Is(AssertHelper.AssertPropertyEqual(data.Id)),
                 Arg.Any<AccessClientType>());
 
@@ -335,13 +335,13 @@ public class AccessPoliciesControllerTests
                 break;
         }
 
-        sutProvider.GetDependency<IServiceAccountRepository>().GetPotentialGranteesAsync(default, default, default)
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdWriteAccessAsync(default, default, default)
             .ReturnsForAnyArgs(new List<ServiceAccount> { mockServiceAccount });
 
         var result = await sutProvider.Sut.GetProjectServiceAccountPotentialGranteesAsync(id);
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetPotentialGranteesAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
+            .GetManyByOrganizationIdWriteAccessAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
                 Arg.Is(AssertHelper.AssertPropertyEqual(data.Id)),
                 Arg.Any<AccessClientType>());
 
@@ -361,6 +361,6 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.GetProjectServiceAccountPotentialGranteesAsync(id));
 
         await sutProvider.GetDependency<IServiceAccountRepository>().DidNotReceiveWithAnyArgs()
-            .GetPotentialGranteesAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .GetManyByOrganizationIdWriteAccessAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
     }
 }

@@ -62,12 +62,12 @@ public class DeleteAccessPolicyCommandTests
         switch (accessPolicyType)
         {
             case AccessPolicyType.UserProjectAccessPolicy:
-                policyToReturn = new UserProjectAccessPolicy { Id = data, GrantedProjectId = grantedProject.Id };
+                policyToReturn = new UserProjectAccessPolicy { Id = data, GrantedProjectId = grantedProject.Id, GrantedProject = grantedProject };
                 break;
             case AccessPolicyType.GroupProjectAccessPolicy:
                 mockGroup.OrganizationId = grantedProject.OrganizationId;
                 policyToReturn =
-                    new GroupProjectAccessPolicy { Id = data, GrantedProjectId = grantedProject.Id, Group = mockGroup };
+                    new GroupProjectAccessPolicy { Id = data, GrantedProjectId = grantedProject.Id, Group = mockGroup, GrantedProject = grantedProject };
                 break;
             case AccessPolicyType.ServiceAccountProjectAccessPolicy:
                 mockServiceAccount.OrganizationId = grantedProject.OrganizationId;
@@ -76,11 +76,11 @@ public class DeleteAccessPolicyCommandTests
                     Id = data,
                     GrantedProjectId = grantedProject.Id,
                     ServiceAccount = mockServiceAccount,
+                    GrantedProject = grantedProject
                 };
                 break;
         }
 
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(grantedProject.Id).Returns(grantedProject);
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
@@ -120,11 +120,11 @@ public class DeleteAccessPolicyCommandTests
         switch (accessPolicyType)
         {
             case AccessPolicyType.UserProjectAccessPolicy:
-                policyToReturn = new UserProjectAccessPolicy { Id = data, GrantedProjectId = grantedProject.Id };
+                policyToReturn = new UserProjectAccessPolicy { Id = data, GrantedProjectId = grantedProject.Id, GrantedProject = grantedProject };
                 break;
             case AccessPolicyType.GroupProjectAccessPolicy:
                 policyToReturn =
-                    new GroupProjectAccessPolicy { Id = data, GrantedProjectId = grantedProject.Id, Group = mockGroup };
+                    new GroupProjectAccessPolicy { Id = data, GrantedProjectId = grantedProject.Id, Group = mockGroup, GrantedProject = grantedProject };
                 break;
             case AccessPolicyType.ServiceAccountProjectAccessPolicy:
                 policyToReturn = new ServiceAccountProjectAccessPolicy
@@ -132,11 +132,11 @@ public class DeleteAccessPolicyCommandTests
                     Id = data,
                     GrantedProjectId = grantedProject.Id,
                     ServiceAccount = mockServiceAccount,
+                    GrantedProject = grantedProject,
                 };
                 break;
         }
 
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(grantedProject.Id).Returns(grantedProject);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
             .Returns(policyToReturn);
 
@@ -170,6 +170,7 @@ public class DeleteAccessPolicyCommandTests
                     {
                         Id = data,
                         GrantedServiceAccountId = grantedServiceAccount.Id,
+                        GrantedServiceAccount = grantedServiceAccount,
                     };
                 break;
             case AccessPolicyType.GroupServiceAccountAccessPolicy:
@@ -180,12 +181,11 @@ public class DeleteAccessPolicyCommandTests
                         Id = data,
                         GrantedServiceAccountId = grantedServiceAccount.Id,
                         Group = mockGroup,
+                        GrantedServiceAccount = grantedServiceAccount,
                     };
                 break;
         }
 
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(grantedServiceAccount.Id)
-            .Returns(grantedServiceAccount);
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
@@ -229,6 +229,7 @@ public class DeleteAccessPolicyCommandTests
                     {
                         Id = data,
                         GrantedServiceAccountId = grantedServiceAccount.Id,
+                        GrantedServiceAccount = grantedServiceAccount,
                     };
                 break;
             case AccessPolicyType.GroupServiceAccountAccessPolicy:
@@ -238,12 +239,11 @@ public class DeleteAccessPolicyCommandTests
                         Id = data,
                         GrantedServiceAccountId = grantedServiceAccount.Id,
                         Group = mockGroup,
+                        GrantedServiceAccount = grantedServiceAccount,
                     };
                 break;
         }
 
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(grantedServiceAccount.Id)
-            .Returns(grantedServiceAccount);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
             .Returns(policyToReturn);
 

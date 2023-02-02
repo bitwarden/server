@@ -69,6 +69,7 @@ public class UpdateAccessPolicyCommandTests
                         Read = true,
                         Write = true,
                         GrantedProjectId = grantedProject.Id,
+                        GrantedProject = grantedProject,
                     };
                 break;
             case AccessPolicyType.GroupProjectAccessPolicy:
@@ -81,6 +82,7 @@ public class UpdateAccessPolicyCommandTests
                         Read = true,
                         Write = true,
                         Group = mockGroup,
+                        GrantedProject = grantedProject,
                     };
                 break;
             case AccessPolicyType.ServiceAccountProjectAccessPolicy:
@@ -92,11 +94,11 @@ public class UpdateAccessPolicyCommandTests
                     Read = true,
                     Write = true,
                     ServiceAccount = mockServiceAccount,
+                    GrantedProject = grantedProject,
                 };
                 break;
         }
 
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(grantedProject.Id).Returns(grantedProject);
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
@@ -145,6 +147,7 @@ public class UpdateAccessPolicyCommandTests
                         Read = true,
                         Write = true,
                         GrantedProjectId = grantedProject.Id,
+                        GrantedProject = grantedProject,
                     };
                 break;
             case AccessPolicyType.GroupProjectAccessPolicy:
@@ -157,6 +160,7 @@ public class UpdateAccessPolicyCommandTests
                         Read = true,
                         Write = true,
                         Group = mockGroup,
+                        GrantedProject = grantedProject,
                     };
                 break;
             case AccessPolicyType.ServiceAccountProjectAccessPolicy:
@@ -168,11 +172,11 @@ public class UpdateAccessPolicyCommandTests
                     Read = true,
                     Write = true,
                     ServiceAccount = mockServiceAccount,
+                    GrantedProject = grantedProject,
                 };
                 break;
         }
 
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(grantedProject.Id).Returns(grantedProject);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -208,6 +212,7 @@ public class UpdateAccessPolicyCommandTests
                         Read = true,
                         Write = true,
                         GrantedServiceAccountId = grantedServiceAccount.Id,
+                        GrantedServiceAccount = grantedServiceAccount,
                     };
                 break;
             case AccessPolicyType.GroupServiceAccountAccessPolicy:
@@ -220,12 +225,11 @@ public class UpdateAccessPolicyCommandTests
                         Read = true,
                         Write = true,
                         Group = mockGroup,
+                        GrantedServiceAccount = grantedServiceAccount,
                     };
                 break;
         }
 
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(grantedServiceAccount.Id)
-            .Returns(grantedServiceAccount);
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
@@ -273,6 +277,7 @@ public class UpdateAccessPolicyCommandTests
                         Read = true,
                         Write = true,
                         GrantedServiceAccountId = grantedServiceAccount.Id,
+                        GrantedServiceAccount = grantedServiceAccount,
                     };
                 break;
             case AccessPolicyType.GroupServiceAccountAccessPolicy:
@@ -282,6 +287,7 @@ public class UpdateAccessPolicyCommandTests
                     {
                         Id = data,
                         GrantedServiceAccountId = grantedServiceAccount.Id,
+                        GrantedServiceAccount = grantedServiceAccount,
                         Read = true,
                         Write = true,
                         Group = mockGroup,
@@ -289,8 +295,6 @@ public class UpdateAccessPolicyCommandTests
                 break;
         }
 
-        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(grantedServiceAccount.Id)
-            .Returns(grantedServiceAccount);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>

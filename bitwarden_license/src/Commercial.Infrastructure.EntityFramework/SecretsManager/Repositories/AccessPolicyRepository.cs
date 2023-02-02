@@ -108,8 +108,15 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             var dbContext = GetDatabaseContext(scope);
             var entity = await dbContext.AccessPolicies.Where(ap => ap.Id == id)
                 .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
+                .Include(ap => ((UserProjectAccessPolicy)ap).GrantedProject)
                 .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
+                .Include(ap => ((GroupProjectAccessPolicy)ap).GrantedProject)
                 .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
+                .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).GrantedProject)
+                .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
+                .Include(ap => ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccount)
+                .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
+                .Include(ap => ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccount)
                 .FirstOrDefaultAsync();
 
             if (entity == null)

@@ -11,5 +11,5 @@ public interface IServiceAccountRepository
     Task ReplaceAsync(ServiceAccount serviceAccount);
     Task<bool> UserHasReadAccessToServiceAccount(Guid id, Guid userId);
     Task<bool> UserHasWriteAccessToServiceAccount(Guid id, Guid userId);
-    Task<IEnumerable<ServiceAccount>> GetPotentialGranteesAsync(Guid organizationId, Guid userId, AccessClientType accessType);
+    Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType);
 }

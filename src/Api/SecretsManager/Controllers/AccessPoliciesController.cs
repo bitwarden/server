@@ -52,7 +52,7 @@ public class AccessPoliciesController : Controller
         _updateAccessPolicyCommand = updateAccessPolicyCommand;
     }
 
-    [HttpPost("/projects/{id:guid}/access-policies")]
+    [HttpPost("/projects/{id}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> CreateProjectAccessPoliciesAsync([FromRoute] Guid id,
         [FromBody] AccessPoliciesCreateRequest request)
     {
@@ -62,7 +62,7 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpGet("/projects/{id:guid}/access-policies")]
+    [HttpGet("/projects/{id}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> GetProjectAccessPoliciesAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
@@ -72,7 +72,7 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
     public async Task<BaseAccessPolicyResponseModel> UpdateAccessPolicyAsync([FromRoute] Guid id,
         [FromBody] AccessPolicyUpdateRequest request)
     {
@@ -96,7 +96,7 @@ public class AccessPoliciesController : Controller
         await _deleteAccessPolicyCommand.DeleteAsync(id, userId);
     }
 
-    [HttpGet("/projects/{id:guid}/access-policies/people/potential-grantees")]
+    [HttpGet("/projects/{id}/access-policies/people/potential-grantees")]
     public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectPeoplePotentialGranteesAsync(
         [FromRoute] Guid id)
     {
@@ -115,7 +115,7 @@ public class AccessPoliciesController : Controller
         return new ListResponseModel<PotentialGranteeResponseModel>(groupResponses.Concat(userResponses));
     }
 
-    [HttpGet("/projects/{id:guid}/access-policies/service-accounts/potential-grantees")]
+    [HttpGet("/projects/{id}/access-policies/service-accounts/potential-grantees")]
     public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectServiceAccountPotentialGranteesAsync(
         [FromRoute] Guid id)
     {
@@ -123,7 +123,7 @@ public class AccessPoliciesController : Controller
         var userContext = await CheckUserHasWriteAccessToProjectAsync(project);
 
         var serviceAccounts =
-            await _serviceAccountRepository.GetPotentialGranteesAsync(project.OrganizationId,
+            await _serviceAccountRepository.GetManyByOrganizationIdWriteAccessAsync(project.OrganizationId,
                 userContext.UserId,
                 userContext.AccessClient);
         var serviceAccountResponses =

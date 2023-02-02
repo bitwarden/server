@@ -54,7 +54,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return await query.AnyAsync();
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.ServiceAccount>> GetPotentialGranteesAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.ServiceAccount>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

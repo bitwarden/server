@@ -38,52 +38,55 @@ public class DeleteAccessPolicyCommand : IDeleteAccessPolicyCommand
         switch (accessPolicy)
         {
             case UserProjectAccessPolicy ap:
-                if (ap.GrantedProjectId == null)
+                if (ap.GrantedProject == null)
                 {
-                    throw new BadRequestException();
+                    throw new NotFoundException();
                 }
 
-                var project = await _projectRepository.GetByIdAsync(ap.GrantedProjectId.Value);
-                await DeleteProjectGrantAsync(ap.Id, userId, project.OrganizationId, project.Id);
+                await CheckPermissionsAsync(ap.GrantedProject.OrganizationId, userId, ap.GrantedProjectId);
+                await _accessPolicyRepository.DeleteAsync(id);
                 break;
             case GroupProjectAccessPolicy ap:
-                await DeleteProjectGrantAsync(ap.Id, userId, ap.Group?.OrganizationId, ap.GrantedProjectId);
+                if (ap.GrantedProject == null)
+                {
+                    throw new NotFoundException();
+                }
+
+                await CheckPermissionsAsync(ap.GrantedProject.OrganizationId, userId, ap.GrantedProjectId);
+                await _accessPolicyRepository.DeleteAsync(id);
                 break;
             case ServiceAccountProjectAccessPolicy ap:
-                await DeleteProjectGrantAsync(ap.Id, userId, ap.ServiceAccount?.OrganizationId, ap.GrantedProjectId);
+                if (ap.GrantedProject == null)
+                {
+                    throw new NotFoundException();
+                }
+
+                await CheckPermissionsAsync(ap.GrantedProject.OrganizationId, userId, ap.GrantedProjectId);
+                await _accessPolicyRepository.DeleteAsync(id);
                 break;
             case UserServiceAccountAccessPolicy ap:
-                await DeleteServiceAccountGrantAsync(ap.Id, userId, ap.GrantedServiceAccountId);
+                if (ap.GrantedServiceAccount == null)
+                {
+                    throw new NotFoundException();
+                }
+
+                await CheckPermissionsAsync(ap.GrantedServiceAccount.OrganizationId, userId,
+                    serviceAccountIdToCheck: ap.GrantedServiceAccountId);
+                await _accessPolicyRepository.DeleteAsync(id);
                 break;
             case GroupServiceAccountAccessPolicy ap:
-                await DeleteServiceAccountGrantAsync(ap.Id, userId, ap.GrantedServiceAccountId);
+                if (ap.GrantedServiceAccount == null)
+                {
+                    throw new NotFoundException();
+                }
+
+                await CheckPermissionsAsync(ap.GrantedServiceAccount.OrganizationId, userId,
+                    serviceAccountIdToCheck: ap.GrantedServiceAccountId);
+                await _accessPolicyRepository.DeleteAsync(id);
                 break;
             default:
                 throw new ArgumentException("Unsupported access policy type provided.");
         }
-    }
-
-    private async Task DeleteProjectGrantAsync(Guid id, Guid userId, Guid? organizationId, Guid? projectId)
-    {
-        if (organizationId == null || projectId == null)
-        {
-            throw new BadRequestException();
-        }
-
-        await CheckPermissionsAsync(organizationId.Value, userId, projectIdToCheck: projectId.Value);
-        await _accessPolicyRepository.DeleteAsync(id);
-    }
-
-    private async Task DeleteServiceAccountGrantAsync(Guid id, Guid userId, Guid? serviceAccountId)
-    {
-        if (serviceAccountId == null)
-        {
-            throw new BadRequestException();
-        }
-
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId.Value);
-        await CheckPermissionsAsync(serviceAccount.OrganizationId, userId, serviceAccountIdToCheck: serviceAccount.Id);
-        await _accessPolicyRepository.DeleteAsync(id);
     }
 
     private async Task CheckPermissionsAsync(
@@ -96,6 +99,7 @@ public class DeleteAccessPolicyCommand : IDeleteAccessPolicyCommand
         {
             throw new NotFoundException();
         }
+
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
@@ -115,12 +119,12 @@ public class DeleteAccessPolicyCommand : IDeleteAccessPolicyCommand
                     hasAccess =
                         await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
                             serviceAccountIdToCheck.Value, userId);
-
                 }
                 else
                 {
                     throw new ArgumentException("No ID to check provided.");
                 }
+
                 break;
             default:
                 hasAccess = false;
