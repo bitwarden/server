@@ -7,8 +7,6 @@ namespace Bit.Core.Services;
 
 public interface IProviderService
 {
-    Task CreateMspAsync(Provider provider, string ownerEmail);
-    Task CreateResellerAsync(Provider provider);
     Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key);
     Task UpdateAsync(Provider provider, bool updateBilling = false);
 
@@ -27,5 +25,6 @@ public interface IProviderService
     Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId);
     Task LogProviderAccessToOrganizationAsync(Guid organizationId);
     Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId);
+    Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail);
 }
 

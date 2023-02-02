@@ -53,32 +53,6 @@ public class ProviderService : IProviderService
         _currentContext = currentContext;
     }
 
-    public async Task CreateMspAsync(Provider provider, string ownerEmail)
-    {
-        var owner = await _userRepository.GetByEmailAsync(ownerEmail);
-        if (owner == null)
-        {
-            throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
-        }
-
-        await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Pending);
-
-        var providerUser = new ProviderUser
-        {
-            ProviderId = provider.Id,
-            UserId = owner.Id,
-            Type = ProviderUserType.ProviderAdmin,
-            Status = ProviderUserStatusType.Confirmed,
-        };
-        await _providerUserRepository.CreateAsync(providerUser);
-        await SendProviderSetupInviteEmailAsync(provider, owner.Email);
-    }
-
-    public async Task CreateResellerAsync(Provider provider)
-    {
-        await ProviderRepositoryCreateAsync(provider, ProviderStatusType.Created);
-    }
-
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
@@ -455,7 +429,7 @@ public class ProviderService : IProviderService
         await SendProviderSetupInviteEmailAsync(provider, owner.Email);
     }
 
-    private async Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail)
+    public async Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail)
     {
         var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {ownerEmail} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
         await _mailService.SendProviderSetupInviteEmailAsync(provider, token, ownerEmail);
@@ -505,11 +479,5 @@ public class ProviderService : IProviderService
         }
     }
 
-    private async Task ProviderRepositoryCreateAsync(Provider provider, ProviderStatusType status)
-    {
-        provider.Status = status;
-        provider.Enabled = true;
-        provider.UseEvents = true;
-        await _providerRepository.CreateAsync(provider);
-    }
+
 }

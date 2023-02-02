@@ -7,10 +7,6 @@ namespace Bit.Core.Services;
 
 public class NoopProviderService : IProviderService
 {
-    public async Task CreateMspAsync(Provider provider, string ownerEmail) => throw new NotImplementedException();
-
-    public async Task CreateResellerAsync(Provider provider) => throw new NotImplementedException();
-
     public Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key) => throw new NotImplementedException();
 
     public Task UpdateAsync(Provider provider, bool updateBilling = false) => throw new NotImplementedException();
@@ -36,4 +32,5 @@ public class NoopProviderService : IProviderService
     public Task LogProviderAccessToOrganizationAsync(Guid organizationId) => throw new NotImplementedException();
 
     public Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid userId) => throw new NotImplementedException();
+    public Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail) => throw new NotImplementedException();
 }

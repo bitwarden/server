@@ -26,41 +26,6 @@ namespace Bit.Commercial.Core.Test.Services;
 public class ProviderServiceTests
 {
     [Theory, BitAutoData]
-    public async Task CreateMspAsync_UserIdIsInvalid_Throws(Provider provider, SutProvider<ProviderService> sutProvider)
-    {
-        provider.Type = ProviderType.Msp;
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateMspAsync(provider, default));
-        Assert.Contains("Invalid owner.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateMspAsync_Success(Provider provider, User user, SutProvider<ProviderService> sutProvider)
-    {
-        provider.Type = ProviderType.Msp;
-
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        userRepository.GetByEmailAsync(user.Email).Returns(user);
-
-        await sutProvider.Sut.CreateMspAsync(provider, user.Email);
-
-        await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IMailService>().ReceivedWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default, default);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateResellerAsync_Success(Provider provider, SutProvider<ProviderService> sutProvider)
-    {
-        provider.Type = ProviderType.Reseller;
-
-        await sutProvider.Sut.CreateResellerAsync(provider);
-
-        await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default, default);
-    }
-
-    [Theory, BitAutoData]
     public async Task CompleteSetupAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<BadRequestException>(
@@ -243,6 +208,14 @@ public class ProviderServiceTests
 
         var result = await sutProvider.Sut.ResendInvitesAsync(invite);
         Assert.True(result.All(r => r.Item2 == ""));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendProviderSetupInviteEmailAsync_Success(Provider provider, string email, SutProvider<ProviderService> sutProvider)
+    {
+        await sutProvider.Sut.SendProviderSetupInviteEmailAsync(provider, email);
+
+        await sutProvider.GetDependency<IMailService>().Received(1).SendProviderSetupInviteEmailAsync(provider, Arg.Any<string>(), email);
     }
 
     [Theory, BitAutoData]
