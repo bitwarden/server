@@ -33,6 +33,9 @@ public class Startup
         StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
         StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
+        // Data Protection
+        services.AddCustomDataProtectionServices(Environment, globalSettings);
+
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 

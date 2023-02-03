@@ -1,4 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -56,6 +57,7 @@ public class DeleteSecretCommandTests
         }
 
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(data).Returns(secrets);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
 
         var results = await sutProvider.Sut.DeleteSecrets(data);
 

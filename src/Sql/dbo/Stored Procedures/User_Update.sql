@@ -37,7 +37,11 @@
     @FailedLoginCount INT,
     @LastFailedLoginDate DATETIME2(7),
     @UnknownDeviceVerificationEnabled BIT = 1,
-    @AvatarColor VARCHAR(7)
+    @AvatarColor VARCHAR(7),
+    @LastPasswordChangeDate DATETIME2(7) = NULL,
+    @LastKdfChangeDate DATETIME2(7) = NULL,
+    @LastKeyRotationDate DATETIME2(7) = NULL,
+    @LastEmailChangeDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -82,7 +86,11 @@ BEGIN
         [FailedLoginCount] = @FailedLoginCount,
         [LastFailedLoginDate] = @LastFailedLoginDate,
         [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled,
-	    [AvatarColor] = @AvatarColor
+        [AvatarColor] = @AvatarColor,
+        [LastPasswordChangeDate] = @LastPasswordChangeDate,
+        [LastKdfChangeDate] = @LastKdfChangeDate,
+        [LastKeyRotationDate] = @LastKeyRotationDate,
+        [LastEmailChangeDate] = @LastEmailChangeDate
     WHERE
         [Id] = @Id
 END

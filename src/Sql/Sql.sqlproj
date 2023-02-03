@@ -238,6 +238,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_Activate.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_Create.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_CreateMany.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_CreateMany2.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_CreateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_Deactivate.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_DeleteById.sql" />
@@ -258,6 +259,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_SelectKnownEmails.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_Update.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_UpdateMany.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_UpdateMany2.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_UpdateWithCollections.sql" />
     <Build Include="dbo\Stored Procedures\Organization_Create.sql" />
     <Build Include="dbo\Stored Procedures\Organization_DeleteById.sql" />
@@ -400,6 +402,7 @@
     <Build Include="dbo\User Defined Types\GuidIdArray.sql" />
     <Build Include="dbo\User Defined Types\OrganizationSponsorshipType.sql" />
     <Build Include="dbo\User Defined Types\OrganizationUserType.sql" />
+    <Build Include="dbo\User Defined Types\OrganizationUserType2.sql" />
     <Build Include="dbo\User Defined Types\SelectionReadOnlyArray.sql" />
     <Build Include="dbo\User Defined Types\TwoGuidIdArray.sql" />
     <Build Include="dbo\Views\AuthRequestView.sql" />

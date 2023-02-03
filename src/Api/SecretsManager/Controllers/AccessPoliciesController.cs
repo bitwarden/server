@@ -40,7 +40,7 @@ public class AccessPoliciesController : Controller
     [HttpGet("/projects/{id}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> GetProjectAccessPoliciesAsync([FromRoute] Guid id)
     {
-        var results = await _accessPolicyRepository.GetManyByProjectId(id);
+        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
