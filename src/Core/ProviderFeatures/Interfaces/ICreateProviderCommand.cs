@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities.Provider;
 
-namespace Bit.Core.AdminFeatures.Providers.Interfaces;
+namespace Bit.Core.ProviderFeatures.Interfaces;
 
 public interface ICreateProviderCommand
 {
