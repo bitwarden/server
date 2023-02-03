@@ -127,7 +127,8 @@ public class Context
         Config = deserializer.Deserialize<Configuration>(configText);
 
         // Fix old explicit config assignments of CSP which should be treated as a default value
-        if (Config.NginxHeaderContentSecurityPolicy == Jan2023ContentSecurityPolicy)
+        var jan2023Csp = string.Format(Jan2023ContentSecurityPolicy, Config.Domain);
+        if (Config.NginxHeaderContentSecurityPolicy == jan2023Csp)
         {
             Config.NginxHeaderContentSecurityPolicy = null;
             SaveConfiguration();
