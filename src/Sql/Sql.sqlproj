@@ -177,7 +177,6 @@
     <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\Event_ReadPageByProviderIdActingUserId.sql" />
     <Build Include="dbo\Stored Procedures\Event_ReadPageByUserId.sql" />
-    <Build Include="dbo\Stored Procedures\Event_ReadyById.sql" />
     <Build Include="dbo\Stored Procedures\Folder_Create.sql" />
     <Build Include="dbo\Stored Procedures\Folder_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Folder_ReadById.sql" />
