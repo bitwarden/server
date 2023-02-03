@@ -9,6 +9,11 @@ public class Context
 
     // These track of old CSP default values to correct.
     // Do not change these values.
+    private const string Dec2020ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
+        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
+        "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
+        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+        "https://twofactorauth.org; object-src 'self' blob:;";
     private const string Jan2021ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
         "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
         "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
@@ -30,6 +35,7 @@ public class Context
 
     private string[] _oldCspDefaults =
     {
+        Dec2020ContentSecurityPolicy,
         Jan2021ContentSecurityPolicy,
         Feb2021ContentSecurityPolicy,
         Jan2023ContentSecurityPolicy
