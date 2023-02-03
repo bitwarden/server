@@ -6,7 +6,7 @@ namespace Bit.Setup;
 public class Context
 {
     private const string ConfigPath = "/bitwarden/config.yml";
-    // This keeps track of the value of the CSPthat was defined as of Jan 2023.
+    // This keeps track of the value of the CSP that was defined as of Jan 2023.
     // Do not change this value.
     private const string Jan2023ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
         "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; " +
