@@ -6,6 +6,14 @@ namespace Bit.Setup;
 public class Context
 {
     private const string ConfigPath = "/bitwarden/config.yml";
+    // This keeps track of the value of the CSPthat was defined as of Jan 2023.
+    // Do not change this value.
+    private const string Jan2023ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
+        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; " +
+        "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
+        "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
+        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+        "https://api.2fa.directory; object-src 'self' blob:;";
 
     public string[] Args { get; set; }
     public bool Quiet { get; set; }
@@ -117,6 +125,13 @@ public class Context
             .WithNamingConvention(UnderscoredNamingConvention.Instance)
             .Build();
         Config = deserializer.Deserialize<Configuration>(configText);
+
+        // Fix old explicit config assignments of CSP which should be treated as a default value
+        if (Config.NginxHeaderContentSecurityPolicy == Jan2023ContentSecurityPolicy)
+        {
+            Config.NginxHeaderContentSecurityPolicy = null;
+            SaveConfiguration();
+        }
     }
 
     public void SaveConfiguration()
