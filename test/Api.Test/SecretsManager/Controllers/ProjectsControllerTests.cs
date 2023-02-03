@@ -29,7 +29,7 @@ public class ProjectsControllerTests
         }
         sutProvider.GetDependency<IDeleteProjectCommand>().DeleteProjects(ids, default).ReturnsForAnyArgs(mockResult);
 
-        var results = await sutProvider.Sut.BulkDeleteProjectsAsync(ids);
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
         await sutProvider.GetDependency<IDeleteProjectCommand>().Received(1)
                      .DeleteProjects(Arg.Is(ids), Arg.Any<Guid>());
         Assert.Equal(data.Count, results.Data.Count());
@@ -40,6 +40,6 @@ public class ProjectsControllerTests
     public async void BulkDeleteProjects_NoGuids_ThrowsArgumentNullException(SutProvider<ProjectsController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.BulkDeleteProjectsAsync(new List<Guid>()));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.BulkDeleteAsync(new List<Guid>()));
     }
 }

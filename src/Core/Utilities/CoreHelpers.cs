@@ -692,6 +692,15 @@ public static class CoreHelpers
                     default:
                         break;
                 }
+
+                // Secrets Manager
+                foreach (var org in group)
+                {
+                    if (org.AccessSecretsManager)
+                    {
+                        claims.Add(new KeyValuePair<string, string>(Claims.SecretsManagerAccess, org.Id.ToString()));
+                    }
+                }
             }
         }
 

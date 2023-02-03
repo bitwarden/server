@@ -138,7 +138,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>?> GetManyByProjectId(Guid id)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedProjectIdAsync(Guid id)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -153,8 +153,23 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
                 .ToListAsync();
 
-            return !entities.Any() ? null : entities.Select(MapToCore);
+            return entities.Select(MapToCore);
         }
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedServiceAccountIdAsync(Guid id)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var entities = await dbContext.AccessPolicies.Where(ap =>
+                ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id ||
+                ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id)
+            .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
+            .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
+            .ToListAsync();
+
+        return entities.Select(MapToCore);
     }
 
     public async Task DeleteAsync(Guid id)
@@ -178,6 +193,8 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             UserProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.UserProjectAccessPolicy>(ap),
             GroupProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.GroupProjectAccessPolicy>(ap),
             ServiceAccountProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy>(ap),
+            UserServiceAccountAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.UserServiceAccountAccessPolicy>(ap),
+            GroupServiceAccountAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy>(ap),
             _ => throw new ArgumentException("Unsupported access policy type")
         };
     }

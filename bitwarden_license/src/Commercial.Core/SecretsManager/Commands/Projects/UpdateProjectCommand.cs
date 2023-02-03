@@ -26,6 +26,11 @@ public class UpdateProjectCommand : IUpdateProjectCommand
             throw new NotFoundException();
         }
 
+        if (!_currentContext.AccessSecretsManager(project.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
@@ -38,7 +43,7 @@ public class UpdateProjectCommand : IUpdateProjectCommand
 
         if (!hasAccess)
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         project.Name = updatedProject.Name;

@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using AutoFixture;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
@@ -12,55 +11,22 @@ using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using RichardSzalay.MockHttp;
 using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
 
 public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTestsBase
 {
-
-    public static SutProvider<SelfHostedSyncSponsorshipsCommand> GetSutProvider(bool enableCloudCommunication = true, string identityResponse = null, string apiResponse = null)
+    private static SutProvider<SelfHostedSyncSponsorshipsCommand> GetSutProvider(string apiResponse = null)
     {
-        var fixture = new Fixture().WithAutoNSubstitutionsAutoPopulatedProperties();
-        fixture.AddMockHttp();
-
-        var settings = fixture.Create<IGlobalSettings>();
-        settings.SelfHosted = true;
-        settings.EnableCloudCommunication = enableCloudCommunication;
-
-        var apiUri = fixture.Create<Uri>();
-        var identityUri = fixture.Create<Uri>();
-        settings.Installation.ApiUri.Returns(apiUri.ToString());
-        settings.Installation.IdentityUri.Returns(identityUri.ToString());
-
-        var apiHandler = new MockHttpMessageHandler();
-        var identityHandler = new MockHttpMessageHandler();
-        var syncUri = string.Concat(apiUri, "organization/sponsorship/sync");
-        var tokenUri = string.Concat(identityUri, "connect/token");
-
-        apiHandler.When(HttpMethod.Post, syncUri)
-            .Respond("application/json", apiResponse);
-        identityHandler.When(HttpMethod.Post, tokenUri)
-            .Respond("application/json", identityResponse ?? "{\"access_token\":\"string\",\"expires_in\":3600,\"token_type\":\"Bearer\",\"scope\":\"string\"}");
-
-
-        var apiHttp = apiHandler.ToHttpClient();
-        var identityHttp = identityHandler.ToHttpClient();
-
-        var mockHttpClientFactory = Substitute.For<IHttpClientFactory>();
-        mockHttpClientFactory.CreateClient(Arg.Is("client")).Returns(apiHttp);
-        mockHttpClientFactory.CreateClient(Arg.Is("identity")).Returns(identityHttp);
-
-        return new SutProvider<SelfHostedSyncSponsorshipsCommand>(fixture)
-            .SetDependency(settings)
-            .SetDependency(mockHttpClientFactory)
-            .Create();
+        return new SutProvider<SelfHostedSyncSponsorshipsCommand>()
+            .ConfigureBaseIdentityClientService("organization/sponsorship/sync",
+                HttpMethod.Post, apiResponse: apiResponse);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SyncOrganization_BillingSyncKeyDisabled_ThrowsBadRequest(
+    public async Task SyncOrganization_BillingSyncConnectionDisabled_ThrowsBadRequest(
         Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
     {
         var sutProvider = GetSutProvider();
@@ -73,7 +39,7 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
 
-        Assert.Contains($"Billing Sync Key disabled", exception.Message);
+        Assert.Contains($"Connection disabled", exception.Message);
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -85,7 +51,7 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
 
     [Theory]
     [BitAutoData]
-    public async Task SyncOrganization_BillingSyncKeyEmpty_ThrowsBadRequest(
+    public async Task SyncOrganization_BillingSyncConfigEmpty_ThrowsBadRequest(
         Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
     {
         var sutProvider = GetSutProvider();
@@ -94,7 +60,7 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
 
-        Assert.Contains($"No Billing Sync Key known", exception.Message);
+        Assert.Contains($"No saved Connection config", exception.Message);
 
         await sutProvider.GetDependency<IOrganizationSponsorshipRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -109,7 +75,8 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
     public async Task SyncOrganization_CloudCommunicationDisabled_EarlyReturn(
         Guid cloudOrganizationId, OrganizationConnection billingSyncConnection)
     {
-        var sutProvider = GetSutProvider(false);
+        var sutProvider = GetSutProvider();
+        sutProvider.GetDependency<IGlobalSettings>().EnableCloudCommunication = false;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.SyncOrganization(billingSyncConnection.OrganizationId, cloudOrganizationId, billingSyncConnection));
@@ -136,7 +103,8 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
                 SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o))
             }));
 
-        var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
+        var sutProvider = GetSutProvider(syncJsonResponse);
+
         billingSyncConnection.SetConfig(new BillingSyncConfig
         {
             BillingSyncKey = "okslkcslkjf"
@@ -166,7 +134,7 @@ public class SelfHostedSyncSponsorshipsCommandTests : FamiliesForEnterpriseTests
                 SponsorshipsBatch = sponsorships.Select(o => new OrganizationSponsorshipData(o) { CloudSponsorshipRemoved = true })
             }));
 
-        var sutProvider = GetSutProvider(apiResponse: syncJsonResponse);
+        var sutProvider = GetSutProvider(syncJsonResponse);
         billingSyncConnection.SetConfig(new BillingSyncConfig
         {
             BillingSyncKey = "okslkcslkjf"

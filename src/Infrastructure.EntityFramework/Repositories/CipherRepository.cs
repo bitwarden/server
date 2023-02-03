@@ -29,7 +29,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             var dbContext = GetDatabaseContext(scope);
             if (cipher.OrganizationId.HasValue)
             {
-                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId);
+                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.Value);
             }
             else if (cipher.UserId.HasValue)
             {
@@ -59,7 +59,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                     await OrganizationUpdateStorage(cipherInfo.OrganizationId.Value);
                 }
 
-                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipherInfo.OrganizationId);
+                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipherInfo.OrganizationId.Value);
             }
             else if (cipherInfo?.UserId != null)
             {
@@ -107,7 +107,16 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                 null;
             var entity = Mapper.Map<Cipher>((Core.Entities.Cipher)cipher);
             await dbContext.AddAsync(entity);
-            await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.GetValueOrDefault());
+
+            if (cipher.OrganizationId.HasValue)
+            {
+                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.Value);
+            }
+            else if (cipher.UserId.HasValue)
+            {
+                await dbContext.UserBumpAccountRevisionDateAsync(cipher.UserId.Value);
+            }
+
             await dbContext.SaveChangesAsync();
         }
         return cipher;
@@ -458,7 +467,16 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                 }
                 var mappedEntity = Mapper.Map<Cipher>((Core.Entities.Cipher)cipher);
                 dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.GetValueOrDefault());
+
+                if (cipher.OrganizationId.HasValue)
+                {
+                    await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.Value);
+                }
+                else if (cipher.UserId.HasValue)
+                {
+                    await dbContext.UserBumpAccountRevisionDateAsync(cipher.UserId.Value);
+                }
+
                 await dbContext.SaveChangesAsync();
             }
         }
@@ -566,7 +584,15 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                 }
             }
 
-            await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.GetValueOrDefault());
+            if (cipher.OrganizationId.HasValue)
+            {
+                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.Value);
+            }
+            else if (cipher.UserId.HasValue)
+            {
+                await dbContext.UserBumpAccountRevisionDateAsync(cipher.UserId.Value);
+            }
+
             await dbContext.SaveChangesAsync();
             return true;
         }
@@ -677,7 +703,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             if (attachment.OrganizationId.HasValue)
             {
                 await OrganizationUpdateStorage(cipher.OrganizationId.Value);
-                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId);
+                await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.Value);
             }
             else if (attachment.UserId.HasValue)
             {
