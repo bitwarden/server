@@ -18,13 +18,13 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class AccessPoliciesController : Controller
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
-    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ICreateAccessPoliciesCommand _createAccessPoliciesCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IDeleteAccessPolicyCommand _deleteAccessPolicyCommand;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
     private readonly IUserService _userService;
 
@@ -96,48 +96,49 @@ public class AccessPoliciesController : Controller
         await _deleteAccessPolicyCommand.DeleteAsync(id, userId);
     }
 
-    [HttpGet("/projects/{id}/access-policies/people/potential-grantees")]
-    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectPeoplePotentialGranteesAsync(
-        [FromRoute] Guid id)
+    [HttpGet("/organizations/{id}/access-policies/potential-grantees")]
+    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetPotentialGranteesAsync([FromRoute] Guid id, [FromQuery] bool includeServiceAccounts = false)
     {
-        var project = await _projectRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToProjectAsync(project);
+        if (!_currentContext.AccessSecretsManager(id))
+        {
+            throw new NotFoundException();
+        }
 
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(project.OrganizationId);
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(id);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var groups = await _groupRepository.GetManyByOrganizationIdAsync(id);
         var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g));
 
         var organizationUsers =
-            await _organizationUserRepository.GetManyDetailsByOrganizationAsync(project.OrganizationId);
+            await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var userResponses = organizationUsers
             .Where(user => user.AccessSecretsManager)
             .Select(userDetails => new PotentialGranteeResponseModel(userDetails));
 
-        return new ListResponseModel<PotentialGranteeResponseModel>(groupResponses.Concat(userResponses));
-    }
-
-    [HttpGet("/projects/{id}/access-policies/service-accounts/potential-grantees")]
-    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectServiceAccountPotentialGranteesAsync(
-        [FromRoute] Guid id)
-    {
-        var project = await _projectRepository.GetByIdAsync(id);
-        var userContext = await CheckUserHasWriteAccessToProjectAsync(project);
+        if (!includeServiceAccounts)
+        {
+            return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses));
+        }
 
         var serviceAccounts =
-            await _serviceAccountRepository.GetManyByOrganizationIdWriteAccessAsync(project.OrganizationId,
-                userContext.UserId,
-                userContext.AccessClient);
+            await _serviceAccountRepository.GetManyByOrganizationIdWriteAccessAsync(id,
+                userId,
+                accessClient);
         var serviceAccountResponses =
             serviceAccounts.Select(serviceAccount => new PotentialGranteeResponseModel(serviceAccount));
 
-        return new ListResponseModel<PotentialGranteeResponseModel>(serviceAccountResponses);
+        return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses).Concat(serviceAccountResponses));
     }
 
-    private async Task<(Guid UserId, AccessClientType AccessClient)> CheckUserHasWriteAccessToProjectAsync(Project project)
+    private async Task CheckUserHasWriteAccessToProjectAsync(Project project)
     {
         if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
         {
             throw new NotFoundException();
         }
+
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
@@ -153,7 +154,5 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
-
-        return (userId, accessClient);
     }
 }
