@@ -2,8 +2,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
-using Bit.Core.AdminFeatures.Providers;
-using Bit.Core.AdminFeatures.Providers.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -306,7 +304,6 @@ public static class ServiceCollectionExtensions
     public static void AddOosServices(this IServiceCollection services)
     {
         services.AddScoped<IProviderService, NoopProviderService>();
-        services.AddScoped<ICreateProviderCommand, CreateProviderCommand>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)

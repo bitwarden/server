@@ -478,6 +478,4 @@ public class ProviderService : IProviderService
             throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
         }
     }
-
-
 }

@@ -1,6 +1,6 @@
-﻿using Bit.Commercial.Core.Services;
-using Bit.Core.AdminFeatures.Providers;
-using Bit.Core.AdminFeatures.Providers.Interfaces;
+﻿using Bit.Commercial.Core.ProviderFeatures;
+using Bit.Commercial.Core.Services;
+using Bit.Core.ProviderFeatures.Interfaces;
 using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 

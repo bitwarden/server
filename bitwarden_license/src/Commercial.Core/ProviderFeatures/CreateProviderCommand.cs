@@ -1,11 +1,11 @@
-﻿using Bit.Core.AdminFeatures.Providers.Interfaces;
-using Bit.Core.Entities.Provider;
+﻿using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
+using Bit.Core.ProviderFeatures.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.AdminFeatures.Providers;
+namespace Bit.Commercial.Core.ProviderFeatures;
 
 public class CreateProviderCommand : ICreateProviderCommand
 {
