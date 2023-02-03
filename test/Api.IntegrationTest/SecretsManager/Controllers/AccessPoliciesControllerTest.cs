@@ -64,13 +64,13 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
         await LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -80,11 +80,11 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         {
             ServiceAccountAccessPolicyRequests = new List<AccessPolicyRequest>
             {
-                new() { GranteeId = initialServiceAccount.Id, Read = true, Write = true },
+                new() { GranteeId = serviceAccount.Id, Read = true, Write = true },
             },
         };
 
-        var response = await _client.PostAsJsonAsync($"/projects/{initialProject.Id}/access-policies", request);
+        var response = await _client.PostAsJsonAsync($"/projects/{project.Id}/access-policies", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -96,7 +96,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -110,13 +110,13 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             {
                 new UserProjectAccessPolicy
                 {
-                    GrantedProjectId = initialProject.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
                 },
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
 
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -126,17 +126,17 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         {
             ServiceAccountAccessPolicyRequests = new List<AccessPolicyRequest>
             {
-                new() { GranteeId = initialServiceAccount.Id, Read = true, Write = true },
+                new() { GranteeId = serviceAccount.Id, Read = true, Write = true },
             },
         };
 
-        var response = await _client.PostAsJsonAsync($"/projects/{initialProject.Id}/access-policies", request);
+        var response = await _client.PostAsJsonAsync($"/projects/{project.Id}/access-policies", request);
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
-        Assert.Equal(initialServiceAccount.Id, result!.ServiceAccountAccessPolicies.First().ServiceAccountId);
+        Assert.Equal(serviceAccount.Id, result!.ServiceAccountAccessPolicies.First().ServiceAccountId);
         Assert.True(result.ServiceAccountAccessPolicies.First().Read);
         Assert.True(result.ServiceAccountAccessPolicies.First().Write);
         AssertHelper.AssertRecent(result.ServiceAccountAccessPolicies.First().RevisionDate);
@@ -160,13 +160,13 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -176,11 +176,11 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         {
             ServiceAccountAccessPolicyRequests = new List<AccessPolicyRequest>
             {
-                new() { GranteeId = initialServiceAccount.Id, Read = true, Write = true },
+                new() { GranteeId = serviceAccount.Id, Read = true, Write = true },
             },
         };
 
-        var response = await _client.PostAsJsonAsync($"/projects/{initialProject.Id}/access-policies", request);
+        var response = await _client.PostAsJsonAsync($"/projects/{project.Id}/access-policies", request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -199,7 +199,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         const bool expectedWrite = false;
         var request = new AccessPolicyUpdateRequest { Read = expectedRead, Write = expectedWrite };
 
-        var response = await _client.PutAsJsonAsync($"/access-policies/{initData.InitialAccessPolicyId}", request);
+        var response = await _client.PutAsJsonAsync($"/access-policies/{initData.AccessPolicyId}", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -217,7 +217,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         const bool expectedWrite = false;
         var request = new AccessPolicyUpdateRequest { Read = expectedRead, Write = expectedWrite };
 
-        var response = await _client.PutAsJsonAsync($"/access-policies/{initData.InitialAccessPolicyId}", request);
+        var response = await _client.PutAsJsonAsync($"/access-policies/{initData.AccessPolicyId}", request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -239,7 +239,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             {
                 new UserProjectAccessPolicy
                 {
-                    GrantedProjectId = initData.InitialProjectId,
+                    GrantedProjectId = initData.ProjectId,
                     OrganizationUserId = orgUser.Id,
                     Read = true,
                     Write = true,
@@ -252,7 +252,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         const bool expectedWrite = false;
         var request = new AccessPolicyUpdateRequest { Read = expectedRead, Write = expectedWrite };
 
-        var response = await _client.PutAsJsonAsync($"/access-policies/{initData.InitialAccessPolicyId}", request);
+        var response = await _client.PutAsJsonAsync($"/access-policies/{initData.AccessPolicyId}", request);
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountProjectAccessPolicyResponseModel>();
@@ -279,7 +279,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         await LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
-        var response = await _client.DeleteAsync($"/access-policies/{initData.InitialAccessPolicyId}");
+        var response = await _client.DeleteAsync($"/access-policies/{initData.AccessPolicyId}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -293,7 +293,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var initData = await SetupAccessPolicyRequest(orgUser.OrganizationId);
 
-        var response = await _client.DeleteAsync($"/access-policies/{initData.InitialAccessPolicyId}");
+        var response = await _client.DeleteAsync($"/access-policies/{initData.AccessPolicyId}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -315,7 +315,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             {
                 new UserProjectAccessPolicy
                 {
-                    GrantedProjectId = initData.InitialProjectId,
+                    GrantedProjectId = initData.ProjectId,
                     OrganizationUserId = orgUser.Id,
                     Read = true,
                     Write = true,
@@ -324,10 +324,10 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
 
-        var response = await _client.DeleteAsync($"/access-policies/{initData.InitialAccessPolicyId}");
+        var response = await _client.DeleteAsync($"/access-policies/{initData.AccessPolicyId}");
         response.EnsureSuccessStatusCode();
 
-        var test = await _accessPolicyRepository.GetByIdAsync(initData.InitialAccessPolicyId);
+        var test = await _accessPolicyRepository.GetByIdAsync(initData.AccessPolicyId);
         Assert.Null(test);
     }
 
@@ -337,13 +337,13 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
-        var response = await _client.GetAsync($"/projects/{initialProject.Id}/access-policies");
+        var response = await _client.GetAsync($"/projects/{project.Id}/access-policies");
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
@@ -364,7 +364,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         await LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
-        var response = await _client.GetAsync($"/projects/{initData.InitialProjectId}/access-policies");
+        var response = await _client.GetAsync($"/projects/{initData.ProjectId}/access-policies");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -378,7 +378,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var initData = await SetupAccessPolicyRequest(orgUser.OrganizationId);
 
-        var response = await _client.GetAsync($"/projects/{initData.InitialProjectId}/access-policies");
+        var response = await _client.GetAsync($"/projects/{initData.ProjectId}/access-policies");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -400,7 +400,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             {
                 new UserProjectAccessPolicy
                 {
-                    GrantedProjectId = initData.InitialProjectId,
+                    GrantedProjectId = initData.ProjectId,
                     OrganizationUserId = orgUser.Id,
                     Read = true,
                     Write = true,
@@ -409,7 +409,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
 
-        var response = await _client.GetAsync($"/projects/{initData.InitialProjectId}/access-policies");
+        var response = await _client.GetAsync($"/projects/{initData.ProjectId}/access-policies");
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
@@ -427,7 +427,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
         await LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -435,7 +435,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var response =
             await _client.GetAsync(
-                $"/projects/{initialProject.Id}/access-policies/service-accounts/potential-grantees");
+                $"/projects/{project.Id}/access-policies/service-accounts/potential-grantees");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -447,22 +447,15 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
-
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
-        {
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString,
-        });
-
 
         var response =
             await _client.GetAsync(
-                $"/projects/{initialProject.Id}/access-policies/service-accounts/potential-grantees");
+                $"/projects/{project.Id}/access-policies/service-accounts/potential-grantees");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -475,13 +468,13 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -495,11 +488,11 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             {
                 new UserProjectAccessPolicy
                 {
-                    GrantedProjectId = initialProject.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
                 },
                 new UserServiceAccountAccessPolicy
                 {
-                    GrantedServiceAccountId = initialServiceAccount.Id,
+                    GrantedServiceAccountId = serviceAccount.Id,
                     OrganizationUserId = orgUser.Id,
                     Read = true,
                     Write = true,
@@ -510,14 +503,14 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var response =
             await _client.GetAsync(
-                $"/projects/{initialProject.Id}/access-policies/service-accounts/potential-grantees");
+                $"/projects/{project.Id}/access-policies/service-accounts/potential-grantees");
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
         Assert.NotNull(result?.Data);
         Assert.Single(result!.Data);
-        Assert.Equal(initialServiceAccount.Id.ToString(), result.Data.First().Id);
+        Assert.Equal(serviceAccount.Id.ToString(), result.Data.First().Id);
     }
 
     [Theory]
@@ -529,14 +522,14 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
         await LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
         var response =
-            await _client.GetAsync($"/projects/{initialProject.Id}/access-policies/people/potential-grantees");
+            await _client.GetAsync($"/projects/{project.Id}/access-policies/people/potential-grantees");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -548,14 +541,14 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
         var response =
-            await _client.GetAsync($"/projects/{initialProject.Id}/access-policies/people/potential-grantees");
+            await _client.GetAsync($"/projects/{project.Id}/access-policies/people/potential-grantees");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -568,7 +561,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -582,14 +575,14 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             {
                 new UserProjectAccessPolicy
                 {
-                    GrantedProjectId = initialProject.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
                 },
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
 
         var response =
-            await _client.GetAsync($"/projects/{initialProject.Id}/access-policies/people/potential-grantees");
+            await _client.GetAsync($"/projects/{project.Id}/access-policies/people/potential-grantees");
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
@@ -600,42 +593,42 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
     private async Task<RequestSetupData> SetupAccessPolicyRequest(Guid organizationId)
     {
-        var initialProject = await _projectRepository.CreateAsync(new Project
+        var project = await _projectRepository.CreateAsync(new Project
         {
             OrganizationId = organizationId,
             Name = _mockEncryptedString,
         });
 
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = organizationId,
             Name = _mockEncryptedString,
         });
 
-        var initialAccessPolicy = await _accessPolicyRepository.CreateManyAsync(
+        var accessPolicy = await _accessPolicyRepository.CreateManyAsync(
             new List<BaseAccessPolicy>
             {
                 new ServiceAccountProjectAccessPolicy
                 {
                     Read = true,
                     Write = true,
-                    ServiceAccountId = initialServiceAccount.Id,
-                    GrantedProjectId = initialProject.Id,
+                    ServiceAccountId = serviceAccount.Id,
+                    GrantedProjectId = project.Id,
                 },
             });
 
         return new RequestSetupData
         {
-            InitialProjectId = initialProject.Id,
-            InitialServiceAccountId = initialServiceAccount.Id,
-            InitialAccessPolicyId = initialAccessPolicy.First().Id,
+            ProjectId = project.Id,
+            ServiceAccountId = serviceAccount.Id,
+            AccessPolicyId = accessPolicy.First().Id,
         };
     }
 
     private class RequestSetupData
     {
-        public Guid InitialProjectId { get; set; }
-        public Guid InitialAccessPolicyId { get; set; }
-        public Guid InitialServiceAccountId { get; set; }
+        public Guid ProjectId { get; set; }
+        public Guid AccessPolicyId { get; set; }
+        public Guid ServiceAccountId { get; set; }
     }
 }

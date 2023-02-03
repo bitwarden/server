@@ -41,9 +41,9 @@ public class AccessPoliciesController : Controller
         IUpdateAccessPolicyCommand updateAccessPolicyCommand)
     {
         _userService = userService;
+        _currentContext = currentContext;
         _serviceAccountRepository = serviceAccountRepository;
         _projectRepository = projectRepository;
-        _currentContext = currentContext;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
         _accessPolicyRepository = accessPolicyRepository;

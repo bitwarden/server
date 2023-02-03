@@ -18,6 +18,117 @@ namespace Bit.Commercial.Core.Test.SecretsManager.AccessPolicies;
 [ProjectCustomize]
 public class UpdateAccessPolicyCommandTests
 {
+    private static void SetupPermission(SutProvider<UpdateAccessPolicyCommand> sutProvider,
+        PermissionType permissionType, Project grantedProject, Guid userId)
+    {
+        switch (permissionType)
+        {
+            case PermissionType.RunAsAdmin:
+                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(grantedProject.OrganizationId)
+                    .Returns(true);
+                break;
+            case PermissionType.RunAsUserWithPermission:
+                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(grantedProject.Id, userId)
+                    .Returns(true);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
+        }
+    }
+
+    private static void SetupPermission(SutProvider<UpdateAccessPolicyCommand> sutProvider,
+        PermissionType permissionType, ServiceAccount grantedServiceAccount, Guid userId)
+    {
+        switch (permissionType)
+        {
+            case PermissionType.RunAsAdmin:
+                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(grantedServiceAccount.OrganizationId)
+                    .Returns(true);
+                break;
+            case PermissionType.RunAsUserWithPermission:
+                sutProvider.GetDependency<IServiceAccountRepository>()
+                    .UserHasWriteAccessToServiceAccount(grantedServiceAccount.Id, userId)
+                    .Returns(true);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
+        }
+    }
+
+    private static BaseAccessPolicy CreatePolicyToReturn(AccessPolicyType accessPolicyType,
+        ServiceAccount grantedServiceAccount, Guid data, Group mockGroup)
+    {
+        switch (accessPolicyType)
+        {
+            case AccessPolicyType.UserServiceAccountAccessPolicy:
+                return
+                    new UserServiceAccountAccessPolicy
+                    {
+                        Id = data,
+                        Read = true,
+                        Write = true,
+                        GrantedServiceAccountId = grantedServiceAccount.Id,
+                        GrantedServiceAccount = grantedServiceAccount,
+                    };
+            case AccessPolicyType.GroupServiceAccountAccessPolicy:
+                mockGroup.OrganizationId = grantedServiceAccount.OrganizationId;
+                return new GroupServiceAccountAccessPolicy
+                {
+                    Id = data,
+                    GrantedServiceAccountId = grantedServiceAccount.Id,
+                    GrantedServiceAccount = grantedServiceAccount,
+                    Read = true,
+                    Write = true,
+                    Group = mockGroup,
+                };
+            default:
+                throw new ArgumentOutOfRangeException(nameof(accessPolicyType), accessPolicyType, null);
+        }
+    }
+
+    private static BaseAccessPolicy CreatePolicyToReturn(AccessPolicyType accessPolicyType, Guid data,
+        Project grantedProject, Group mockGroup, ServiceAccount mockServiceAccount)
+    {
+        switch (accessPolicyType)
+        {
+            case AccessPolicyType.UserProjectAccessPolicy:
+                return
+                    new UserProjectAccessPolicy
+                    {
+                        Id = data,
+                        Read = true,
+                        Write = true,
+                        GrantedProjectId = grantedProject.Id,
+                        GrantedProject = grantedProject,
+                    };
+            case AccessPolicyType.GroupProjectAccessPolicy:
+                mockGroup.OrganizationId = grantedProject.OrganizationId;
+                return
+                    new GroupProjectAccessPolicy
+                    {
+                        Id = data,
+                        GrantedProjectId = grantedProject.Id,
+                        Read = true,
+                        Write = true,
+                        Group = mockGroup,
+                        GrantedProject = grantedProject,
+                    };
+            case AccessPolicyType.ServiceAccountProjectAccessPolicy:
+                mockServiceAccount.OrganizationId = grantedProject.OrganizationId;
+                return new ServiceAccountProjectAccessPolicy
+                {
+                    Id = data,
+                    GrantedProjectId = grantedProject.Id,
+                    Read = true,
+                    Write = true,
+                    ServiceAccount = mockServiceAccount,
+                    GrantedProject = grantedProject,
+                };
+            default:
+                throw new ArgumentOutOfRangeException(nameof(accessPolicyType), accessPolicyType, null);
+        }
+    }
+
     [Theory]
     [BitAutoData]
     public async Task UpdateAsync_Throws_NotFoundException(Guid data, bool read, bool write, Guid userId,
@@ -58,58 +169,9 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        BaseAccessPolicy policyToReturn = null;
-        switch (accessPolicyType)
-        {
-            case AccessPolicyType.UserProjectAccessPolicy:
-                policyToReturn =
-                    new UserProjectAccessPolicy
-                    {
-                        Id = data,
-                        Read = true,
-                        Write = true,
-                        GrantedProjectId = grantedProject.Id,
-                        GrantedProject = grantedProject,
-                    };
-                break;
-            case AccessPolicyType.GroupProjectAccessPolicy:
-                mockGroup.OrganizationId = grantedProject.OrganizationId;
-                policyToReturn =
-                    new GroupProjectAccessPolicy
-                    {
-                        Id = data,
-                        GrantedProjectId = grantedProject.Id,
-                        Read = true,
-                        Write = true,
-                        Group = mockGroup,
-                        GrantedProject = grantedProject,
-                    };
-                break;
-            case AccessPolicyType.ServiceAccountProjectAccessPolicy:
-                mockServiceAccount.OrganizationId = grantedProject.OrganizationId;
-                policyToReturn = new ServiceAccountProjectAccessPolicy
-                {
-                    Id = data,
-                    GrantedProjectId = grantedProject.Id,
-                    Read = true,
-                    Write = true,
-                    ServiceAccount = mockServiceAccount,
-                    GrantedProject = grantedProject,
-                };
-                break;
-        }
-
-        switch (permissionType)
-        {
-            case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(grantedProject.OrganizationId)
-                    .Returns(true);
-                break;
-            case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(grantedProject.Id, userId)
-                    .Returns(true);
-                break;
-        }
+        var policyToReturn =
+            CreatePolicyToReturn(accessPolicyType, data, grantedProject, mockGroup, mockServiceAccount);
+        SetupPermission(sutProvider, permissionType, grantedProject, userId);
 
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
         var result = await sutProvider.Sut.UpdateAsync(data, read, write, userId);
@@ -136,47 +198,8 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        BaseAccessPolicy policyToReturn = null;
-        switch (accessPolicyType)
-        {
-            case AccessPolicyType.UserProjectAccessPolicy:
-                policyToReturn =
-                    new UserProjectAccessPolicy
-                    {
-                        Id = data,
-                        Read = true,
-                        Write = true,
-                        GrantedProjectId = grantedProject.Id,
-                        GrantedProject = grantedProject,
-                    };
-                break;
-            case AccessPolicyType.GroupProjectAccessPolicy:
-                mockGroup.OrganizationId = grantedProject.OrganizationId;
-                policyToReturn =
-                    new GroupProjectAccessPolicy
-                    {
-                        Id = data,
-                        GrantedProjectId = grantedProject.Id,
-                        Read = true,
-                        Write = true,
-                        Group = mockGroup,
-                        GrantedProject = grantedProject,
-                    };
-                break;
-            case AccessPolicyType.ServiceAccountProjectAccessPolicy:
-                mockServiceAccount.OrganizationId = grantedProject.OrganizationId;
-                policyToReturn = new ServiceAccountProjectAccessPolicy
-                {
-                    Id = data,
-                    GrantedProjectId = grantedProject.Id,
-                    Read = true,
-                    Write = true,
-                    ServiceAccount = mockServiceAccount,
-                    GrantedProject = grantedProject,
-                };
-                break;
-        }
-
+        var policyToReturn =
+            CreatePolicyToReturn(accessPolicyType, data, grantedProject, mockGroup, mockServiceAccount);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -201,47 +224,8 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        BaseAccessPolicy policyToReturn = null;
-        switch (accessPolicyType)
-        {
-            case AccessPolicyType.UserServiceAccountAccessPolicy:
-                policyToReturn =
-                    new UserServiceAccountAccessPolicy
-                    {
-                        Id = data,
-                        Read = true,
-                        Write = true,
-                        GrantedServiceAccountId = grantedServiceAccount.Id,
-                        GrantedServiceAccount = grantedServiceAccount,
-                    };
-                break;
-            case AccessPolicyType.GroupServiceAccountAccessPolicy:
-                mockGroup.OrganizationId = grantedServiceAccount.OrganizationId;
-                policyToReturn =
-                    new GroupServiceAccountAccessPolicy
-                    {
-                        Id = data,
-                        GrantedServiceAccountId = grantedServiceAccount.Id,
-                        Read = true,
-                        Write = true,
-                        Group = mockGroup,
-                        GrantedServiceAccount = grantedServiceAccount,
-                    };
-                break;
-        }
-
-        switch (permissionType)
-        {
-            case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(grantedServiceAccount.OrganizationId)
-                    .Returns(true);
-                break;
-            case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<IServiceAccountRepository>()
-                    .UserHasWriteAccessToServiceAccount(grantedServiceAccount.Id, userId)
-                    .Returns(true);
-                break;
-        }
+        var policyToReturn = CreatePolicyToReturn(accessPolicyType, grantedServiceAccount, data, mockGroup);
+        SetupPermission(sutProvider, permissionType, grantedServiceAccount, userId);
 
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
         var result = await sutProvider.Sut.UpdateAsync(data, read, write, userId);
@@ -266,35 +250,7 @@ public class UpdateAccessPolicyCommandTests
         SutProvider<UpdateAccessPolicyCommand> sutProvider)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        BaseAccessPolicy policyToReturn = null;
-        switch (accessPolicyType)
-        {
-            case AccessPolicyType.UserServiceAccountAccessPolicy:
-                policyToReturn =
-                    new UserServiceAccountAccessPolicy
-                    {
-                        Id = data,
-                        Read = true,
-                        Write = true,
-                        GrantedServiceAccountId = grantedServiceAccount.Id,
-                        GrantedServiceAccount = grantedServiceAccount,
-                    };
-                break;
-            case AccessPolicyType.GroupServiceAccountAccessPolicy:
-                mockGroup.OrganizationId = grantedServiceAccount.OrganizationId;
-                policyToReturn =
-                    new GroupServiceAccountAccessPolicy
-                    {
-                        Id = data,
-                        GrantedServiceAccountId = grantedServiceAccount.Id,
-                        GrantedServiceAccount = grantedServiceAccount,
-                        Read = true,
-                        Write = true,
-                        Group = mockGroup,
-                    };
-                break;
-        }
-
+        var policyToReturn = CreatePolicyToReturn(accessPolicyType, grantedServiceAccount, data, mockGroup);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).Returns(policyToReturn);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
