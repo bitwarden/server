@@ -6,14 +6,40 @@ namespace Bit.Setup;
 public class Context
 {
     private const string ConfigPath = "/bitwarden/config.yml";
-    // This keeps track of the value of the CSP that was defined as of Jan 2023.
-    // Do not change this value.
+
+    // These track of old CSP default values to correct.
+    // Do not change these values.
+    private const string Dec2020ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
+        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
+        "child-src 'self' https://*.duosecurity.com; frame-src 'self' https://*.duosecurity.com; " +
+        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+        "https://twofactorauth.org; object-src 'self' blob:;";
+    private const string Jan2021ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
+        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
+        "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
+        "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
+        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+        "https://twofactorauth.org; object-src 'self' blob:;";
+    private const string Feb2021ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
+        "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; " +
+        "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
+        "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
+        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+        "https://2fa.directory; object-src 'self' blob:;";
     private const string Jan2023ContentSecurityPolicy = "default-src 'self'; style-src 'self' " +
         "'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; " +
         "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
         "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
         "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
         "https://api.2fa.directory; object-src 'self' blob:;";
+
+    private string[] _oldCspDefaults =
+    {
+        Dec2020ContentSecurityPolicy,
+        Jan2021ContentSecurityPolicy,
+        Feb2021ContentSecurityPolicy,
+        Jan2023ContentSecurityPolicy
+    };
 
     public string[] Args { get; set; }
     public bool Quiet { get; set; }
@@ -127,7 +153,7 @@ public class Context
         Config = deserializer.Deserialize<Configuration>(configText);
 
         // Fix old explicit config assignments of CSP which should be treated as a default value
-        if (Config.NginxHeaderContentSecurityPolicy == Jan2023ContentSecurityPolicy)
+        if (_oldCspDefaults.Any(c => c == Config.NginxHeaderContentSecurityPolicy))
         {
             Config.NginxHeaderContentSecurityPolicy = null;
             SaveConfiguration();
