@@ -321,6 +321,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                         }
 
                         cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
+                        cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value = user.AccountRevisionDate;
+                        cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value = user.LastKeyRotationDate;
                         cmd.ExecuteNonQuery();
                     }
 

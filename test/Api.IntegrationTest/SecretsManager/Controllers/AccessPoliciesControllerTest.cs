@@ -130,6 +130,26 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
     }
 
     [Fact]
+    public async Task GetProjectAccessPolicies_ReturnsEmpty()
+    {
+        var initialProject = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = _organization.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var response = await _client.GetAsync($"/projects/{initialProject.Id}/access-policies");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ProjectAccessPoliciesResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.Empty(result!.UserAccessPolicies);
+        Assert.Empty(result!.GroupAccessPolicies);
+        Assert.Empty(result!.ServiceAccountAccessPolicies);
+    }
+
+    [Fact]
     public async Task GetProjectAccessPolicies()
     {
         var initData = await SetupAccessPolicyRequest();
