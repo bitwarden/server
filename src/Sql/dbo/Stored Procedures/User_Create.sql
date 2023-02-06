@@ -37,7 +37,11 @@
     @FailedLoginCount INT = 0,
     @LastFailedLoginDate DATETIME2(7),
     @UnknownDeviceVerificationEnabled BIT = 1,
-    @AvatarColor VARCHAR(7) = NULL
+    @AvatarColor VARCHAR(7) = NULL,
+    @LastPasswordChangeDate DATETIME2(7) = NULL,
+    @LastKdfChangeDate DATETIME2(7) = NULL,
+    @LastKeyRotationDate DATETIME2(7) = NULL,
+    @LastEmailChangeDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -82,7 +86,11 @@ BEGIN
         [UnknownDeviceVerificationEnabled],
         [AvatarColor],
         [KdfMemory],
-        [KdfParallelism]
+        [KdfParallelism],
+        [LastPasswordChangeDate],
+        [LastKdfChangeDate],
+        [LastKeyRotationDate],
+        [LastEmailChangeDate]
     )
     VALUES
     (
@@ -124,6 +132,10 @@ BEGIN
         @UnknownDeviceVerificationEnabled,
         @AvatarColor,
         @KdfMemory,
-        @KdfParallelism
+        @KdfParallelism,
+        @LastPasswordChangeDate,
+        @LastKdfChangeDate,
+        @LastKeyRotationDate,
+        @LastEmailChangeDate
     )
 END

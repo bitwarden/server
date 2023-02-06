@@ -43,9 +43,9 @@ public class AccessPoliciesController : Controller
         IUpdateAccessPolicyCommand updateAccessPolicyCommand)
     {
         _userService = userService;
+        _currentContext = currentContext;
         _serviceAccountRepository = serviceAccountRepository;
         _projectRepository = projectRepository;
-        _currentContext = currentContext;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
         _accessPolicyRepository = accessPolicyRepository;
@@ -54,7 +54,7 @@ public class AccessPoliciesController : Controller
         _updateAccessPolicyCommand = updateAccessPolicyCommand;
     }
 
-    [HttpPost("/projects/{id:guid}/access-policies")]
+    [HttpPost("/projects/{id}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> CreateProjectAccessPoliciesAsync([FromRoute] Guid id,
         [FromBody] AccessPoliciesCreateRequest request)
     {
@@ -64,17 +64,7 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpPost("/service-accounts/{id:guid}/access-policies")]
-    public async Task<ServiceAccountAccessPoliciesResponseModel> CreateServiceAccountAccessPoliciesAsync([FromRoute] Guid id,
-        [FromBody] AccessPoliciesCreateRequest request)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        var policies = request.ToBaseAccessPoliciesForServiceAccount(id);
-        var results = await _createAccessPoliciesCommand.CreateForServiceAccountAsync(id, policies, userId);
-        return new ServiceAccountAccessPoliciesResponseModel(results);
-    }
-
-    [HttpGet("/projects/{id:guid}/access-policies")]
+    [HttpGet("/projects/{id}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> GetProjectAccessPoliciesAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
@@ -84,7 +74,17 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpGet("/service-accounts/{id:guid}/access-policies")]
+    [HttpPost("/service-accounts/{id}/access-policies")]
+    public async Task<ServiceAccountAccessPoliciesResponseModel> CreateServiceAccountAccessPoliciesAsync([FromRoute] Guid id,
+        [FromBody] AccessPoliciesCreateRequest request)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var policies = request.ToBaseAccessPoliciesForServiceAccount(id);
+        var results = await _createAccessPoliciesCommand.CreateForServiceAccountAsync(id, policies, userId);
+        return new ServiceAccountAccessPoliciesResponseModel(results);
+    }
+
+    [HttpGet("/service-accounts/{id}/access-policies")]
     public async Task<ServiceAccountAccessPoliciesResponseModel> GetServiceAccountAccessPoliciesAsync([FromRoute] Guid id)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
@@ -94,7 +94,7 @@ public class AccessPoliciesController : Controller
         return new ServiceAccountAccessPoliciesResponseModel(results);
     }
 
-    [HttpPut("{id:guid}")]
+    [HttpPut("{id}")]
     public async Task<BaseAccessPolicyResponseModel> UpdateAccessPolicyAsync([FromRoute] Guid id,
         [FromBody] AccessPolicyUpdateRequest request)
     {
@@ -104,7 +104,9 @@ public class AccessPoliciesController : Controller
         return result switch
         {
             UserProjectAccessPolicy accessPolicy => new UserProjectAccessPolicyResponseModel(accessPolicy),
+            UserServiceAccountAccessPolicy accessPolicy => new UserServiceAccountAccessPolicyResponseModel(accessPolicy),
             GroupProjectAccessPolicy accessPolicy => new GroupProjectAccessPolicyResponseModel(accessPolicy),
+            GroupServiceAccountAccessPolicy accessPolicy => new GroupServiceAccountAccessPolicyResponseModel(accessPolicy),
             ServiceAccountProjectAccessPolicy accessPolicy => new ServiceAccountProjectAccessPolicyResponseModel(
                 accessPolicy),
             _ => throw new ArgumentException("Unsupported access policy type provided."),
@@ -118,67 +120,55 @@ public class AccessPoliciesController : Controller
         await _deleteAccessPolicyCommand.DeleteAsync(id, userId);
     }
 
-    [HttpGet("/projects/{id:guid}/access-policies/people/potential-grantees")]
-    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectPeoplePotentialGranteesAsync(
-        [FromRoute] Guid id)
+    [HttpGet("/organizations/{id}/access-policies/people/potential-grantees")]
+    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetPeoplePotentialGranteesAsync([FromRoute] Guid id)
     {
-        var project = await _projectRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToProjectAsync(project);
+        if (!_currentContext.AccessSecretsManager(id))
+        {
+            throw new NotFoundException();
+        }
 
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(project.OrganizationId);
+        var groups = await _groupRepository.GetManyByOrganizationIdAsync(id);
         var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g));
 
         var organizationUsers =
-            await _organizationUserRepository.GetManyDetailsByOrganizationAsync(project.OrganizationId);
+            await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var userResponses = organizationUsers
             .Where(user => user.AccessSecretsManager)
             .Select(userDetails => new PotentialGranteeResponseModel(userDetails));
 
-        return new ListResponseModel<PotentialGranteeResponseModel>(groupResponses.Concat(userResponses));
+        return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses));
     }
 
-    [HttpGet("/projects/{id:guid}/access-policies/service-accounts/potential-grantees")]
-    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetProjectServiceAccountPotentialGranteesAsync(
-        [FromRoute] Guid id)
+    [HttpGet("/organizations/{id}/access-policies/service-accounts/potential-grantees")]
+    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetServiceAccountsPotentialGranteesAsync([FromRoute] Guid id)
     {
-        var project = await _projectRepository.GetByIdAsync(id);
-        var userContext = await CheckUserHasWriteAccessToProjectAsync(project);
+        if (!_currentContext.AccessSecretsManager(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(id);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         var serviceAccounts =
-            await _serviceAccountRepository.GetPotentialGranteesAsync(project.OrganizationId,
-                userContext.UserId,
-                userContext.AccessClient);
+            await _serviceAccountRepository.GetManyByOrganizationIdWriteAccessAsync(id,
+                userId,
+                accessClient);
         var serviceAccountResponses =
             serviceAccounts.Select(serviceAccount => new PotentialGranteeResponseModel(serviceAccount));
 
         return new ListResponseModel<PotentialGranteeResponseModel>(serviceAccountResponses);
     }
 
-    [HttpGet("/service-accounts/{id:guid}/access-policies/potential-grantees")]
-    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetServiceAccountPotentialGranteesAsync(
-        [FromRoute] Guid id)
-    {
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
-
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(serviceAccount.OrganizationId);
-        var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g));
-
-        var organizationUsers =
-            await _organizationUserRepository.GetManyDetailsByOrganizationAsync(serviceAccount.OrganizationId);
-        var userResponses = organizationUsers
-            .Where(user => user.AccessSecretsManager)
-            .Select(userDetails => new PotentialGranteeResponseModel(userDetails));
-
-        return new ListResponseModel<PotentialGranteeResponseModel>(groupResponses.Concat(userResponses));
-    }
-
-    private async Task<(Guid UserId, AccessClientType AccessClient)> CheckUserHasWriteAccessToProjectAsync(Project project)
+    private async Task CheckUserHasWriteAccessToProjectAsync(Project project)
     {
         if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
         {
             throw new NotFoundException();
         }
+
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
@@ -194,11 +184,9 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
-
-        return (userId, accessClient);
     }
 
-    private async Task<(Guid UserId, AccessClientType AccessClient)> CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
+    private async Task CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
     {
         if (serviceAccount == null || !_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
         {
@@ -219,7 +207,5 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
-
-        return (userId, accessClient);
     }
 }

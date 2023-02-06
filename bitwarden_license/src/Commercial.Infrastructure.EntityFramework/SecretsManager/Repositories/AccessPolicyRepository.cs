@@ -115,17 +115,24 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
     public async Task<Core.SecretsManager.Entities.BaseAccessPolicy?> GetByIdAsync(Guid id)
     {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var entity = await dbContext.AccessPolicies.Where(ap => ap.Id == id)
-            .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
-            .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
-            .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
-            .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
-            .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
-            .FirstOrDefaultAsync();
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entity = await dbContext.AccessPolicies.Where(ap => ap.Id == id)
+                .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
+                .Include(ap => ((UserProjectAccessPolicy)ap).GrantedProject)
+                .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
+                .Include(ap => ((GroupProjectAccessPolicy)ap).GrantedProject)
+                .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
+                .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).GrantedProject)
+                .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
+                .Include(ap => ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccount)
+                .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
+                .Include(ap => ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccount)
+                .FirstOrDefaultAsync();
 
-        return entity == null ? null : MapToCore(entity);
+            return entity == null ? null : MapToCore(entity);
+        }
     }
 
     public async Task ReplaceAsync(Core.SecretsManager.Entities.BaseAccessPolicy baseAccessPolicy)
@@ -156,7 +163,6 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
             .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
             .ToListAsync();
-
         return entities.Select(MapToCore);
     }
 

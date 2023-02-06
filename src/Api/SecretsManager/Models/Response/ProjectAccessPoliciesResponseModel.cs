@@ -10,11 +10,6 @@ public class ProjectAccessPoliciesResponseModel : ResponseModel
     public ProjectAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies)
         : base(_objectName)
     {
-        if (baseAccessPolicies == null)
-        {
-            return;
-        }
-
         foreach (var baseAccessPolicy in baseAccessPolicies)
         {
             switch (baseAccessPolicy)

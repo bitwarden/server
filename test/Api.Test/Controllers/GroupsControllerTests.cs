@@ -29,7 +29,7 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<ICreateGroupCommand>().Received(1).CreateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll && g.ExternalId == groupRequestModel.ExternalId),
+                g.AccessAll == groupRequestModel.AccessAll),
             organization,
             Arg.Any<IEnumerable<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
@@ -38,7 +38,6 @@ public class GroupsControllerTests
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id.ToString(), response.OrganizationId);
         Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
-        Assert.Equal(groupRequestModel.ExternalId, response.ExternalId);
     }
 
     [Theory]
@@ -57,7 +56,7 @@ public class GroupsControllerTests
         await sutProvider.GetDependency<IUpdateGroupCommand>().Received(1).UpdateGroupAsync(
             Arg.Is<Group>(g =>
                 g.OrganizationId == organization.Id && g.Name == groupRequestModel.Name &&
-                g.AccessAll == groupRequestModel.AccessAll && g.ExternalId == groupRequestModel.ExternalId),
+                g.AccessAll == groupRequestModel.AccessAll),
             Arg.Is<Organization>(o => o.Id == organization.Id),
             Arg.Any<IEnumerable<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
@@ -66,6 +65,5 @@ public class GroupsControllerTests
         Assert.Equal(groupRequestModel.Name, response.Name);
         Assert.Equal(organization.Id.ToString(), response.OrganizationId);
         Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
-        Assert.Equal(groupRequestModel.ExternalId, response.ExternalId);
     }
 }

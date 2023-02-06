@@ -34,60 +34,37 @@ public class UpdateAccessPolicyCommand : IUpdateAccessPolicyCommand
             throw new NotFoundException();
         }
 
-        switch (accessPolicy)
-        {
-            case UserProjectAccessPolicy ap:
-                if (ap.GrantedProjectId == null)
-                {
-                    throw new NotFoundException();
-                }
-
-                var project = await _projectRepository.GetByIdAsync(ap.GrantedProjectId.Value);
-                return await UpdateProjectGrantAsync(ap, userId, project.OrganizationId, project.Id, read, write);
-            case GroupProjectAccessPolicy ap:
-                return await UpdateProjectGrantAsync(ap, userId, ap.Group?.OrganizationId, ap.GrantedProjectId, read, write);
-            case ServiceAccountProjectAccessPolicy ap:
-                return await UpdateProjectGrantAsync(ap, userId, ap.ServiceAccount?.OrganizationId, ap.GrantedProjectId, read, write);
-            case UserServiceAccountAccessPolicy ap:
-                return await UpdateServiceAccountGrantAsync(ap, userId, ap.GrantedServiceAccountId, read, write);
-            case GroupServiceAccountAccessPolicy ap:
-                return await UpdateServiceAccountGrantAsync(ap, userId, ap.GrantedServiceAccountId, read, write);
-            default:
-                throw new ArgumentException("Unsupported access policy type provided.", nameof(accessPolicy));
-        }
-    }
-
-    private async Task<BaseAccessPolicy> UpdateProjectGrantAsync(
-        BaseAccessPolicy ap,
-        Guid userId,
-        Guid? organizationId,
-        Guid? projectId,
-        bool read,
-        bool write)
-    {
-        if (organizationId == null || projectId == null)
+        if (!await IsAllowedToUpdateAsync(accessPolicy, userId))
         {
             throw new NotFoundException();
         }
 
-        await CheckPermissionsAsync(organizationId.Value, userId, projectIdToCheck: projectId.Value);
-        return await UpdateAccessPolicyAsync(ap, read, write);
+        accessPolicy.Read = read;
+        accessPolicy.Write = write;
+        accessPolicy.RevisionDate = DateTime.UtcNow;
+        await _accessPolicyRepository.ReplaceAsync(accessPolicy);
+        return accessPolicy;
     }
 
-    private async Task<BaseAccessPolicy> UpdateServiceAccountGrantAsync(BaseAccessPolicy ap, Guid userId, Guid? serviceAccountId, bool read, bool write)
-    {
-        if (serviceAccountId == null)
+    private async Task<bool> IsAllowedToUpdateAsync(BaseAccessPolicy baseAccessPolicy, Guid userId) =>
+        baseAccessPolicy switch
         {
-            throw new NotFoundException();
-        }
+            UserProjectAccessPolicy ap => await HasPermissionsAsync(ap.GrantedProject!.OrganizationId, userId,
+                ap.GrantedProjectId),
+            GroupProjectAccessPolicy ap => await HasPermissionsAsync(ap.GrantedProject!.OrganizationId, userId,
+                ap.GrantedProjectId),
+            ServiceAccountProjectAccessPolicy ap => await HasPermissionsAsync(ap.GrantedProject!.OrganizationId,
+                userId, ap.GrantedProjectId),
+            UserServiceAccountAccessPolicy ap => await HasPermissionsAsync(
+                ap.GrantedServiceAccount!.OrganizationId,
+                userId, serviceAccountIdToCheck: ap.GrantedServiceAccountId),
+            GroupServiceAccountAccessPolicy ap => await HasPermissionsAsync(
+                ap.GrantedServiceAccount!.OrganizationId,
+                userId, serviceAccountIdToCheck: ap.GrantedServiceAccountId),
+            _ => throw new ArgumentException("Unsupported access policy type provided."),
+        };
 
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId.Value);
-        await CheckPermissionsAsync(serviceAccount.OrganizationId, userId,
-            serviceAccountIdToCheck: serviceAccount.Id);
-        return await UpdateAccessPolicyAsync(ap, read, write);
-    }
-
-    private async Task CheckPermissionsAsync(
+    private async Task<bool> HasPermissionsAsync(
         Guid organizationId,
         Guid userId,
         Guid? projectIdToCheck = null,
@@ -95,8 +72,9 @@ public class UpdateAccessPolicyCommand : IUpdateAccessPolicyCommand
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
-            throw new NotFoundException();
+            return false;
         }
+
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
@@ -107,39 +85,27 @@ public class UpdateAccessPolicyCommand : IUpdateAccessPolicyCommand
                 hasAccess = true;
                 break;
             case AccessClientType.User:
-                if (projectIdToCheck != null)
+                if (projectIdToCheck.HasValue)
                 {
                     hasAccess = await _projectRepository.UserHasWriteAccessToProject(projectIdToCheck.Value, userId);
                 }
-                else if (serviceAccountIdToCheck != null)
+                else if (serviceAccountIdToCheck.HasValue)
                 {
                     hasAccess =
                         await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
                             serviceAccountIdToCheck.Value, userId);
-
                 }
                 else
                 {
                     throw new ArgumentException("No ID to check provided.");
                 }
+
                 break;
             default:
                 hasAccess = false;
                 break;
         }
 
-        if (!hasAccess)
-        {
-            throw new NotFoundException();
-        }
-    }
-
-    private async Task<BaseAccessPolicy> UpdateAccessPolicyAsync(BaseAccessPolicy accessPolicy, bool read, bool write)
-    {
-        accessPolicy.Read = read;
-        accessPolicy.Write = write;
-        accessPolicy.RevisionDate = DateTime.UtcNow;
-        await _accessPolicyRepository.ReplaceAsync(accessPolicy);
-        return accessPolicy;
+        return hasAccess;
     }
 }
