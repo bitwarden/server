@@ -17,82 +17,8 @@ namespace Bit.Commercial.Core.Test.SecretsManager.AccessPolicies;
 [ProjectCustomize]
 public class CreateAccessPoliciesCommandTests
 {
-    [Theory]
-    [BitAutoData]
-    public async Task CreateForProject_SmNotEnabled_Throws(
-        Guid userId,
-        Project project,
-        List<UserProjectAccessPolicy> userProjectAccessPolicies,
-        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
-        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
-        SutProvider<CreateAccessPoliciesCommand> sutProvider)
+    private static List<BaseAccessPolicy> MakeDuplicate(List<BaseAccessPolicy> data, AccessPolicyType accessPolicyType)
     {
-        var data = new List<BaseAccessPolicy>();
-        data.AddRange(userProjectAccessPolicies);
-        data.AddRange(groupProjectAccessPolicies);
-        data.AddRange(serviceAccountProjectAccessPolicies);
-
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(false);
-
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId));
-
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task CreateForProject_AlreadyExists_Throws_BadRequestException(
-        Guid userId,
-        Project project,
-        List<UserProjectAccessPolicy> userProjectAccessPolicies,
-        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
-        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
-        SutProvider<CreateAccessPoliciesCommand> sutProvider)
-    {
-        var data = new List<BaseAccessPolicy>();
-        data.AddRange(userProjectAccessPolicies);
-        data.AddRange(groupProjectAccessPolicies);
-        data.AddRange(serviceAccountProjectAccessPolicies);
-
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
-
-        sutProvider.GetDependency<IAccessPolicyRepository>().AccessPolicyExists(Arg.Any<BaseAccessPolicy>())
-            .Returns(true);
-
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId));
-
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData(AccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy)]
-    [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy)]
-    public async Task CreateForProjectAsync_NotUnique_ThrowsException(
-        AccessPolicyType accessPolicyType,
-        Guid userId,
-        Project project,
-        List<UserProjectAccessPolicy> userProjectAccessPolicies,
-        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
-        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
-        SutProvider<CreateAccessPoliciesCommand> sutProvider
-    )
-    {
-        var data = new List<BaseAccessPolicy>();
-        data.AddRange(userProjectAccessPolicies);
-        data.AddRange(groupProjectAccessPolicies);
-        data.AddRange(serviceAccountProjectAccessPolicies);
-
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
-
         switch (accessPolicyType)
         {
             case AccessPolicyType.UserProjectAccessPolicy:
@@ -162,6 +88,126 @@ public class CreateAccessPoliciesCommandTests
                 }
         }
 
+        return data;
+    }
+
+    private static void SetupAdmin(SutProvider<CreateAccessPoliciesCommand> sutProvider, Guid organizationId)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
+    }
+
+    private static void SetupUser(SutProvider<CreateAccessPoliciesCommand> sutProvider, Guid organizationId)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+    }
+
+    private static void SetupPermission(SutProvider<CreateAccessPoliciesCommand> sutProvider,
+        PermissionType permissionType, Project project, Guid userId)
+    {
+        switch (permissionType)
+        {
+            case PermissionType.RunAsAdmin:
+                SetupAdmin(sutProvider, project.OrganizationId);
+                break;
+            case PermissionType.RunAsUserWithPermission:
+                SetupUser(sutProvider, project.OrganizationId);
+                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId)
+                    .Returns(true);
+                break;
+        }
+    }
+
+    private static void SetupPermission(SutProvider<CreateAccessPoliciesCommand> sutProvider,
+        PermissionType permissionType, ServiceAccount serviceAccount, Guid userId)
+    {
+        switch (permissionType)
+        {
+            case PermissionType.RunAsAdmin:
+                SetupAdmin(sutProvider, serviceAccount.OrganizationId);
+                break;
+            case PermissionType.RunAsUserWithPermission:
+                SetupUser(sutProvider, serviceAccount.OrganizationId);
+                sutProvider.GetDependency<IServiceAccountRepository>()
+                    .UserHasWriteAccessToServiceAccount(serviceAccount.Id, userId).Returns(true);
+                break;
+        }
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateForProject_SmNotEnabled_Throws(
+        Guid userId,
+        Project project,
+        List<UserProjectAccessPolicy> userProjectAccessPolicies,
+        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
+        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
+        SutProvider<CreateAccessPoliciesCommand> sutProvider)
+    {
+        var data = new List<BaseAccessPolicy>();
+        data.AddRange(userProjectAccessPolicies);
+        data.AddRange(groupProjectAccessPolicies);
+        data.AddRange(serviceAccountProjectAccessPolicies);
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId));
+
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CreateForProject_AlreadyExists_Throws_BadRequestException(
+        Guid userId,
+        Project project,
+        List<UserProjectAccessPolicy> userProjectAccessPolicies,
+        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
+        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
+        SutProvider<CreateAccessPoliciesCommand> sutProvider)
+    {
+        var data = new List<BaseAccessPolicy>();
+        data.AddRange(userProjectAccessPolicies);
+        data.AddRange(groupProjectAccessPolicies);
+        data.AddRange(serviceAccountProjectAccessPolicies);
+
+        SetupAdmin(sutProvider, project.OrganizationId);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
+        sutProvider.GetDependency<IAccessPolicyRepository>().AccessPolicyExists(Arg.Any<BaseAccessPolicy>())
+            .Returns(true);
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId));
+
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData(AccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy)]
+    [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy)]
+    [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy)]
+    public async Task CreateForProjectAsync_NotUnique_ThrowsException(
+        AccessPolicyType accessPolicyType,
+        Guid userId,
+        Project project,
+        List<UserProjectAccessPolicy> userProjectAccessPolicies,
+        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
+        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
+        SutProvider<CreateAccessPoliciesCommand> sutProvider
+    )
+    {
+        var data = new List<BaseAccessPolicy>();
+        data.AddRange(userProjectAccessPolicies);
+        data.AddRange(groupProjectAccessPolicies);
+        data.AddRange(serviceAccountProjectAccessPolicies);
+        data = MakeDuplicate(data, accessPolicyType);
+
+        SetupAdmin(sutProvider, project.OrganizationId);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<IAccessPolicyRepository>().AccessPolicyExists(Arg.Any<BaseAccessPolicy>())
             .Returns(true);
 
@@ -189,18 +235,8 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-
-        switch (permissionType)
-        {
-            case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
-                break;
-            case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(true);
-                break;
-        }
+        SetupPermission(sutProvider, permissionType, project, userId);
 
         await sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId);
 
@@ -223,9 +259,9 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
+        SetupUser(sutProvider, project.OrganizationId);
         sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(false);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.CreateForProjectAsync(project.Id, data, userId));
@@ -272,10 +308,8 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
+        SetupAdmin(sutProvider, serviceAccount.OrganizationId);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(serviceAccount.OrganizationId).Returns(true);
-
         sutProvider.GetDependency<IAccessPolicyRepository>().AccessPolicyExists(Arg.Any<BaseAccessPolicy>())
             .Returns(true);
 
@@ -306,80 +340,10 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(userProjectAccessPolicies);
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
+        data = MakeDuplicate(data, accessPolicyType);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
+        SetupAdmin(sutProvider, serviceAccount.OrganizationId);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(serviceAccount.OrganizationId).Returns(true);
-
-        switch (accessPolicyType)
-        {
-            case AccessPolicyType.UserProjectAccessPolicy:
-                {
-                    var mockAccessPolicy = new UserProjectAccessPolicy
-                    {
-                        OrganizationUserId = Guid.NewGuid(),
-                        GrantedProjectId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-            case AccessPolicyType.GroupProjectAccessPolicy:
-                {
-                    var mockAccessPolicy = new GroupProjectAccessPolicy
-                    {
-                        GroupId = Guid.NewGuid(),
-                        GrantedProjectId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-            case AccessPolicyType.ServiceAccountProjectAccessPolicy:
-                {
-                    var mockAccessPolicy = new ServiceAccountProjectAccessPolicy
-                    {
-                        ServiceAccountId = Guid.NewGuid(),
-                        GrantedProjectId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-            case AccessPolicyType.UserServiceAccountAccessPolicy:
-                {
-                    var mockAccessPolicy = new UserServiceAccountAccessPolicy
-                    {
-                        OrganizationUserId = Guid.NewGuid(),
-                        GrantedServiceAccountId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-            case AccessPolicyType.GroupServiceAccountAccessPolicy:
-                {
-                    var mockAccessPolicy = new GroupServiceAccountAccessPolicy
-                    {
-                        GroupId = Guid.NewGuid(),
-                        GrantedServiceAccountId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-        }
-
         sutProvider.GetDependency<IAccessPolicyRepository>().AccessPolicyExists(Arg.Any<BaseAccessPolicy>())
             .Returns(true);
 
@@ -406,20 +370,8 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(userServiceAccountAccessPolicies);
         data.AddRange(groupServiceAccountAccessPolicies);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
-
-        switch (permissionType)
-        {
-            case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(serviceAccount.OrganizationId)
-                    .Returns(true);
-                break;
-            case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<IServiceAccountRepository>()
-                    .UserHasWriteAccessToServiceAccount(serviceAccount.Id, userId).Returns(true);
-                break;
-        }
+        SetupPermission(sutProvider, permissionType, serviceAccount, userId);
 
         await sutProvider.Sut.CreateForServiceAccountAsync(serviceAccount.Id, data, userId);
 
@@ -440,7 +392,7 @@ public class CreateAccessPoliciesCommandTests
         data.AddRange(userServiceAccountAccessPolicies);
         data.AddRange(groupServiceAccountAccessPolicies);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
+        SetupUser(sutProvider, serviceAccount.OrganizationId);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .UserHasWriteAccessToServiceAccount(serviceAccount.Id, userId).Returns(false);

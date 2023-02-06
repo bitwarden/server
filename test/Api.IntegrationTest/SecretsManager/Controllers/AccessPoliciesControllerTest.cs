@@ -534,37 +534,6 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         Assert.Equal(serviceAccount.Id.ToString(), result!.Data.First(x => x.Id == serviceAccount.Id.ToString()).Id);
     }
 
-    private async Task<RequestSetupData> SetupAccessPolicyRequest(Guid organizationId)
-    {
-        var project = await _projectRepository.CreateAsync(new Project
-        {
-            OrganizationId = organizationId,
-            Name = _mockEncryptedString,
-        });
-
-        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
-        {
-            OrganizationId = organizationId,
-            Name = _mockEncryptedString,
-        });
-
-        var accessPolicy = await _accessPolicyRepository.CreateManyAsync(
-            new List<BaseAccessPolicy>
-            {
-                new ServiceAccountProjectAccessPolicy
-                {
-                    Read = true, Write = true, ServiceAccountId = serviceAccount.Id, GrantedProjectId = project.Id,
-                },
-            });
-
-        return new RequestSetupData
-        {
-            ProjectId = project.Id,
-            ServiceAccountId = serviceAccount.Id,
-            AccessPolicyId = accessPolicy.First().Id,
-        };
-    }
-
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
@@ -574,7 +543,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (org, orgUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
         await LoginAsync(_email);
 
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -589,7 +558,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         };
 
         var response =
-            await _client.PostAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}/access-policies", request);
+            await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-policies", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -602,7 +571,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         await LoginAsync(_email);
         var ownerOrgUserId = orgUser.Id;
 
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -625,7 +594,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             {
                 new UserServiceAccountAccessPolicy
                 {
-                    GrantedServiceAccountId = initialServiceAccount.Id,
+                    GrantedServiceAccountId = serviceAccount.Id,
                     OrganizationUserId = newOrgUser.Id,
                     Read = true,
                     Write = true,
@@ -644,7 +613,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
 
         var response =
-            await _client.PostAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}/access-policies", request);
+            await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-policies", request);
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountAccessPoliciesResponseModel>();
@@ -675,7 +644,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
-        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
@@ -690,7 +659,58 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         };
 
         var response =
-            await _client.PostAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}/access-policies", request);
+            await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-policies", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task GetServiceAccountAccessPolicies_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
+        var initData = await SetupAccessPolicyRequest(org.Id);
+
+        var response = await _client.GetAsync($"/service-accounts/{initData.ServiceAccountId}/access-policies");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetServiceAccountAccessPolicies_ReturnsEmpty()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-policies");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ServiceAccountAccessPoliciesResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.Empty(result!.UserAccessPolicies);
+        Assert.Empty(result!.GroupAccessPolicies);
+    }
+
+    [Fact]
+    public async Task GetServiceAccountAccessPolicies_NoPermission()
+    {
+        // Create a new account as a user
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var initData = await SetupAccessPolicyRequest(orgUser.OrganizationId);
+
+        var response = await _client.GetAsync($"/service-accounts/{initData.ServiceAccountId}/access-policies");
+
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -743,6 +763,36 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             result.UserAccessPolicies.First(x => x.OrganizationUserId == owerOrgUser.Id).OrganizationUserId);
     }
 
+    private async Task<RequestSetupData> SetupAccessPolicyRequest(Guid organizationId)
+    {
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = organizationId,
+            Name = _mockEncryptedString,
+        });
+
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = organizationId,
+            Name = _mockEncryptedString,
+        });
+
+        var accessPolicy = await _accessPolicyRepository.CreateManyAsync(
+            new List<BaseAccessPolicy>
+            {
+                new ServiceAccountProjectAccessPolicy
+                {
+                    Read = true, Write = true, ServiceAccountId = serviceAccount.Id, GrantedProjectId = project.Id,
+                },
+            });
+
+        return new RequestSetupData
+        {
+            ProjectId = project.Id,
+            ServiceAccountId = serviceAccount.Id,
+            AccessPolicyId = accessPolicy.First().Id,
+        };
+    }
 
     private class RequestSetupData
     {
