@@ -1,0 +1,9 @@
+@using Bit.SharedWeb.Utilities
+@model Bit.Core.Models.Data.ProviderOrganizationProviderDetails
+<dl class="row">
+    <dt class="col-sm-4 col-lg-3">Provider Name</dt>
+    <dd class="col-sm-8 col-lg-9">@Model.ProviderName</dd>
+    
+    <dt class="col-sm-4 col-lg-3">Provider Type</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.ProviderType.GetDisplayAttribute()?.GetName())</dd>
+</dl>

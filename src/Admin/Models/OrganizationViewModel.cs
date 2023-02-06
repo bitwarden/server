@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Admin.Models;
@@ -8,11 +9,12 @@ public class OrganizationViewModel
 {
     public OrganizationViewModel() { }
 
-    public OrganizationViewModel(Organization org, IEnumerable<OrganizationConnection> connections,
+    public OrganizationViewModel(Organization org, ProviderOrganizationProviderDetails providerDetails, IEnumerable<OrganizationConnection> connections,
         IEnumerable<OrganizationUserUserDetails> orgUsers, IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<Group> groups, IEnumerable<Policy> policies)
     {
         Organization = org;
+        ProviderDetails = providerDetails;
         Connections = connections ?? Enumerable.Empty<OrganizationConnection>();
         HasPublicPrivateKeys = org.PublicKey != null && org.PrivateKey != null;
         UserInvitedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Invited);
@@ -34,6 +36,7 @@ public class OrganizationViewModel
     }
 
     public Organization Organization { get; set; }
+    public ProviderOrganizationProviderDetails ProviderDetails { get; set; }
     public IEnumerable<OrganizationConnection> Connections { get; set; }
     public string Owners { get; set; }
     public string Admins { get; set; }
