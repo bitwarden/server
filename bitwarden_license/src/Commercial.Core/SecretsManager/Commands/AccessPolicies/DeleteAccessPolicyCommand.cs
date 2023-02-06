@@ -81,11 +81,11 @@ public class DeleteAccessPolicyCommand : IDeleteAccessPolicyCommand
                 hasAccess = true;
                 break;
             case AccessClientType.User:
-                if (projectIdToCheck != null)
+                if (projectIdToCheck.HasValue)
                 {
                     hasAccess = await _projectRepository.UserHasWriteAccessToProject(projectIdToCheck.Value, userId);
                 }
-                else if (serviceAccountIdToCheck != null)
+                else if (serviceAccountIdToCheck.HasValue)
                 {
                     hasAccess =
                         await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(

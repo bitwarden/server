@@ -9,11 +9,13 @@ using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [SecretsManager]
+[Authorize("secrets")]
 [Route("access-policies")]
 public class AccessPoliciesController : Controller
 {
@@ -96,17 +98,13 @@ public class AccessPoliciesController : Controller
         await _deleteAccessPolicyCommand.DeleteAsync(id, userId);
     }
 
-    [HttpGet("/organizations/{id}/access-policies/potential-grantees")]
-    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetPotentialGranteesAsync([FromRoute] Guid id, [FromQuery] bool includeServiceAccounts = false)
+    [HttpGet("/organizations/{id}/access-policies/people/potential-grantees")]
+    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetPeoplePotentialGranteesAsync([FromRoute] Guid id)
     {
         if (!_currentContext.AccessSecretsManager(id))
         {
             throw new NotFoundException();
         }
-
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(id);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         var groups = await _groupRepository.GetManyByOrganizationIdAsync(id);
         var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g));
@@ -117,10 +115,20 @@ public class AccessPoliciesController : Controller
             .Where(user => user.AccessSecretsManager)
             .Select(userDetails => new PotentialGranteeResponseModel(userDetails));
 
-        if (!includeServiceAccounts)
+        return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses));
+    }
+
+    [HttpGet("/organizations/{id}/access-policies/service-accounts/potential-grantees")]
+    public async Task<ListResponseModel<PotentialGranteeResponseModel>> GetServiceAccountsPotentialGranteesAsync([FromRoute] Guid id)
+    {
+        if (!_currentContext.AccessSecretsManager(id))
         {
-            return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses));
+            throw new NotFoundException();
         }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(id);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         var serviceAccounts =
             await _serviceAccountRepository.GetManyByOrganizationIdWriteAccessAsync(id,
@@ -129,7 +137,7 @@ public class AccessPoliciesController : Controller
         var serviceAccountResponses =
             serviceAccounts.Select(serviceAccount => new PotentialGranteeResponseModel(serviceAccount));
 
-        return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses).Concat(serviceAccountResponses));
+        return new ListResponseModel<PotentialGranteeResponseModel>(serviceAccountResponses);
     }
 
     private async Task CheckUserHasWriteAccessToProjectAsync(Project project)

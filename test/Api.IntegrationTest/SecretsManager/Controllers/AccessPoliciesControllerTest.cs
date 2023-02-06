@@ -413,19 +413,59 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
     [InlineData(false, false)]
     [InlineData(true, false)]
     [InlineData(false, true)]
-    public async Task GetPotentialGrantees_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    public async Task GetPeoplePotentialGrantees_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
         await LoginAsync(_email);
 
         var response =
             await _client.GetAsync(
-                $"/organizations/{org.Id}/access-policies/potential-grantees");
+                $"/organizations/{org.Id}/access-policies/people/potential-grantees");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task GetPeoplePotentialGrantees_Success(PermissionType permissionType)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        if (permissionType == PermissionType.RunAsUserWithPermission)
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await LoginAsync(email);
+        }
+
+        var response =
+            await _client.GetAsync(
+                $"/organizations/{org.Id}/access-policies/people/potential-grantees");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
+
+        Assert.NotNull(result?.Data);
+        Assert.NotEmpty(result!.Data);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task GetServiceAccountPotentialGrantees_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
+
+        var response =
+            await _client.GetAsync(
+                $"/organizations/{org.Id}/access-policies/service-accounts/potential-grantees");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task GetPotentialGrantees_OnlyReturnsServiceAccountsWithWriteAccess()
+    public async Task GetServiceAccountPotentialGrantees_OnlyReturnsServiceAccountsWithWriteAccess()
     {
         // Create a new account as a user
         var (org, _) = await _organizationHelper.Initialize(true, true);
@@ -441,21 +481,19 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var response =
             await _client.GetAsync(
-                $"/organizations/{org.Id}/access-policies/potential-grantees?includeServiceAccounts=true");
+                $"/organizations/{org.Id}/access-policies/service-accounts/potential-grantees");
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
         Assert.NotNull(result?.Data);
-        Assert.Null(result!.Data.FirstOrDefault(x => x.Id == serviceAccount.Id.ToString()));
+        Assert.Empty(result!.Data);
     }
 
     [Theory]
-    [InlineData(PermissionType.RunAsAdmin, true)]
-    [InlineData(PermissionType.RunAsUserWithPermission, true)]
-    [InlineData(PermissionType.RunAsAdmin, false)]
-    [InlineData(PermissionType.RunAsUserWithPermission, false)]
-    public async Task GetPotentialGrantees_Success(PermissionType permissionType, bool includeServiceAccounts)
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task GetServiceAccountsPotentialGrantees_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
@@ -470,6 +508,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
             await LoginAsync(email);
+
             await _accessPolicyRepository.CreateManyAsync(
                 new List<BaseAccessPolicy>
                 {
@@ -485,20 +524,14 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
 
         var response =
             await _client.GetAsync(
-                $"/organizations/{org.Id}/access-policies/potential-grantees?includeServiceAccounts={includeServiceAccounts}");
+                $"/organizations/{org.Id}/access-policies/service-accounts/potential-grantees");
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
         Assert.NotNull(result?.Data);
-        if (includeServiceAccounts)
-        {
-            Assert.Equal(serviceAccount.Id.ToString(), result!.Data.First(x => x.Id == serviceAccount.Id.ToString()).Id);
-        }
-        else
-        {
-            Assert.Null(result!.Data.FirstOrDefault(x => x.Id == serviceAccount.Id.ToString()));
-        }
+        Assert.NotEmpty(result!.Data);
+        Assert.Equal(serviceAccount.Id.ToString(), result!.Data.First(x => x.Id == serviceAccount.Id.ToString()).Id);
     }
 
     private async Task<RequestSetupData> SetupAccessPolicyRequest(Guid organizationId)
