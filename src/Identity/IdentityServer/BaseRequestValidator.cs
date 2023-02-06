@@ -183,6 +183,8 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
         customResponse.Add("Kdf", (byte)user.Kdf);
         customResponse.Add("KdfIterations", user.KdfIterations);
+        customResponse.Add("KdfMemory", user.KdfMemory);
+        customResponse.Add("KdfParallelism", user.KdfParallelism);
 
         if (sendRememberToken)
         {

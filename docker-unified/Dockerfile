@@ -214,7 +214,6 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     tzdata \
     unzip \
-    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Create required directories
@@ -228,6 +227,7 @@ RUN mkdir -p /var/log/bitwarden
 RUN mkdir -p /var/log/nginx/logs
 RUN mkdir -p /etc/nginx/http.d
 RUN mkdir -p /var/run/nginx
+RUN mkdir -p /var/lib/nginx/tmp
 RUN touch /var/run/nginx/nginx.pid
 RUN mkdir -p /app
 

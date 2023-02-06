@@ -30,4 +30,34 @@ public static class OrganizationTestHelpers
             Owner = owner,
         });
     }
+
+    public static async Task<OrganizationUser> CreateUserAsync<T>(
+        WebApplicationFactoryBase<T> factory,
+        Guid organizationId,
+        string userEmail,
+        OrganizationUserType type,
+        bool accessSecretsManager = false
+    ) where T : class
+    {
+        var userRepository = factory.GetService<IUserRepository>();
+        var organizationUserRepository = factory.GetService<IOrganizationUserRepository>();
+
+        var user = await userRepository.GetByEmailAsync(userEmail);
+
+        var orgUser = new OrganizationUser
+        {
+            OrganizationId = organizationId,
+            UserId = user.Id,
+            Key = null,
+            Type = type,
+            Status = OrganizationUserStatusType.Confirmed,
+            AccessAll = false,
+            ExternalId = null,
+            AccessSecretsManager = accessSecretsManager,
+        };
+
+        await organizationUserRepository.CreateAsync(orgUser);
+
+        return orgUser;
+    }
 }

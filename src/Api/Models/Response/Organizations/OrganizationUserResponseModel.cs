@@ -23,6 +23,7 @@ public class OrganizationUserResponseModel : ResponseModel
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
+        AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
     }
@@ -40,6 +41,7 @@ public class OrganizationUserResponseModel : ResponseModel
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
+        AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
@@ -50,6 +52,7 @@ public class OrganizationUserResponseModel : ResponseModel
     public OrganizationUserType Type { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public bool AccessAll { get; set; }
+    public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }
@@ -111,12 +114,16 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
 
         Kdf = orgUser.Kdf;
         KdfIterations = orgUser.KdfIterations;
+        KdfMemory = orgUser.KdfMemory;
+        KdfParallelism = orgUser.KdfParallelism;
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
     }
 
     public KdfType Kdf { get; set; }
     public int KdfIterations { get; set; }
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
 }

@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationConnections;
 
-public class OrganizationConnectionData<T> where T : new()
+public class OrganizationConnectionData<T> where T : IConnectionConfig
 {
     public Guid? Id { get; set; }
     public OrganizationConnectionType Type { get; set; }

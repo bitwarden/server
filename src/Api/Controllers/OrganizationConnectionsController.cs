@@ -191,7 +191,7 @@ public class OrganizationConnectionsController : Controller
         Guid? organizationConnectionId,
         OrganizationConnectionRequestModel model,
         Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
-        where T : new()
+        where T : IConnectionConfig
     {
         var typedModel = new OrganizationConnectionRequestModel<T>(model);
         if (validateAction != null)
