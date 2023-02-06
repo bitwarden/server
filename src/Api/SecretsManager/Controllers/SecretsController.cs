@@ -3,10 +3,13 @@ using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Identity;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using EventType = Bit.Core.Enums.EventType;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
@@ -19,19 +22,25 @@ public class SecretsController : Controller
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
+    private readonly IUserService _userService;
+    private readonly IEventService _eventService;
 
     public SecretsController(
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
         ICreateSecretCommand createSecretCommand,
         IUpdateSecretCommand updateSecretCommand,
-        IDeleteSecretCommand deleteSecretCommand)
+        IDeleteSecretCommand deleteSecretCommand,
+        IUserService userService,
+        IEventService eventService)
     {
         _currentContext = currentContext;
         _secretRepository = secretRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
+        _userService = userService;
+        _eventService = eventService;
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
@@ -66,6 +75,13 @@ public class SecretsController : Controller
         {
             throw new NotFoundException();
         }
+
+        if (_currentContext.ClientType == ClientType.ServiceAccount)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
+        }
+
         return new SecretResponseModel(secret);
     }
 

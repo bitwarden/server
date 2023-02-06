@@ -21,4 +21,6 @@ public interface IEvent
     string IpAddress { get; set; }
     DateTime Date { get; set; }
     EventSystemUser? SystemUser { get; set; }
+    Guid? SecretId { get; set; }
+    Guid? ServiceAccountId { get; set; }
 }

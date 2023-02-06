@@ -5,7 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
+using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.Services;
 
@@ -16,22 +16,19 @@ public class EventService : IEventService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly ICurrentContext _currentContext;
-    private readonly GlobalSettings _globalSettings;
 
     public EventService(
         IEventWriteService eventWriteService,
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IApplicationCacheService applicationCacheService,
-        ICurrentContext currentContext,
-        GlobalSettings globalSettings)
+        ICurrentContext currentContext)
     {
         _eventWriteService = eventWriteService;
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
         _applicationCacheService = applicationCacheService;
         _currentContext = currentContext;
-        _globalSettings = globalSettings;
     }
 
     public async Task LogUserEventAsync(Guid userId, EventType type, DateTime? date = null)
@@ -326,6 +323,25 @@ public class EventService : IEventService
             ProviderOrganizationId = providerOrganization.Id,
             Type = type,
             ActingUserId = _currentContext?.UserId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
+    public async Task LogServiceAccountSecretEventAsync(Guid serviceAccountId, Secret secret, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = secret.OrganizationId,
+            Type = type,
+            SecretId = secret.Id,
+            ServiceAccountId = serviceAccountId,
             Date = date.GetValueOrDefault(DateTime.UtcNow)
         };
         await _eventWriteService.CreateAsync(e);
