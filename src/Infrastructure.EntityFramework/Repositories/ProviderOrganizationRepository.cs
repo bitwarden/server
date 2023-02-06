@@ -26,6 +26,17 @@ public class ProviderOrganizationRepository :
         }
     }
 
+    public async Task<ProviderOrganizationProviderDetails> GetProviderDetailsByOrganizationAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new ProviderOrganizationProviderDetailsReadByOrganizationIdQuery(organizationId);
+            var data = await query.Run(dbContext).FirstOrDefaultAsync();
+            return data;
+        }
+    }
+
     public async Task<ProviderOrganization> GetByOrganizationId(Guid organizationId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
