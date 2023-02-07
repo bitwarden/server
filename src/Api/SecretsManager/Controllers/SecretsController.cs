@@ -2,6 +2,7 @@
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
@@ -9,7 +10,6 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using EventType = Bit.Core.Enums.EventType;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
