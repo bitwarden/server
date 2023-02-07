@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using Provider = Bit.Core.Entities.Provider.Provider;
 using ProviderUser = Bit.Core.Entities.Provider.ProviderUser;
 
 namespace Bit.Commercial.Core.Test.Services;
@@ -24,26 +25,6 @@ namespace Bit.Commercial.Core.Test.Services;
 [SutProviderCustomize]
 public class ProviderServiceTests
 {
-    [Theory, BitAutoData]
-    public async Task CreateAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
-    {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateAsync(default));
-        Assert.Contains("Invalid owner.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateAsync_Success(User user, SutProvider<ProviderService> sutProvider)
-    {
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        userRepository.GetByEmailAsync(user.Email).Returns(user);
-
-        await sutProvider.Sut.CreateAsync(user.Email);
-
-        await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IMailService>().ReceivedWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default, default);
-    }
-
     [Theory, BitAutoData]
     public async Task CompleteSetupAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
@@ -227,6 +208,14 @@ public class ProviderServiceTests
 
         var result = await sutProvider.Sut.ResendInvitesAsync(invite);
         Assert.True(result.All(r => r.Item2 == ""));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendProviderSetupInviteEmailAsync_Success(Provider provider, string email, SutProvider<ProviderService> sutProvider)
+    {
+        await sutProvider.Sut.SendProviderSetupInviteEmailAsync(provider, email);
+
+        await sutProvider.GetDependency<IMailService>().Received(1).SendProviderSetupInviteEmailAsync(provider, Arg.Any<string>(), email);
     }
 
     [Theory, BitAutoData]
