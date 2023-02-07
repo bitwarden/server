@@ -6,7 +6,14 @@
             <table class="table table-striped table-hover">
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th style="width: 50%;">Name</th>
+                        <th style="width: 50%;">Status</th>
+                        <th>
+                            <div class="float-right text-nowrap">
+                                <a asp-controller="Organizations" asp-action="Create" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary">New Organization</a>
+                                <a asp-controller="Providers" asp-action="AddExistingOrganization" asp-route-id="@Model.Provider.Id" class="btn btn-sm btn-outline-primary">Add Existing Organization</a>
+                            </div>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -22,8 +29,24 @@
                         {
                             <tr>
                                 <td class="align-middle">
-                                    <a asp-controller="Organizations" asp-action="Edit"
-                                asp-route-id="@org.OrganizationId">@org.OrganizationName</a>
+                                    <a asp-controller="Organizations" asp-action="Edit" asp-route-id="@org.OrganizationId">@org.OrganizationName</a>
+                                </td>
+                                <td>
+                                    @org.Status
+                                </td>
+                                <td>
+                                    <div class="float-right">
+                                        @if (org.Status == OrganizationStatusType.Pending)
+                                        {
+                                            <a asp-controller="Organizations" asp-action="ResendInvite" asp-route-id="@org.Id" class="float-right">
+                                                <i class="fa fa-envelope-o fa-lg" title="Resend Setup Invite"></i>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <i class="fa fa-envelope-o fa-lg text-secondary"></i>
+                                        }
+                                    </div>
                                 </td>
                             </tr>
                         }
