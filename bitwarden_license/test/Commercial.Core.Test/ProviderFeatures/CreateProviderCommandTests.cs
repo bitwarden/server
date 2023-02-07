@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.ProviderFeatures;
+﻿using Bit.Commercial.Core.Providers;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;

@@ -1,7 +1,7 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
-using Bit.Core.ProviderFeatures.Interfaces;
+using Bit.Core.Providers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
