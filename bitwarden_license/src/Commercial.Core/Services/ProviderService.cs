@@ -53,33 +53,6 @@ public class ProviderService : IProviderService
         _currentContext = currentContext;
     }
 
-    public async Task CreateAsync(string ownerEmail)
-    {
-        var owner = await _userRepository.GetByEmailAsync(ownerEmail);
-        if (owner == null)
-        {
-            throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
-        }
-
-        var provider = new Provider
-        {
-            Status = ProviderStatusType.Pending,
-            Enabled = true,
-            UseEvents = true,
-        };
-        await _providerRepository.CreateAsync(provider);
-
-        var providerUser = new ProviderUser
-        {
-            ProviderId = provider.Id,
-            UserId = owner.Id,
-            Type = ProviderUserType.ProviderAdmin,
-            Status = ProviderUserStatusType.Confirmed,
-        };
-        await _providerUserRepository.CreateAsync(providerUser);
-        await SendProviderSetupInviteEmailAsync(provider, owner.Email);
-    }
-
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
     {
         var owner = await _userService.GetUserByIdAsync(ownerUserId);
@@ -456,7 +429,7 @@ public class ProviderService : IProviderService
         await SendProviderSetupInviteEmailAsync(provider, owner.Email);
     }
 
-    private async Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail)
+    public async Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail)
     {
         var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {ownerEmail} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
         await _mailService.SendProviderSetupInviteEmailAsync(provider, token, ownerEmail);

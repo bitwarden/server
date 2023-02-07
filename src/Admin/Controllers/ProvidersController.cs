@@ -1,5 +1,7 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Entities.Provider;
+using Bit.Core.Enums.Provider;
+using Bit.Core.Providers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,10 +21,16 @@ public class ProvidersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderService _providerService;
+    private readonly ICreateProviderCommand _createProviderCommand;
 
-    public ProvidersController(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
-        IProviderOrganizationRepository providerOrganizationRepository, IProviderService providerService,
-        GlobalSettings globalSettings, IApplicationCacheService applicationCacheService)
+    public ProvidersController(
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IProviderService providerService,
+        GlobalSettings globalSettings,
+        IApplicationCacheService applicationCacheService,
+        ICreateProviderCommand createProviderCommand)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -30,6 +38,7 @@ public class ProvidersController : Controller
         _providerService = providerService;
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
+        _createProviderCommand = createProviderCommand;
     }
 
     public async Task<IActionResult> Index(string name = null, string userEmail = null, int page = 1, int count = 25)
@@ -75,9 +84,18 @@ public class ProvidersController : Controller
             return View(model);
         }
 
-        await _providerService.CreateAsync(model.OwnerEmail);
+        var provider = model.ToProvider();
+        switch (provider.Type)
+        {
+            case ProviderType.Msp:
+                await _createProviderCommand.CreateMspAsync(provider, model.OwnerEmail);
+                break;
+            case ProviderType.Reseller:
+                await _createProviderCommand.CreateResellerAsync(provider);
+                break;
+        }
 
-        return RedirectToAction("Index");
+        return RedirectToAction("Edit", new { id = provider.Id });
     }
 
     public async Task<IActionResult> View(Guid id)
