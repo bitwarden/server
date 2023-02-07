@@ -339,7 +339,7 @@ public static class ServiceCollectionExtensions
             {
                 RequireDigit = false,
                 RequireLowercase = false,
-                RequiredLength = 10,
+                RequiredLength = 12,
                 RequireNonAlphanumeric = false,
                 RequireUppercase = false
             };
