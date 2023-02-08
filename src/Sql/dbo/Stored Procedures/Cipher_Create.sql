@@ -10,7 +10,9 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
-    @Reprompt TINYINT
+    @Reprompt TINYINT,
+    @Key VARCHAR(MAX),
+    @ForceKeyRotation BIT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -28,7 +30,9 @@ BEGIN
         [CreationDate],
         [RevisionDate],
         [DeletedDate],
-        [Reprompt]
+        [Reprompt],
+        [Key],
+        [ForceKeyRotation]
     )
     VALUES
     (
@@ -43,7 +47,9 @@ BEGIN
         @CreationDate,
         @RevisionDate,
         @DeletedDate,
-        @Reprompt
+        @Reprompt,
+        @Key,
+        @ForceKeyRotation
     )
 
     IF @OrganizationId IS NOT NULL
