@@ -20,6 +20,8 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public DateTime? DeletedDate { get; set; }
     public Enums.CipherRepromptType? Reprompt { get; set; }
+    public string Key { get; set; }
+    public bool ForceKeyRotation { get; set; }
 
     public void SetNewId()
     {
