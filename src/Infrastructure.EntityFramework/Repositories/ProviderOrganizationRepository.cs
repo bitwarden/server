@@ -26,7 +26,8 @@ public class ProviderOrganizationRepository :
                              on o.Id equals ou.OrganizationId
                          join u in dbContext.Users
                              on ou.UserId equals u.Id
-                         where !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                         where o.PlanType >= PlanType.TeamsMonthly && o.PlanType <= PlanType.EnterpriseAnnually &&
+                               !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
                                ou.Type == OrganizationUserType.Owner &&
                                (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%")) &&
                                (string.IsNullOrWhiteSpace(ownerEmail) || u.Email == ownerEmail)
