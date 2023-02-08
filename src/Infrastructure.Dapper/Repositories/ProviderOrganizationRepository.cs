@@ -18,6 +18,20 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
         : base(connectionString, readOnlyConnectionString)
     { }
 
+    public async Task<ICollection<ProviderOrganizationUnassignedOrganizationDetails>> SearchAsync(string name, string ownerEmail, int skip, int take)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<ProviderOrganizationUnassignedOrganizationDetails>(
+                "[dbo].[ProviderOrganizationUnassignedOrganizationDetails_Search]",
+                new { Name = name, OwnerEmail = ownerEmail, Skip = skip, Take = take },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 120);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId)
     {
         using (var connection = new SqlConnection(ConnectionString))
