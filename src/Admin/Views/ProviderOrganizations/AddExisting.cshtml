@@ -1,0 +1,98 @@
+@model ProviderOrganizationViewModel
+@using Bit.SharedWeb.Utilities
+
+@{
+    ViewData["Title"] = "Add Existing Organization";
+}
+
+<h1>Add Existing Organization</h1>
+<div class="row mb-2">
+    <div class="col">
+        <form class="form-inline mb-2" method="get">
+            @Html.HiddenFor(m => m.ProviderId)
+            <label class="sr-only" asp-for="OrganizationName">Organization Name</label>
+            <input type="text" class="form-control mb-2 mr-2 flex-fill" placeholder="Organization Name" asp-for="OrganizationName" name="name">
+            <label class="sr-only" asp-for="OrganizationOwnerEmail">Owner email</label>
+            <input type="email" class="form-control mb-2 mr-2 flex-fill" placeholder="Owner email" asp-for="OrganizationOwnerEmail" name="ownerEmail">
+            <button type="submit" class="btn btn-primary mb-2" title="Search" formmethod="get"><i class="fa fa-search"></i> Search</button>
+        </form>
+    </div>
+</div>
+
+<form method="post" id="select-form">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+            <tr>
+                <th style="width: 20px;">All</th>
+                <th>Name</th>
+                <th style="width: 190px;">Plan</th>
+                <th style="width: 190px;">Owner email</th>
+            </tr>
+            </thead>
+            <tbody>
+            @if (!Model.Items.Any())
+            {
+                <tr>
+                    <td colspan="5">No results to list.</td>
+                </tr>
+            }
+            else
+            {
+                @for (var i = 0; i < Model.Items.Count; i++)
+                {
+                    <tr>
+                        <td class="text-center">
+                            @Html.HiddenFor(m => Model.Items[i].OrganizationId)
+                            @Html.CheckBoxFor(m => Model.Items[i].Selected)
+                        </td>
+                        <td>@Model.Items[i].Name</td>
+                        <td>@(Model.Items[i].PlanType.GetDisplayAttribute()?.Name ?? Model.Items[i].PlanType.ToString())</td>
+                        <td>@Model.Items[i].OwnerEmail</td>
+                    </tr>
+                }
+            }
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<div class="row">
+    <div class="col">
+        <nav>
+            <ul class="pagination">
+                @if (Model.PreviousPage.HasValue)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="AddExisting" asp-route-providerId="@Model.ProviderId" asp-route-page="@Model.PreviousPage.Value"
+                           asp-route-count="@Model.Count" asp-route-ownerEmail="@Model.OrganizationOwnerEmail"
+                           asp-route-name="@Model.OrganizationName">Previous</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1">Previous</a>
+                    </li>
+                }
+                @if (Model.NextPage.HasValue)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-action="AddExisting" asp-route-providerId="@Model.ProviderId" asp-route-page="@Model.NextPage.Value"
+                           asp-route-count="@Model.Count" asp-route-userEmail="@Model.OrganizationOwnerEmail"
+                           asp-route-name="@Model.OrganizationName">Next</a>
+                    </li>
+                }
+                else
+                {
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#" tabindex="-1">Next</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    </div>
+    <div class="col-auto">
+        <button type="submit" class="btn btn-primary" form="select-form">Add to Reseller</button>
+    </div>
+</div>
