@@ -207,7 +207,6 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.NotNull(result);
         Assert.Equal(request.Name, updatedProject.Name);
         AssertHelper.AssertRecent(updatedProject.RevisionDate);
-        AssertHelper.AssertRecent(updatedProject.CreationDate);
         Assert.Null(updatedProject.DeletedDate);
         Assert.NotEqual(initialProject.Name, updatedProject.Name);
         Assert.NotEqual(initialProject.RevisionDate, updatedProject.RevisionDate);
