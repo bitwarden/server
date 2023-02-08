@@ -46,7 +46,7 @@
                             @Html.HiddenFor(m => Model.Items[i].OrganizationId)
                             @Html.CheckBoxFor(m => Model.Items[i].Selected)
                         </td>
-                        <td>@Model.Items[i].Name</td>
+                        <td>@Html.ActionLink(Model.Items[i].Name, "Edit", "Organizations", new { id = Model.Items[i].OrganizationId }, new { target = "_blank" })</td>
                         <td>@(Model.Items[i].PlanType.GetDisplayAttribute()?.Name ?? Model.Items[i].PlanType.ToString())</td>
                         <td>@Model.Items[i].OwnerEmail</td>
                     </tr>
