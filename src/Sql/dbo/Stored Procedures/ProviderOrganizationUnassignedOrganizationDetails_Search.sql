@@ -21,7 +21,8 @@ INNER JOIN
 INNER JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
 WHERE
-    NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] po WHERE po.[OrganizationId] = O.[Id])
+    O.[PlanType] >= 8 AND O.[PlanType] <= 11 -- Get 'Team' and 'Enterprise' Organizations
+    AND NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] po WHERE po.[OrganizationId] = O.[Id])
     AND OU.[Type] = 0 --Get 'Owner' type users only
     AND (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
     AND (@OwnerEmail IS NULL OR U.[Email] = @OwnerEmail)
