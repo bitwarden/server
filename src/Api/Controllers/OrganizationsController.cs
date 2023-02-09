@@ -731,7 +731,7 @@ public class OrganizationsController : Controller
     [SecretsManager]
     [SelfHosted(NotSelfHostedOnly = true)]
     [HttpPost("{id}/enroll-secrets-manager")]
-    public async Task<bool> EnrollSecretsManager(Guid id, [FromBody] OrganizationEnrollSecretsManagerRequestModel model)
+    public async Task EnrollSecretsManager(Guid id, [FromBody] OrganizationEnrollSecretsManagerRequestModel model)
     {
         var userId = _userService.GetProperUserId(User).Value;
         if (!await _currentContext.OrganizationAdmin(id))
@@ -755,7 +755,5 @@ public class OrganizationsController : Controller
             orgUser.AccessSecretsManager = true;
             await _organizationUserRepository.ReplaceAsync(orgUser);
         }
-
-        return model.Enabled;
     }
 }
