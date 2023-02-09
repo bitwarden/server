@@ -97,14 +97,14 @@ public class SecretsController : Controller
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
-    [HttpPost("organizations/{organizationId}/secrets")]
-    public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        var secret = createRequest.ToSecret(organizationId);
-        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
-        return new SecretResponseModel(result);
-    }
+    //[HttpPost("organizations/{organizationId}/secrets")]
+    //public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
+    //{
+    //    var userId = _userService.GetProperUserId(User).Value;
+    //    var secret = createRequest.ToSecret(organizationId);
+    //    var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
+    //    return new SecretResponseModel(result);
+    //}
 
     [HttpPut("secrets/{organizationId}/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid organizationId, [FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
