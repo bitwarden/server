@@ -1,5 +1,6 @@
 ﻿using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Api.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -25,12 +26,6 @@ namespace Bit.Api.Test.SecretsManager.Controllers;
 [JsonDocumentCustomize]
 public class AccessPoliciesControllerTests
 {
-    public enum PermissionType
-    {
-        RunAsAdmin,
-        RunAsUserWithPermission,
-    }
-
     private static void SetupAdmin(SutProvider<AccessPoliciesController> sutProvider, Guid organizationId)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
