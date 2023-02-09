@@ -8,7 +8,6 @@ using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using NSubstitute;
 using Xunit;
 

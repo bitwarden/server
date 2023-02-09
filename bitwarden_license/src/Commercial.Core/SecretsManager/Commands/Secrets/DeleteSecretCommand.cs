@@ -74,7 +74,8 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                 if (!hasAccess)
                 {
                     results.Add(new Tuple<Secret, string>(secret, "access denied"));
-                } else
+                }
+                else
                 {
                     deleteIds.Add(id);
                     results.Add(new Tuple<Secret, string>(secret, ""));

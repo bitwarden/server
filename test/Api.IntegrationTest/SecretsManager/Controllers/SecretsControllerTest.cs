@@ -308,7 +308,8 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
                 },
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-        } else
+        }
+        else
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.Admin, true);
             await LoginAsync(email);

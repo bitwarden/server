@@ -22,7 +22,7 @@ public class CreateSecretCommandTests
     public async Task CreateAsync_Success(PermissionType permissionType, Secret data,
       SutProvider<CreateSecretCommand> sutProvider, Guid userId, Project mockProject)
     {
-        data.Projects =new List<Project>() { mockProject };
+        data.Projects = new List<Project>() { mockProject };
 
         if (permissionType == PermissionType.RunAsAdmin)
         {

@@ -4,13 +4,11 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Test.AutoFixture.OrganizationSponsorshipFixtures;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
-using Microsoft.Azure.Amqp.Framing;
 using NSubstitute;
 using Xunit;
 
@@ -70,7 +68,7 @@ public class UpdateSecretCommandTests
             Key = existingSecret.Key,
         };
 
-        var result = await sutProvider.Sut.UpdateAsync(secretUpdate, userId); 
+        var result = await sutProvider.Sut.UpdateAsync(secretUpdate, userId);
 
         Assert.Equal(existingSecret.OrganizationId, result.OrganizationId);
         Assert.NotEqual(existingSecret.OrganizationId, updatedOrgId);
