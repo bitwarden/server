@@ -1,4 +1,4 @@
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
 
 public class AccessControlService : IAccessControlService
 {
@@ -7,7 +7,7 @@ public class AccessControlService : IAccessControlService
     private readonly IGlobalSettings _globalSettings;
 
     public AccessControlService(
-        IHttpContextAccessor httpContextAccessor, 
+        IHttpContextAccessor httpContextAccessor,
         IConfiguration configuration,
         IGlobalSettings globalSettings)
     {
@@ -17,10 +17,10 @@ public class AccessControlService : IAccessControlService
     }
 
     public string GetUserRole(string userEmail)
-    { 
+    {
         var settings = _configuration.GetSection("adminSettings").GetChildren();
 
-        if(settings == null || !settings.Any())
+        if (settings == null || !settings.Any())
             return null;
 
         var rolePrefix = "role";
@@ -28,19 +28,19 @@ public class AccessControlService : IAccessControlService
         foreach (var setting in settings)
         {
             var key = setting.Key;
-            
+
             if (setting.Value == null || !key.Contains(rolePrefix))
                 continue;
-            
+
             var usersInRole = setting.Value.ToLowerInvariant().Split(',');
 
-            if(!usersInRole.Contains(userEmail))
+            if (!usersInRole.Contains(userEmail))
                 continue;
 
             var role = key.Substring(key.IndexOf(rolePrefix) + rolePrefix.Length);
             return role;
         }
-     
+
         return null;
     }
 

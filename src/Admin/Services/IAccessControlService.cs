@@ -1,4 +1,4 @@
-public interface IAccessControlService
+﻿public interface IAccessControlService
 {
     public string GetUserRole(string userEmail);
 }
