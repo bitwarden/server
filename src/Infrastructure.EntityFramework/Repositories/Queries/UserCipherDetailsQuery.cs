@@ -72,6 +72,8 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Reprompt = c.Reprompt,
             ViewPassword = true,
             OrganizationUseTotp = false,
+            Key = c.Key,
+            ForceKeyRotation = c.ForceKeyRotation
         });
         return union;
     }
