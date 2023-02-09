@@ -16,17 +16,6 @@ public class AccessControlService : IAccessControlService
         _globalSettings = globalSettings;
     }
 
-    public bool UserHasPermission(Permission permission)
-    {
-        var userRole = GetUserRoleFromClaim();
-        if(string.IsNullOrEmpty(userRole))
-            return false;
-
-        //The check for if the role has the given permission will be implemented
-        //in a future ticket
-        return false;
-    }
-
     public string GetUserRole(string userEmail)
     { 
         var settings = _configuration.GetSection("adminSettings").GetChildren();
