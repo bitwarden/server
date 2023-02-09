@@ -20,7 +20,7 @@ public class SecretUpdateRequestModel
 
     public Guid[] ProjectIds { get; set; }
 
-    public Secret ToSecret(Guid id, Guid organizationId)
+    public Secret ToSecret(Guid id)
     {
         return new Secret()
         {
@@ -29,7 +29,6 @@ public class SecretUpdateRequestModel
             Value = Value,
             Note = Note,
             DeletedDate = null,
-            OrganizationId = organizationId,
             Projects = ProjectIds != null && ProjectIds.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
         };
     }

@@ -155,10 +155,10 @@ public class SecretsControllerTests
             sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
         }
 
-        var resultSecret = data.ToSecret(secretId, organizationId);
+        var resultSecret = data.ToSecret(secretId);
         sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default, userId).ReturnsForAnyArgs(resultSecret);
 
-        var result = await sutProvider.Sut.UpdateSecretAsync(default, secretId, data);
+        var result = await sutProvider.Sut.UpdateSecretAsync(secretId, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
                      .UpdateAsync(Arg.Any<Secret>(), userId);
     }

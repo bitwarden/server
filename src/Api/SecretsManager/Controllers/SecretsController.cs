@@ -76,7 +76,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        if (!await userHasReadAccessToProject(secret))
+        if (!await userHasReadAccessToSecret(secret))
         {
             throw new NotFoundException();
         }
@@ -97,20 +97,11 @@ public class SecretsController : Controller
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
-    //[HttpPost("organizations/{organizationId}/secrets")]
-    //public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
-    //{
-    //    var userId = _userService.GetProperUserId(User).Value;
-    //    var secret = createRequest.ToSecret(organizationId);
-    //    var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
-    //    return new SecretResponseModel(result);
-    //}
-
-    [HttpPut("secrets/{organizationId}/{id}")]
-    public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid organizationId, [FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
+    [HttpPut("secrets/{id}")]
+    public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var secret = updateRequest.ToSecret(id, organizationId);
+        var secret = updateRequest.ToSecret(id);
         var result = await _updateSecretCommand.UpdateAsync(secret, userId);
         return new SecretResponseModel(result);
     }
@@ -141,7 +132,7 @@ public class SecretsController : Controller
         return hasAccess;
     }
 
-    public async Task<bool> userHasReadAccessToProject(Secret secret)
+    public async Task<bool> userHasReadAccessToSecret(Secret secret)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
@@ -156,28 +147,6 @@ public class SecretsController : Controller
                 AccessClientType.NoAccessCheck => true,
                 AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
                 AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId),
-                _ => false,
-            };
-        }
-
-        return hasAccess;
-    }
-
-    public async Task<bool> userHasWriteAccessToProject(Secret secret)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var hasAccess = orgAdmin;
-
-        if (secret.Projects?.Count > 0)
-        {
-            var projectId = secret.Projects.FirstOrDefault().Id;
-            hasAccess = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(projectId, userId),
                 _ => false,
             };
         }

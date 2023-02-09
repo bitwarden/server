@@ -22,28 +22,26 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 
     public async Task<Secret> UpdateAsync(Secret updatedSecret, Guid userId)
     {
-        var orgAdmin = await _currentContext.OrganizationAdmin(updatedSecret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var hasAccess = orgAdmin;
-
-        var project = updatedSecret.Projects?.FirstOrDefault();
-        if (project != null)
-        {
-            hasAccess = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
-                _ => false,
-            };
-        }
-
-        if (!hasAccess)
+        var secret = await _secretRepository.GetByIdAsync(updatedSecret.Id);
+        if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
         {
             throw new NotFoundException();
         }
 
-        var secret = await _secretRepository.GetByIdAsync(updatedSecret.Id);
-        if (secret == null)
+        var orgAdmin = await _currentContext.OrganizationAdmin(updatedSecret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var project = updatedSecret.Projects?.FirstOrDefault();
+
+        var hasAccess = accessClient switch
+        {
+            AccessClientType.NoAccessCheck => true,
+            AccessClientType.User => project != null && await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
+            AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(project.Id, userId),
+            _ => false,
+        };
+
+        if (!hasAccess)
         {
             throw new NotFoundException();
         }

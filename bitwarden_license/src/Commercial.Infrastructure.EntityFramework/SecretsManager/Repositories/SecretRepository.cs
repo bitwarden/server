@@ -43,6 +43,10 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
+    private static Expression<Func<Secret, bool>> ServiceAccountHasReadAccessToSecret(Guid serviceAccountId) => s =>
+    s.Projects.Any(p =>
+        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read));
+
     private static Expression<Func<Secret, bool>> UserHasReadAccessToSecret(Guid userId) => s =>
         s.Projects.Any(p =>
             p.UserAccessPolicies.Any(ap => ap.OrganizationUserId == userId && ap.Read) ||
@@ -60,6 +64,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             AccessClientType.NoAccessCheck => query,
             AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
+            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
@@ -79,6 +84,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             {
                 AccessClientType.NoAccessCheck => query,
                 AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
+                AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)),
                 _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
             };
 
