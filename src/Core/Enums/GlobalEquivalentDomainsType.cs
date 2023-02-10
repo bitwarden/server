@@ -44,7 +44,7 @@ public enum GlobalEquivalentDomainsType : byte
     Dropbox = 39,
     Snapfish = 40,
     Alibaba = 41,
-    Playstation = 42,
+    Playstation = 42, // deprecated
     Mercado = 43,
     Zendesk = 44,
     Autodesk = 45,
