@@ -20,13 +20,13 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class AccessPoliciesController : Controller
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ICreateAccessPoliciesCommand _createAccessPoliciesCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IDeleteAccessPolicyCommand _deleteAccessPolicyCommand;
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
-    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
     private readonly IUserService _userService;
 
@@ -74,6 +74,26 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
+    [HttpPost("/service-accounts/{id}/access-policies")]
+    public async Task<ServiceAccountAccessPoliciesResponseModel> CreateServiceAccountAccessPoliciesAsync([FromRoute] Guid id,
+        [FromBody] AccessPoliciesCreateRequest request)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var policies = request.ToBaseAccessPoliciesForServiceAccount(id);
+        var results = await _createAccessPoliciesCommand.CreateForServiceAccountAsync(id, policies, userId);
+        return new ServiceAccountAccessPoliciesResponseModel(results);
+    }
+
+    [HttpGet("/service-accounts/{id}/access-policies")]
+    public async Task<ServiceAccountAccessPoliciesResponseModel> GetServiceAccountAccessPoliciesAsync([FromRoute] Guid id)
+    {
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
+
+        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id);
+        return new ServiceAccountAccessPoliciesResponseModel(results);
+    }
+
     [HttpPut("{id}")]
     public async Task<BaseAccessPolicyResponseModel> UpdateAccessPolicyAsync([FromRoute] Guid id,
         [FromBody] AccessPolicyUpdateRequest request)
@@ -84,7 +104,9 @@ public class AccessPoliciesController : Controller
         return result switch
         {
             UserProjectAccessPolicy accessPolicy => new UserProjectAccessPolicyResponseModel(accessPolicy),
+            UserServiceAccountAccessPolicy accessPolicy => new UserServiceAccountAccessPolicyResponseModel(accessPolicy),
             GroupProjectAccessPolicy accessPolicy => new GroupProjectAccessPolicyResponseModel(accessPolicy),
+            GroupServiceAccountAccessPolicy accessPolicy => new GroupServiceAccountAccessPolicyResponseModel(accessPolicy),
             ServiceAccountProjectAccessPolicy accessPolicy => new ServiceAccountProjectAccessPolicyResponseModel(
                 accessPolicy),
             _ => throw new ArgumentException("Unsupported access policy type provided."),
@@ -155,6 +177,29 @@ public class AccessPoliciesController : Controller
         {
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
+            _ => false,
+        };
+
+        if (!hasAccess)
+        {
+            throw new NotFoundException();
+        }
+    }
+
+    private async Task CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
+    {
+        if (serviceAccount == null || !_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var hasAccess = accessClient switch
+        {
+            AccessClientType.NoAccessCheck => true,
+            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(serviceAccount.Id, userId),
             _ => false,
         };
 
