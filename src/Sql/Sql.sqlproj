@@ -282,7 +282,7 @@
     <Build Include="dbo\Stored Procedures\Policy_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Policy_Update.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganizationOrganizationDetails_ReadByProviderId.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderDetails_ReadByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\Provider_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_Create.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadById.sql" />
@@ -425,7 +425,6 @@
     <Build Include="dbo\Views\OrganizationView.sql" />
     <Build Include="dbo\Views\PolicyView.sql" />
     <Build Include="dbo\Views\ProviderOrganizationOrganizationDetailsView.sql" />
-    <Build Include="dbo\Views\ProviderOrganizationProviderDetailsView.sql" />
     <Build Include="dbo\Views\ProviderOrganizationView.sql" />
     <Build Include="dbo\Views\ProviderUserProviderDetailsView.sql" />
     <Build Include="dbo\Views\ProviderUserProviderOrganizationDetailsView.sql" />

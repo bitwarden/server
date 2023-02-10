@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -13,11 +13,11 @@ public class OrganizationEditModel : OrganizationViewModel
 {
     public OrganizationEditModel() { }
 
-    public OrganizationEditModel(Organization org, ProviderOrganizationProviderDetails providerDetails, IEnumerable<OrganizationUserUserDetails> orgUsers,
+    public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
         IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
         GlobalSettings globalSettings)
-        : base(org, providerDetails, connections, orgUsers, ciphers, collections, groups, policies)
+        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies)
     {
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;

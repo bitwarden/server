@@ -31,20 +31,6 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
         }
     }
 
-    public async Task<ProviderOrganizationProviderDetails> GetProviderDetailsByOrganizationAsync(
-        Guid organizationId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<ProviderOrganizationProviderDetails>(
-                "[dbo].[ProviderOrganizationProviderDetails_ReadByOrganizationId]",
-                new { OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
-
-            return results.FirstOrDefault();
-        }
-    }
-
     public async Task<ProviderOrganization> GetByOrganizationId(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
