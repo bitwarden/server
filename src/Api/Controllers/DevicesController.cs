@@ -131,8 +131,10 @@ public class DevicesController : Controller
     }
 
     [AllowAnonymous]
-    [HttpPost("knowndevice")]
-    public async Task<bool> GetByIdentifierQuery([FromQuery] string email, [FromQuery] string identifier) => await GetByIdentifier(email, identifier);
+    [HttpGet("knowndevice")]
+    public async Task<bool> GetByIdentifierQuery(
+        [FromHeader(Name = "X-Request-Email")] string email,
+        [FromHeader(Name = "X-Device-Identifier")] string deviceIdentifier) => await GetByIdentifier(email, deviceIdentifier);
 
     [Obsolete("Path is deprecated due to encoding issues, use /knowndevice instead.")]
     [AllowAnonymous]
