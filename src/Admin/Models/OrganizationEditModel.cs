@@ -62,8 +62,6 @@ public class OrganizationEditModel : OrganizationViewModel
     [Required]
     [Display(Name = "Organization Name")]
     public string Name { get; set; }
-    [Display(Name = "Client Owner Email")]
-    public string ClientOwnerEmail { get; set; }
     [Display(Name = "Business Name")]
     public string BusinessName { get; set; }
     [Display(Name = "Billing Email")]
