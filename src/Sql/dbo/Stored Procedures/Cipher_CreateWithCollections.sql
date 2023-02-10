@@ -11,8 +11,8 @@
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT,
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

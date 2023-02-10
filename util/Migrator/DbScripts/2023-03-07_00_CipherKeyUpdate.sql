@@ -8,7 +8,9 @@ GO
 -- Add ForceKeyRotation
 IF COL_LENGTH('[dbo].[Cipher]', 'ForceKeyRotation') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[Cipher] ADD [ForceKeyRotation] BIT DEFAULT (0) NOT NULL;
+    ALTER TABLE [dbo].[Cipher] ADD [ForceKeyRotation] BIT NULL;
+    UPDATE [dbo].[Cipher] SET [ForceKeyRotation] = 0;
+    ALTER TABLE [dbo].[Cipher] ALTER COLUMN [ForceKeyRotation] BIT NOT NULL;
 END
 GO
 
@@ -42,7 +44,7 @@ END [FolderId],
     C.[DeletedDate],
     C.[Reprompt],
     C.[Key],
-    C. [ForceKeyRotation]
+    C.[ForceKeyRotation]
 FROM
     [dbo].[Cipher] C
 GO
@@ -77,8 +79,8 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Create]
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -148,8 +150,8 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(2),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -215,8 +217,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_Update]
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -264,8 +266,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_Create]
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -329,8 +331,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_CreateWithCollections]
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT,
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -357,8 +359,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Cipher_UpdateWithCollections]
     @RevisionDate DATETIME2(7),
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT,
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -421,8 +423,8 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_CreateWithCollections]
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT,
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN

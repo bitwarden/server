@@ -28,6 +28,6 @@ SELECT
     C.[DeletedDate],
     C.[Reprompt],
     C.[Key],
-    C. [ForceKeyRotation]
+    C.[ForceKeyRotation]
 FROM
     [dbo].[Cipher] C

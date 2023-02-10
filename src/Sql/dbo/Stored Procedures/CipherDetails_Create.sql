@@ -16,8 +16,8 @@
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX),
-    @ForceKeyRotation BIT
+    @Key VARCHAR(MAX) = NULL,
+    @ForceKeyRotation BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
