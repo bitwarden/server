@@ -8,9 +8,10 @@ GO
 -- Add ForceKeyRotation
 IF COL_LENGTH('[dbo].[Cipher]', 'ForceKeyRotation') IS NULL
 BEGIN
-    ALTER TABLE [dbo].[Cipher] ADD [ForceKeyRotation] BIT NULL;
-    UPDATE [dbo].[Cipher] SET [ForceKeyRotation] = 0;
-    ALTER TABLE [dbo].[Cipher] ALTER COLUMN [ForceKeyRotation] BIT NOT NULL;
+    ALTER TABLE 
+        [dbo].[Cipher] 
+    ADD 
+        [ForceKeyRotation] BIT NOT NULL CONSTRAINT D_Cipher_ForceKeyRotation DEFAULT 0;
 END
 GO
 
