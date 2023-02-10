@@ -365,6 +365,20 @@ public class ProviderService : IProviderService
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
     }
 
+    public async Task AddOrganizations(Guid providerId, IEnumerable<Guid> organizationIds, Guid addingUserId,
+        string key)
+    {
+        var providerOrganization = new ProviderOrganization
+        {
+            ProviderId = providerId,
+            Key = key,
+        };
+
+        await _providerOrganizationRepository.CreateWithManyOrganizations(providerOrganization, organizationIds);
+
+        // TODO : EventService
+    }
+
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
         OrganizationSignup organizationSignup, string clientOwnerEmail, User user)
     {

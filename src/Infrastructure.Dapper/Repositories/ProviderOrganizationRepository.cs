@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.Json;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -17,6 +18,20 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
     public ProviderOrganizationRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
+
+    public async Task CreateWithManyOrganizations(ProviderOrganization providerOrganization, IEnumerable<Guid> organizationIds)
+    {
+        var objWithOrganizationIds = JsonSerializer.Deserialize<ProviderOrganizationWithOrganizations>(
+            JsonSerializer.Serialize(providerOrganization));
+        objWithOrganizationIds.OrganizationIds = organizationIds.ToGuidIdArrayTVP();
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteAsync(
+                $"[{Schema}].[ProviderOrganization_CreateWithManyOrganizations]",
+                objWithOrganizationIds,
+                commandType: CommandType.StoredProcedure);
+        }
+    }
 
     public async Task<ICollection<ProviderOrganizationUnassignedOrganizationDetails>> SearchAsync(string name, string ownerEmail, int skip, int take)
     {
@@ -56,5 +71,10 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
 
             return results.SingleOrDefault();
         }
+    }
+
+    public class ProviderOrganizationWithOrganizations : ProviderOrganization
+    {
+        public DataTable OrganizationIds { get; set; }
     }
 }
