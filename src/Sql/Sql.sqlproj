@@ -285,6 +285,7 @@
     <Build Include="dbo\Stored Procedures\Provider_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganizationUnassignedOrganizationDetails_Search.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_Create.sql" />
+    <Build Include="dbo\Stored Procedures\ProviderOrganization_CreateWithManyOrganizations.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadByOrganizationId.sql" />

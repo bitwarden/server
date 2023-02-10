@@ -1,7 +1,6 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Admin.Controllers;
@@ -55,6 +54,10 @@ public class ProviderOrganizationsController : Controller
     [HttpPost]
     public async Task<IActionResult> AddExisting(ProviderOrganizationViewModel model)
     {
+        var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.OrganizationId).ToArray();
+
+        await _providerService.AddOrganizations(model.ProviderId, organizationIds, Guid.Empty, null);
+
         return RedirectToAction("Edit", "Providers", new { id = model.ProviderId });
     }
 }
