@@ -28,7 +28,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
             throw new NotFoundException();
         }
 
-        var orgAdmin = await _currentContext.OrganizationAdmin(updatedSecret.OrganizationId);
+        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         var project = updatedSecret.Projects?.FirstOrDefault();

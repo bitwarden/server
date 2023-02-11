@@ -8,7 +8,6 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-//using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
@@ -74,11 +73,12 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task ListByOrganization_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, orgUserOwner) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
+            Id = new Guid(),
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
@@ -87,6 +87,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
             await LoginAsync(email);
+
             var accessPolicies = new List<BaseAccessPolicy>
             {
                 new UserProjectAccessPolicy
@@ -198,7 +199,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task CreateWithProject_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, orgAdminUser) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
         AccessClientType accessType = AccessClientType.NoAccessCheck;
@@ -210,7 +211,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
             Name = _mockEncryptedString
         });
 
-        var orgUserId = new Guid();
+        var orgUserId = (Guid)orgAdminUser.UserId;
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
@@ -225,16 +226,9 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
                     GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id , Read = true, Write = true,
                 },
             };
-            orgUserId = orgUser.Id;
+            orgUserId = (Guid)orgUser.UserId;
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
-        else
-        {
-            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.Admin, true);
-            await LoginAsync(email);
-            orgUserId = orgUser.Id;
-        }
-
 
         var secretRequest = new SecretCreateRequestModel()
         {
@@ -398,7 +392,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString,
-            Projects = new List<Project>() { project }
+            Projects = permissionType == PermissionType.RunAsUserWithPermission ? new List<Project>() { project } : null
         });
 
         var request = new SecretUpdateRequestModel()
@@ -406,10 +400,10 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
             Key = _mockEncryptedString,
             Value = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
             Note = _mockEncryptedString,
-            ProjectIds = new Guid[] { project.Id }
+            ProjectIds = permissionType == PermissionType.RunAsUserWithPermission ? new Guid[] { project.Id } : null
         };
 
-        var response = await _client.PutAsJsonAsync($"/secrets/{org.Id}/{secret.Id}", request);
+        var response = await _client.PutAsJsonAsync($"/secrets/{secret.Id}", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<SecretResponseModel>();
         Assert.Equal(request.Key, result!.Key);

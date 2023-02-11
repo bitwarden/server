@@ -49,16 +49,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
     private static Expression<Func<Secret, bool>> UserHasReadAccessToSecret(Guid userId) => s =>
         s.Projects.Any(p =>
-            p.UserAccessPolicies.Any(ap => ap.OrganizationUserId == userId && ap.Read) ||
+            p.UserAccessPolicies.Any(ap => ap.OrganizationUser.UserId == userId && ap.Read) ||
             p.GroupAccessPolicies.Any(ap =>
-                ap.Group.GroupUsers.Any(gu => gu.OrganizationUserId == userId && ap.Read)));
+                ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.UserId == userId && ap.Read)));
 
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Secret.Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
+        var query = dbContext.Secret.Include(c => c.Projects).Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
 
         query = accessType switch
         {
@@ -68,7 +68,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
-        var secrets = await query.Include(c => c.Projects).OrderBy(c => c.RevisionDate).ToListAsync();
+        var secrets = await query.OrderBy(c => c.RevisionDate).ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
     }
 

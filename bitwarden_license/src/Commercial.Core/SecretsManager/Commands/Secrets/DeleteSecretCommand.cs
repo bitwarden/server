@@ -67,6 +67,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                     {
                         AccessClientType.NoAccessCheck => true,
                         AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),
+                        AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(projectId, userId),
                         _ => false,
                     };
                 }
