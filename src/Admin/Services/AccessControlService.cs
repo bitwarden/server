@@ -1,4 +1,8 @@
-﻿using Bit.Core.Settings;
+﻿using Bit.Admin.Enums;
+using Bit.Admin.Utilities;
+using Bit.Core.Settings;
+
+namespace Bit.Admin.Services;
 
 public class AccessControlService : IAccessControlService
 {
@@ -14,6 +18,18 @@ public class AccessControlService : IAccessControlService
         _httpContextAccessor = httpContextAccessor;
         _configuration = configuration;
         _globalSettings = globalSettings;
+    }
+
+    public bool UserHasPermission(Permission permission)
+    {
+        if (_globalSettings.SelfHosted)
+            return true;
+
+        var userRole = GetUserRoleFromClaim();
+        if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.ContainsKey(userRole))
+            return false;
+
+        return RolePermissionMapping.RolePermissions[userRole].Contains(permission);
     }
 
     public string GetUserRole(string userEmail)

@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Admin.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
