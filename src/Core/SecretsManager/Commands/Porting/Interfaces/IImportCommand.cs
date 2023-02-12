@@ -2,6 +2,6 @@
 
 public interface IImportCommand
 {
-    Task<SMImport> ImportAsync(Guid organizationId, SMImport import);
+    Task ImportAsync(Guid organizationId, SMImport import);
     SMImport AssignNewIds(SMImport import);
 }

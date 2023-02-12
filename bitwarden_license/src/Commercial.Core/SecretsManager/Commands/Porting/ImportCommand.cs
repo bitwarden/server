@@ -16,23 +16,23 @@ public class ImportCommand : IImportCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<SMImport> ImportAsync(Guid organizationId, SMImport import)
+    public async Task ImportAsync(Guid organizationId, SMImport import)
     {
-        var importedProjects = new List<Project>();
-        var importedSecrets = new List<Secret>();
+        var importedProjects = new List<Guid>();
+        var importedSecrets = new List<Guid>();
 
         try
         {
             import = AssignNewIds(import);
 
-            if (import.Projects != null && import.Projects.Any())
+            if (import.Projects.Any())
             {
                 importedProjects = (await _projectRepository.ImportAsync(import.Projects.Select(p => new Project
                 {
                     Id = p.Id,
                     OrganizationId = organizationId,
                     Name = p.Name,
-                }))).ToList();
+                }))).Select(p => p.Id).ToList();
             }
 
             if (import.Secrets != null && import.Secrets.Any())
@@ -45,45 +45,36 @@ public class ImportCommand : IImportCommand
                     Value = s.Value,
                     Note = s.Note,
                     Projects = s.ProjectIds != null && s.ProjectIds.Any() ? s.ProjectIds.Select(id => new Project { Id = id }).ToList() : null,
-                }))).ToList();
+                }))).Select(s => s.Id).ToList();
             }
         }
         catch (Exception)
         {
             if (importedProjects.Any())
             {
-                // remove them
+                await _projectRepository.DeleteManyByIdAsync(importedProjects);
             }
 
             if (importedSecrets.Any())
             {
-                // remove them
+                await _secretRepository.HardDeleteManyByIdAsync(importedSecrets);
             }
 
             throw new Exception("Error attempting import");
         }
-
-        return import;
     }
 
     public SMImport AssignNewIds(SMImport import)
     {
-        Dictionary<Guid, Guid> oldNewProjectIds = new Dictionary<Guid, Guid>();
-        var projects = new List<SMImport.InnerProject>();
+        var projects = new Dictionary<Guid, SMImport.InnerProject>();
         var secrets = new List<SMImport.InnerSecret>();
 
         if (import.Projects != null && import.Projects.Any())
         {
-            foreach (var project in import.Projects)
-            {
-                var newProjectId = Guid.NewGuid();
-                oldNewProjectIds.Add(project.Id, newProjectId);
-                projects.Add(new SMImport.InnerProject
-                {
-                    Id = newProjectId,
-                    Name = project.Name,
-                });
-            }
+            projects = import.Projects.ToDictionary(
+                p => p.Id,
+                p => new SMImport.InnerProject { Id = Guid.NewGuid(), Name = p.Name }
+            );
         }
 
         if (import.Secrets != null && import.Secrets.Any())
@@ -96,15 +87,15 @@ public class ImportCommand : IImportCommand
                     Key = secret.Key,
                     Value = secret.Value,
                     Note = secret.Note,
-                    ProjectIds = secret.ProjectIds?.Select(projectId => oldNewProjectIds[projectId]),
+                    ProjectIds = secret.ProjectIds?.Select(id => projects[id].Id),
                 });
             }
         }
 
         return new SMImport
         {
-            Projects = projects,
-            Secrets = secrets
+            Projects = projects.Values,
+            Secrets = secrets,
         };
     }
 }

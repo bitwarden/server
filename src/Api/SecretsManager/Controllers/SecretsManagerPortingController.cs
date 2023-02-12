@@ -49,7 +49,7 @@ public class SecretsManagerPortingController : Controller
     }
 
     [HttpPost("sm/{organizationId}/import")]
-    public async Task<SMImportResponseModel> Import([FromRoute] Guid organizationId, [FromBody] SMImportRequestModel importRequest)
+    public async Task Import([FromRoute] Guid organizationId, [FromBody] SMImportRequestModel importRequest)
     {
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
@@ -61,7 +61,6 @@ public class SecretsManagerPortingController : Controller
             throw new BadRequestException("You cannot import this much data at once, the limit is 1000 projects and 6000 secrets.");
         }
 
-        var result = await _importCommand.ImportAsync(organizationId, importRequest.ToSMImport());
-        return new SMImportResponseModel(result);
+        await _importCommand.ImportAsync(organizationId, importRequest.ToSMImport());
     }
 }

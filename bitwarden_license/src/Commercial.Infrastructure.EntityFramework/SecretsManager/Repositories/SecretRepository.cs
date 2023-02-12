@@ -136,6 +136,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
+    public async Task HardDeleteManyByIdAsync(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var utcNow = DateTime.UtcNow;
+            var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
+            await secrets.ForEachAsync(secret =>
+            {
+                dbContext.Attach(secret);
+                dbContext.Remove(secret);
+            });
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> ImportAsync(IEnumerable<Core.SecretsManager.Entities.Secret> secrets)
     {
         try
