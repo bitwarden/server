@@ -10,15 +10,14 @@ All rights reserved
 
 using System.Globalization;
 using System.Net;
-using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
-using Microsoft.Extensions.Http;
+using Bit.Core.Models.Api.Response.Duo;
 
-namespace Bit.Core.Utilities.Duo;
+namespace Bit.Core.Utilities;
 
 public class DuoApi
 {
@@ -28,9 +27,9 @@ public class DuoApi
     private readonly string _host;
     private readonly string _ikey;
     private readonly string _skey;
-    
+
     private readonly HttpClient _httpClient = new();
-    
+
     public DuoApi(string ikey, string skey, string host)
     {
         _ikey = ikey;
@@ -113,7 +112,7 @@ public class DuoApi
         var canonParams = CanonicalizeParams(parameters);
         var query = string.Empty;
         if (!method.Equals("POST") && !method.Equals("PUT"))
-        {    
+        {
             if (parameters.Count > 0)
             {
                 query = "?" + canonParams;
@@ -123,16 +122,16 @@ public class DuoApi
 
         var dateString = RFC822UtcNow();
         var auth = Sign(method, path, canonParams, dateString);
-        
+
         //TODO: Change to httpclient
         var request = new HttpRequestMessage
         {
             Method = new HttpMethod(method),
             RequestUri = new Uri(url),
         };
-        request.Headers.Add("Authorization", auth);    
+        request.Headers.Add("Authorization", auth);
         request.Headers.Add("X-Duo-Date", dateString);
-        request.Headers.UserAgent.ParseAdd(UserAgent);  
+        request.Headers.UserAgent.ParseAdd(UserAgent);
 
         if (timeout > 0)
         {
@@ -145,67 +144,15 @@ public class DuoApi
             request.Content = new StringContent(canonParams, Encoding.UTF8, "application/x-www-form-urlencoded");
         }
 
-        try
-        {
-            var response = await _httpClient.SendAsync(request);
-            var result = await response.Content.ReadAsStringAsync();
-            var statusCode = response.StatusCode;
-            return (result, statusCode);
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            throw;
-        }
-      
-
-        // var request = (HttpWebRequest)WebRequest.Create(url);
-        // request.Method = method;
-        // request.Accept = "application/json";
-        // request.Headers.Add("Authorization", auth);
-        // request.Headers.Add("X-Duo-Date", dateString);
-        // request.UserAgent = UserAgent;
-        //
-        // if (method.Equals("POST") || method.Equals("PUT"))
-        // {
-        //     var data = Encoding.UTF8.GetBytes(canonParams);
-        //     request.ContentType = "application/x-www-form-urlencoded";
-        //     request.ContentLength = data.Length;
-        //     using (var requestStream = request.GetRequestStream())
-        //     {
-        //         requestStream.Write(data, 0, data.Length);
-        //     }
-        // }
-        // if (timeout > 0)
-        // {
-        //     request.Timeout = timeout;
-        // }
-        //
-        // // Do the request and process the result.
-        // HttpWebResponse response;
-        // try
-        // {
-        //     response = (HttpWebResponse)request.GetResponse();
-        // }
-        // catch (WebException ex)
-        // {
-        //     response = (HttpWebResponse)ex.Response;
-        //     if (response == null)
-        //     {
-        //         throw;
-        //     }
-        // }
-        // using (var reader = new StreamReader(response.GetResponseStream()))
-        // {
-        //     statusCode = response.StatusCode;
-        //     return reader.ReadToEnd();
-        // }
+        var response = await _httpClient.SendAsync(request);
+        var result = await response.Content.ReadAsStringAsync();
+        var statusCode = response.StatusCode;
+        return (result, statusCode);
     }
 
-    public T JSONApiCall<T>(string method, string path, Dictionary<string, string> parameters = null)
-        where T : class
+    public async Task<Response> JSONApiCall(string method, string path, Dictionary<string, string> parameters = null)
     {
-        return JSONApiCall<T>(method, path, parameters, 0);
+        return await JSONApiCall(method, path, parameters, 0);
     }
 
     /// <param name="timeout">The request timeout, in milliseconds.
@@ -215,27 +162,18 @@ public class DuoApi
     /// return a response until an out-of-band authentication process
     /// has completed. In some cases, this may take as much as a
     /// small number of minutes.</param>
-    public async Task<T> JSONApiCall<T>(string method, string path, Dictionary<string, string> parameters, int timeout)
-        where T : class
+    private async Task<Response> JSONApiCall(string method, string path, Dictionary<string, string> parameters, int timeout)
     {
         var (res, statusCode) = await ApiCall(method, path, parameters, timeout);
         try
         {
-            // TODO: We should deserialize this into our own DTO and not work on dictionaries.
-            var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(res);
-            if (dict["stat"].ToString() == "OK")
+            var obj = JsonSerializer.Deserialize<DuoResponseModel>(res);
+            if (obj.Stat == "OK")
             {
-                return JsonSerializer.Deserialize<T>(dict["response"].ToString());
+                return obj.Response;
             }
 
-            var check = ToNullableInt(dict["code"].ToString());
-            var code = check.GetValueOrDefault(0);
-            var messageDetail = string.Empty;
-            if (dict.ContainsKey("message_detail"))
-            {
-                messageDetail = dict["message_detail"].ToString();
-            }
-            throw new ApiException(code, (int)statusCode, dict["message"].ToString(), messageDetail);
+            throw new ApiException(obj.Code ?? 0, (int)statusCode, obj.Message, obj.MessageDetail);
         }
         catch (ApiException)
         {
