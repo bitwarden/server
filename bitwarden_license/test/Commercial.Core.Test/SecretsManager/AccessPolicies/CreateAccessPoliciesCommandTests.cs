@@ -230,10 +230,23 @@ public class CreateAccessPoliciesCommandTests
         List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
         SutProvider<CreateAccessPoliciesCommand> sutProvider)
     {
+        foreach (var ap in userProjectAccessPolicies)
+        {
+            ap.GrantedProjectId = project.Id;
+        }
+        foreach (var ap in groupProjectAccessPolicies)
+        {
+            ap.GrantedProjectId = project.Id;
+        }
+        foreach (var ap in serviceAccountProjectAccessPolicies)
+        {
+            ap.GrantedProjectId = project.Id;
+        }
         var data = new List<BaseAccessPolicy>();
         data.AddRange(userProjectAccessPolicies);
         data.AddRange(groupProjectAccessPolicies);
         data.AddRange(serviceAccountProjectAccessPolicies);
+
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         SetupPermission(sutProvider, permissionType, project, userId);
@@ -366,6 +379,14 @@ public class CreateAccessPoliciesCommandTests
         List<GroupServiceAccountAccessPolicy> groupServiceAccountAccessPolicies,
         SutProvider<CreateAccessPoliciesCommand> sutProvider)
     {
+        foreach (var ap in userServiceAccountAccessPolicies)
+        {
+            ap.GrantedServiceAccountId = serviceAccount.Id;
+        }
+        foreach (var ap in groupServiceAccountAccessPolicies)
+        {
+            ap.GrantedServiceAccountId = serviceAccount.Id;
+        }
         var data = new List<BaseAccessPolicy>();
         data.AddRange(userServiceAccountAccessPolicies);
         data.AddRange(groupServiceAccountAccessPolicies);
