@@ -117,6 +117,11 @@
 
 <h1>Organization <small>@Model.Organization.Name</small></h1>
 
+@if (Model.Provider != null)
+{
+    <h2>Provider Relationship</h2>
+    @await Html.PartialAsync("_ProviderInformation", Model.Provider)
+}
 <h2>Organization Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
 <h2>Billing Information</h2>
@@ -283,7 +288,14 @@
         <div class="col-sm">
             <div class="form-group">
                 <label asp-for="BillingEmail"></label>
-                <input type="email" class="form-control" asp-for="BillingEmail">
+                @if (Model.Provider?.Type == ProviderType.Reseller)
+                {
+                    <input type="email" class="form-control" asp-for="Provider.BillingEmail" readonly="readonly">
+                }
+                else
+                {
+                    <input type="email" class="form-control" asp-for="BillingEmail">
+                }
             </div>
         </div>
         <div class="col-sm">
