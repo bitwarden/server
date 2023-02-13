@@ -1,3 +1,4 @@
+# syntax = docker/dockerfile:1.2
 ###############################################
 #                 Build stage                 #
 ###############################################
@@ -13,8 +14,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /tmp
 
 # Download tags from 'clients' repository
-RUN --mount=type=bind,target=. \
-  --mount=type=secret,id=GH_PAT \
+RUN --mount=type=secret,id=GH_PAT \
   GH_PAT=$(cat /run/secrets/GH_PAT) curl --header "Authorization: token $GH_PAT" \
   https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json
 
