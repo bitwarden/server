@@ -14,8 +14,8 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /tmp
 
 # Download tags from 'clients' repository
-RUN --mount=type=secret,id=GH_PAT \
-  GH_PAT=$(cat /run/secrets/GH_PAT) && curl --header "Authorization: token $GH_PAT" \
+RUN --mount=type=secret,id=GH_PAT,target=/run/secrets/GH_PAT \
+  GH_PAT=$(cat /run/secrets/GH_PAT) curl --header "Authorization: token $GH_PAT" \
   https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json
 
 RUN cat tags.json
