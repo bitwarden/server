@@ -62,7 +62,8 @@ jobs:
           secrets: "docker-password,
             docker-username,
             dct-delegate-2-repo-passphrase,
-            dct-delegate-2-key"
+            dct-delegate-2-key
+            github-pat-bitwarden-devops-bot-repo-scope"
 
       - name: Log into Docker
         if: ${{ env.is_publish_branch == 'true' }}
@@ -118,6 +119,8 @@ jobs:
             linux/arm64/v8
           push: true
           tags: ${{ steps.tag-list.outputs.tags }}
+          secrets:
+            GH_PAT=${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
 
       - name: Log out of Docker and disable Docker Notary
         if: ${{ env.is_publish_branch == 'true' }}
