@@ -48,10 +48,16 @@ jobs:
         run: az acr login -n bitwardenqa
 
       - name: Login to Azure - Prod Subscription
-        if: ${{ env.is_publish_branch == 'true' }}
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Retrieve github PAT secrets
+        id: retrieve-secret-pat
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
+        with:
+          keyvault: "bitwarden-prod-kv"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
       - name: Retrieve secrets
         if: ${{ env.is_publish_branch == 'true' }}
@@ -120,7 +126,7 @@ jobs:
           push: true
           tags: ${{ steps.tag-list.outputs.tags }}
           secrets: |
-            "GH_PAT=${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
+            "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
       - name: Log out of Docker and disable Docker Notary
         if: ${{ env.is_publish_branch == 'true' }}
