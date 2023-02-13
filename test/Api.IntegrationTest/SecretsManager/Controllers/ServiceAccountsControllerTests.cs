@@ -1,7 +1,6 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
-using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
@@ -26,8 +25,9 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private Organization _organization = null!;
 
+    private string _email = null!;
+    private SecretsManagerOrganizationHelper _organizationHelper = null!;
 
     public ServiceAccountsControllerTest(ApiApplicationFactory factory)
     {
@@ -39,22 +39,45 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
     public async Task InitializeAsync()
     {
-        var ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(ownerEmail);
-        (_organization, _) =
-            await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: ownerEmail, billingEmail: ownerEmail);
-        var tokens = await _factory.LoginAsync(ownerEmail);
+        _email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(_email);
+        _organizationHelper = new SecretsManagerOrganizationHelper(_factory, _email);
+    }
+
+    public Task DisposeAsync()
+    {
+        _client.Dispose();
+        return Task.CompletedTask;
+    }
+
+    private async Task LoginAsync(string email)
+    {
+        var tokens = await _factory.LoginAsync(email);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
     }
 
-    public Task DisposeAsync() => Task.CompletedTask;
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task ListByOrganization_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
+
+        var response = await _client.GetAsync($"/organizations/{org.Id}/service-accounts");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
 
     [Fact]
-    public async Task GetServiceAccountsByOrganization_Admin()
+    public async Task ListByOrganization_Admin_Success()
     {
-        var serviceAccountIds = await SetupGetServiceAccountsByOrganizationAsync();
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
 
-        var response = await _client.GetAsync($"/organizations/{_organization.Id}/service-accounts");
+        var serviceAccountIds = await SetupGetServiceAccountsByOrganizationAsync(org);
+
+        var response = await _client.GetAsync($"/organizations/{org.Id}/service-accounts");
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ServiceAccountResponseModel>>();
 
@@ -64,56 +87,59 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     }
 
     [Fact]
-    public async Task GetServiceAccountsByOrganization_User_Success()
+    public async Task ListByOrganization_User_Success()
     {
-        // Create a new account as a user
-        var user = await LoginAsNewOrgUserAsync();
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
 
-        var serviceAccountIds = await SetupGetServiceAccountsByOrganizationAsync();
+        var serviceAccountIds = await SetupGetServiceAccountsByOrganizationAsync(org);
 
-        var accessPolicies = serviceAccountIds.Select(
+        // Setup access for two
+        var accessPolicies = serviceAccountIds.Take(2).Select(
             id => new UserServiceAccountAccessPolicy
             {
-                OrganizationUserId = user.Id,
+                OrganizationUserId = orgUser.Id,
                 GrantedServiceAccountId = id,
                 Read = true,
                 Write = false,
             }).Cast<BaseAccessPolicy>().ToList();
 
-
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);
 
-
-        var response = await _client.GetAsync($"/organizations/{_organization.Id}/service-accounts");
+        var response = await _client.GetAsync($"/organizations/{org.Id}/service-accounts");
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ServiceAccountResponseModel>>();
 
         Assert.NotNull(result);
         Assert.NotEmpty(result!.Data);
-        Assert.Equal(serviceAccountIds.Count, result.Data.Count());
+        Assert.Equal(2, result.Data.Count());
     }
 
-    [Fact]
-    public async Task GetServiceAccountsByOrganization_User_NoPermission()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Create_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
-        // Create a new account as a user
-        await LoginAsNewOrgUserAsync();
-        await SetupGetServiceAccountsByOrganizationAsync();
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
 
-        var response = await _client.GetAsync($"/organizations/{_organization.Id}/service-accounts");
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ServiceAccountResponseModel>>();
-
-        Assert.NotNull(result);
-        Assert.Empty(result!.Data);
-    }
-
-    [Fact]
-    public async Task CreateServiceAccount_Admin()
-    {
         var request = new ServiceAccountCreateRequestModel { Name = _mockEncryptedString };
 
-        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/service-accounts", request);
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/service-accounts", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Create_Admin_Success()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var request = new ServiceAccountCreateRequestModel { Name = _mockEncryptedString };
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/service-accounts", request);
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
 
@@ -127,26 +153,47 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         Assert.Equal(request.Name, createdServiceAccount.Name);
         AssertHelper.AssertRecent(createdServiceAccount.RevisionDate);
         AssertHelper.AssertRecent(createdServiceAccount.CreationDate);
+
+        // Check permissions have been bootstrapped.
+        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(createdServiceAccount.Id);
+        Assert.NotNull(accessPolicies);
+        var ap = accessPolicies!.First();
+        Assert.True(ap.Read);
+        Assert.True(ap.Write);
+        AssertHelper.AssertRecent(ap.CreationDate);
+        AssertHelper.AssertRecent(ap.RevisionDate);
     }
 
-    [Fact]
-    public async Task CreateServiceAccount_User_NoPermissions()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Update_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
-        // Create a new account as a user
-        await LoginAsNewOrgUserAsync();
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
 
-        var request = new ServiceAccountCreateRequestModel { Name = _mockEncryptedString };
+        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
 
-        var response = await _client.PostAsJsonAsync($"/organizations/{_organization.Id}/service-accounts", request);
+        var request = new ServiceAccountUpdateRequestModel { Name = _mockNewName };
+
+        var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task UpdateServiceAccount_Admin()
+    public async Task Update_Admin()
     {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = _organization.Id,
+            OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
@@ -171,18 +218,19 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     }
 
     [Fact]
-    public async Task UpdateServiceAccount_User_WithPermission()
+    public async Task Update_User_WithPermission()
     {
-        // Create a new account as a user
-        var user = await LoginAsNewOrgUserAsync();
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = _organization.Id,
+            OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
-        await CreateUserServiceAccountAccessPolicyAsync(user.Id, initialServiceAccount.Id, true, true);
+        await CreateUserPolicyAsync(orgUser.Id, initialServiceAccount.Id, true, true);
 
         var request = new ServiceAccountUpdateRequestModel { Name = _mockNewName };
 
@@ -205,29 +253,61 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     }
 
     [Fact]
-    public async Task UpdateServiceAccount_User_NoPermissions()
+    public async Task Update_User_NoPermissions()
     {
-        // Create a new account as a user
-        await LoginAsNewOrgUserAsync();
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = _organization.Id,
+            OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
         var request = new ServiceAccountUpdateRequestModel { Name = _mockNewName };
 
         var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request);
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
-    public async Task CreateServiceAccountAccessToken_Admin()
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task CreateAccessToken_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
+
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = _organization.Id,
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var mockExpiresAt = DateTime.UtcNow.AddDays(30);
+        var request = new AccessTokenCreateRequestModel
+        {
+            Name = _mockEncryptedString,
+            EncryptedPayload = _mockEncryptedString,
+            Key = _mockEncryptedString,
+            ExpireAt = mockExpiresAt,
+        };
+
+        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateAccessToken_Admin()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
@@ -253,18 +333,19 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     }
 
     [Fact]
-    public async Task CreateServiceAccountAccessToken_User_WithPermission()
+    public async Task CreateAccessToken_User_WithPermission()
     {
-        // Create a new account as a user
-        var user = await LoginAsNewOrgUserAsync();
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = _organization.Id,
+            OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
-        await CreateUserServiceAccountAccessPolicyAsync(user.Id, serviceAccount.Id, true, true);
+        await CreateUserPolicyAsync(orgUser.Id, serviceAccount.Id, true, true);
 
         var mockExpiresAt = DateTime.UtcNow.AddDays(30);
         var request = new AccessTokenCreateRequestModel
@@ -288,14 +369,15 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     }
 
     [Fact]
-    public async Task CreateServiceAccountAccessToken_User_NoPermission()
+    public async Task CreateAccessToken_User_NoPermission()
     {
-        // Create a new account as a user
-        await LoginAsNewOrgUserAsync();
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = _organization.Id,
+            OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
@@ -309,15 +391,18 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         };
 
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task CreateServiceAccountAccessTokenExpireAtNullAsync_Admin()
+    public async Task CreateAccessToken_ExpireAtNull_Admin()
     {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = _organization.Id,
+            OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
 
@@ -341,104 +426,31 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         AssertHelper.AssertRecent(result.CreationDate);
     }
 
-    [Fact]
-    public async Task CreateServiceAccountAccessTokenExpireAtNullAsync_User_WithPermission()
+    private async Task CreateUserPolicyAsync(Guid userId, Guid serviceAccountId, bool read, bool write)
     {
-        // Create a new account as a user
-        var user = await LoginAsNewOrgUserAsync();
-
-        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        var policy = new UserServiceAccountAccessPolicy
         {
-            OrganizationId = _organization.Id,
-            Name = _mockEncryptedString,
-        });
-
-        await CreateUserServiceAccountAccessPolicyAsync(user.Id, serviceAccount.Id, true, true);
-
-        var request = new AccessTokenCreateRequestModel
-        {
-            Name = _mockEncryptedString,
-            EncryptedPayload = _mockEncryptedString,
-            Key = _mockEncryptedString,
-            ExpireAt = null,
+            OrganizationUserId = userId,
+            GrantedServiceAccountId = serviceAccountId,
+            Read = read,
+            Write = write,
         };
-
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
-        response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
-
-        Assert.NotNull(result);
-        Assert.Equal(request.Name, result!.Name);
-        Assert.NotNull(result.ClientSecret);
-        Assert.Null(result.ExpireAt);
-        AssertHelper.AssertRecent(result.RevisionDate);
-        AssertHelper.AssertRecent(result.CreationDate);
+        await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { policy });
     }
 
-    [Fact]
-    public async Task CreateServiceAccountAccessTokenExpireAtNullAsync_User_NoPermission()
+    private async Task<List<Guid>> SetupGetServiceAccountsByOrganizationAsync(Organization org)
     {
-        // Create a new account as a user
-        await LoginAsNewOrgUserAsync();
-
-        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
-        {
-            OrganizationId = _organization.Id,
-            Name = _mockEncryptedString,
-        });
-
-        var request = new AccessTokenCreateRequestModel
-        {
-            Name = _mockEncryptedString,
-            EncryptedPayload = _mockEncryptedString,
-            Key = _mockEncryptedString,
-            ExpireAt = null,
-        };
-
-        var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    private async Task<List<Guid>> SetupGetServiceAccountsByOrganizationAsync()
-    {
-        const int serviceAccountsToCreate = 3;
         var serviceAccountIds = new List<Guid>();
-        for (var i = 0; i < serviceAccountsToCreate; i++)
+        for (var i = 0; i < 3; i++)
         {
             var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
             {
-                OrganizationId = _organization.Id,
+                OrganizationId = org.Id,
                 Name = _mockEncryptedString,
             });
             serviceAccountIds.Add(serviceAccount.Id);
         }
 
         return serviceAccountIds;
-    }
-
-    private async Task CreateUserServiceAccountAccessPolicyAsync(Guid userId, Guid serviceAccountId, bool read,
-        bool write)
-    {
-        var accessPolicies = new List<BaseAccessPolicy>
-        {
-            new UserServiceAccountAccessPolicy
-            {
-                OrganizationUserId = userId,
-                GrantedServiceAccountId = serviceAccountId,
-                Read = read,
-                Write = write,
-            },
-        };
-        await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-    }
-
-    private async Task<OrganizationUser> LoginAsNewOrgUserAsync(OrganizationUserType type = OrganizationUserType.User)
-    {
-        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-        await _factory.LoginWithNewAccount(email);
-        var orgUser = await OrganizationTestHelpers.CreateUserAsync(_factory, _organization.Id, email, type);
-        var tokens = await _factory.LoginAsync(email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-        return orgUser;
     }
 }

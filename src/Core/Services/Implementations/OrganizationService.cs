@@ -1241,6 +1241,7 @@ public class OrganizationService : IOrganizationService
                         Type = invite.Type.Value,
                         Status = OrganizationUserStatusType.Invited,
                         AccessAll = invite.AccessAll,
+                        AccessSecretsManager = invite.AccessSecretsManager,
                         ExternalId = externalId,
                         CreationDate = DateTime.UtcNow,
                         RevisionDate = DateTime.UtcNow,
@@ -1924,30 +1925,6 @@ public class OrganizationService : IOrganizationService
         await _organizationUserRepository.ReplaceAsync(orgUser);
         await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ?
             EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
-    }
-
-    public async Task<OrganizationLicense> GenerateLicenseAsync(Guid organizationId, Guid installationId)
-    {
-        var organization = await GetOrgById(organizationId);
-        return await GenerateLicenseAsync(organization, installationId);
-    }
-
-    public async Task<OrganizationLicense> GenerateLicenseAsync(Organization organization, Guid installationId,
-        int? version = null)
-    {
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var installation = await _installationRepository.GetByIdAsync(installationId);
-        if (installation == null || !installation.Enabled)
-        {
-            throw new BadRequestException("Invalid installation id");
-        }
-
-        var subInfo = await _paymentService.GetSubscriptionAsync(organization);
-        return new OrganizationLicense(organization, subInfo, installationId, _licensingService, version);
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
