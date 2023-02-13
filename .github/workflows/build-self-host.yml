@@ -119,8 +119,8 @@ jobs:
             linux/arm64/v8
           push: true
           tags: ${{ steps.tag-list.outputs.tags }}
-          secrets:
-            GH_PAT=${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          secrets: |
+            "GH_PAT=${{ steps.retrieve-secrets.outputs.github-pat-bitwarden-devops-bot-repo-scope }}""
 
       - name: Log out of Docker and disable Docker Notary
         if: ${{ env.is_publish_branch == 'true' }}
