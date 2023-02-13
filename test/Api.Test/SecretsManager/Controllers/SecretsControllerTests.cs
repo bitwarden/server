@@ -88,8 +88,13 @@ public class SecretsControllerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void GetSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Secret resultSecret, Guid userId, Guid organizationId, Project mockProject)
     {
-        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(default).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        mockProject.OrganizationId = organizationId;
+        resultSecret.Projects = new List<Project>() { mockProject };
+        resultSecret.OrganizationId = organizationId;
+
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(default).ReturnsForAnyArgs(resultSecret);
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
@@ -98,11 +103,9 @@ public class SecretsControllerTests
         }
         else
         {
-            resultSecret.Projects = new List<Core.SecretsManager.Entities.Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
             sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
         }
-
 
         var result = await sutProvider.Sut.GetAsync(resultSecret.Id);
 

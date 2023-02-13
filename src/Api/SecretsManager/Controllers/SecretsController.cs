@@ -87,10 +87,10 @@ public class SecretsController : Controller
     [HttpGet("projects/{projectId}/secrets")]
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByProjectAsync([FromRoute] Guid projectId)
     {
-        var project = await _projectRepository.GetByIdAsync(projectId); 
-        if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId)) 
+        var project = await _projectRepository.GetByIdAsync(projectId);
+        if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
         {
-            throw new NotFoundException(); 
+            throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;

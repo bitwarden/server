@@ -33,6 +33,7 @@ public class UpdateSecretCommandTests
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async Task UpdateAsync_Success(PermissionType permissionType, Secret data, SutProvider<UpdateSecretCommand> sutProvider, Guid userId, Project mockProject)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
@@ -57,7 +58,8 @@ public class UpdateSecretCommandTests
     public async Task UpdateAsync_DoesNotModifyOrganizationId(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider, Guid userId)
     {
         var updatedOrgId = Guid.NewGuid();
-
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(existingSecret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(existingSecret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(updatedOrgId).Returns(true);
 
@@ -78,6 +80,7 @@ public class UpdateSecretCommandTests
     [BitAutoData]
     public async Task UpdateAsync_DoesNotModifyCreationDate(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider, Guid userId)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(existingSecret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(existingSecret.OrganizationId).Returns(true);
 
@@ -100,6 +103,7 @@ public class UpdateSecretCommandTests
     [BitAutoData]
     public async Task UpdateAsync_DoesNotModifyDeletionDate(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider, Guid userId)
     {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(existingSecret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(existingSecret.OrganizationId).Returns(true);
 
@@ -123,6 +127,8 @@ public class UpdateSecretCommandTests
     [BitAutoData]
     public async Task UpdateAsync_RevisionDateIsUpdatedToUtcNow(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider, Guid userId)
     {
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(existingSecret.OrganizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(existingSecret.OrganizationId).Returns(true);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).Returns(existingSecret);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(existingSecret.OrganizationId).Returns(true);
 
