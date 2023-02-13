@@ -54,6 +54,21 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = await dbContext.Secret
+                                    .Where(c => c.OrganizationId == organizationId && c.DeletedDate != null)
+                                    .Include("Projects")
+                                    .OrderBy(c => c.RevisionDate)
+                                    .ToListAsync();
+
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+        }
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByProjectIdAsync(Guid projectId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
