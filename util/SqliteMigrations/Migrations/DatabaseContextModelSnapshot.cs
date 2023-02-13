@@ -344,6 +344,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SecretId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ServiceAccountId")
+                        .HasColumnType("TEXT");
+
                     b.Property<byte?>("SystemUser")
                         .HasColumnType("INTEGER");
 
