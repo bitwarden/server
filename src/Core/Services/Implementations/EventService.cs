@@ -331,6 +331,27 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(e);
     }
 
+    public async Task LogProviderOrganizationEventsAsync(Guid providerId, IEnumerable<ProviderOrganization> providerOrganizations,
+        EventType type, DateTime? date = null)
+    {
+        var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
+        if (!CanUseProviderEvents(providerAbilities, providerId))
+        {
+            return;
+        }
+
+        var messages = providerOrganizations.Select(po => new EventMessage(_currentContext)
+        {
+            ProviderId = po.ProviderId,
+            ProviderOrganizationId = po.Id,
+            Type = type,
+            ActingUserId = _currentContext?.UserId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        });
+
+        await _eventWriteService.CreateManyAsync(messages);
+    }
+
     private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
     {
         if (_currentContext == null || !orgId.HasValue)

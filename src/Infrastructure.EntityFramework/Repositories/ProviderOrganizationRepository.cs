@@ -16,7 +16,7 @@ public class ProviderOrganizationRepository :
         : base(serviceScopeFactory, mapper, context => context.ProviderOrganizations)
     { }
 
-    public async Task CreateWithManyOrganizations(ProviderOrganization providerOrganization, IEnumerable<Guid> organizationIds)
+    public async Task<ICollection<ProviderOrganization>> CreateWithManyOrganizations(ProviderOrganization providerOrganization, IEnumerable<Guid> organizationIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -34,6 +34,8 @@ public class ProviderOrganizationRepository :
 
             await dbContext.AddRangeAsync(insert);
             await dbContext.SaveChangesAsync();
+
+            return insert.ToList();
         }
     }
 

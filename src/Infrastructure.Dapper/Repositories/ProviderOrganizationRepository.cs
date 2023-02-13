@@ -19,17 +19,19 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task CreateWithManyOrganizations(ProviderOrganization providerOrganization, IEnumerable<Guid> organizationIds)
+    public async Task<ICollection<ProviderOrganization>> CreateWithManyOrganizations(ProviderOrganization providerOrganization, IEnumerable<Guid> organizationIds)
     {
         var objWithOrganizationIds = JsonSerializer.Deserialize<ProviderOrganizationWithOrganizations>(
             JsonSerializer.Serialize(providerOrganization));
         objWithOrganizationIds.OrganizationIds = organizationIds.ToGuidIdArrayTVP();
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.ExecuteAsync(
+            var results = await connection.QueryAsync<ProviderOrganization>(
                 $"[{Schema}].[ProviderOrganization_CreateWithManyOrganizations]",
                 objWithOrganizationIds,
                 commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
         }
     }
 

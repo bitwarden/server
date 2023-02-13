@@ -10,10 +10,20 @@
 AS
 BEGIN
     SET NOCOUNT ON
+        
+    DECLARE @ProviderOrganizationsToInsert TABLE (
+        [Id]             UNIQUEIDENTIFIER    NOT NULL,
+        [ProviderId]     UNIQUEIDENTIFIER    NOT NULL,
+        [OrganizationId] UNIQUEIDENTIFIER    NULL,
+        [Key]            VARCHAR (MAX)       NULL,
+        [Settings]       NVARCHAR(MAX)       NULL,
+        [CreationDate]   DATETIME2 (7)       NOT NULL,
+        [RevisionDate]   DATETIME2 (7)       NOT NULL
+    );
 
     -- Insert
     INSERT INTO
-        [dbo].[ProviderOrganization]
+        @ProviderOrganizationsToInsert
     SELECT
         NEWID(),
         @ProviderId,
@@ -36,4 +46,10 @@ BEGIN
                 [ProviderId] = @ProviderId
                 AND [OrganizationId] = [Source].[Id]
         )
+
+    INSERT INTO [dbo].[ProviderOrganization] ([Id], [ProviderId], [OrganizationId], [Key], [Settings], [CreationDate], [RevisionDate])
+    SELECT      [Id], [ProviderId], [OrganizationId], [Key], [Settings], [CreationDate], [RevisionDate]
+    FROM        @ProviderOrganizationsToInsert
+
+    SELECT * FROM @ProviderOrganizationsToInsert
 END

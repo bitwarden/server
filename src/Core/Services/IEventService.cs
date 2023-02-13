@@ -23,4 +23,5 @@ public interface IEventService
     Task LogProviderUserEventAsync(ProviderUser providerUser, EventType type, DateTime? date = null);
     Task LogProviderUsersEventAsync(IEnumerable<(ProviderUser, EventType, DateTime?)> events);
     Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type, DateTime? date = null);
+    Task LogProviderOrganizationEventsAsync(Guid providerId, IEnumerable<ProviderOrganization> providerOrganizations, EventType type, DateTime? date = null);
 }

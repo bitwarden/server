@@ -374,9 +374,9 @@ public class ProviderService : IProviderService
             Key = key,
         };
 
-        await _providerOrganizationRepository.CreateWithManyOrganizations(providerOrganization, organizationIds);
+        var insertedProviderOrganizations = await _providerOrganizationRepository.CreateWithManyOrganizations(providerOrganization, organizationIds);
 
-        // TODO : EventService
+        await _eventService.LogProviderOrganizationEventsAsync(providerId, insertedProviderOrganizations, EventType.ProviderOrganization_Added);
     }
 
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
