@@ -4,7 +4,6 @@
     @Type TINYINT,
     @RequestDeviceIdentifier NVARCHAR(50),
     @RequestDeviceType TINYINT,
-    @RequestIpAddress VARCHAR(50),
     @RequestFingerprint VARCHAR(MAX),
     @ResponseDeviceId UNIQUEIDENTIFIER,
     @AccessCode VARCHAR(25),
