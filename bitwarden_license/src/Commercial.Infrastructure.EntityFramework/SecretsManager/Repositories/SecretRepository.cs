@@ -160,7 +160,11 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             {
                 var dbContext = GetDatabaseContext(scope);
                 var entities = new List<Secret>();
-                var projects = secrets.SelectMany(s => s.Projects?.Select(p => Mapper.Map<Project>(p)) ?? new List<Project>()).DistinctBy(p => p.Id).ToList();
+                var projects = secrets
+                    .SelectMany(s => s.Projects ?? Enumerable.Empty<Core.SecretsManager.Entities.Project>())
+                    .DistinctBy(p => p.Id)
+                    .Select(p => Mapper.Map<Project>(p))
+                    .ToDictionary(p => p.Id, p => p);
 
                 dbContext.AttachRange(projects);
 
@@ -170,7 +174,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
                     if (s.Projects?.Count > 0)
                     {
-                        entity.Projects = s.Projects.Select(p => projects.Find(p2 => p.Id == p2.Id)).ToList();
+                        entity.Projects = s.Projects.Select(p => projects[p.Id]).ToList();
                     }
 
                     entities.Add(entity);

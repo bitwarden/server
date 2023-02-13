@@ -44,7 +44,7 @@ public class ImportCommand : IImportCommand
                     Key = s.Key,
                     Value = s.Value,
                     Note = s.Note,
-                    Projects = s.ProjectIds != null && s.ProjectIds.Any() ? s.ProjectIds.Select(id => new Project { Id = id }).ToList() : null,
+                    Projects = s.ProjectIds?.Select(id => new Project { Id = id }).ToList(),
                 }))).Select(s => s.Id).ToList();
             }
         }

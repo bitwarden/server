@@ -6,18 +6,12 @@ namespace Bit.Api.SecretsManager.Models.Request;
 
 public class SMImportRequestModel
 {
-    public IEnumerable<InnerProject> Projects { get; set; }
-    public IEnumerable<InnerSecret> Secrets { get; set; }
+    public IEnumerable<InnerProjectImportRequestModel> Projects { get; set; }
+    public IEnumerable<InnerSecretImportRequestModel> Secrets { get; set; }
 
-    public class InnerProject
+    public class InnerProjectImportRequestModel
     {
-        public InnerProject() { }
-
-        public InnerProject(Core.SecretsManager.Entities.Project project)
-        {
-            Id = project.Id;
-            Name = project.Name;
-        }
+        public InnerProjectImportRequestModel() { }
 
         [Required]
         public Guid Id { get; set; }
@@ -28,18 +22,9 @@ public class SMImportRequestModel
         public string Name { get; set; }
     }
 
-    public class InnerSecret
+    public class InnerSecretImportRequestModel
     {
-        public InnerSecret() { }
-
-        public InnerSecret(Core.SecretsManager.Entities.Secret secret)
-        {
-            Id = secret.Id;
-            Key = secret.Key;
-            Value = secret.Value;
-            Note = secret.Note;
-            ProjectIds = secret.Projects?.Select(p => p.Id);
-        }
+        public InnerSecretImportRequestModel() { }
 
         [Required]
         public Guid Id { get; set; }

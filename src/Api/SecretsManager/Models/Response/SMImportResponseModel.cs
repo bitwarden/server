@@ -7,53 +7,38 @@ public class SMImportResponseModel : ResponseModel
 {
     public SMImportResponseModel(SMImport import, string obj = "SecretsManagerImportResponseModel") : base(obj)
     {
-        Projects = import.Projects != null && import.Projects.Any() ? import.Projects.Select(p => new InnerProject
-        {
-            Id = p.Id,
-            Name = p.Name,
-        }) : null;
-
-        Secrets = import.Secrets != null && import.Secrets.Any() ? import.Secrets.Select(s => new InnerSecret
-        {
-            Id = s.Id,
-            Key = s.Key,
-            Value = s.Value,
-            Note = s.Note,
-            ProjectIds = s.ProjectIds,
-        }) : null;
+        Projects = import.Projects?.Select(p => new InnerProjectImportResponseModel(p));
+        Secrets = import.Secrets?.Select(s => new InnerSecretImportResponseModel(s));
     }
 
-    public IEnumerable<InnerProject> Projects { get; set; }
-    public IEnumerable<InnerSecret> Secrets { get; set; }
+    public IEnumerable<InnerProjectImportResponseModel> Projects { get; set; }
+    public IEnumerable<InnerSecretImportResponseModel> Secrets { get; set; }
 
-    public class InnerProject
+    public class InnerProjectImportResponseModel
     {
-        public InnerProject() { }
+        public InnerProjectImportResponseModel() { }
 
-        public InnerProject(Core.SecretsManager.Entities.Project project)
+        public InnerProjectImportResponseModel(SMImport.InnerProject project)
         {
             Id = project.Id;
             Name = project.Name;
-            ImportErrorMessage = "";
         }
 
         public Guid Id { get; set; }
         public string Name { get; set; }
-        public string ImportErrorMessage { get; set; }
     }
 
-    public class InnerSecret
+    public class InnerSecretImportResponseModel
     {
-        public InnerSecret() { }
+        public InnerSecretImportResponseModel() { }
 
-        public InnerSecret(Core.SecretsManager.Entities.Secret secret)
+        public InnerSecretImportResponseModel(SMImport.InnerSecret secret)
         {
             Id = secret.Id;
             Key = secret.Key;
             Value = secret.Value;
             Note = secret.Note;
-            ProjectIds = secret.Projects?.Select(p => p.Id);
-            ImportErrorMessage = "";
+            ProjectIds = secret.ProjectIds;
         }
 
         public Guid Id { get; set; }
@@ -61,6 +46,5 @@ public class SMImportResponseModel : ResponseModel
         public string Value { get; set; }
         public string Note { get; set; }
         public IEnumerable<Guid> ProjectIds { get; set; }
-        public string ImportErrorMessage { get; set; }
     }
 }

@@ -7,16 +7,16 @@ public class SMExportResponseModel : ResponseModel
 {
     public SMExportResponseModel(IEnumerable<Project> projects, IEnumerable<Secret> secrets, string obj = "SecretsManagerExportResponseModel") : base(obj)
     {
-        Secrets = secrets?.Select(s => new InnerSecret(s));
-        Projects = projects?.Select(p => new InnerProject(p));
+        Secrets = secrets?.Select(s => new InnerSecretExportResponseModel(s));
+        Projects = projects?.Select(p => new InnerProjectExportResponseModel(p));
     }
 
-    public IEnumerable<InnerProject> Projects { get; set; }
-    public IEnumerable<InnerSecret> Secrets { get; set; }
+    public IEnumerable<InnerProjectExportResponseModel> Projects { get; set; }
+    public IEnumerable<InnerSecretExportResponseModel> Secrets { get; set; }
 
-    public class InnerProject
+    public class InnerProjectExportResponseModel
     {
-        public InnerProject(Project project)
+        public InnerProjectExportResponseModel(Project project)
         {
             Id = project.Id;
             Name = project.Name;
@@ -26,9 +26,9 @@ public class SMExportResponseModel : ResponseModel
         public string Name { get; set; }
     }
 
-    public class InnerSecret
+    public class InnerSecretExportResponseModel
     {
-        public InnerSecret(Secret secret)
+        public InnerSecretExportResponseModel(Secret secret)
         {
             Id = secret.Id;
             Key = secret.Key;
