@@ -129,4 +129,41 @@ public class ServiceAccountsController : Controller
         var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id), userId);
         return new AccessTokenCreationResponseModel(result);
     }
+
+    [HttpPost("{id}/access-tokens/revoke")]
+    public async Task RevokeAccessTokensAsync(Guid id, [FromBody] RevokeAccessTokensRequest request)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var hasAccess = accessClient switch
+        {
+            AccessClientType.NoAccessCheck => true,
+            AccessClientType.User => await _serviceAccountRepository.UserHasReadAccessToServiceAccount(id, userId),
+            _ => false,
+        };
+
+        if (!hasAccess)
+        {
+            throw new NotFoundException();
+        }
+
+        var accessTokens = await _apiKeyRepository.GetManyByServiceAccountIdAsync(id);
+
+        var tokensToDelete = accessTokens.Where(at => request.Ids.Contains(at.Id));
+
+        await _apiKeyRepository.DeleteManyAsync(tokensToDelete);
+    }
 }
