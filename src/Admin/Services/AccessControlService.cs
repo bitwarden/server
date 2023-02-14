@@ -1,4 +1,5 @@
-﻿using Bit.Admin.Enums;
+﻿using System.Security.Claims;
+using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core.Settings;
 
@@ -40,32 +41,21 @@ public class AccessControlService : IAccessControlService
             return null;
 
         var rolePrefix = "role";
+        userEmail = userEmail.ToLowerInvariant();
 
-        foreach (var setting in settings)
-        {
-            var key = setting.Key;
+        var roleSetting = settings.FirstOrDefault(s => s.Key.StartsWith(rolePrefix)
+                                                 && (s.Value != null ? s.Value.ToLowerInvariant().Split(',').Contains(userEmail) : false));
 
-            if (setting.Value == null || !key.Contains(rolePrefix))
-                continue;
+        if (roleSetting == null)
+            return null;
 
-            var usersInRole = setting.Value.ToLowerInvariant().Split(',');
-
-            if (!usersInRole.Contains(userEmail))
-                continue;
-
-            var role = key.Substring(key.IndexOf(rolePrefix) + rolePrefix.Length);
-            return role;
-        }
-
-        return null;
+        var role = roleSetting.Key.Substring(roleSetting.Key.IndexOf(rolePrefix) + rolePrefix.Length);
+        return role;
     }
 
     private string GetUserRoleFromClaim()
     {
-        var claims = _httpContextAccessor.HttpContext?.User?.Claims;
-        if (claims == null || !claims.Any())
-            return null;
-
-        return claims.FirstOrDefault(c => c.Type == "Role")?.Value;
+        return _httpContextAccessor.HttpContext?.User?.Claims?
+                 .FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
     }
 }

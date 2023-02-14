@@ -33,7 +33,7 @@ public class CustomClaimsPrincipalFactory : UserClaimsPrincipalFactory<IdentityU
             if (!string.IsNullOrEmpty(role))
             {
                 ((ClaimsIdentity)principal.Identity).AddClaims(
-                new[] { new Claim("Role", role) });
+                new[] { new Claim(ClaimTypes.Role, role) });
             }
         }
 
