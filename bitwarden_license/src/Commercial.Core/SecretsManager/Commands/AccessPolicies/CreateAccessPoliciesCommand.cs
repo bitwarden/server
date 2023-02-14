@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -10,18 +9,15 @@ namespace Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
 public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
-    private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public CreateAccessPoliciesCommand(
         IAccessPolicyRepository accessPolicyRepository,
-        ICurrentContext currentContext,
         IProjectRepository projectRepository,
         IServiceAccountRepository serviceAccountRepository)
     {
         _accessPolicyRepository = accessPolicyRepository;
-        _currentContext = currentContext;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
     }
@@ -63,38 +59,6 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
         {
             throw new BadRequestException("Resources must be unique");
         }
-    }
-
-    public async Task<IEnumerable<BaseAccessPolicy>> CreateForProjectAsync(Guid projectId,
-        List<BaseAccessPolicy> accessPolicies, Guid userId)
-    {
-        var project = await _projectRepository.GetByIdAsync(projectId);
-        if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        await CreateManyAsync(accessPolicies, userId, accessClient);
-        return await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(projectId);
-    }
-
-    public async Task<IEnumerable<BaseAccessPolicy>> CreateForServiceAccountAsync(Guid serviceAccountId,
-        List<BaseAccessPolicy> accessPolicies, Guid userId)
-    {
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
-        if (serviceAccount == null || !_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        await CreateManyAsync(accessPolicies, userId, accessClient);
-        return await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(serviceAccountId);
     }
 
     public async Task<IEnumerable<BaseAccessPolicy>> CreateManyAsync(List<BaseAccessPolicy> accessPolicies, Guid userId, AccessClientType accessType)

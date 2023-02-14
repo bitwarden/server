@@ -58,9 +58,16 @@ public class AccessPoliciesController : Controller
     public async Task<ProjectAccessPoliciesResponseModel> CreateProjectAccessPoliciesAsync([FromRoute] Guid id,
         [FromBody] AccessPoliciesCreateRequest request)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessClient, userId) = await GetAccessClientTypeAsync(project.OrganizationId);
         var policies = request.ToBaseAccessPoliciesForProject(id);
-        var results = await _createAccessPoliciesCommand.CreateForProjectAsync(id, policies, userId);
+        await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
+        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
@@ -79,9 +86,16 @@ public class AccessPoliciesController : Controller
         [FromRoute] Guid id,
         [FromBody] AccessPoliciesCreateRequest request)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
         var policies = request.ToBaseAccessPoliciesForServiceAccount(id);
-        var results = await _createAccessPoliciesCommand.CreateForServiceAccountAsync(id, policies, userId);
+        await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
+        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id);
         return new ServiceAccountAccessPoliciesResponseModel(results);
     }
 
@@ -127,8 +141,7 @@ public class AccessPoliciesController : Controller
         var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
         var policies = requests.Select(request => request.ToServiceAccountProjectAccessPolicy(id));
         var results =
-            await _createAccessPoliciesCommand.CreateManyAsync(new List<BaseAccessPolicy>(policies), userId,
-                accessClient);
+            await _createAccessPoliciesCommand.CreateManyAsync(new List<BaseAccessPolicy>(policies), userId, accessClient);
         var responses = results.Select(ap =>
             new ServiceAccountProjectAccessPolicyResponseModel((ServiceAccountProjectAccessPolicy)ap));
         return new ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>(responses);
