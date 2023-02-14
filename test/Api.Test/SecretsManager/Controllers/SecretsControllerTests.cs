@@ -1,5 +1,6 @@
 ﻿using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Api.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -13,7 +14,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
-using static Bit.Api.Test.SecretsManager.Controllers.AccessPoliciesControllerTests;
 
 namespace Bit.Api.Test.SecretsManager.Controllers;
 
