@@ -148,8 +148,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         {
             var dbContext = GetDatabaseContext(scope);
             var organization = await GetDbSet(dbContext)
-                .Where(o => o.LicenseKey == licenseKey)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(o => o.LicenseKey == licenseKey);
 
             return organization;
         }
