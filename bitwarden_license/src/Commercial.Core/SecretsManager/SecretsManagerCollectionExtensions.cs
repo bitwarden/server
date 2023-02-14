@@ -10,6 +10,7 @@ using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Commands.Trash.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Core.SecretsManager;
@@ -31,5 +32,6 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IUpdateAccessPolicyCommand, UpdateAccessPolicyCommand>();
         services.AddScoped<IDeleteAccessPolicyCommand, DeleteAccessPolicyCommand>();
         services.AddScoped<IImportCommand, ImportCommand>();
+        services.AddScoped<IEmptyTrashCommand, EmptyTrashCommand>();
     }
 }
