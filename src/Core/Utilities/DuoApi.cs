@@ -122,7 +122,7 @@ public class DuoApi
 
         var dateString = RFC822UtcNow();
         var auth = Sign(method, path, canonParams, dateString);
-        
+
         var request = new HttpRequestMessage
         {
             Method = new HttpMethod(method),
@@ -136,7 +136,7 @@ public class DuoApi
         {
             _httpClient.Timeout = TimeSpan.FromMilliseconds(timeout);
         }
-        
+
         if (method.Equals("POST") || method.Equals("PUT"))
         {
             request.Content = new StringContent(canonParams, Encoding.UTF8, "application/x-www-form-urlencoded");
