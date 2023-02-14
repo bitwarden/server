@@ -121,4 +121,14 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
         return await query.AnyAsync();
     }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> ImportAsync(IEnumerable<Core.SecretsManager.Entities.Project> projects)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var entities = projects.Select(p => Mapper.Map<Project>(p));
+        var dbContext = GetDatabaseContext(scope);
+        await GetDbSet(dbContext).AddRangeAsync(entities);
+        await dbContext.SaveChangesAsync();
+        return projects;
+    }
 }
