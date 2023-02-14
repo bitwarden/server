@@ -451,6 +451,31 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AddOrganizations_Success(Provider provider, ICollection<Organization> organizations, User user, string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+
+        foreach (var organization in organizations)
+        {
+            organization.PlanType = PlanType.EnterpriseAnnually;
+            providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        }
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var organizationIds = organizations.Select(o => o.Id).ToArray();
+
+        await sutProvider.Sut.AddOrganizations(provider.Id, organizationIds, user.Id, key);
+
+        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateWithManyOrganizations(Arg.Is<ProviderOrganization>(p => p.ProviderId == provider.Id), organizationIds);
+        await sutProvider.GetDependency<IEventService>()
+            .Received().LogProviderOrganizationEventsAsync(provider.Id, Arg.Any<IEnumerable<ProviderOrganization>>(),
+                EventType.ProviderOrganization_Added);
+    }
+
+    [Theory, BitAutoData]
     public async Task CreateOrganizationAsync_Success(Provider provider, OrganizationSignup organizationSignup,
         Organization organization, string clientOwnerEmail, User user, SutProvider<ProviderService> sutProvider)
     {
