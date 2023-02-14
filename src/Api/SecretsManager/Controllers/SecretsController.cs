@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
@@ -13,30 +14,52 @@ namespace Bit.Api.SecretsManager.Controllers;
 [Authorize("secrets")]
 public class SecretsController : Controller
 {
+    private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
-    private readonly IProjectRepository _projectRepository;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
 
-    public SecretsController(ISecretRepository secretRepository, IProjectRepository projectRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand)
+    public SecretsController(
+        ICurrentContext currentContext,
+        ISecretRepository secretRepository,
+        ICreateSecretCommand createSecretCommand,
+        IUpdateSecretCommand updateSecretCommand,
+        IDeleteSecretCommand deleteSecretCommand)
     {
+        _currentContext = currentContext;
         _secretRepository = secretRepository;
-        _projectRepository = projectRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
-    public async Task<SecretWithProjectsListResponseModel> GetSecretsByOrganizationAsync([FromRoute] Guid organizationId)
+    public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync([FromRoute] Guid organizationId)
     {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
         var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
+    [HttpPost("organizations/{organizationId}/secrets")]
+    public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
+    {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId));
+        return new SecretResponseModel(result);
+    }
+
     [HttpGet("secrets/{id}")]
-    public async Task<SecretResponseModel> GetSecretAsync([FromRoute] Guid id)
+    public async Task<SecretResponseModel> GetAsync([FromRoute] Guid id)
     {
         var secret = await _secretRepository.GetByIdAsync(id);
         if (secret == null)
@@ -54,15 +77,8 @@ public class SecretsController : Controller
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
-    [HttpPost("organizations/{organizationId}/secrets")]
-    public async Task<SecretResponseModel> CreateSecretAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
-    {
-        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId));
-        return new SecretResponseModel(result);
-    }
-
     [HttpPut("secrets/{id}")]
-    public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
+    public async Task<SecretResponseModel> UpdateAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
         var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id));
         return new SecretResponseModel(result);

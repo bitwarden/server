@@ -4,5 +4,5 @@ namespace Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 
 public interface ICreateProjectCommand
 {
-    Task<Project> CreateAsync(Project project);
+    Task<Project> CreateAsync(Project project, Guid userId);
 }

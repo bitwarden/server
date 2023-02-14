@@ -83,11 +83,17 @@ jobs:
         run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
         shell: pwsh
 
+      - name: Generate SQL file
+        run: /usr/local/sqlpackage/sqlpackage /action:Script /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"diff.sql" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        shell: pwsh
+
       - name: Upload Report
         uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
           name: report.xml
-          path: report.xml
+          path: |
+            report.xml
+            diff.sql
 
       - name: Validate XML
         run: |

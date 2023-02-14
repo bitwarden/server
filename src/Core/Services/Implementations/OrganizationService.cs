@@ -1061,6 +1061,7 @@ public class OrganizationService : IOrganizationService
                         Type = invite.Type.Value,
                         Status = OrganizationUserStatusType.Invited,
                         AccessAll = invite.AccessAll,
+                        AccessSecretsManager = invite.AccessSecretsManager,
                         ExternalId = externalId,
                         CreationDate = DateTime.UtcNow,
                         RevisionDate = DateTime.UtcNow,

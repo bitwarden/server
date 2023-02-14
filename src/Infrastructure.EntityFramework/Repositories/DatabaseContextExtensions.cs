@@ -34,7 +34,7 @@ public static class DatabaseContextExtensions
         UpdateUserRevisionDate(users);
     }
 
-    public static async Task UserBumpAccountRevisionDateByCipherIdAsync(this DatabaseContext context, Guid cipherId, Guid? organizationId)
+    public static async Task UserBumpAccountRevisionDateByCipherIdAsync(this DatabaseContext context, Guid cipherId, Guid organizationId)
     {
         var query = new UserBumpAccountRevisionDateByCipherIdQuery(cipherId, organizationId);
         var users = await query.Run(context).ToListAsync();

@@ -1,5 +1,4 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using User = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
@@ -7,15 +6,9 @@ namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 public class UserBumpAccountRevisionDateByCipherIdQuery : IQuery<User>
 {
     private readonly Guid _cipherId;
-    private readonly Guid? _organizationId;
+    private readonly Guid _organizationId;
 
-    public UserBumpAccountRevisionDateByCipherIdQuery(Cipher cipher)
-    {
-        _cipherId = cipher.Id;
-        _organizationId = cipher.OrganizationId;
-    }
-
-    public UserBumpAccountRevisionDateByCipherIdQuery(Guid cipherId, Guid? organizationId)
+    public UserBumpAccountRevisionDateByCipherIdQuery(Guid cipherId, Guid organizationId)
     {
         _cipherId = cipherId;
         _organizationId = organizationId;

@@ -28,6 +28,7 @@
     "orgcustom",
     "providerprovideradmin",
     "providerserviceuser",
+    "accesssecretsmanager",
     "sub",
     "organization"
   ],

@@ -418,7 +418,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(_marsConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_CreateMany]",
+                $"[{Schema}].[{Table}_CreateMany2]",
                 new { OrganizationUsersInput = orgUsersTVP },
                 commandType: CommandType.StoredProcedure);
         }
@@ -437,7 +437,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(_marsConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_UpdateMany]",
+                $"[{Schema}].[{Table}_UpdateMany2]",
                 new { OrganizationUsersInput = orgUsersTVP },
                 commandType: CommandType.StoredProcedure);
         }
