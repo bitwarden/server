@@ -80,7 +80,6 @@ public class Startup
                 options.Cookie.Path = "/admin";
             });
         }
-        services.AddScoped<IUserClaimsPrincipalFactory<IdentityUser>, CustomClaimsPrincipalFactory>();
 
         // Services
         services.AddBaseServices(globalSettings);

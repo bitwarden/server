@@ -50,7 +50,7 @@ public class AccessControlService : IAccessControlService
             return null;
 
         var role = roleSetting.Key.Substring(roleSetting.Key.IndexOf(rolePrefix) + rolePrefix.Length);
-        return role;
+        return role.ToLowerInvariant();
     }
 
     private string GetUserRoleFromClaim()
