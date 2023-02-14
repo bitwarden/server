@@ -26,6 +26,8 @@ SELECT
         ELSE TRY_CONVERT(UNIQUEIDENTIFIER, JSON_VALUE(C.[Folders], CONCAT('$."', @UserId, '"')))
     END [FolderId],
     C.[DeletedDate],
-    C.[Reprompt]
+    C.[Reprompt],
+    C.[Key],
+    C.[ForceKeyRotation]
 FROM
     [dbo].[Cipher] C

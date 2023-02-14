@@ -357,6 +357,8 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                                         Reprompt = c.Reprompt,
                                         ViewPassword = true,
                                         OrganizationUseTotp = false,
+                                        Key = c.Key,
+                                        ForceKeyRotation = c.ForceKeyRotation
                                     };
             }
             var ciphers = await cipherDetailsView.ToListAsync();
