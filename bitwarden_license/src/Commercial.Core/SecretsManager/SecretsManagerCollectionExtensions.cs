@@ -1,10 +1,12 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
 using Bit.Commercial.Core.SecretsManager.Commands.AccessTokens;
+using Bit.Commercial.Core.SecretsManager.Commands.Porting;
 using Bit.Commercial.Core.SecretsManager.Commands.Projects;
 using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 using Bit.Commercial.Core.SecretsManager.Commands.ServiceAccounts;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
+using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
@@ -28,5 +30,6 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<ICreateAccessPoliciesCommand, CreateAccessPoliciesCommand>();
         services.AddScoped<IUpdateAccessPolicyCommand, UpdateAccessPolicyCommand>();
         services.AddScoped<IDeleteAccessPolicyCommand, DeleteAccessPolicyCommand>();
+        services.AddScoped<IImportCommand, ImportCommand>();
     }
 }
