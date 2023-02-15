@@ -492,7 +492,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
             secretIds.Add(secret.Id);
         }
 
-        var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/delete", secretIds);
+        var response = await _client.PostAsJsonAsync($"/secrets/delete", secretIds);
         response.EnsureSuccessStatusCode();
 
         var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
