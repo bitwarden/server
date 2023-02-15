@@ -11,28 +11,15 @@ jobs:
   purge:
     name: Purge old images
     runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: bitwardenqa
-          - name: bitwardenprod
     steps:
       - name: Login to Azure
-        if: matrix.name == 'bitwardenprod'
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to Azure
-        if: matrix.name == 'bitwardenqa'
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
-        with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
-
       - name: Purge images
         env:
-          REGISTRY: ${{ matrix.name }}
+          REGISTRY: bitwardenprod
           AGO_DUR_VER: "180d"
           AGO_DUR: "30d"
         run: |
