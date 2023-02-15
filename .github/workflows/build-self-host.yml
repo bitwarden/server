@@ -9,6 +9,12 @@ on:
     paths-ignore:
       - ".github/workflows/**"
   workflow_dispatch:
+  pull_request:
+    branches-ignore:
+      - "l10n_master"
+      - "gh-pages"
+    paths:
+      - ".github/workflows/build-self-host.yml"
 
 jobs:
   build-docker:
