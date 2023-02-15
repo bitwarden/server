@@ -30,7 +30,7 @@ public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMode
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
-        OrganizationUserName = string.IsNullOrWhiteSpace(accessPolicy.User?.Name) ? accessPolicy.User?.Email : accessPolicy.User?.Name;
+        OrganizationUserName = accessPolicy.GetUserDisplayName();
     }
 
     public UserProjectAccessPolicyResponseModel() : base(new UserProjectAccessPolicy(), _objectName)
@@ -51,7 +51,7 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
-        OrganizationUserName = string.IsNullOrWhiteSpace(accessPolicy.User?.Name) ? accessPolicy.User?.Email : accessPolicy.User?.Name;
+        OrganizationUserName = accessPolicy.GetUserDisplayName();
     }
 
     public UserServiceAccountAccessPolicyResponseModel() : base(new UserServiceAccountAccessPolicy(), _objectName)
