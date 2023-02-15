@@ -19,6 +19,7 @@ namespace Bit.Api.SecretsManager.Controllers;
 [Route("access-policies")]
 public class AccessPoliciesController : Controller
 {
+    private const int _maxBulkCreation = 15;
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly ICreateAccessPoliciesCommand _createAccessPoliciesCommand;
     private readonly ICurrentContext _currentContext;
@@ -58,6 +59,11 @@ public class AccessPoliciesController : Controller
     public async Task<ProjectAccessPoliciesResponseModel> CreateProjectAccessPoliciesAsync([FromRoute] Guid id,
         [FromBody] AccessPoliciesCreateRequest request)
     {
+        if (request.Count() > _maxBulkCreation)
+        {
+            throw new BadRequestException($"Can process no more than {_maxBulkCreation} creation requests at once.");
+        }
+
         var project = await _projectRepository.GetByIdAsync(id);
         if (project == null)
         {
@@ -86,6 +92,11 @@ public class AccessPoliciesController : Controller
         [FromRoute] Guid id,
         [FromBody] AccessPoliciesCreateRequest request)
     {
+        if (request.Count() > _maxBulkCreation)
+        {
+            throw new BadRequestException($"Can process no more than {_maxBulkCreation} creation requests at once.");
+        }
+
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
         if (serviceAccount == null)
         {
@@ -132,6 +143,11 @@ public class AccessPoliciesController : Controller
         CreateServiceAccountGrantedPoliciesAsync([FromRoute] Guid id,
             [FromBody] List<GrantedAccessPolicyRequest> requests)
     {
+        if (requests.Count > _maxBulkCreation)
+        {
+            throw new BadRequestException($"Can process no more than {_maxBulkCreation} creation requests at once.");
+        }
+
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
         if (serviceAccount == null)
         {
