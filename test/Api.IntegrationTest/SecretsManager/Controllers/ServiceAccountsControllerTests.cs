@@ -461,11 +461,13 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
-    public async Task RevokeAccessToken_User_NoPermission()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task RevokeAccessToken_User_NoPermission(bool hasReadAccess)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -473,6 +475,19 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
+
+        if (hasReadAccess)
+        {
+            await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> {
+                new UserServiceAccountAccessPolicy
+                {
+                    GrantedServiceAccountId = serviceAccount.Id,
+                    OrganizationUserId = orgUser.Id,
+                    Write = false,
+                    Read = true,
+                },
+            });
+        }
 
         var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
         {

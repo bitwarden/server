@@ -155,7 +155,7 @@ public class ServiceAccountsController : Controller
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasReadAccessToServiceAccount(id, userId),
+            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
             _ => false,
         };
 
