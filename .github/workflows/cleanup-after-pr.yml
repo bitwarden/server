@@ -14,18 +14,18 @@ jobs:
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
 
       ########## ACR ##########
-      - name: Login to Azure - QA Subscription
+      - name: Login to Azure - PROD Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to Azure ACR
-        run: az acr login -n bitwardenqa
+        run: az acr login -n bitwardenprod
 
       ########## Remove Docker images ##########
       - name: Remove the docker image from ACR
         env:
-          REGISTRY_NAME: bitwardenqa
+          REGISTRY_NAME: bitwardenprod
           SERVICES: |
             services:
               - Admin
