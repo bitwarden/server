@@ -192,19 +192,19 @@ public class SecretsControllerTests
         {
             mockResult.Add(new Tuple<Secret, string>(secret, ""));
         }
-        sutProvider.GetDependency<IDeleteSecretCommand>().DeleteSecrets(ids, userId, organizationId).ReturnsForAnyArgs(mockResult);
+        sutProvider.GetDependency<IDeleteSecretCommand>().DeleteSecrets(ids, userId).ReturnsForAnyArgs(mockResult);
 
-        var results = await sutProvider.Sut.BulkDeleteAsync(ids, organizationId);
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
         await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
-                     .DeleteSecrets(Arg.Is(ids), userId, organizationId);
+                     .DeleteSecrets(Arg.Is(ids), userId);
         Assert.Equal(data.Count, results.Data.Count());
     }
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteSecret_NoGuids_ThrowsArgumentNullException(SutProvider<SecretsController> sutProvider, Guid organizationId)
+    public async void BulkDeleteSecret_NoGuids_ThrowsArgumentNullException(SutProvider<SecretsController> sutProvider)
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.BulkDeleteAsync(new List<Guid>(), organizationId));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.BulkDeleteAsync(new List<Guid>()));
     }
 }
