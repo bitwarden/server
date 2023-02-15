@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Full Server - Self-hosted" type="CompoundRunConfigurationType">
+    <toRun name="Admin: Admin-SelfHost" type="LaunchSettings" />
+    <toRun name="Api: Api-SelfHost" type="LaunchSettings" />
+    <toRun name="Events: Events-SelfHost" type="LaunchSettings" />
+    <toRun name="Identity: Identity-SelfHost" type="LaunchSettings" />
+    <toRun name="Notifications: Notifications-SelfHost" type="LaunchSettings" />
+    <toRun name="Sso: Sso-SelfHost" type="LaunchSettings" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -3,6 +3,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.SqliteMigrations;
 
@@ -21,6 +22,10 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
 {
     public DatabaseContext CreateDbContext(string[] args)
     {
+        var services = new ServiceCollection();
+        services.AddDataProtection();
+        var serviceProvider = services.BuildServiceProvider();
+
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         var connectionString = globalSettings.Sqlite?.ConnectionString ?? "Data Source=:memory:";
@@ -30,7 +35,8 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         }
         optionsBuilder.UseSqlite(
             connectionString,
-            b => b.MigrationsAssembly("SqliteMigrations"));
+            b => b.MigrationsAssembly("SqliteMigrations"))
+           .UseApplicationServiceProvider(serviceProvider);
         return new DatabaseContext(optionsBuilder.Options);
     }
 }

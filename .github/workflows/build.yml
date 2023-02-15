@@ -38,7 +38,7 @@ jobs:
 
   testing:
     name: Testing
-    runs-on: windows-2022
+    runs-on: ubuntu-22.04
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
@@ -46,13 +46,10 @@ jobs:
         uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
         with:
           dotnet-version: "6.0.x"
-      - name: Set up MSBuild
-        uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
 
       - name: Print environment
         run: |
           dotnet --info
-          msbuild -version
           nuget help | grep Version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
@@ -64,20 +61,23 @@ jobs:
         run: dotnet restore --locked-mode
         shell: pwsh
 
+      - name: Remove SQL proj
+        run: dotnet sln bitwarden-server.sln remove src/Sql/Sql.sqlproj
+
       - name: Build OSS solution
-        run: msbuild bitwarden-server.sln /p:Configuration=Debug /p:DefineConstants="OSS" /verbosity:minimal
+        run: dotnet build bitwarden-server.sln -p:Configuration=Debug -p:DefineConstants="OSS" --verbosity minimal
         shell: pwsh
 
       - name: Build solution
-        run: msbuild bitwarden-server.sln /p:Configuration=Debug /verbosity:minimal
+        run: dotnet build bitwarden-server.sln -p:Configuration=Debug --verbosity minimal
         shell: pwsh
 
       - name: Test OSS solution
-        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx" || true
+        run: dotnet test ./test --configuration Debug --no-build --logger "trx;LogFileName=oss-test-results.trx"
         shell: pwsh
 
       - name: Test Bitwarden solution
-        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx" || true
+        run: dotnet test ./bitwarden_license/test --configuration Debug --no-build --logger "trx;LogFileName=bw-test-results.trx"
         shell: pwsh
 
       - name: Report test results
@@ -191,64 +191,72 @@ jobs:
         include:
           - project_name: Admin
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Api
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Attachments
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
           - project_name: Events
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: EventsProcessor
             base_path: ./src
-            docker_repos: [bitwardenqa.azurecr.io]
+            docker_repos: [bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Icons
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Identity
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: MsSql
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
           - project_name: Nginx
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
           - project_name: Notifications
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Server
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Setup
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Sso
             base_path: ./bitwarden_license/src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Scim
             base_path: ./bitwarden_license/src
-            docker_repos: [bitwarden, bitwardenqa.azurecr.io]
+            docker_repos: [bitwarden, bitwardenprod.azurecr.io]
             dotnet: true
           - project_name: Billing
             base_path: ./src
-            docker_repos: [bitwardenqa.azurecr.io]
+            docker_repos: [bitwardenprod.azurecr.io]
             dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      - name: Set up image tag
+        run: |
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       ########## Build Docker Image ##########
       - name: Setup project name
@@ -277,28 +285,23 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: docker build -t $PROJECT_NAME ${{ matrix.base_path }}/${{ matrix.project_name }}
 
-      ########## ACR ##########
-      - name: Login to Azure - QA Subscription
+      ########## PROD ACR ##########
+      - name: Login to Azure - PROD Subscription
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to Azure ACR
-        run: az acr login -n bitwardenqa
+      - name: Login to PROD ACR
+        run: az acr login -n bitwardenprod
 
-      - name: Tag and Push image to Azure ACR QA registry
+      - name: Tag and push image to PROD ACR
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          REGISTRY: bitwardenqa.azurecr.io
+          REGISTRY: bitwardenprod.azurecr.io
         run: |
-          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-          if [[ "$IMAGE_TAG" == "master" ]]; then
-            IMAGE_TAG=dev
-          fi
-
           docker tag $PROJECT_NAME \
-            $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
-          docker push $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+            $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker
         run: docker logout
@@ -366,14 +369,9 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwarden
         run: |
-          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-          if [[ "$IMAGE_TAG" == "master" ]]; then
-            IMAGE_TAG=dev
-          fi
-
           docker tag $PROJECT_NAME \
-            $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
-          docker push $REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+            $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push $REGISTRY/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker and disable Docker Notary
         if: |
@@ -390,6 +388,11 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
+        with:
+          dotnet-version: "6.0.x"
+
       - name: Checkout repo
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 

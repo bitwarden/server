@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[ProviderUserUserDetails_ReadByProviderId]
-    @ProviderId UNIQUEIDENTIFIER
+    @ProviderId UNIQUEIDENTIFIER,
+    @Status TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -10,4 +11,5 @@ BEGIN
         [dbo].[ProviderUserUserDetailsView]
     WHERE
         [ProviderId] = @ProviderId
+        AND [Status] = COALESCE(@Status, [Status])
 END

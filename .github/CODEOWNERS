@@ -1,0 +1,5 @@
+﻿# Please sort lines alphabetically, this will ensure we don't accidentally add duplicates.
+#
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+**/SecretsManager @bitwarden/pod-sm-dev

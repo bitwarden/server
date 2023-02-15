@@ -57,7 +57,7 @@ server {
     include /etc/nginx/security-headers-ssl.conf;
 {{/if}}
     include /etc/nginx/security-headers.conf;
-    add_header Content-Security-Policy "{{{String.Coalesce env.BW_CSP "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com https://www.gravatar.com; child-src 'self' https://*.duosecurity.com https://*.duofederal.com; frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; connect-src 'self' https://api.pwnedpasswords.com https://api.2fa.directory; object-src 'self' blob:;"}}}";
+    add_header Content-Security-Policy "{{{String.Coalesce env.BW_CSP "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://haveibeenpwned.com; child-src 'self' https://*.duosecurity.com https://*.duofederal.com; frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; connect-src 'self' https://api.pwnedpasswords.com https://api.2fa.directory; object-src 'self' blob:;"}}}";
     add_header X-Frame-Options SAMEORIGIN;
     add_header X-Robots-Tag "noindex, nofollow";
   }
@@ -101,7 +101,7 @@ server {
     root /app/Web;
   }
 
-  location /attachments {
+  location /attachments/ {
     alias /etc/bitwarden/attachments/;
   }
 {{#if (String.Equal env.BW_ENABLE_API "true")}}

@@ -7,6 +7,8 @@ using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
@@ -33,6 +35,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
+        services.AddOrganizationGroupCommands();
+        services.AddOrganizationLicenseCommandQueries();
         services.AddOrganizationDomainCommandsQueries();
     }
 
@@ -85,6 +89,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
+    }
+
+    private static void AddOrganizationLicenseCommandQueries(this IServiceCollection services)
+    {
+        services.AddScoped<ICloudGetOrganizationLicenseQuery, CloudGetOrganizationLicenseQuery>();
+        services.AddScoped<ISelfHostedGetOrganizationLicenseQuery, SelfHostedGetOrganizationLicenseQuery>();
     }
 
     private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
 using Bit.Core.Repositories;
 
@@ -15,7 +16,7 @@ public class UpdateOrganizationConnectionCommand : IUpdateOrganizationConnection
         _organizationConnectionRepository = organizationConnectionRepository;
     }
 
-    public async Task<OrganizationConnection> UpdateAsync<T>(OrganizationConnectionData<T> connectionData) where T : new()
+    public async Task<OrganizationConnection> UpdateAsync<T>(OrganizationConnectionData<T> connectionData) where T : IConnectionConfig
     {
         if (!connectionData.Id.HasValue)
         {

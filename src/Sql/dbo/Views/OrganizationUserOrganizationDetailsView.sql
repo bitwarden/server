@@ -39,7 +39,8 @@ SELECT
     OS.[FriendlyName] FamilySponsorshipFriendlyName,
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
     OS.[ToDelete] FamilySponsorshipToDelete,
-    OS.[ValidUntil] FamilySponsorshipValidUntil
+    OS.[ValidUntil] FamilySponsorshipValidUntil,
+    OU.[AccessSecretsManager]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
