@@ -24,7 +24,7 @@ public class DeleteSecretCommandTests
     {
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(data).Returns(new List<Secret>());
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteSecrets(data, default, default));
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteSecrets(data, default));
 
         await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().SoftDeleteManyByIdAsync(default);
     }
@@ -40,7 +40,7 @@ public class DeleteSecretCommandTests
         };
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(data).Returns(new List<Secret>() { secret });
 
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteSecrets(data, default, default));
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteSecrets(data, default));
 
         await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().SoftDeleteManyByIdAsync(default);
     }
@@ -80,7 +80,7 @@ public class DeleteSecretCommandTests
         sutProvider.GetDependency<ISecretRepository>().GetManyByIds(data).Returns(secrets);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
 
-        var results = await sutProvider.Sut.DeleteSecrets(data, userId, organizationId);
+        var results = await sutProvider.Sut.DeleteSecrets(data, userId);
         await sutProvider.GetDependency<ISecretRepository>().Received(1).SoftDeleteManyByIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
 
         foreach (var result in results)

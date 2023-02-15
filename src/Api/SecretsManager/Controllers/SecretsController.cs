@@ -76,7 +76,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        if (!await userHasReadAccessToSecret(secret))
+        if (!await UserHasReadAccessToSecret(secret))
         {
             throw new NotFoundException();
         }
@@ -99,7 +99,6 @@ public class SecretsController : Controller
 
         var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId, userId, accessClient);
 
-        var responses = secrets.Select(s => new SecretResponseModel(s));
         return new SecretWithProjectsListResponseModel(secrets);
     }
 
@@ -112,33 +111,16 @@ public class SecretsController : Controller
         return new SecretResponseModel(result);
     }
 
-    [HttpPost("secrets/{organizationId}/delete")]
-    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids, [FromRoute] Guid organizationId)
+    [HttpPost("secrets/delete")]
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var results = await _deleteSecretCommand.DeleteSecrets(ids, userId, organizationId);
+        var results = await _deleteSecretCommand.DeleteSecrets(ids, userId);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
-    public async Task<bool> userHasReadAccessToProject(Guid projectId, Guid organizationId)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
-            AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId),
-            _ => false,
-        };
-
-        return hasAccess;
-    }
-
-    public async Task<bool> userHasReadAccessToSecret(Secret secret)
+    public async Task<bool> UserHasReadAccessToSecret(Secret secret)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);

@@ -37,7 +37,6 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         {
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => project != null && await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
-            AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(project.Id, userId),
             _ => false,
         };
 

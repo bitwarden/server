@@ -21,19 +21,18 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         _currentContext = currentContext;
     }
 
-    public async Task<List<Tuple<Secret, string>>> DeleteSecrets(List<Guid> ids, Guid userId, Guid organizationId)
+    public async Task<List<Tuple<Secret, string>>> DeleteSecrets(List<Guid> ids, Guid userId)
     {
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var secrets = await _secretRepository.GetManyByIds(ids);
+        var secrets = (await _secretRepository.GetManyByIds(ids)).ToList();
 
-        if (secrets?.Any() != true)
+        if (secrets.Any() != true)
         {
             throw new NotFoundException();
         }
 
         // Ensure all secrets belongs to the same organization
-        if (secrets.Any(p => p.OrganizationId != organizationId))
+        var organizationId = secrets.First().OrganizationId;
+        if (secrets.Any(secret => secret.OrganizationId != organizationId))
         {
             throw new BadRequestException();
         }
@@ -43,46 +42,40 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             throw new NotFoundException();
         }
 
+        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
         var results = new List<Tuple<Secret, string>>();
         var deleteIds = new List<Guid>();
 
-        foreach (var id in ids)
+        foreach (var secret in secrets)
         {
-            var secret = secrets.FirstOrDefault(secret => secret.Id == id);
+            var hasAccess = orgAdmin;
 
-
-            if (secret == null)
+            if (secret.Projects != null && secret.Projects?.Count > 0)
             {
-                throw new NotFoundException();
+                var projectId = secret.Projects.First().Id;
+
+                hasAccess = accessClient switch
+                {
+                    AccessClientType.NoAccessCheck => true,
+                    AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),
+                    _ => false,
+                };
+            }
+
+            if (!hasAccess)
+            {
+                results.Add(new Tuple<Secret, string>(secret, "access denied"));
             }
             else
             {
-                var hasAccess = orgAdmin;
-
-                if (secret.Projects != null && secret.Projects?.Count > 0)
-                {
-                    var projectId = secret.Projects.FirstOrDefault().Id;
-
-                    hasAccess = accessClient switch
-                    {
-                        AccessClientType.NoAccessCheck => true,
-                        AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),
-                        AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasWriteAccessToProject(projectId, userId),
-                        _ => false,
-                    };
-                }
-
-                if (!hasAccess)
-                {
-                    results.Add(new Tuple<Secret, string>(secret, "access denied"));
-                }
-                else
-                {
-                    deleteIds.Add(id);
-                    results.Add(new Tuple<Secret, string>(secret, ""));
-                }
+                deleteIds.Add(secret.Id);
+                results.Add(new Tuple<Secret, string>(secret, ""));
             }
-        };
+        }
+
+
 
         if (deleteIds.Count > 0)
         {
