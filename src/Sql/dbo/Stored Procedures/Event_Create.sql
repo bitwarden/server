@@ -16,7 +16,8 @@
     @DeviceType SMALLINT,
     @IpAddress VARCHAR(50),
     @Date DATETIME2(7),
-    @SystemUser TINYINT = null
+    @SystemUser TINYINT = null,
+    @DomainName VARCHAR(256)
 AS
 BEGIN
     SET NOCOUNT ON
@@ -40,7 +41,8 @@ BEGIN
         [DeviceType],
         [IpAddress],
         [Date],
-        [SystemUser]
+        [SystemUser],
+        [DomainName]
     )
     VALUES
     (
@@ -61,6 +63,7 @@ BEGIN
         @DeviceType,
         @IpAddress,
         @Date,
-        @SystemUser
+        @SystemUser,
+        @DomainName
     )
 END
