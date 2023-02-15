@@ -45,7 +45,7 @@ jobs:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
       - name: Login to Azure ACR
-        run: az acr login -n bitwardenqa
+        run: az acr login -n bitwardenprod
 
       - name: Login to Azure - Prod Subscription
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
@@ -68,8 +68,7 @@ jobs:
           secrets: "docker-password,
             docker-username,
             dct-delegate-2-repo-passphrase,
-            dct-delegate-2-key
-            github-pat-bitwarden-devops-bot-repo-scope"
+            dct-delegate-2-key"
 
       - name: Log into Docker
         if: ${{ env.is_publish_branch == 'true' }}
@@ -109,9 +108,9 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
           if [ "$IMAGE_TAG" = "dev" ] || [ "$IMAGE_TAG" = "beta" ]; then
-            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+            echo "tags=bitwardenprod.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           else
-            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+            echo "tags=bitwardenprod.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build Docker image
