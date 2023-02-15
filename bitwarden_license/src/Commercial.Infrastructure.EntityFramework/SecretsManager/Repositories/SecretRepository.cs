@@ -171,12 +171,26 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var utcNow = DateTime.UtcNow;
             var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
             await secrets.ForEachAsync(secret =>
             {
                 dbContext.Attach(secret);
                 dbContext.Remove(secret);
+            });
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task RestoreManyByIdAsync(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
+            await secrets.ForEachAsync(secret =>
+            {
+                dbContext.Attach(secret);
+                secret.DeletedDate = null;
             });
             await dbContext.SaveChangesAsync();
         }
