@@ -68,8 +68,7 @@ jobs:
           secrets: "docker-password,
             docker-username,
             dct-delegate-2-repo-passphrase,
-            dct-delegate-2-key
-            github-pat-bitwarden-devops-bot-repo-scope"
+            dct-delegate-2-key"
 
       - name: Log into Docker
         if: ${{ env.is_publish_branch == 'true' }}
