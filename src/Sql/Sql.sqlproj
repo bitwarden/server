@@ -454,4 +454,20 @@
     <Build Include="SecretsManager\dbo\Views\ApiKeyDetailsView.sql" />
     <Build Include="SecretsManager\dbo\Views\ApiKeyView.sql" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_Create.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteById.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteIfExpired.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_OrganizationDeleted.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByClaimedDomain.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByNextRunDate.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadById.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByOrganizationId.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadDomainByOrgIdAndDomainName.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadIfExpired.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_Update.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomainSsoDetails_ReadByEmail.sql" />
+    <Content Include="dbo\Tables\OrganizationDomain.sql" />
+    <Content Include="dbo\Views\OrganizationDomainView.sql" />
+  </ItemGroup>
 </Project>
