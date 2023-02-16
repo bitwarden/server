@@ -7,6 +7,8 @@ using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationDomains;
+using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
@@ -35,6 +37,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandQueries();
+        services.AddOrganizationDomainCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -92,6 +95,15 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<ICloudGetOrganizationLicenseQuery, CloudGetOrganizationLicenseQuery>();
         services.AddScoped<ISelfHostedGetOrganizationLicenseQuery, SelfHostedGetOrganizationLicenseQuery>();
+    }
+
+    private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
+        services.AddScoped<IVerifyOrganizationDomainCommand, VerifyOrganizationDomainCommand>();
+        services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
+        services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
+        services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)
