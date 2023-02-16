@@ -60,4 +60,10 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     {
         return Premium.GetValueOrDefault(false);
     }
+
+    public Permissions GetPermissions()
+    {
+        return string.IsNullOrWhiteSpace(Permissions) ? null
+            : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
+    }
 }

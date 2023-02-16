@@ -14,6 +14,7 @@ public class Organization : Core.Entities.Organization
     public virtual ICollection<Transaction> Transactions { get; set; }
     public virtual ICollection<OrganizationApiKey> ApiKeys { get; set; }
     public virtual ICollection<OrganizationConnection> Connections { get; set; }
+    public virtual ICollection<OrganizationDomain> Domains { get; set; }
 }
 
 public class OrganizationMapperProfile : Profile
