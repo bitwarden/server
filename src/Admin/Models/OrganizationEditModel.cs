@@ -6,12 +6,19 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.Models;
 
 public class OrganizationEditModel : OrganizationViewModel
 {
     public OrganizationEditModel() { }
+
+    public OrganizationEditModel(Provider provider)
+    {
+        Provider = provider;
+        Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+    }
 
     public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,

@@ -1,0 +1,95 @@
+<script>
+    (() => {
+        document.getElementById('teams-trial').addEventListener('click', () => {
+            if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                alert('Organization is not on a free plan.');
+                return;
+            }
+            // Plan
+            document.getElementById('@(nameof(Model.PlanType))').value = '@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)';
+            document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
+            document.getElementById('@(nameof(Model.Seats))').value = '10';
+            document.getElementById('@(nameof(Model.MaxCollections))').value = '';
+            document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+            // Features
+            document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
+            document.getElementById('@(nameof(Model.UseSso))').checked = false;
+            document.getElementById('@(nameof(Model.UseGroups))').checked = true;
+            document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
+            document.getElementById('@(nameof(Model.UseEvents))').checked = true;
+            document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
+            document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;                
+            document.getElementById('@(nameof(Model.UseTotp))').checked = true;
+            document.getElementById('@(nameof(Model.Use2fa))').checked = true;
+            document.getElementById('@(nameof(Model.UseApi))').checked = true;
+            document.getElementById('@(nameof(Model.SelfHost))').checked = false;
+            document.getElementById('@(nameof(Model.UseResetPassword))').checked = false;
+            document.getElementById('@(nameof(Model.UseScim))').checked = false;
+            // Licensing
+            document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+            document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
+            document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+        });
+        document.getElementById('enterprise-trial').addEventListener('click', () => {
+            if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                alert('Organization is not on a free plan.');
+                return;
+            }
+            // Plan
+            document.getElementById('@(nameof(Model.PlanType))').value = '@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)';
+            document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
+            document.getElementById('@(nameof(Model.Seats))').value = '10';
+            document.getElementById('@(nameof(Model.MaxCollections))').value = '';
+            document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+            // Features
+            document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
+            document.getElementById('@(nameof(Model.UseSso))').checked = true;
+            document.getElementById('@(nameof(Model.UseGroups))').checked = true;
+            document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
+            document.getElementById('@(nameof(Model.UseEvents))').checked = true;
+            document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
+            document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = true;
+            document.getElementById('@(nameof(Model.UseTotp))').checked = true;
+            document.getElementById('@(nameof(Model.Use2fa))').checked = true;
+            document.getElementById('@(nameof(Model.UseApi))').checked = true;
+            document.getElementById('@(nameof(Model.SelfHost))').checked = true;
+            document.getElementById('@(nameof(Model.UseResetPassword))').checked = true;
+            document.getElementById('@(nameof(Model.UseScim))').checked = true;
+            // Licensing
+            document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+            document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
+            document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+        });
+        document.getElementById('@(nameof(Model.PlanType))').addEventListener('change', () => {
+            const selectEl = document.getElementById('@(nameof(Model.PlanType))');
+            const selectText = selectEl.options[selectEl.selectedIndex].text;
+            document.getElementById('@(nameof(Model.Plan))').value = selectText;
+        });
+        document.getElementById('gateway-customer-link').addEventListener('click', () => {
+            const gateway = document.getElementById('@(nameof(Model.Gateway))');
+            const customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
+            if (!gateway || gateway.value === '' || !customerId || customerId.value === '') {
+                return;
+            }
+            if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
+                window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
+            } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
+                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/'
+                    + customerId.value, '_blank');
+            }
+        });
+        document.getElementById('gateway-subscription-link').addEventListener('click', () => {
+            const gateway = document.getElementById('@(nameof(Model.Gateway))');
+            const subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
+            if (!gateway || gateway.value === '' || !subId || subId.value === '') {
+                return;
+            }
+            if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
+                window.open('https://dashboard.stripe.com/subscriptions/' + subId.value, '_blank');
+            } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
+                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
+                    'subscriptions/' + subId.value, '_blank');
+            }
+        });
+    })();
+</script>
