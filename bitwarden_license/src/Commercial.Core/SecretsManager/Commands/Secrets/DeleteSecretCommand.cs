@@ -18,7 +18,6 @@ public class DeleteSecretCommand : IDeleteSecretCommand
         _currentContext = currentContext;
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
-        _currentContext = currentContext;
     }
 
     public async Task<List<Tuple<Secret, string>>> DeleteSecrets(List<Guid> ids, Guid userId)
