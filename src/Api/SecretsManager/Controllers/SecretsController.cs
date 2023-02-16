@@ -34,7 +34,6 @@ public class SecretsController : Controller
         _deleteSecretCommand = deleteSecretCommand;
         _projectRepository = projectRepository;
         _userService = userService;
-        _currentContext = currentContext;
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
