@@ -373,10 +373,10 @@ jobs:
         if: contains(matrix.docker_repos, 'bitwarden') && env.is_publish_branch == 'true'
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          docker tag bitwardenprod.azurecr.io/$PROJECT_NAME:${{ env.IMAGE_TAG }} \
-            bitwarden/$PROJECT_NAME:${{ env.IMAGE_TAG }}
-          docker push bitwarden/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker tag bitwardenprod.azurecr.io/$PROJECT_NAME:$IMAGE_TAG bitwarden/$PROJECT_NAME:$IMAGE_TAG
+          docker push bitwarden/$PROJECT_NAME:$IMAGE_TAG
 
       - name: Log out of Docker
         run: |
