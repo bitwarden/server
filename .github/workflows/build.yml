@@ -370,7 +370,7 @@ jobs:
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
       - name: Push to DockerHub
-        if: contains(matrix.docker_repos, 'bitwarden') env.is_publish_branch == 'true'
+        if: contains(matrix.docker_repos, 'bitwarden') && env.is_publish_branch == 'true'
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
