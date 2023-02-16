@@ -45,6 +45,24 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByOrganizationIdWriteAccessAsync(
+        Guid organizationId, Guid userId, AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasWriteAccessToProject(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        var projects = await query.OrderBy(p => p.RevisionDate).ToListAsync();
+        return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
+    }
+
     private static Expression<Func<Project, bool>> UserHasReadAccessToProject(Guid userId) => p =>
         p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
         p.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read));
