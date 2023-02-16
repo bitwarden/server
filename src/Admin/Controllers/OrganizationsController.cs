@@ -31,7 +31,6 @@ public class OrganizationsController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly IUserService _userService;
     private readonly IProviderRepository _providerRepository;
-    private readonly IProviderService _providerService;
     private readonly ILogger<OrganizationsController> _logger;
 
     public OrganizationsController(
@@ -50,7 +49,6 @@ public class OrganizationsController : Controller
         IReferenceEventService referenceEventService,
         IUserService userService,
         IProviderRepository providerRepository,
-        IProviderService providerService,
         ILogger<OrganizationsController> logger)
     {
         _organizationRepository = organizationRepository;
@@ -68,7 +66,6 @@ public class OrganizationsController : Controller
         _referenceEventService = referenceEventService;
         _userService = userService;
         _providerRepository = providerRepository;
-        _providerService = providerService;
         _logger = logger;
     }
 
@@ -115,16 +112,6 @@ public class OrganizationsController : Controller
     [HttpPost]
     public async Task<IActionResult> Create(Guid providerId, OrganizationEditModel model)
     {
-        var organization = model.CreateOrganization();
-        await _organizationRepository.CreateAsync(organization);
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
-        {
-            EventRaisedByUser = _userService.GetUserName(User),
-            SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
-        });
-        await _providerService.AddOrganization(providerId, organization.Id, Guid.Empty, null);
-
         return RedirectToAction("Edit", "Providers", new { id = providerId });
     }
 
