@@ -17,4 +17,5 @@ public interface IGlobalSettings
     ISsoSettings Sso { get; set; }
     ILogLevelSettings MinLogLevel { get; set; }
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
+    IDomainVerificationSettings DomainVerification { get; set; }
 }
