@@ -342,11 +342,12 @@ jobs:
         id: tag-list
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
           if [ "$IMAGE_TAG" = "dev" ] || [ "$IMAGE_TAG" = "beta" ]; then
-            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwardenprod.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+            echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwarden/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           else
-            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwardenprod.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+            echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/PROJECT_NAME:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           fi
 
       - name: Get build artifact
@@ -366,7 +367,7 @@ jobs:
         uses: docker/build-push-action@c56af957549030174b10d6867f20e78cfd7debc5
         with:
           context: ${{ matrix.base_path }}/${{ matrix.project_name }}
-          file: Dockerfile
+          file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
           tags: ${{ steps.tag-list.outputs.tags }}
