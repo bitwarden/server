@@ -27,11 +27,6 @@ public class UserProjectAccessPolicy : BaseAccessPolicy
     public User? User { get; set; }
     public Guid? GrantedProjectId { get; set; }
     public Project? GrantedProject { get; set; }
-
-    public string? GetUserDisplayName()
-    {
-        return string.IsNullOrWhiteSpace(User?.Name) ? User?.Email : User?.Name;
-    }
 }
 
 public class UserServiceAccountAccessPolicy : BaseAccessPolicy
@@ -40,11 +35,6 @@ public class UserServiceAccountAccessPolicy : BaseAccessPolicy
     public User? User { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
     public ServiceAccount? GrantedServiceAccount { get; set; }
-
-    public string? GetUserDisplayName()
-    {
-        return string.IsNullOrWhiteSpace(User?.Name) ? User?.Email : User?.Name;
-    }
 }
 
 public class GroupProjectAccessPolicy : BaseAccessPolicy

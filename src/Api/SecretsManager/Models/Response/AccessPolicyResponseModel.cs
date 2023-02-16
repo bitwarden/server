@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Entities;
 
@@ -20,6 +21,11 @@ public abstract class BaseAccessPolicyResponseModel : ResponseModel
     public bool Write { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
+
+    public string? GetUserDisplayName(User? user)
+    {
+        return string.IsNullOrWhiteSpace(user?.Name) ? user?.Email : user?.Name;
+    }
 }
 
 public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel
@@ -30,7 +36,7 @@ public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMode
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
-        OrganizationUserName = accessPolicy.GetUserDisplayName();
+        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
     }
 
     public UserProjectAccessPolicyResponseModel() : base(new UserProjectAccessPolicy(), _objectName)
@@ -51,7 +57,7 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
-        OrganizationUserName = accessPolicy.GetUserDisplayName();
+        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
     }
 
     public UserServiceAccountAccessPolicyResponseModel() : base(new UserServiceAccountAccessPolicy(), _objectName)
