@@ -3,11 +3,11 @@ using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-public class OrganizationUserReadOccupySeatCountByOrganizationIdQuery : IQuery<OrganizationUser>
+public class OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery : IQuery<OrganizationUser>
 {
     private readonly Guid _organizationId;
 
-    public OrganizationUserReadOccupySeatCountByOrganizationIdQuery(Guid organizationId)
+    public OrganizationUserReadOccupiedSeatCountByOrganizationIdQuery(Guid organizationId)
     {
         _organizationId = organizationId;
     }

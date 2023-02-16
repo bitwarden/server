@@ -455,7 +455,7 @@
     <Build Include="SecretsManager\dbo\Views\ApiKeyView.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByLicenseKey.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadSelfHostedDetailsById.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadOccupySeatCountByOrganizationId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadOccupiedSeatCountByOrganizationId.sql" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="dbo\Stored Procedures\OrganizationDomain_Create.sql" />

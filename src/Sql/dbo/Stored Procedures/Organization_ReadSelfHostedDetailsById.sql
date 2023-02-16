@@ -5,7 +5,7 @@ BEGIN
     SET NOCOUNT ON
         
     EXEC [dbo].[Organization_ReadById] @Id
-    EXEC [dbo].[OrganizationUser_ReadOccupySeatCountByOrganizationId] @Id
+    EXEC [dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId] @Id
     EXEC [dbo].[Collection_ReadCountByOrganizationId] @Id
     EXEC [dbo].[Group_ReadCountByOrganizationId] @Id
     EXEC [dbo].[OrganizationUser_ReadByOrganizationId] @Id, NULL

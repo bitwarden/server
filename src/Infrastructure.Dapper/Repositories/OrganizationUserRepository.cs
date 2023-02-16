@@ -91,7 +91,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.ExecuteScalarAsync<int>(
-                "[dbo].[OrganizationUser_ReadOccupySeatCountByOrganizationId]",
+                "[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 

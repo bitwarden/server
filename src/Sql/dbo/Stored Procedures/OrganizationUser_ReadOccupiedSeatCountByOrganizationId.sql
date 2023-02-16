@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[OrganizationUser_ReadOccupySeatCountByOrganizationId]
+CREATE PROCEDURE [dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]
     @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
