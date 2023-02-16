@@ -154,41 +154,32 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> ImportAsync(IEnumerable<Core.SecretsManager.Entities.Secret> secrets)
     {
-        try
+        using (var scope = ServiceScopeFactory.CreateScope())
         {
-            using (var scope = ServiceScopeFactory.CreateScope())
+            var dbContext = GetDatabaseContext(scope);
+            var entities = new List<Secret>();
+            var projects = secrets
+                .SelectMany(s => s.Projects ?? Enumerable.Empty<Core.SecretsManager.Entities.Project>())
+                .DistinctBy(p => p.Id)
+                .Select(p => Mapper.Map<Project>(p))
+                .ToDictionary(p => p.Id, p => p);
+
+            dbContext.AttachRange(projects.Values);
+
+            foreach (var s in secrets)
             {
-                var dbContext = GetDatabaseContext(scope);
-                var entities = new List<Secret>();
-                var projects = secrets
-                    .SelectMany(s => s.Projects ?? Enumerable.Empty<Core.SecretsManager.Entities.Project>())
-                    .DistinctBy(p => p.Id)
-                    .Select(p => Mapper.Map<Project>(p))
-                    .ToDictionary(p => p.Id, p => p);
+                var entity = Mapper.Map<Secret>(s);
 
-                dbContext.AttachRange(projects);
-
-                foreach (var s in secrets)
+                if (s.Projects?.Count > 0)
                 {
-                    var entity = Mapper.Map<Secret>(s);
-
-                    if (s.Projects?.Count > 0)
-                    {
-                        entity.Projects = s.Projects.Select(p => projects[p.Id]).ToList();
-                    }
-
-                    entities.Add(entity);
+                    entity.Projects = s.Projects.Select(p => projects[p.Id]).ToList();
                 }
-                await GetDbSet(dbContext).AddRangeAsync(entities);
-                await dbContext.SaveChangesAsync();
-            }
-            return secrets;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-        }
 
+                entities.Add(entity);
+            }
+            await GetDbSet(dbContext).AddRangeAsync(entities);
+            await dbContext.SaveChangesAsync();
+        }
         return secrets;
     }
 }

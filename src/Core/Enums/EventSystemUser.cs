@@ -2,5 +2,6 @@
 
 public enum EventSystemUser : byte
 {
-    SCIM = 1
+    SCIM = 1,
+    DomainVerification = 2
 }
