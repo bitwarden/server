@@ -347,7 +347,7 @@ jobs:
           if [ "${{ env.is_publish_branch }}" == "true" ]; then
             echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwarden/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           else
-            echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/PROJECT_NAME:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+            echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           fi
 
       - name: Get build artifact
