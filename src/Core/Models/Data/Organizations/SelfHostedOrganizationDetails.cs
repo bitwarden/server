@@ -1,8 +1,9 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.Models.Data.Organizations;
 
 public class SelfHostedOrganizationDetails : Organization
 {
@@ -91,6 +92,7 @@ public class SelfHostedOrganizationDetails : Organization
 
     public Organization ToOrganization()
     {
+        // Any new Organization properties must be added here for them to flow through to self-hosted organizations
         return new Organization
         {
             Id = Id,
