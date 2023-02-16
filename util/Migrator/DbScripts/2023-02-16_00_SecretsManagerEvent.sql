@@ -92,7 +92,7 @@ BEGIN
         @IpAddress,
         @Date,
         @SystemUser,
-        @DomainName
+        @DomainName,
         @SecretId,
         @ServiceAccountId
     )
