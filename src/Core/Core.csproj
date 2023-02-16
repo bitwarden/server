@@ -27,6 +27,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.12.0" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
+    <PackageReference Include="DnsClient" Version="1.7.0" />
     <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
     <PackageReference Include="Handlebars.Net" Version="2.1.2" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />

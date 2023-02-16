@@ -36,4 +36,13 @@ public class ApiKeyRepository : Repository<Core.SecretsManager.Entities.ApiKey, 
 
         return Mapper.Map<List<Core.SecretsManager.Entities.ApiKey>>(apiKeys);
     }
+
+    public async Task DeleteManyAsync(IEnumerable<Core.SecretsManager.Entities.ApiKey> objs)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var entities = objs.Select(obj => Mapper.Map<ApiKey>(obj));
+        dbContext.RemoveRange(entities);
+        await dbContext.SaveChangesAsync();
+    }
 }

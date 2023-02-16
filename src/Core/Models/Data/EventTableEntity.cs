@@ -27,6 +27,7 @@ public class EventTableEntity : TableEntity, IEvent
         IpAddress = e.IpAddress;
         ActingUserId = e.ActingUserId;
         SystemUser = e.SystemUser;
+        DomainName = e.DomainName;
         SecretId = e.SecretId;
         ServiceAccountId = e.ServiceAccountId;
     }
@@ -48,6 +49,7 @@ public class EventTableEntity : TableEntity, IEvent
     public string IpAddress { get; set; }
     public Guid? ActingUserId { get; set; }
     public EventSystemUser? SystemUser { get; set; }
+    public string DomainName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ServiceAccountId { get; set; }
 
