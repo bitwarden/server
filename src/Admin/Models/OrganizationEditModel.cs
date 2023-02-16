@@ -2,16 +2,24 @@
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.Models;
 
 public class OrganizationEditModel : OrganizationViewModel
 {
     public OrganizationEditModel() { }
+
+    public OrganizationEditModel(Provider provider)
+    {
+        Provider = provider;
+        Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+    }
 
     public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
@@ -124,11 +132,18 @@ public class OrganizationEditModel : OrganizationViewModel
     public DateTime? ExpirationDate { get; set; }
     public bool SalesAssistedTrialStarted { get; set; }
 
+    public Organization CreateOrganization()
+    {
+        var organization = new Organization();
+
+        return ToOrganization(organization);
+    }
+
     public Organization ToOrganization(Organization existingOrganization)
     {
         existingOrganization.Name = Name;
         existingOrganization.BusinessName = BusinessName;
-        existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
+        existingOrganization.BillingEmail = Provider?.Type == ProviderType.Reseller ? Provider.BillingEmail : BillingEmail?.ToLowerInvariant()?.Trim();
         existingOrganization.PlanType = PlanType.Value;
         existingOrganization.Plan = Plan;
         existingOrganization.Seats = Seats;
