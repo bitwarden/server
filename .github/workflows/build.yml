@@ -344,11 +344,7 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [ "${{ env.is_publish_branch }}" == "true" ]; then
-            echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwarden/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          else
             echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          fi
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
@@ -373,6 +369,15 @@ jobs:
           tags: ${{ steps.tag-list.outputs.tags }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
+
+      - name: Push to DockerHub
+        if: contains(matrix.docker_repos, 'bitwarden') env.is_publish_branch == 'true'
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+        run: |
+          docker tag bitwardenprod.azurecr.io/$PROJECT_NAME:${{ env.IMAGE_TAG }} \
+            bitwarden/$PROJECT_NAME:${{ env.IMAGE_TAG }}
+          docker push bitwarden/$PROJECT_NAME:${{ env.IMAGE_TAG }}
 
       - name: Log out of Docker
         run: |
