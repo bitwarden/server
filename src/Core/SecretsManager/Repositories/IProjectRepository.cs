@@ -6,6 +6,7 @@ namespace Bit.Core.SecretsManager.Repositories;
 public interface IProjectRepository
 {
     Task<IEnumerable<Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
+    Task<IEnumerable<Project>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType);
     Task<IEnumerable<Project>> GetManyByIds(IEnumerable<Guid> ids);
     Task<Project> GetByIdAsync(Guid id);
     Task<Project> CreateAsync(Project project);

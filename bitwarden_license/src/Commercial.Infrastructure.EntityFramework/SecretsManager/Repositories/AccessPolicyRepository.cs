@@ -1,9 +1,12 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
@@ -13,6 +16,12 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         mapper)
     {
     }
+
+    private static Expression<Func<ServiceAccountProjectAccessPolicy, bool>> UserHasWriteAccessToProject(Guid userId) =>
+        policy =>
+            policy.GrantedProject.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+            policy.GrantedProject.GroupAccessPolicies.Any(ap =>
+                ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write));
 
     public async Task<List<Core.SecretsManager.Entities.BaseAccessPolicy>> CreateManyAsync(List<Core.SecretsManager.Entities.BaseAccessPolicy> baseAccessPolicies)
     {
@@ -191,16 +200,41 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(BaseAccessPolicy baseAccessPolicyEntity)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByServiceAccountIdAsync(Guid id, Guid userId,
+        AccessClientType accessType)
     {
-        return baseAccessPolicyEntity switch
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.ServiceAccountProjectAccessPolicy.Where(ap =>
+            ap.ServiceAccountId == id);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasWriteAccessToProject(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        var entities = await query
+            .Include(ap => ap.ServiceAccount)
+            .Include(ap => ap.GrantedProject)
+            .ToListAsync();
+
+        return entities.Select(MapToCore);
+    }
+
+    private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(
+        BaseAccessPolicy baseAccessPolicyEntity) =>
+        baseAccessPolicyEntity switch
         {
             UserProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.UserProjectAccessPolicy>(ap),
             GroupProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.GroupProjectAccessPolicy>(ap),
-            ServiceAccountProjectAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy>(ap),
-            UserServiceAccountAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.UserServiceAccountAccessPolicy>(ap),
-            GroupServiceAccountAccessPolicy ap => Mapper.Map<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy>(ap),
-            _ => throw new ArgumentException("Unsupported access policy type")
+            ServiceAccountProjectAccessPolicy ap => Mapper
+                .Map<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy>(ap),
+            UserServiceAccountAccessPolicy ap =>
+                Mapper.Map<Core.SecretsManager.Entities.UserServiceAccountAccessPolicy>(ap),
+            GroupServiceAccountAccessPolicy ap => Mapper
+                .Map<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy>(ap),
+            _ => throw new ArgumentException("Unsupported access policy type"),
         };
-    }
 }

@@ -121,6 +121,7 @@ public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyRe
         ServiceAccountId = accessPolicy.ServiceAccountId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
         ServiceAccountName = accessPolicy.ServiceAccount?.Name;
+        GrantedProjectName = accessPolicy.GrantedProject?.Name;
     }
 
     public ServiceAccountProjectAccessPolicyResponseModel()
@@ -131,4 +132,5 @@ public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyRe
     public Guid? ServiceAccountId { get; set; }
     public string? ServiceAccountName { get; set; }
     public Guid? GrantedProjectId { get; set; }
+    public string? GrantedProjectName { get; set; }
 }
