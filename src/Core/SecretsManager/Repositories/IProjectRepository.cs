@@ -15,4 +15,6 @@ public interface IProjectRepository
     Task<IEnumerable<Project>> ImportAsync(IEnumerable<Project> projects);
     Task<bool> UserHasReadAccessToProject(Guid id, Guid userId);
     Task<bool> UserHasWriteAccessToProject(Guid id, Guid userId);
+    Task<bool> ServiceAccountHasWriteAccessToProject(Guid id, Guid userId);
+    Task<bool> ServiceAccountHasReadAccessToProject(Guid id, Guid userId);
 }

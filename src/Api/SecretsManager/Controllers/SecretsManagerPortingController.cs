@@ -38,7 +38,7 @@ public class SecretsManagerPortingController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var projects = await _projectRepository.GetManyByOrganizationIdAsync(organizationId, userId, AccessClientType.NoAccessCheck);
-        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId);
+        var secrets = await _secretRepository.GetManyByOrganizationIdAsync(organizationId, userId, AccessClientType.NoAccessCheck);
 
         if (projects == null && secrets == null)
         {
