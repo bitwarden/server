@@ -41,6 +41,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Event_Create]
     @IpAddress VARCHAR(50),
     @Date DATETIME2(7),
     @SystemUser TINYINT = null,
+    @DomainName VARCHAR(256),
     @SecretId UNIQUEIDENTIFIER = null,
     @ServiceAccountId UNIQUEIDENTIFIER = null
 AS
@@ -67,6 +68,7 @@ BEGIN
         [IpAddress],
         [Date],
         [SystemUser],
+        [DomainName],
         [SecretId],
         [ServiceAccountId]
     )
@@ -90,6 +92,7 @@ BEGIN
         @IpAddress,
         @Date,
         @SystemUser,
+        @DomainName
         @SecretId,
         @ServiceAccountId
     )
