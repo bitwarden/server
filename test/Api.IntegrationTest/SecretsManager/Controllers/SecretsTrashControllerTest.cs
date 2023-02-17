@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Repositories;
 using Xunit;
@@ -44,6 +45,58 @@ public class SecretsTrashControllerTest : IClassFixture<ApiApplicationFactory>, 
     {
         var tokens = await _factory.LoginAsync(email);
         _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task ListByOrganization_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
+
+        var response = await _client.GetAsync($"/secrets/{org.Id}/trash");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListByOrganization_NotAdmin_Unauthorized()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var response = await _client.GetAsync($"/secrets/{org.Id}/trash");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ListByOrganization_Success()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = org.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            DeletedDate = DateTime.Now,
+        });
+
+        await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = org.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+        });
+
+        var response = await _client.GetAsync($"/secrets/{org.Id}/trash");
+
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
+        Assert.Single(result!.Secrets);
     }
 
     [Theory]
@@ -107,6 +160,5 @@ public class SecretsTrashControllerTest : IClassFixture<ApiApplicationFactory>, 
         var ids = new List<Guid> { secret.Id };
         var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/trash/restore", ids);
         response.EnsureSuccessStatusCode();
-
     }
 }
