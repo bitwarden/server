@@ -16,26 +16,17 @@ public class TrashController : Controller
 {
     private readonly ICurrentContext _currentContext;
     private readonly ISecretRepository _secretRepository;
-    private readonly ICreateSecretCommand _createSecretCommand;
-    private readonly IUpdateSecretCommand _updateSecretCommand;
-    private readonly IDeleteSecretCommand _deleteSecretCommand;
     private readonly IEmptyTrashCommand _emptyTrashCommand;
     private readonly IRestoreTrashCommand _restoreTrashCommand;
 
     public TrashController(
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
-        ICreateSecretCommand createSecretCommand,
-        IUpdateSecretCommand updateSecretCommand,
-        IDeleteSecretCommand deleteSecretCommand,
         IEmptyTrashCommand emptyTrashCommand,
         IRestoreTrashCommand restoreTrashCommand)
     {
         _currentContext = currentContext;
         _secretRepository = secretRepository;
-        _createSecretCommand = createSecretCommand;
-        _updateSecretCommand = updateSecretCommand;
-        _deleteSecretCommand = deleteSecretCommand;
         _emptyTrashCommand = emptyTrashCommand;
         _restoreTrashCommand = restoreTrashCommand;
     }
