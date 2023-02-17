@@ -21,11 +21,22 @@ jobs:
 
       - name: Login to Azure ACR
         run: az acr login -n bitwardenqa
+          k
+      - name: Login to Azure - PROD Subscription
+        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Login to Azure ACR
+        run: az acr login -n bitwardenprod
 
       ########## Remove Docker images ##########
       - name: Remove the docker image from ACR
         env:
-          REGISTRY_NAME: bitwardenqa
+          REGISTRIES: |
+            registries:
+              - bitwardenprod
+              - bitwardenqa
           SERVICES: |
             services:
               - Admin
@@ -45,21 +56,24 @@ jobs:
         run: |
           for SERVICE in $(echo "${{ env.SERVICES }}" | yq e ".services[]" - )
           do
-            SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
-            IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+            for REGISTRY in $( echo "${{ env.REGISTRIES }}" | yq e ".registries[]" - )
+            do
+              SERVICE_NAME=$(echo $SERVICE | awk '{print tolower($0)}')
+              IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
 
-            echo "[*] Checking if remote exists: $REGISTRY_NAME.azurecr.io/$SERVICE_NAME:$IMAGE_TAG"
-            TAG_EXISTS=$(
-              az acr repository show-tags --name $REGISTRY_NAME --repository $SERVICE_NAME \
-              | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
-            )
+              echo "[*] Checking if remote exists: $REGISTRY.azurecr.io/$SERVICE_NAME:$IMAGE_TAG"
+              TAG_EXISTS=$(
+                az acr repository show-tags --name $REGISTRY --repository $SERVICE_NAME \
+                | jq --arg $TAG "$IMAGE_TAG" -e '. | any(. == "$TAG")'
+              )
 
-            if [[ "$TAG_EXISTS" == "true" ]]; then
-              echo "[*] Tag exists. Removing tag"
-              az acr repository delete --name $REGISTRY_NAME --image $SERVICE_NAME:$IMAGE_TAG --yes
-            else
-              echo "[*] Tag does not exist. No action needed"
-            fi
+              if [[ "$TAG_EXISTS" == "true" ]]; then
+                echo "[*] Tag exists. Removing tag"
+                az acr repository delete --name $REGISTRY --image $SERVICE_NAME:$IMAGE_TAG --yes
+              else
+                echo "[*] Tag does not exist. No action needed"
+              fi
+            done
           done
 
       - name: Log out of Docker

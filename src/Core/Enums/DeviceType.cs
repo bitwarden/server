@@ -48,4 +48,6 @@ public enum DeviceType : byte
     SafariExtension = 20,
     [Display(Name = "SDK")]
     SDK = 21,
+    [Display(Name = "Server")]
+    Server = 22
 }

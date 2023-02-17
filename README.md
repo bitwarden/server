@@ -80,16 +80,3 @@ Consider installing our git pre-commit hook for automatic formatting.
 ```bash
 git config --local core.hooksPath .git-hooks
 ```
-
-### File Scoped Namespaces
-
-We recently migrated to using file scoped namespaces to save some horizontal space. All previous branches will need to update to avoid large merge conflicts using the following steps:
-
-1. Check out your local Branch
-2. Run `git merge 9b7aef0763ad14e229b337c3b5b27cb411009792`
-3. Resolve any merge conflicts, commit.
-4. Run `dotnet format`
-5. Commit
-6. Run `git merge -Xours 7f5f010e1eea400300c47f776604ecf46c4b4f2d`
-7. Fix Merge conflicts
-8. Push

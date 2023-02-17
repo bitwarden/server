@@ -66,14 +66,15 @@ public class ServiceAccountsControllerTests
     [BitAutoData]
     public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId)
     {
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(true);
         var resultServiceAccount = data.ToServiceAccount(organizationId);
-        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
 
         await sutProvider.Sut.CreateAsync(organizationId, data);
         await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
-                     .CreateAsync(Arg.Any<ServiceAccount>());
+                     .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -82,11 +83,13 @@ public class ServiceAccountsControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(false);
         var resultServiceAccount = data.ToServiceAccount(organizationId);
-        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
 
-        await sutProvider.GetDependency<ICreateServiceAccountCommand>().DidNotReceiveWithAnyArgs().CreateAsync(Arg.Any<ServiceAccount>());
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
     }
 
     [Theory]
