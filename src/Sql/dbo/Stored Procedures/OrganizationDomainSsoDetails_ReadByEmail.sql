@@ -11,7 +11,7 @@ BEGIN
     SELECT
         O.Id AS OrganizationId,
         O.[Name] AS OrganizationName,
-        O.UseSso AS SsoAvailable,
+        S.Enabled AS SsoAvailable,
         P.Enabled AS SsoRequired,
         O.Identifier AS OrganizationIdentifier,
         OD.VerifiedDate,
@@ -23,6 +23,8 @@ BEGIN
         ON O.Id = OD.OrganizationId
     LEFT JOIN [dbo].[PolicyView] P
         ON O.Id = P.OrganizationId
+    LEFT JOIN [dbo].[Ssoconfig] S
+        ON O.Id = S.OrganizationId
     WHERE OD.DomainName = @Domain
     AND O.Enabled = 1
     AND (P.Id is NULL OR (P.Id IS NOT NULL AND P.[Type] = 4)) -- SSO Type
