@@ -60,6 +60,7 @@ BEGIN
     EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
     EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
     EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationDomain_OrganizationDeleted] @Id
 
     DELETE
     FROM
