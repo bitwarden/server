@@ -92,7 +92,9 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
                                     VerifiedDate = od.VerifiedDate,
                                     PolicyType = p.Type,
                                     DomainName = od.DomainName
-                                }).SingleOrDefaultAsync();
+                                })
+            .AsNoTracking()
+            .SingleOrDefaultAsync();
 
         return ssoDetails;
     }
