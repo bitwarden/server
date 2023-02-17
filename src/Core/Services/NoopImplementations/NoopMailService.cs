@@ -72,11 +72,6 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token)
-    {
-        return Task.CompletedTask;
-    }
-
     public Task SendWelcomeEmailAsync(User user)
     {
         return Task.FromResult(0);
