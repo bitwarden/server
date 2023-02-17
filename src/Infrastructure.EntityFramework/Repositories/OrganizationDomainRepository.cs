@@ -74,34 +74,25 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var ssoDetails = await dbContext.Organizations
-            .Join(dbContext.OrganizationDomains, o => o.Id, od => od.OrganizationId,
-                (organization, domain) => new { resOrganization = organization, resDomain = domain })
-            .Join(dbContext.Policies, o => o.resOrganization.Id, p => p.OrganizationId,
-                (combinedOrgDomain, policy)
-                    => new
-                    {
-                        Organization = combinedOrgDomain.resOrganization,
-                        Domain = combinedOrgDomain.resDomain,
-                        Policy = policy
-                    })
-            .Select(x => new OrganizationDomainSsoDetailsData
-            {
-                OrganizationId = x.Organization.Id,
-                OrganizationName = x.Organization.Name,
-                SsoAvailable = x.Organization.UseSso,
-                OrganizationIdentifier = x.Organization.Identifier,
-                SsoRequired = x.Policy.Enabled,
-                VerifiedDate = x.Domain.VerifiedDate,
-                PolicyType = x.Policy.Type,
-                DomainName = x.Domain.DomainName,
-                OrganizationEnabled = x.Organization.Enabled
-            })
-            .Where(y => y.DomainName == domainName
-                        && y.OrganizationEnabled == true
-                        && y.PolicyType.Equals(PolicyType.RequireSso))
-            .AsNoTracking()
-            .SingleOrDefaultAsync();
+        var ssoDetails = await (from o in dbContext.Organizations
+                                from od in o.Domains
+                                join s in dbContext.SsoConfigs on o.Id equals s.OrganizationId into sJoin
+                                from s in sJoin.DefaultIfEmpty()
+                                join p in dbContext.Policies.Where(p => p.Type == PolicyType.RequireSso) on o.Id
+                                    equals p.OrganizationId into pJoin
+                                from p in pJoin.DefaultIfEmpty()
+                                where od.DomainName == domainName && o.Enabled
+                                select new OrganizationDomainSsoDetailsData
+                                {
+                                    OrganizationId = o.Id,
+                                    OrganizationName = o.Name,
+                                    SsoAvailable = o.SsoConfigs.Any(sc => sc.Enabled),
+                                    SsoRequired = p != null && p.Enabled,
+                                    OrganizationIdentifier = o.Identifier,
+                                    VerifiedDate = od.VerifiedDate,
+                                    PolicyType = p.Type,
+                                    DomainName = od.DomainName
+                                }).SingleOrDefaultAsync();
 
         return ssoDetails;
     }
