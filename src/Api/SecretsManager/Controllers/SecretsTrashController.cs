@@ -2,7 +2,6 @@
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Commands.Trash.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -32,12 +31,13 @@ public class TrashController : Controller
     }
 
     [HttpGet("secrets/{organizationId}/trash")]
-    public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync([FromRoute] Guid organizationId)
+    public async Task<SecretWithProjectsListResponseModel> ListByOrganizationAsync(Guid organizationId)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
+
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
             throw new UnauthorizedAccessException();
@@ -48,12 +48,13 @@ public class TrashController : Controller
     }
 
     [HttpPost("secrets/{organizationId}/trash/empty")]
-    public async Task<ListResponseModel<BulkDeleteResponseModel>> EmptyTrash([FromRoute] Guid organizationId, [FromBody] List<Guid> ids)
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> EmptyTrashAsync(Guid organizationId, [FromBody] List<Guid> ids)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
+
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
             throw new UnauthorizedAccessException();
@@ -65,19 +66,18 @@ public class TrashController : Controller
     }
 
     [HttpPost("secrets/{organizationId}/trash/restore")]
-    public async Task<ListResponseModel<BulkRestoreResponseModel>> RestoreTrash([FromRoute] Guid organizationId, [FromBody] List<Guid> ids)
+    public async Task RestoreTrashAsync(Guid organizationId, [FromBody] List<Guid> ids)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
+
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
             throw new UnauthorizedAccessException();
         }
 
-        var results = await _restoreTrashCommand.RestoreTrash(organizationId, ids);
-        var responses = results.Select(r => new BulkRestoreResponseModel(r.Item1.Id, r.Item2));
-        return new ListResponseModel<BulkRestoreResponseModel>(responses);
+        await _restoreTrashCommand.RestoreTrash(organizationId, ids);
     }
 }
