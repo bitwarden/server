@@ -2,7 +2,7 @@
 using Bit.Core.SecretsManager.Commands.Trash.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 
-namespace Bit.Commercial.Core.SecretsManager.Commands.Secrets;
+namespace Bit.Commercial.Core.SecretsManager.Commands.Trash;
 
 public class RestoreTrashCommand : IRestoreTrashCommand
 {

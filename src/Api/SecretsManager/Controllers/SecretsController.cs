@@ -70,10 +70,7 @@ public class SecretsController : Controller
     public async Task<SecretResponseModel> GetAsync([FromRoute] Guid id)
     {
         var secret = await _secretRepository.GetByIdAsync(id);
-        if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
+
 
         if (!await UserHasReadAccessToSecret(secret))
         {
@@ -87,10 +84,7 @@ public class SecretsController : Controller
     public async Task<SecretWithProjectsListResponseModel> GetSecretsByProjectAsync([FromRoute] Guid projectId)
     {
         var project = await _projectRepository.GetByIdAsync(projectId);
-        if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
+
 
         var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);

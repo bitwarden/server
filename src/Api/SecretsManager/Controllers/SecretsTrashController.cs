@@ -1,5 +1,4 @@
-﻿using Bit.Api.Models.Response;
-using Bit.Api.SecretsManager.Models.Response;
+﻿using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Trash.Interfaces;
@@ -48,7 +47,7 @@ public class TrashController : Controller
     }
 
     [HttpPost("secrets/{organizationId}/trash/empty")]
-    public async Task<ListResponseModel<BulkDeleteResponseModel>> EmptyTrashAsync(Guid organizationId, [FromBody] List<Guid> ids)
+    public async Task EmptyTrashAsync(Guid organizationId, [FromBody] List<Guid> ids)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
@@ -60,9 +59,7 @@ public class TrashController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var results = await _emptyTrashCommand.EmptyTrash(organizationId, ids);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
-        return new ListResponseModel<BulkDeleteResponseModel>(responses);
+        await _emptyTrashCommand.EmptyTrash(organizationId, ids);
     }
 
     [HttpPost("secrets/{organizationId}/trash/restore")]

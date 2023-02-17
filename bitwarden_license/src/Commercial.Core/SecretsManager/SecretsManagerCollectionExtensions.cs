@@ -4,6 +4,7 @@ using Bit.Commercial.Core.SecretsManager.Commands.Porting;
 using Bit.Commercial.Core.SecretsManager.Commands.Projects;
 using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 using Bit.Commercial.Core.SecretsManager.Commands.ServiceAccounts;
+using Bit.Commercial.Core.SecretsManager.Commands.Trash;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
