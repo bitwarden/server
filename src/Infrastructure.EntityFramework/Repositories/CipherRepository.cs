@@ -168,12 +168,12 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             {
                 var collectionEntities = Mapper.Map<List<Collection>>(collections);
                 await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionEntities);
+            }
 
-                if (collectionCiphers.Any())
-                {
-                    var collectionCipherEntities = Mapper.Map<List<CollectionCipher>>(collectionCiphers);
-                    await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionCipherEntities);
-                }
+            if (collectionCiphers.Any())
+            {
+                var collectionCipherEntities = Mapper.Map<List<CollectionCipher>>(collectionCiphers);
+                await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, collectionCipherEntities);
             }
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(ciphers.First().OrganizationId.Value);
             await dbContext.SaveChangesAsync();

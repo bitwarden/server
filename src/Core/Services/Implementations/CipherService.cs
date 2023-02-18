@@ -646,10 +646,19 @@ public class CipherService : ICipherService
             }
         }
 
+        var existingFolders = new List<Folder>();
         // Init. ids for folders
         foreach (var folder in folders)
         {
-            folder.SetNewId();
+            if (folder.Id == Guid.Empty || await _folderRepository.GetByIdAsync(folder.Id) == null)
+            {
+                folder.SetNewId();
+            }
+            else
+            {
+                await _folderRepository.ReplaceAsync(folder);
+                existingFolders.Add(folder);
+            }
         }
 
         // Create the folder associations based on the newly created folder ids
@@ -666,6 +675,8 @@ public class CipherService : ICipherService
             cipher.Folders = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":" +
                 $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
         }
+
+        folders = folders.Except(existingFolders).ToList();
 
         // Create it all
         await _cipherRepository.CreateAsync(ciphers, folders);
@@ -703,10 +714,20 @@ public class CipherService : ICipherService
             cipher.SetNewId();
         }
 
+        var existingCollections = new List<Collection>();
         // Init. ids for collections
         foreach (var collection in collections)
         {
-            collection.SetNewId();
+            if (collection.Id == Guid.Empty || await _collectionRepository.GetByIdAsync(collection.Id) == null)
+            {
+                collection.SetNewId();
+            }
+            else
+            {
+                //update the collections to grant the import data
+                await _collectionRepository.ReplaceAsync(collection);
+                existingCollections.Add(collection);
+            }
         }
 
         // Create associations based on the newly assigned ids
@@ -727,6 +748,8 @@ public class CipherService : ICipherService
                 CollectionId = collection.Id
             });
         }
+
+        collections = collections.Except(existingCollections).ToList();
 
         // Create it all
         await _cipherRepository.CreateAsync(ciphers, collections, collectionCiphers);

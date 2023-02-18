@@ -28,5 +28,23 @@ public class FolderRequestModel
 
 public class FolderWithIdRequestModel : FolderRequestModel
 {
-    public Guid Id { get; set; }
+    public Guid? Id { get; set; }
+
+    public new Folder ToFolder(Guid userId)
+    {
+        return ToFolder(new Folder
+        {
+            UserId = userId
+        });
+    }
+
+    public new Folder ToFolder(Folder existingFolder)
+    {
+        existingFolder.Name = Name;
+        if (Id != null && Id != Guid.Empty)
+        {
+            existingFolder.Id = Id ?? Guid.Empty;
+        }
+        return existingFolder;
+    }
 }

@@ -12,6 +12,7 @@ public class CollectionRequestModel
     public string Name { get; set; }
     [StringLength(300)]
     public string ExternalId { get; set; }
+    public Guid? Id { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Users { get; set; }
 
@@ -27,6 +28,10 @@ public class CollectionRequestModel
     {
         existingCollection.Name = Name;
         existingCollection.ExternalId = ExternalId;
+        if (Id != null && Id != Guid.Empty)
+        {
+            existingCollection.Id = Id ?? Guid.Empty;
+        }
         return existingCollection;
     }
 }
