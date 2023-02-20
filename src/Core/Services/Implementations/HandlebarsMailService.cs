@@ -113,21 +113,6 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token)
-    {
-        var message = CreateDefaultMessage("New Device Login Verification Code", email);
-        var model = new EmailTokenViewModel
-        {
-            Token = token,
-            WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-            SiteName = _globalSettings.SiteName
-        };
-        await AddMessageContentAsync(message, "NewDeviceLoginTwoFactorEmail", model);
-        message.MetaData.Add("SendGridBypassListManagement", true);
-        message.Category = "TwoFactorEmail";
-        await _mailDeliveryService.SendEmailAsync(message);
-    }
-
     public async Task SendMasterPasswordHintEmailAsync(string email, string hint)
     {
         var message = CreateDefaultMessage("Your Master Password Hint", email);
