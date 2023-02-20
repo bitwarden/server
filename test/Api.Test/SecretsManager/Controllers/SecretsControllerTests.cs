@@ -78,10 +78,8 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void GetSecret_NotFound(SutProvider<SecretsController> sutProvider, Guid userId)
+    public async void GetSecret_NotFound(SutProvider<SecretsController> sutProvider)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(Guid.NewGuid()));
     }
 
