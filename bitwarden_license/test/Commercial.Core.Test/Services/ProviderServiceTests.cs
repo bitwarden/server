@@ -451,11 +451,12 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task AddOrganizations_Success(Provider provider, ICollection<Organization> organizations, User user, string key,
-        SutProvider<ProviderService> sutProvider)
+    public async Task AddOrganizationsToReseller_WithResellerProvider_Success(Provider provider, ICollection<Organization> organizations, SutProvider<ProviderService> sutProvider)
     {
-        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        provider.Type = ProviderType.Reseller;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
 
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         foreach (var organization in organizations)
         {
             organization.PlanType = PlanType.EnterpriseAnnually;
@@ -465,12 +466,35 @@ public class ProviderServiceTests
 
         var organizationIds = organizations.Select(o => o.Id).ToArray();
 
-        await sutProvider.Sut.AddOrganizations(provider.Id, organizationIds, user.Id, key);
+        await sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds);
 
         await providerOrganizationRepository.ReceivedWithAnyArgs().CreateWithManyOrganizations(Arg.Is<ProviderOrganization>(p => p.ProviderId == provider.Id), organizationIds);
         await sutProvider.GetDependency<IEventService>()
             .Received().LogProviderOrganizationEventsAsync(provider.Id, Arg.Any<IEnumerable<ProviderOrganization>>(),
                 EventType.ProviderOrganization_Added);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationsToReseller_WithMspProvider_Throws(Provider provider, ICollection<Organization> organizations, SutProvider<ProviderService> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        foreach (var organization in organizations)
+        {
+            organization.PlanType = PlanType.EnterpriseAnnually;
+            providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        }
+
+        var organizationIds = organizations.Select(o => o.Id).ToArray();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds));
+        Assert.Contains("Organization must be of type Reseller in order to assign Organizations to it.", exception.Message);
+
+        await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateWithManyOrganizations(Arg.Any<ProviderOrganization>(), organizationIds);
+        await sutProvider.GetDependency<IEventService>().DidNotReceive().LogProviderOrganizationEventsAsync(provider.Id, Arg.Any<IEnumerable<ProviderOrganization>>(), EventType.ProviderOrganization_Added);
     }
 
     [Theory, BitAutoData]

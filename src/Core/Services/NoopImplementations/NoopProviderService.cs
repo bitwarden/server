@@ -25,7 +25,7 @@ public class NoopProviderService : IProviderService
 
     public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
 
-    public Task AddOrganizations(Guid providerId, IEnumerable<Guid> organizationIds, Guid addingUserId, string key) => throw new NotImplementedException();
+    public Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds) => throw new NotImplementedException();
 
     public Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, string clientOwnerEmail, User user) => throw new NotImplementedException();
 

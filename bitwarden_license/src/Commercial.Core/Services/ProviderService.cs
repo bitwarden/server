@@ -365,13 +365,17 @@ public class ProviderService : IProviderService
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
     }
 
-    public async Task AddOrganizations(Guid providerId, IEnumerable<Guid> organizationIds, Guid addingUserId,
-        string key)
+    public async Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds)
     {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider.Type != ProviderType.Reseller)
+        {
+            throw new BadRequestException("Organization must be of type Reseller in order to assign Organizations to it.");
+        }
+
         var providerOrganization = new ProviderOrganization
         {
-            ProviderId = providerId,
-            Key = key,
+            ProviderId = providerId
         };
 
         var insertedProviderOrganizations = await _providerOrganizationRepository.CreateWithManyOrganizations(providerOrganization, organizationIds);

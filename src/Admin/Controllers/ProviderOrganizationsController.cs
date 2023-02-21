@@ -56,7 +56,7 @@ public class ProviderOrganizationsController : Controller
     {
         var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.OrganizationId).ToArray();
 
-        await _providerService.AddOrganizations(model.ProviderId, organizationIds, Guid.Empty, null);
+        await _providerService.AddOrganizationsToReseller(model.ProviderId, organizationIds);
 
         return RedirectToAction("Edit", "Providers", new { id = model.ProviderId });
     }
