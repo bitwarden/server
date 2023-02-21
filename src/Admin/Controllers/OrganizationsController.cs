@@ -1,6 +1,7 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -101,7 +102,7 @@ public class OrganizationsController : Controller
     public async Task<IActionResult> Create(Guid providerId)
     {
         var provider = await _providerRepository.GetByIdAsync(providerId);
-        if (provider == null)
+        if (provider is not { Type: ProviderType.Reseller })
         {
             return RedirectToAction("Index");
         }
