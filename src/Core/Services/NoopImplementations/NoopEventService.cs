@@ -68,9 +68,12 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-    public async Task LogProviderOrganizationEventsAsync(Guid providerId, IEnumerable<ProviderOrganization> providerOrganizations, EventType type,
-        DateTime? date = null) =>
-        throw new NotImplementedException();
+    public Task LogProviderOrganizationEventsAsync(Guid providerId,
+        IEnumerable<ProviderOrganization> providerOrganizations, EventType type,
+        DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
 
     public Task LogOrganizationUserEventAsync(OrganizationUser organizationUser, EventType type, DateTime? date = null)
     {
