@@ -39,7 +39,5 @@ public enum ReferenceEventType
     [EnumMember(Value = "collection-created")]
     CollectionCreated,
     [EnumMember(Value = "organization-edited-by-admin")]
-    OrganizationEditedByAdmin,
-    [EnumMember(Value = "organization-created-by-admin")]
-    OrganizationCreatedByAdmin
+    OrganizationEditedByAdmin
 }
