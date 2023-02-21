@@ -12,6 +12,7 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     public Guid? UserId { get; set; }
     public string Name { get; set; }
     public string Email { get; set; }
+    public string AvatarColor { get; set; }
     public string TwoFactorProviders { get; set; }
     public bool? Premium { get; set; }
     public OrganizationUserStatusType Status { get; set; }

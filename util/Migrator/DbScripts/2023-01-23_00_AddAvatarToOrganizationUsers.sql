@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[OrganizationUserUserDetailsView]
+CREATE OR ALTER VIEW [dbo].[OrganizationUserUserDetailsView]
 AS
 SELECT
     OU.[Id],
@@ -12,7 +12,6 @@ SELECT
     OU.[Status],
     OU.[Type],
     OU.[AccessAll],
-    OU.[AccessSecretsManager],
     OU.[ExternalId],
     SU.[ExternalId] SsoExternalId,
     OU.[Permissions],
@@ -24,3 +23,10 @@ LEFT JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]';
+END
+GO
