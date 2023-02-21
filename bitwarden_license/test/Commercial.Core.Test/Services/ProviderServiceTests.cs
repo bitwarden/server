@@ -463,8 +463,6 @@ public class ProviderServiceTests
             sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         }
 
-        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
-
         var organizationIds = organizations.Select(o => o.Id).ToArray();
 
         await sutProvider.Sut.AddOrganizations(provider.Id, organizationIds, user.Id, key);
