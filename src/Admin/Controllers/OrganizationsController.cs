@@ -112,6 +112,8 @@ public class OrganizationsController : Controller
     [HttpPost]
     public async Task<IActionResult> Create(Guid providerId, OrganizationEditModel model)
     {
+        // TODO : Insert logic to create the new Organization entry, create an OrganizationUser entry for the owner and send the invitation email
+
         return RedirectToAction("Edit", "Providers", new { id = providerId });
     }
 
