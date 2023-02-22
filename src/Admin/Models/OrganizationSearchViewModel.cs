@@ -2,10 +2,8 @@
 
 namespace Bit.Admin.Models;
 
-public class ProviderOrganizationViewModel : PagedModel<ProviderOrganizationItemViewModel>
+public class OrganizationSearchViewModel : PagedModel<OrganizationSelectableViewModel>
 {
-    public Guid ProviderId { get; set; }
-
     [Display(Name = "Organization Name")]
     public string OrganizationName { get; set; }
 

@@ -2,7 +2,7 @@
 
 namespace Bit.Admin.Models;
 
-public class ProviderOrganizationItemViewModel : Organization
+public class OrganizationSelectableViewModel : Organization
 {
     public bool Selected { get; set; }
 }
