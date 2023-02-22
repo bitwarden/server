@@ -17,6 +17,7 @@ public class OrganizationEditModel : OrganizationViewModel
     public OrganizationEditModel(Provider provider)
     {
         Provider = provider;
+        PlanType = Core.Enums.PlanType.TeamsMonthly;
         Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
     }
 
