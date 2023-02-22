@@ -5,6 +5,7 @@ using AutoFixture.Kernel;
 using AutoFixture.Xunit2;
 using Bit.Core;
 using Bit.Core.Test.Helpers.Factories;
+using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
 using Moq;
 
@@ -50,7 +51,25 @@ public class GlobalSettingsBuilder : ISpecimenBuilder
     }
 }
 
+internal class SelfHosted : ICustomization
+{
+    public bool IsSelfHosted { get; set; }
+    public void Customize(IFixture fixture)
+    {
+        fixture.Customizations.Add(new GlobalSettingsBuilder());
+
+        fixture.Customize<Bit.Core.Settings.GlobalSettings>(composer => composer
+            .With(o => o.SelfHosted, IsSelfHosted));
+    }
+}
+
 public class GlobalSettingsCustomizeAttribute : CustomizeAttribute
 {
     public override ICustomization GetCustomization(ParameterInfo parameter) => new GlobalSettings();
+}
+
+internal class SelfHostedAutoDataAttribute : CustomAutoDataAttribute
+{
+    public SelfHostedAutoDataAttribute(bool isSelfHosted) : base(new SutProviderCustomization(), new SelfHosted() { IsSelfHosted = isSelfHosted })
+    { }
 }
