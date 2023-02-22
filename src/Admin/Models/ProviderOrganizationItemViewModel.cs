@@ -1,8 +1,8 @@
-﻿using Bit.Core.Models.Data;
+﻿using Bit.Core.Entities;
 
 namespace Bit.Admin.Models;
 
-public class ProviderOrganizationItemViewModel : ProviderOrganizationUnassignedOrganizationDetails
+public class ProviderOrganizationItemViewModel : Organization
 {
     public bool Selected { get; set; }
 }

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -87,6 +88,29 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                 UseScim = e.UseScim,
                 UseCustomPermissions = e.UseCustomPermissions
             }).ToListAsync();
+        }
+    }
+
+    public async Task<ICollection<Core.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = (from o in dbContext.Organizations
+                         let ownerEmails = (from ou in dbContext.OrganizationUsers
+                                            join u in dbContext.Users
+                                                on ou.UserId equals u.Id
+                                            where ou.OrganizationId == o.Id && ou.Type == OrganizationUserType.Owner
+                                            select u.Email).ToList()
+                         where o.PlanType >= PlanType.TeamsMonthly && o.PlanType <= PlanType.EnterpriseAnnually &&
+                               !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                               (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%")) &&
+                               (string.IsNullOrWhiteSpace(ownerEmail) || ownerEmails.Any(email => email == ownerEmail))
+                         orderby o.CreationDate descending
+                         select o)
+                .Skip(skip).Take(take);
+
+            return await query.ToArrayAsync();
         }
     }
 

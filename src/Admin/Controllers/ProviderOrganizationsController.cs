@@ -8,13 +8,14 @@ namespace Bit.Admin.Controllers;
 public class ProviderOrganizationsController : Controller
 {
     private readonly IProviderService _providerService;
-    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
+    private readonly IOrganizationRepository _organizationRepository;
 
-    public ProviderOrganizationsController(IProviderService providerService,
-        IProviderOrganizationRepository providerOrganizationRepository)
+    public ProviderOrganizationsController(
+        IProviderService providerService,
+        IOrganizationRepository organizationRepository)
     {
         _providerService = providerService;
-        _providerOrganizationRepository = providerOrganizationRepository;
+        _organizationRepository = organizationRepository;
     }
 
     [HttpGet]
@@ -31,7 +32,7 @@ public class ProviderOrganizationsController : Controller
         }
 
         var skip = (page - 1) * count;
-        var unassignedOrganizations = await _providerOrganizationRepository.SearchAsync(name, ownerEmail, skip, count);
+        var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(name, ownerEmail, skip, count);
         var viewModel = new ProviderOrganizationViewModel
         {
             ProviderId = providerId,
@@ -41,10 +42,9 @@ public class ProviderOrganizationsController : Controller
             Count = count,
             Items = unassignedOrganizations.Select(uo => new ProviderOrganizationItemViewModel
             {
-                OrganizationId = uo.OrganizationId,
+                Id = uo.Id,
                 Name = uo.Name,
-                PlanType = uo.PlanType,
-                OwnerEmail = uo.OwnerEmail
+                PlanType = uo.PlanType
             }).ToList()
         };
 
@@ -54,7 +54,7 @@ public class ProviderOrganizationsController : Controller
     [HttpPost]
     public async Task<IActionResult> AddExisting(ProviderOrganizationViewModel model)
     {
-        var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.OrganizationId).ToArray();
+        var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
 
         await _providerService.AddOrganizationsToReseller(model.ProviderId, organizationIds);
 

@@ -1,5 +1,6 @@
-@model ProviderOrganizationViewModel
 @using Bit.SharedWeb.Utilities
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model ProviderOrganizationViewModel
 
 @{
     ViewData["Title"] = "Add Existing Organization";
@@ -27,7 +28,6 @@
                 <th style="width: 20px;">All</th>
                 <th>Name</th>
                 <th style="width: 190px;">Plan</th>
-                <th style="width: 250px;">Owner email</th>
             </tr>
             </thead>
             <tbody>
@@ -43,12 +43,11 @@
                 {
                     <tr>
                         <td class="text-center">
-                            @Html.HiddenFor(m => Model.Items[i].OrganizationId)
+                            @Html.HiddenFor(m => Model.Items[i].Id)
                             @Html.CheckBoxFor(m => Model.Items[i].Selected)
                         </td>
-                        <td>@Html.ActionLink(Model.Items[i].Name, "Edit", "Organizations", new { id = Model.Items[i].OrganizationId }, new { target = "_blank" })</td>
+                        <td>@Html.ActionLink(Model.Items[i].Name, "Edit", "Organizations", new { id = Model.Items[i].Id }, new { target = "_blank" })</td>
                         <td>@(Model.Items[i].PlanType.GetDisplayAttribute()?.Name ?? Model.Items[i].PlanType.ToString())</td>
-                        <td>@Model.Items[i].OwnerEmail</td>
                     </tr>
                 }
             }
@@ -79,7 +78,7 @@
                 {
                     <li class="page-item">
                         <a class="page-link" asp-action="AddExisting" asp-route-providerId="@Model.ProviderId" asp-route-page="@Model.NextPage.Value"
-                           asp-route-count="@Model.Count" asp-route-userEmail="@Model.OrganizationOwnerEmail"
+                           asp-route-count="@Model.Count" asp-route-ownerEmail="@Model.OrganizationOwnerEmail"
                            asp-route-name="@Model.OrganizationName">Next</a>
                     </li>
                 }
