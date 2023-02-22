@@ -1,13 +1,7 @@
 @using Bit.SharedWeb.Utilities
 @model OrganizationEditModel
 
-<form method="post" id="edit-form">
-    @if (Model.Provider != null)
-    {
-        @Html.HiddenFor(m => m.Provider.Id)
-        @Html.HiddenFor(m => m.Provider.Type)
-    }
-    
+<form method="post" id="edit-form" asp-route-providerId="@Model.Provider?.Id">
     <input asp-for="SalesAssistedTrialStarted" type="hidden">
     <h2>General</h2>
     <div class="row">
