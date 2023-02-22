@@ -21,7 +21,7 @@ jobs:
 
       - name: Login to Azure ACR
         run: az acr login -n bitwardenqa
-          k
+
       - name: Login to Azure - PROD Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
