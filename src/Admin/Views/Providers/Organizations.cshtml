@@ -9,10 +9,13 @@
                         <th style="width: 50%;">Name</th>
                         <th style="width: 50%;">Status</th>
                         <th>
-                            <div class="float-right text-nowrap">
-                                <a asp-controller="Organizations" asp-action="Create" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary">New Organization</a>
-                                <a asp-controller="Providers" asp-action="AddExistingOrganization" asp-route-id="@Model.Provider.Id" class="btn btn-sm btn-outline-primary">Add Existing Organization</a>
-                            </div>
+                            @if (Model.Provider.Type == ProviderType.Reseller)
+                            {
+                                <div class="float-right text-nowrap">
+                                    <a asp-controller="Organizations" asp-action="Create" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary">New Organization</a>
+                                    <a asp-controller="Providers" asp-action="AddExistingOrganization" asp-route-id="@Model.Provider.Id" class="btn btn-sm btn-outline-primary">Add Existing Organization</a>
+                                </div>
+                            }
                         </th>
                     </tr>
                 </thead>
