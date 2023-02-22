@@ -322,6 +322,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<byte?>("DeviceType")
                         .HasColumnType("smallint");
 
+                    b.Property<string>("DomainName")
+                        .HasColumnType("text");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("uuid");
 
@@ -705,6 +708,43 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("OrganizationId");
 
                     b.ToTable("OrganizationConnection", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationDomain", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DomainName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("JobRunCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastCheckedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("NextRunDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Txt")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("VerifiedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationDomain", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
@@ -1300,9 +1340,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<bool>("UnknownDeviceVerificationEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
 
@@ -1791,6 +1828,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationDomain", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("Domains")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "SponsoredOrganization")
@@ -2086,6 +2134,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Navigation("Ciphers");
 
                     b.Navigation("Connections");
+
+                    b.Navigation("Domains");
 
                     b.Navigation("Groups");
 

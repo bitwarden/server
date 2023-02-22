@@ -49,6 +49,19 @@ public class PotentialGranteeResponseModel : ResponseModel
         Type = "serviceAccount";
     }
 
+    public PotentialGranteeResponseModel(Project project)
+        : base(_objectName)
+    {
+        if (project == null)
+        {
+            throw new ArgumentNullException(nameof(project));
+        }
+
+        Id = project.Id.ToString();
+        Name = project.Name;
+        Type = "project";
+    }
+
     public PotentialGranteeResponseModel() : base(_objectName)
     {
     }

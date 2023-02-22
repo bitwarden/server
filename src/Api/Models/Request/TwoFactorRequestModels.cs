@@ -202,8 +202,6 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     [StringLength(256)]
     public string Email { get; set; }
 
-    public string DeviceIdentifier { get; set; }
-
     public string AuthRequestId { get; set; }
 
     public User ToUser(User extistingUser)
