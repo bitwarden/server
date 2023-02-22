@@ -24,7 +24,6 @@ LEFT JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
-END
 GO
 
 IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadById]') IS NOT NULL
