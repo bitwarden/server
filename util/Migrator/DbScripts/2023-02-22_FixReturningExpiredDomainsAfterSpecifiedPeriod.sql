@@ -1,9 +1,9 @@
-CREATE PROCEDURE [dbo].[OrganizationDomain_ReadIfExpired]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadIfExpired]
 AS
 BEGIN
     SET NOCOUNT OFF
-        
-    SELECT 
+
+    SELECT
         *
     FROM
         [dbo].[OrganizationDomain]
