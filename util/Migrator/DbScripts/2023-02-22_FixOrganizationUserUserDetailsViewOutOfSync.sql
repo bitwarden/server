@@ -20,9 +20,9 @@ SELECT
     U.[UsesKeyConnector]
 FROM
     [dbo].[OrganizationUser] OU
-    LEFT JOIN
+LEFT JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
-    LEFT JOIN
+LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
 END
 GO
@@ -44,5 +44,3 @@ BEGIN
     EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByMinimumRole]';
 END
 GO
-
-
