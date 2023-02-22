@@ -9,6 +9,7 @@ using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -183,6 +184,7 @@ public abstract class BaseRequestValidator<T> where T : class
             customResponse.Add("Key", user.Key);
         }
 
+        customResponse.Add("MasterPasswordPolicies", await GetMasterPasswordPolicies(user));
         customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
         customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
         customResponse.Add("Kdf", (byte)user.Kdf);
@@ -617,5 +619,20 @@ public abstract class BaseRequestValidator<T> where T : class
         var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
         var failedLoginCount = user?.FailedLoginCount ?? 0;
         return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
+    }
+
+    private async Task<IEnumerable<PolicyResponseModel>> GetMasterPasswordPolicies(User user)
+    {
+        var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
+            .ToList();
+
+        if (!orgs.Any())
+        {
+            return new List<PolicyResponseModel>();
+        }
+
+        return (await _policyRepository.GetManyByUserIdAsync(user.Id))
+            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
+            .Select(p => new PolicyResponseModel(p));
     }
 }
