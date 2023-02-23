@@ -1,6 +1,8 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Entities.Provider;
+using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
+using Bit.Core.Models.Business;
 using Bit.Core.Providers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -15,29 +17,38 @@ namespace Bit.Admin.Controllers;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class ProvidersController : Controller
 {
+    private readonly IOrganizationService _organizationService;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderService _providerService;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly IUserService _userService;
     private readonly ICreateProviderCommand _createProviderCommand;
 
     public ProvidersController(
+        IOrganizationService organizationService,
         IProviderRepository providerRepository,
         IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         GlobalSettings globalSettings,
         IApplicationCacheService applicationCacheService,
+        IReferenceEventService referenceEventService,
+        IUserService userService,
         ICreateProviderCommand createProviderCommand)
     {
+        _organizationService = organizationService;
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
+        _referenceEventService = referenceEventService;
+        _userService = userService;
         _createProviderCommand = createProviderCommand;
     }
 
@@ -164,7 +175,22 @@ public class ProvidersController : Controller
     [HttpPost]
     public async Task<IActionResult> CreateOrganization(Guid providerId, OrganizationEditModel model)
     {
-        // TODO : Insert logic to create the new Organization entry, create an OrganizationUser entry for the owner and send the invitation email
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider is not { Type: ProviderType.Reseller })
+        {
+            return RedirectToAction("Index");
+        }
+
+        var organization = model.CreateOrganization(provider);
+        await _organizationService.CreateOrganization(organization, model.Owners);
+
+        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
+        {
+            EventRaisedByUser = _userService.GetUserName(User),
+            SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
+        });
+        await _providerService.AddOrganization(providerId, organization.Id, Guid.Empty, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
     }

@@ -132,6 +132,13 @@ public class OrganizationEditModel : OrganizationViewModel
     public DateTime? ExpirationDate { get; set; }
     public bool SalesAssistedTrialStarted { get; set; }
 
+    public Organization CreateOrganization(Provider provider)
+    {
+        BillingEmail = provider.BillingEmail;
+
+        return ToOrganization(new Organization());
+    }
+
     public Organization ToOrganization(Organization existingOrganization)
     {
         existingOrganization.Name = Name;
