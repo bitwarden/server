@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Bit.Core.Models.Api;
-using HandlebarsDotNet.ObjectDescriptors;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
