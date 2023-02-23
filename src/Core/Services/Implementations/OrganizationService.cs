@@ -1349,7 +1349,7 @@ public class OrganizationService : IOrganizationService
                 continue;
             }
 
-            await SendInviteAsync(orgUser, org);
+            await SendInviteAsync(orgUser, org, false);
             result.Add(Tuple.Create(orgUser, ""));
         }
 
@@ -1366,7 +1366,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var org = await GetOrgById(orgUser.OrganizationId);
-        await SendInviteAsync(orgUser, org);
+        await SendInviteAsync(orgUser, org, false);
     }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
@@ -1378,14 +1378,21 @@ public class OrganizationService : IOrganizationService
             orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
     }
 
-    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization)
+    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
     {
         var now = DateTime.UtcNow;
         var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
         var token = _dataProtector.Protect(
             $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
 
-        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
+        if (initOrganization)
+        {
+            await _mailService.SendOrganizationCreationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
+        }
+        else
+        {
+            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
+        }
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
@@ -2615,8 +2622,9 @@ public class OrganizationService : IOrganizationService
         return orgUsers.Count(ou => ou.OccupiesOrganizationSeat);
     }
 
-    public async Task CreateOrganization(Organization organization, string ownerEmail)
+    public async Task CreatePendingOrganization(Organization organization, string ownerEmail)
     {
+        organization.Enabled = false;
         organization.Status = OrganizationStatusType.Pending;
         await _organizationRepository.CreateAsync(organization);
 
@@ -2635,6 +2643,20 @@ public class OrganizationService : IOrganizationService
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 
         await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
-        await SendInviteAsync(ownerOrganizationUser, organization);
+        await SendInviteAsync(ownerOrganizationUser, organization, true);
+    }
+
+    public async Task InitPendingOrganization(Guid organizationId, string publicKey, string privateKey)
+    {
+        var org = await GetOrgById(organizationId);
+        if (!org.Enabled && org.Status == OrganizationStatusType.Pending && string.IsNullOrEmpty(org.PublicKey) && string.IsNullOrEmpty(org.PrivateKey))
+        {
+            org.Enabled = true;
+            org.Status = OrganizationStatusType.Created;
+            org.PublicKey = publicKey;
+            org.PrivateKey = privateKey;
+
+            await UpdateAsync(org);
+        }
     }
 }

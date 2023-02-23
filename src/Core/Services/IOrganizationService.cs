@@ -39,8 +39,7 @@ public interface IOrganizationService
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId);
-    Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
-        IUserService userService);
+    Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token, IUserService userService);
     Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService);
     Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, IUserService userService);
@@ -71,5 +70,6 @@ public interface IOrganizationService
     Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
     Task<int> GetOccupiedSeatCount(Organization organization);
-    Task CreateOrganization(Organization organization, string ownerEmail);
+    Task CreatePendingOrganization(Organization organization, string ownerEmail);
+    Task InitPendingOrganization(Guid organizationId, string publicKey, string privateKey);
 }
