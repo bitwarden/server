@@ -186,22 +186,35 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-        var useMasterPasswordPolicy = masterPasswordPolicy != null &&
-            masterPasswordPolicy.Enabled &&
-            masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
-
-        if (useMasterPasswordPolicy &&
-            string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+        if (!string.IsNullOrWhiteSpace(model.Key) && model.Keys != null)
         {
-            throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
+            // Update the Organization entry with the public/private keys
+            await _organizationService.InitPendingOrganization(orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey);
+
+            // Update the OrgUser entry with their encrypted symmetric key
+            // Immediately move that OrgUser into the Confirmed status
+            await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+            await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
         }
-
-        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
-
-        if (useMasterPasswordPolicy)
+        else
         {
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+            var useMasterPasswordPolicy = masterPasswordPolicy != null &&
+                                          masterPasswordPolicy.Enabled &&
+                                          masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+
+            if (useMasterPasswordPolicy &&
+                string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+            {
+                throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
+            }
+
+            await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+
+            if (useMasterPasswordPolicy)
+            {
+                await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            }
         }
     }
 

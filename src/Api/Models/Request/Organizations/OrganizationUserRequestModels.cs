@@ -43,6 +43,8 @@ public class OrganizationUserAcceptRequestModel
     public string Token { get; set; }
     // Used to auto-enroll in master password reset
     public string ResetPasswordKey { get; set; }
+    public string Key { get; set; }
+    public OrganizationKeysRequestModel Keys { get; set; }
 }
 
 public class OrganizationUserConfirmRequestModel
