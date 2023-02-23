@@ -244,6 +244,34 @@ public class HandlebarsMailService : IMailService
         await EnqueueMailAsync(messageModels);
     }
 
+    public async Task SendOrganizationCreationInviteEmailAsync(string organizationName, OrganizationUser orgUser,
+        ExpiringToken token)
+    {
+        MailQueueMessage CreateMessage(string email, object model)
+        {
+            var message = CreateDefaultMessage($"Join {organizationName}", email);
+            return new MailQueueMessage(message, "OrganizationUserInvited", model);
+        }
+
+        var messageModel = CreateMessage(orgUser.Email,
+            new OrganizationUserInvitedViewModel
+            {
+                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+                Email = WebUtility.UrlEncode(orgUser.Email),
+                OrganizationId = orgUser.OrganizationId.ToString(),
+                OrganizationUserId = orgUser.Id.ToString(),
+                Token = WebUtility.UrlEncode(token.Token),
+                ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
+                OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
+                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
+                SiteName = _globalSettings.SiteName,
+                InitOrganization = true
+            }
+        );
+
+        await EnqueueMailAsync(messageModel);
+    }
+
     public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
     {
         var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);

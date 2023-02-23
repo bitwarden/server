@@ -32,6 +32,11 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendOrganizationCreationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
     {
         return Task.FromResult(0);
