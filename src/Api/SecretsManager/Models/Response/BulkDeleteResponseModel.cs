@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Bit.Core.Models.Api;
+using HandlebarsDotNet.ObjectDescriptors;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
@@ -7,9 +8,10 @@ public class BulkDeleteResponseModel : ResponseModel
 {
     private const string _objectName = "BulkDeleteResponseModel";
 
-    public BulkDeleteResponseModel(Guid id, string error) : base(_objectName)
+    public BulkDeleteResponseModel(Guid id, string error, string objectDescription) : base(_objectName)
     {
         Id = id;
+        ObjectDescription = objectDescription;
 
         if (string.IsNullOrWhiteSpace(error))
         {
@@ -28,4 +30,6 @@ public class BulkDeleteResponseModel : ResponseModel
     public Guid Id { get; set; }
 
     public string? Error { get; set; }
+
+    public string ObjectDescription { get; set; }
 }

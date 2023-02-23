@@ -118,7 +118,7 @@ public class ProjectsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
 
         var results = await _deleteProjectCommand.DeleteProjects(ids, userId);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2, r.Item1.Name));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 }
