@@ -217,5 +217,4 @@ public class OrganizationsController : Controller
         }
         return RedirectToAction("Index");
     }
-
 }
