@@ -10,7 +10,7 @@ public class OrganizationDomainSsoDetailsData
     public bool SsoAvailable { get; set; }
     public string OrganizationIdentifier { get; set; }
     public bool SsoRequired { get; set; }
-    public PolicyType PolicyType { get; set; }
+    public PolicyType? PolicyType { get; set; }
     public DateTime? VerifiedDate { get; set; }
     public bool OrganizationEnabled { get; set; }
 }

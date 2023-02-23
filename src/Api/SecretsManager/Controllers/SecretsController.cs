@@ -81,6 +81,7 @@ public class SecretsController : Controller
     public async Task<SecretResponseModel> GetAsync([FromRoute] Guid id)
     {
         var secret = await _secretRepository.GetByIdAsync(id);
+
         if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
         {
             throw new NotFoundException();

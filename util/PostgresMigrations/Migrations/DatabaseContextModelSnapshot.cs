@@ -1346,9 +1346,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
 
-                    b.Property<bool>("UnknownDeviceVerificationEnabled")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");
 
