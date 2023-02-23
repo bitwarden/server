@@ -119,7 +119,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         //Get domains that have not been verified after 72 hours
         var domains = dbContext.OrganizationDomains
             .AsEnumerable()
-            .Where(x => (DateTime.UtcNow - x.CreationDate).Days >= 4
+            .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
                         && x.VerifiedDate == null)
             .ToList();
 
