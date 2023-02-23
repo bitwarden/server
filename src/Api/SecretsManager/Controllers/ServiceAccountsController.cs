@@ -19,20 +19,23 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class ServiceAccountsController : Controller
 {
     private readonly ICurrentContext _currentContext;
+    private readonly IUserService _userService;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
     private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
-    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
-    private readonly IUserService _userService;
+    private readonly IRevokeAccessTokensCommand _revokeAccessTokensCommand;
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
         IUserService userService,
         IServiceAccountRepository serviceAccountRepository,
+        IApiKeyRepository apiKeyRepository,
         ICreateAccessTokenCommand createAccessTokenCommand,
-        IApiKeyRepository apiKeyRepository, ICreateServiceAccountCommand createServiceAccountCommand,
-        IUpdateServiceAccountCommand updateServiceAccountCommand)
+        ICreateServiceAccountCommand createServiceAccountCommand,
+        IUpdateServiceAccountCommand updateServiceAccountCommand,
+        IRevokeAccessTokensCommand revokeAccessTokensCommand)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -40,6 +43,7 @@ public class ServiceAccountsController : Controller
         _apiKeyRepository = apiKeyRepository;
         _createServiceAccountCommand = createServiceAccountCommand;
         _updateServiceAccountCommand = updateServiceAccountCommand;
+        _revokeAccessTokensCommand = revokeAccessTokensCommand;
         _createAccessTokenCommand = createAccessTokenCommand;
     }
 
@@ -128,5 +132,38 @@ public class ServiceAccountsController : Controller
 
         var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id), userId);
         return new AccessTokenCreationResponseModel(result);
+    }
+
+    [HttpPost("{id}/access-tokens/revoke")]
+    public async Task RevokeAccessTokensAsync(Guid id, [FromBody] RevokeAccessTokensRequest request)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var hasAccess = accessClient switch
+        {
+            AccessClientType.NoAccessCheck => true,
+            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
+            _ => false,
+        };
+
+        if (!hasAccess)
+        {
+            throw new NotFoundException();
+        }
+
+        await _revokeAccessTokensCommand.RevokeAsync(serviceAccount, request.Ids);
     }
 }

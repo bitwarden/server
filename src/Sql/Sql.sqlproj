@@ -444,6 +444,7 @@
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
+    <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_DeleteByIds.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_ReadByServiceAccountId.sql" />
     <Build Include="SecretsManager\dbo\Tables\AccessPolicy.sql" />
     <Build Include="SecretsManager\dbo\Tables\ApiKey.sql" />

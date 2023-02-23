@@ -1287,9 +1287,6 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("UnknownDeviceVerificationEnabled")
-                        .HasColumnType("INTEGER");
-
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");
 
