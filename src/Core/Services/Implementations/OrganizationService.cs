@@ -2614,4 +2614,27 @@ public class OrganizationService : IOrganizationService
         var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
         return orgUsers.Count(ou => ou.OccupiesOrganizationSeat);
     }
+
+    public async Task CreateOrganization(Organization organization, string ownerEmail)
+    {
+        organization.Status = OrganizationStatusType.Pending;
+        await _organizationRepository.CreateAsync(organization);
+
+        var ownerOrganizationUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = null,
+            Email = ownerEmail,
+            Key = null,
+            Type = OrganizationUserType.Owner,
+            Status = OrganizationUserStatusType.Invited,
+            AccessAll = true,
+            CreationDate = organization.CreationDate,
+            RevisionDate = organization.CreationDate
+        };
+        await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
+
+        await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
+        await SendInviteAsync(ownerOrganizationUser, organization);
+    }
 }
