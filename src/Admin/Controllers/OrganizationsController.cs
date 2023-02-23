@@ -1,7 +1,6 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -96,26 +95,6 @@ public class OrganizationsController : Controller
             Action = _globalSettings.SelfHosted ? "View" : "Edit",
             SelfHosted = _globalSettings.SelfHosted
         });
-    }
-
-    [HttpGet]
-    public async Task<IActionResult> Create(Guid providerId)
-    {
-        var provider = await _providerRepository.GetByIdAsync(providerId);
-        if (provider is not { Type: ProviderType.Reseller })
-        {
-            return RedirectToAction("Index");
-        }
-
-        return View(new OrganizationEditModel(provider));
-    }
-
-    [HttpPost]
-    public async Task<IActionResult> Create(Guid providerId, OrganizationEditModel model)
-    {
-        // TODO : Insert logic to create the new Organization entry, create an OrganizationUser entry for the owner and send the invitation email
-
-        return RedirectToAction("Edit", "Providers", new { id = providerId });
     }
 
     public async Task<IActionResult> View(Guid id)
