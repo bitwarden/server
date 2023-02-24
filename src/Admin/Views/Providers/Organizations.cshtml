@@ -1,4 +1,7 @@
 @model ProviderViewModel
+
+@await Html.PartialAsync("_ProviderScripts")
+
 <h2>Provider Organizations</h2>
 <div class="row">
     <div class="col-sm">
@@ -41,7 +44,7 @@
                                     <div class="float-right">
                                         @if (org.Status == OrganizationStatusType.Pending)
                                         {
-                                            <a asp-controller="Organizations" asp-action="ResendInvite" asp-route-id="@org.Id" class="float-right">
+                                            <a href="#" class="float-right" onclick="return resendOwnerInvite('@org.OrganizationId', '@org.OrganizationName');">
                                                 <i class="fa fa-envelope-o fa-lg" title="Resend Setup Invite"></i>
                                             </a>
                                         }
