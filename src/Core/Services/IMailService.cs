@@ -18,7 +18,7 @@ public interface IMailService
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
     Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token);
     Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites);
-    Task SendOrganizationCreationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token);
+    Task SendOrganizationInitInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token);
     Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);

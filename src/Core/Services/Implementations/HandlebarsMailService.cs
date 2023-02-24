@@ -244,7 +244,7 @@ public class HandlebarsMailService : IMailService
         await EnqueueMailAsync(messageModels);
     }
 
-    public async Task SendOrganizationCreationInviteEmailAsync(string organizationName, OrganizationUser orgUser,
+    public async Task SendOrganizationInitInviteEmailAsync(string organizationName, OrganizationUser orgUser,
         ExpiringToken token)
     {
         MailQueueMessage CreateMessage(string email, object model)
@@ -254,7 +254,7 @@ public class HandlebarsMailService : IMailService
         }
 
         var messageModel = CreateMessage(orgUser.Email,
-            new OrganizationUserInvitedViewModel
+            new OrganizationUserInitInvitedViewModel
             {
                 OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
                 Email = WebUtility.UrlEncode(orgUser.Email),
@@ -264,8 +264,7 @@ public class HandlebarsMailService : IMailService
                 ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
                 OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName,
-                InitOrganization = true
+                SiteName = _globalSettings.SiteName
             }
         );
 
