@@ -25,6 +25,9 @@ public class ServiceAccountAccessPoliciesResponseModel : ResponseModel
                 case GroupServiceAccountAccessPolicy accessPolicy:
                     GroupAccessPolicies.Add(new GroupServiceAccountAccessPolicyResponseModel(accessPolicy));
                     break;
+                case ServiceAccountProjectAccessPolicy accessPolicy:
+                    ProjectAccessPolicies.Add(new ServiceAccountProjectAccessPolicyResponseModel(accessPolicy));
+                    break;
             }
         }
     }
@@ -36,4 +39,5 @@ public class ServiceAccountAccessPoliciesResponseModel : ResponseModel
     public List<UserServiceAccountAccessPolicyResponseModel> UserAccessPolicies { get; set; } = new();
 
     public List<GroupServiceAccountAccessPolicyResponseModel> GroupAccessPolicies { get; set; } = new();
+    public List<ServiceAccountProjectAccessPolicyResponseModel> ProjectAccessPolicies { get; set; } = new();
 }

@@ -13,6 +13,8 @@ public class AccessPoliciesCreateRequest
 
     public IEnumerable<AccessPolicyRequest>? ServiceAccountAccessPolicyRequests { get; set; }
 
+    public IEnumerable<AccessPolicyRequest>? ProjectAccessPolicyRequests { get; set; }
+
     public List<BaseAccessPolicy> ToBaseAccessPoliciesForProject(Guid grantedProjectId)
     {
         if (UserAccessPolicyRequests == null && GroupAccessPolicyRequests == null && ServiceAccountAccessPolicyRequests == null)
@@ -49,7 +51,7 @@ public class AccessPoliciesCreateRequest
 
     public List<BaseAccessPolicy> ToBaseAccessPoliciesForServiceAccount(Guid grantedServiceAccountId)
     {
-        if (UserAccessPolicyRequests == null && GroupAccessPolicyRequests == null)
+        if (UserAccessPolicyRequests == null && GroupAccessPolicyRequests == null && ProjectAccessPolicyRequests == null)
         {
             throw new BadRequestException("No creation requests provided.");
         }
@@ -59,6 +61,9 @@ public class AccessPoliciesCreateRequest
 
         var groupAccessPolicies = GroupAccessPolicyRequests?
             .Select(x => x.ToGroupServiceAccountAccessPolicy(grantedServiceAccountId)).ToList();
+
+        var projectAccessPolicies = ProjectAccessPolicyRequests?
+            .Select(x => x.ToProjectServiceAccountAccessPolicy(grantedServiceAccountId)).ToList();
 
         var policies = new List<BaseAccessPolicy>();
         if (userAccessPolicies != null)
@@ -70,6 +75,12 @@ public class AccessPoliciesCreateRequest
         {
             policies.AddRange(groupAccessPolicies);
         }
+
+        if (projectAccessPolicies != null)
+        {
+            policies.AddRange(projectAccessPolicies);
+        }
+
         return policies;
     }
 
@@ -146,6 +157,15 @@ public class AccessPolicyRequest
         {
             GroupId = GranteeId,
             GrantedServiceAccountId = id,
+            Read = Read,
+            Write = Write
+        };
+
+    public ServiceAccountProjectAccessPolicy ToProjectServiceAccountAccessPolicy(Guid serviceAccountId) =>
+        new()
+        {
+            ServiceAccountId = serviceAccountId,
+            GrantedProjectId = GranteeId,
             Read = Read,
             Write = Write
         };

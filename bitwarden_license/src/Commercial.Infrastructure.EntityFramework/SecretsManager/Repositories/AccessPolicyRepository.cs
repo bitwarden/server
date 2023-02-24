@@ -180,9 +180,11 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         var entities = await dbContext.AccessPolicies.Where(ap =>
                 ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id ||
-                ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id)
+                ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id ||
+                ((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId == id)
             .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
             .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
+            .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).GrantedProject)
             .ToListAsync();
 
         return entities.Select(MapToCore);
