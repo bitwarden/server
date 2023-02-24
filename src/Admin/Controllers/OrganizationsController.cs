@@ -220,7 +220,7 @@ public class OrganizationsController : Controller
         }
         return RedirectToAction("Index");
     }
-    
+
     [HttpPost]
     public async Task<IActionResult> ResendOwnerInvite(Guid id)
     {
