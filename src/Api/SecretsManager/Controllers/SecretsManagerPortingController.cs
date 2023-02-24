@@ -33,7 +33,7 @@ public class SecretsManagerPortingController : Controller
     {
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
-            throw new BadRequestException("You must be an organization admin to export data");
+            throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
@@ -53,7 +53,7 @@ public class SecretsManagerPortingController : Controller
     {
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
-            throw new BadRequestException("You must be an organization admin to import data");
+            throw new NotFoundException();
         }
 
         if (importRequest.Projects?.Count() > 1000 || importRequest.Secrets?.Count() > 6000)
