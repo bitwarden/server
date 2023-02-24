@@ -1,4 +1,28 @@
-﻿CREATE PROCEDURE [dbo].[Event_Create]
+IF COL_LENGTH('[dbo].[Event]', 'SecretId') IS NULL
+BEGIN
+    ALTER TABLE
+        [dbo].[Event]
+    ADD
+        [SecretId] UNIQUEIDENTIFIER NULL
+END
+GO
+
+IF COL_LENGTH('[dbo].[Event]', 'ServiceAccountId') IS NULL
+BEGIN
+    ALTER TABLE
+        [dbo].[Event]
+    ADD
+        [ServiceAccountId] UNIQUEIDENTIFIER NULL
+END
+GO
+
+IF OBJECT_ID('[dbo].[EventView]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[EventView]';
+END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[Event_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Type INT,
     @UserId UNIQUEIDENTIFIER,
@@ -73,3 +97,4 @@ BEGIN
         @ServiceAccountId
     )
 END
+GO
