@@ -37,14 +37,22 @@ public class OrganizationUserInviteRequestModel
     }
 }
 
+public class OrganizationUserAcceptInitRequestModel
+{
+    [Required]
+    public string Token { get; set; }
+    [Required]
+    public string Key { get; set; }
+    [Required]
+    public OrganizationKeysRequestModel Keys { get; set; }
+}
+
 public class OrganizationUserAcceptRequestModel
 {
     [Required]
     public string Token { get; set; }
     // Used to auto-enroll in master password reset
     public string ResetPasswordKey { get; set; }
-    public string Key { get; set; }
-    public OrganizationKeysRequestModel Keys { get; set; }
 }
 
 public class OrganizationUserConfirmRequestModel

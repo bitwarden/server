@@ -177,6 +177,30 @@ public class OrganizationUsersController : Controller
         await _organizationService.ResendInviteAsync(orgGuidId, userId.Value, new Guid(id));
     }
 
+    [HttpPost("{organizationUserId}/accept-init")]
+    public async Task AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (string.IsNullOrWhiteSpace(model.Key) || model.Keys == null)
+        {
+            throw new BadRequestException();
+        }
+
+        // Update the Organization entry with the public/private keys
+        await _organizationService.InitPendingOrganization(orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey);
+
+        // Accept the OrgUser
+        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+
+        // Update the OrgUser entry with their encrypted symmetric key and move into the Confirmed status
+        await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
+    }
+
     [HttpPost("{organizationUserId}/accept")]
     public async Task Accept(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptRequestModel model)
     {
@@ -186,35 +210,20 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (!string.IsNullOrWhiteSpace(model.Key) && model.Keys != null)
-        {
-            // Update the Organization entry with the public/private keys
-            await _organizationService.InitPendingOrganization(orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey);
-
-            // Update the OrgUser entry with their encrypted symmetric key
-            // Immediately move that OrgUser into the Confirmed status
-            await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
-            await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
-        }
-        else
-        {
-            var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
-            var useMasterPasswordPolicy = masterPasswordPolicy != null &&
+        var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
+        var useMasterPasswordPolicy = masterPasswordPolicy != null &&
                                           masterPasswordPolicy.Enabled &&
                                           masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+        if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+        {
+            throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
+        }
 
-            if (useMasterPasswordPolicy &&
-                string.IsNullOrWhiteSpace(model.ResetPasswordKey))
-            {
-                throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
-            }
+        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
 
-            await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
-
-            if (useMasterPasswordPolicy)
-            {
-                await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
-            }
+        if (useMasterPasswordPolicy)
+        {
+            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
         }
     }
 
