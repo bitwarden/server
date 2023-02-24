@@ -344,6 +344,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SecretId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ServiceAccountId")
+                        .HasColumnType("TEXT");
+
                     b.Property<byte?>("SystemUser")
                         .HasColumnType("INTEGER");
 
@@ -1286,9 +1292,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("TwoFactorRecoveryCode")
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("UnknownDeviceVerificationEnabled")
-                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");

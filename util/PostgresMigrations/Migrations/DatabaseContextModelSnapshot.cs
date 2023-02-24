@@ -353,6 +353,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SecretId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ServiceAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<byte?>("SystemUser")
                         .HasColumnType("smallint");
 
@@ -1339,9 +1345,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("TwoFactorRecoveryCode")
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
-
-                    b.Property<bool>("UnknownDeviceVerificationEnabled")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("boolean");

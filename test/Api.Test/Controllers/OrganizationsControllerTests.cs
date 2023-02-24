@@ -32,6 +32,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
+    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     private readonly OrganizationsController _sut;
@@ -53,11 +54,13 @@ public class OrganizationsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
+        _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
-            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _cloudGetOrganizationLicenseQuery, _globalSettings);
+            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
+            _cloudGetOrganizationLicenseQuery, _globalSettings);
     }
 
     public void Dispose()

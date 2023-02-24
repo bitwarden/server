@@ -1,4 +1,6 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -34,18 +36,48 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             var dbContext = GetDatabaseContext(scope);
             var secrets = await dbContext.Secret
                                     .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
+                                    .Include(c => c.Projects)
                                     .ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId)
+    private static Expression<Func<Secret, bool>> ServiceAccountHasReadAccessToSecret(Guid serviceAccountId) => s =>
+    s.Projects.Any(p =>
+        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read));
+
+    private static Expression<Func<Secret, bool>> UserHasReadAccessToSecret(Guid userId) => s =>
+        s.Projects.Any(p =>
+            p.UserAccessPolicies.Any(ap => ap.OrganizationUser.UserId == userId && ap.Read) ||
+            p.GroupAccessPolicies.Any(ap =>
+                ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.UserId == userId && ap.Read)));
+
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = dbContext.Secret.Include(c => c.Projects).Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
+            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        var secrets = await query.OrderBy(c => c.RevisionDate).ToListAsync();
+        return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var secrets = await dbContext.Secret
-                                    .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
+                                    .Where(s => ids.Contains(s.Id) && s.OrganizationId == organizationId && s.DeletedDate != null)
                                     .Include("Projects")
                                     .OrderBy(c => c.RevisionDate)
                                     .ToListAsync();
@@ -54,15 +86,38 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByProjectIdAsync(Guid projectId)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var secrets = await dbContext.Secret
-                .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null).Include("Projects")
-                .OrderBy(s => s.RevisionDate).ToListAsync();
+                                    .Where(c => c.OrganizationId == organizationId && c.DeletedDate != null)
+                                    .Include("Projects")
+                                    .OrderBy(c => c.RevisionDate)
+                                    .ToListAsync();
 
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+        }
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByProjectIdAsync(Guid projectId, Guid userId, AccessClientType accessType)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = dbContext.Secret.Include(s => s.Projects)
+                .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null);
+
+            query = accessType switch
+            {
+                AccessClientType.NoAccessCheck => query,
+                AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
+                AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)),
+                _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+            };
+
+            var secrets = await query.OrderBy(s => s.RevisionDate).ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
         }
     }
@@ -96,6 +151,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         {
             var dbContext = GetDatabaseContext(scope);
             var mappedEntity = Mapper.Map<Secret>(secret);
+
             var entity = await dbContext.Secret
                 .Include("Projects")
                 .FirstAsync(s => s.Id == secret.Id);
@@ -141,12 +197,26 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var utcNow = DateTime.UtcNow;
             var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
             await secrets.ForEachAsync(secret =>
             {
                 dbContext.Attach(secret);
                 dbContext.Remove(secret);
+            });
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task RestoreManyByIdAsync(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
+            await secrets.ForEachAsync(secret =>
+            {
+                dbContext.Attach(secret);
+                secret.DeletedDate = null;
             });
             await dbContext.SaveChangesAsync();
         }
