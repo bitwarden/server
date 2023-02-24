@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230213133244_SecretsManagerEvent")]
+    partial class SecretsManagerEvent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "6.0.12");
@@ -1292,6 +1294,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("TwoFactorRecoveryCode")
                         .HasMaxLength(32)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("UnknownDeviceVerificationEnabled")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("INTEGER");
