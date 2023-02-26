@@ -449,12 +449,13 @@ public class ToolsController : Controller
         options.EndingBefore = await StripeSubscriptionsGetHasPreviousPage(subscriptions, options) ?
             subscriptions.FirstOrDefault()?.Id :
             null;
-
+        
+        var isProduction = _globalSettings.Braintree.Production;
         var model = new StripeSubscriptionsModel()
         {
             Items = subscriptions.Select(s => new StripeSubscriptionRowModel(s)).ToList(),
             Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
-            TestClocks = await _stripeAdapter.TestClockListAsync(),
+            TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync(),
             Filter = options
         };
         return View(model);
@@ -465,8 +466,9 @@ public class ToolsController : Controller
     {
         if (!ModelState.IsValid)
         {
+            var isProduction = _globalSettings.Braintree.Production;
             model.Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
-            model.TestClocks = await _stripeAdapter.TestClockListAsync();
+            model.TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync();
             return View(model);
         }
 
