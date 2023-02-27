@@ -4,6 +4,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
+using Bit.Api.SecretsManager;
 using Bit.Api.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -38,6 +39,7 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
 
@@ -55,6 +57,7 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
+        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         GlobalSettings globalSettings)
     {
@@ -71,6 +74,7 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
+        _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _globalSettings = globalSettings;
     }
@@ -135,6 +139,7 @@ public class OrganizationsController : Controller
             {
                 throw new NotFoundException();
             }
+
             return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo);
         }
         else
@@ -255,7 +260,7 @@ public class OrganizationsController : Controller
         }
 
         var updateBilling = !_globalSettings.SelfHosted && (model.BusinessName != organization.BusinessName ||
-            model.BillingEmail != organization.BillingEmail);
+                                                            model.BillingEmail != organization.BillingEmail);
 
         var hasRequiredPermissions = updateBilling
             ? await _currentContext.ManageBilling(orgIdGuid)
@@ -304,11 +309,7 @@ public class OrganizationsController : Controller
         }
 
         var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
-        return new PaymentResponseModel
-        {
-            Success = result.Item1,
-            PaymentIntentClientSecret = result.Item2
-        };
+        return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
     }
 
     [HttpPost("{id}/subscription")]
@@ -335,11 +336,7 @@ public class OrganizationsController : Controller
         }
 
         var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
-        return new PaymentResponseModel
-        {
-            Success = true,
-            PaymentIntentClientSecret = result
-        };
+        return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
     [HttpPost("{id}/storage")]
@@ -353,11 +350,7 @@ public class OrganizationsController : Controller
         }
 
         var result = await _organizationService.AdjustStorageAsync(orgIdGuid, model.StorageGbAdjustment.Value);
-        return new PaymentResponseModel
-        {
-            Success = true,
-            PaymentIntentClientSecret = result
-        };
+        return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
     [HttpPost("{id}/verify-bank")]
@@ -471,7 +464,15 @@ public class OrganizationsController : Controller
             throw new BadRequestException("Invalid license");
         }
 
-        await _organizationService.UpdateLicenseAsync(new Guid(id), license);
+        var selfHostedOrganizationDetails = await _organizationRepository.GetSelfHostedOrganizationDetailsById(orgIdGuid);
+        if (selfHostedOrganizationDetails == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var existingOrganization = await _organizationRepository.GetByLicenseKeyAsync(license.LicenseKey);
+
+        await _updateOrganizationLicenseCommand.UpdateLicenseAsync(selfHostedOrganizationDetails, license, existingOrganization);
     }
 
     [HttpPost("{id}/import")]
@@ -548,7 +549,8 @@ public class OrganizationsController : Controller
     }
 
     [HttpGet("{id}/api-key-information/{type?}")]
-    public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id, [FromRoute] OrganizationApiKeyType? type)
+    public async Task<ListResponseModel<OrganizationApiKeyInformation>> ApiKeyInformation(Guid id,
+        [FromRoute] OrganizationApiKeyType? type)
     {
         if (!await HasApiKeyAccessAsync(id, type))
         {
@@ -577,8 +579,8 @@ public class OrganizationsController : Controller
         }
 
         var organizationApiKey = await _getOrganizationApiKeyQuery
-                                    .GetOrganizationApiKeyAsync(organization.Id, model.Type) ??
-                                await _createOrganizationApiKeyCommand.CreateAsync(organization.Id, model.Type);
+                                     .GetOrganizationApiKeyAsync(organization.Id, model.Type) ??
+                                 await _createOrganizationApiKeyCommand.CreateAsync(organization.Id, model.Type);
 
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -679,7 +681,8 @@ public class OrganizationsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey, model.EncryptedPrivateKey);
+        var org = await _organizationService.UpdateOrganizationKeysAsync(new Guid(id), model.PublicKey,
+            model.EncryptedPrivateKey);
         return new OrganizationKeysResponseModel(org);
     }
 
@@ -724,5 +727,35 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateAsync(organization);
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
+    }
+
+    // This is a temporary endpoint to self-enroll in secrets manager
+    [SecretsManager]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [HttpPost("{id}/enroll-secrets-manager")]
+    public async Task EnrollSecretsManager(Guid id, [FromBody] OrganizationEnrollSecretsManagerRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        if (!await _currentContext.OrganizationAdmin(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        organization.UseSecretsManager = model.Enabled;
+        await _organizationService.UpdateAsync(organization);
+
+        // Turn on Secrets Manager for the user
+        if (model.Enabled)
+        {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(id, userId);
+            orgUser.AccessSecretsManager = true;
+            await _organizationUserRepository.ReplaceAsync(orgUser);
+        }
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Bit.Api.Models.Response;
 
+[Obsolete("Leaving this for backwards compatibilty on clients")]
 public class DeviceVerificationResponseModel : ResponseModel
 {
     public DeviceVerificationResponseModel(bool isDeviceVerificationSectionEnabled, bool unknownDeviceVerificationEnabled)
