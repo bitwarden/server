@@ -65,7 +65,8 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId));
+        var userId = _userService.GetProperUserId(User).Value;
+        var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId), userId);
         return new ProjectResponseModel(result);
     }
 

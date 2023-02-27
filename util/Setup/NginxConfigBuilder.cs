@@ -4,6 +4,14 @@ public class NginxConfigBuilder
 {
     private const string ConfFile = "/bitwarden/nginx/default.conf";
 
+    private const string DefaultContentSecurityPolicy = "default-src 'self'; " +
+        "script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data: https://haveibeenpwned.com; " +
+        "child-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
+        "frame-src 'self' https://*.duosecurity.com https://*.duofederal.com; " +
+        "connect-src 'self' wss://{0} https://api.pwnedpasswords.com " +
+        "https://api.2fa.directory; object-src 'self' blob:;";
+
     private readonly Context _context;
 
     public NginxConfigBuilder(Context context)
@@ -72,7 +80,12 @@ public class NginxConfigBuilder
             Domain = context.Config.Domain;
             Url = context.Config.Url;
             RealIps = context.Config.RealIps;
-            ContentSecurityPolicy = string.Format(context.Config.NginxHeaderContentSecurityPolicy, Domain);
+            var csp = DefaultContentSecurityPolicy;
+            if (!string.IsNullOrWhiteSpace(context.Config.NginxHeaderContentSecurityPolicy))
+            {
+                csp = context.Config.NginxHeaderContentSecurityPolicy;
+            }
+            ContentSecurityPolicy = string.Format(csp, Domain);
 
             if (Ssl)
             {

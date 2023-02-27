@@ -20,7 +20,6 @@ public interface IOrganizationService
     Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
     Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationLicense license, User owner,
         string ownerKey, string collectionName, string publicKey, string privateKey);
-    Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license);
     Task DeleteAsync(Organization organization);
     Task EnableAsync(Guid organizationId, DateTime? expirationDate);
     Task DisableAsync(Guid organizationId, DateTime? expirationDate);
@@ -69,7 +68,7 @@ public interface IOrganizationService
     Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
-    Task<int> GetOccupiedSeatCount(Organization organization);
     Task CreatePendingOrganization(Organization organization, string ownerEmail);
     Task InitPendingOrganization(Guid organizationId, string publicKey, string privateKey);
+    Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 }
