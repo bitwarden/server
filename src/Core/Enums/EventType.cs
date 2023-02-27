@@ -80,5 +80,7 @@ public enum EventType : int
     OrganizationDomain_Added = 2000,
     OrganizationDomain_Removed = 2001,
     OrganizationDomain_Verified = 2002,
-    OrganizationDomain_NotVerified = 2003
+    OrganizationDomain_NotVerified = 2003,
+
+    Secret_Retrieved = 2100,
 }

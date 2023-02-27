@@ -403,6 +403,9 @@
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByLicenseKey.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadSelfHostedDetailsById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadOccupiedSeatCountByOrganizationId.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_DeleteByIds.sql" />

@@ -4,6 +4,13 @@ param (
   $Name
 )
 
+# DB service provider name
+$service = "mysql"
+
+Write-Output "--- Attempting to start $service service ---"
+
+docker-compose --profile $service up -d --no-recreate
+
 dotnet tool restore
 
 $providers = @{
