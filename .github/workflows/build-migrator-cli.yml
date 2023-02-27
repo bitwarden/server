@@ -6,17 +6,7 @@ on:
     branches-ignore:
       - "l10n_master"
       - "gh-pages"
-    paths:
-      - ".github/workflows/build-migrator-cli.yml"
-      - "util/Migrator/**"
-      - "util/MigratorCLI/**"
-      - "src/Core/**"
   pull_request:
-    paths:
-      - ".github/workflows/build-migrator-cli.yml"
-      - "util/Migrator/**"
-      - "util/MigratorCLI/**"
-      - "src/Core/**"
   workflow_dispatch:
 
 defaults:
