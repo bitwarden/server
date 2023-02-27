@@ -1,4 +1,5 @@
-﻿using Bit.Core.Services;
+﻿using AutoFixture;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -8,27 +9,35 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class LaunchDarklyFeatureServiceTests
 {
-    [Theory(Skip = "For local development"), SelfHostedAutoData(false), BitAutoData]
-    public void Online_WhenNotSelfHost(SutProvider<LaunchDarklyFeatureService> sutProvider)
+    public static SutProvider<LaunchDarklyFeatureService> GetSutProvider(Core.Settings.GlobalSettings globalSettings)
     {
+        var fixture = new Fixture();
+        return new SutProvider<LaunchDarklyFeatureService>(fixture)
+            .SetDependency<Core.Settings.GlobalSettings>(globalSettings)
+            .Create();
+    }
+
+    [Fact]
+    public void Online_WhenNotSelfHost()
+    {
+        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings() { SelfHosted = false });
+
         Assert.True(sutProvider.Sut.IsOnline());
     }
 
-    [Theory(Skip = "For local development"), SelfHostedAutoData(true), BitAutoData]
-    public void Offline_WhenSelfHost(SutProvider<LaunchDarklyFeatureService> sutProvider)
+    [Fact]
+    public void Offline_WhenSelfHost()
     {
+        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings() { SelfHosted = true });
+
         Assert.False(sutProvider.Sut.IsOnline());
     }
 
-    [Fact(Skip = "For local development")]
+    [Fact]
     public void Online_WithFileFallback_WhenSdkKeyNull()
     {
-        var globalSettings = new Core.Settings.GlobalSettings();
+        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings());
 
-        var sut = new LaunchDarklyFeatureService(
-            globalSettings
-        );
-
-        Assert.True(sut.IsOnline());
+        Assert.True(sutProvider.Sut.IsOnline());
     }
 }
