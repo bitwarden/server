@@ -76,7 +76,6 @@
     <Folder Include="SecretsManager\dbo\Views\" />
   </ItemGroup>
   <ItemGroup>
-    <Build Include="dbo\Functions\CipherDetails.sql" />
     <Build Include="dbo\Functions\PolicyApplicableToUser.sql" />
     <Build Include="dbo\Functions\UserCollectionDetails.sql" />
     <Build Include="dbo\Stored Procedures\AuthRequest_Create.sql" />
@@ -418,6 +417,7 @@
     <Build Include="SecretsManager\dbo\Tables\ServiceAccount.sql" />
     <Build Include="SecretsManager\dbo\Views\ApiKeyDetailsView.sql" />
     <Build Include="SecretsManager\dbo\Views\ApiKeyView.sql" />
+    <Build Include="Vault\dbo\Functions\CipherDetails.sql" />
     <Build Include="Vault\dbo\Functions\UserCipherDetails.sql" />
     <Build Include="Vault\dbo\Stored Procedures\CipherDetails_Create.sql" />
     <Build Include="Vault\dbo\Stored Procedures\CipherDetails_CreateWithCollections.sql" />
