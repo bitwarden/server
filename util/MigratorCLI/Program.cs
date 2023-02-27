@@ -19,7 +19,7 @@ internal class Program
 
     private static void MigrateDatabase(string databaseConnectionString, bool verbose = false, int attempt = 1)
     {
-        var logger = CreateLogger();
+        var logger = CreateLogger(verbose);
 
         try
         {
@@ -50,15 +50,23 @@ internal class Program
         }
     }
 
-    private static ILogger<DbMigrator> CreateLogger()
+    private static ILogger<DbMigrator> CreateLogger(bool verbose)
     {
         var loggerFactory = LoggerFactory.Create(builder =>
         {
             builder
                 .AddFilter("Microsoft", LogLevel.Warning)
                 .AddFilter("System", LogLevel.Warning)
-                .AddFilter("DbMigrator.DbMigrator", LogLevel.Debug)
                 .AddConsole();
+
+            if (verbose)
+            {
+                builder.AddFilter("DbMigrator.DbMigrator", LogLevel.Debug);
+            }
+            else
+            {
+                builder.AddFilter("DbMigrator.DbMigrator", LogLevel.Information);
+            }
         });
         var logger = loggerFactory.CreateLogger<DbMigrator>();
         return logger;
