@@ -452,7 +452,7 @@ public class ToolsController : Controller
         options.EndingBefore = await StripeSubscriptionsGetHasPreviousPage(subscriptions, options) ?
             subscriptions.FirstOrDefault()?.Id :
             null;
-        
+
         var isProduction = _environment.IsProduction();
         var model = new StripeSubscriptionsModel()
         {
