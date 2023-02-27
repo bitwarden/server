@@ -199,21 +199,42 @@ public class OrganizationLicense : ILicense
         }
     }
 
-    public bool CanUse(IGlobalSettings globalSettings)
+    public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
         if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
+            exception = "Invalid license. Your organization is disabled or the license has expired.";
             return false;
         }
 
-        if (ValidLicenseVersion)
+        if (!ValidLicenseVersion)
         {
-            return InstallationId == globalSettings.Installation.Id && SelfHost;
+            exception = $"Version {Version} is not supported.";
+            return false;
         }
-        else
+
+        if (InstallationId != globalSettings.Installation.Id || !SelfHost)
         {
-            throw new NotSupportedException($"Version {Version} is not supported.");
+            exception = "Invalid license. Make sure your license allows for on-premise " +
+                "hosting of organizations and that the installation id matches your current installation.";
+            return false;
         }
+
+        if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
+        {
+            exception = "Premium licenses cannot be applied to an organization. "
+                                          + "Upload this license from your personal account settings page.";
+            return false;
+        }
+
+        if (!licensingService.VerifyLicense(this))
+        {
+            exception = "Invalid license.";
+            return false;
+        }
+
+        exception = "";
+        return true;
     }
 
     public bool VerifyData(Organization organization, IGlobalSettings globalSettings)

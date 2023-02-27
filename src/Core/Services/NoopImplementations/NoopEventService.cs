@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
+using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.Services;
 
@@ -107,4 +108,9 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
+    public Task LogServiceAccountSecretEventAsync(Guid serviceAccountId, Secret secret, EventType type,
+        DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
 }

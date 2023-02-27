@@ -8,7 +8,6 @@ using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-
 namespace Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
 
 public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, Secret, Guid>, ISecretRepository
@@ -70,6 +69,36 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         var secrets = await query.OrderBy(c => c.RevisionDate).ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = await dbContext.Secret
+                                    .Where(s => ids.Contains(s.Id) && s.OrganizationId == organizationId && s.DeletedDate != null)
+                                    .Include("Projects")
+                                    .OrderBy(c => c.RevisionDate)
+                                    .ToListAsync();
+
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+        }
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = await dbContext.Secret
+                                    .Where(c => c.OrganizationId == organizationId && c.DeletedDate != null)
+                                    .Include("Projects")
+                                    .OrderBy(c => c.RevisionDate)
+                                    .ToListAsync();
+
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+        }
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByProjectIdAsync(Guid projectId, Guid userId, AccessClientType accessType)
@@ -168,12 +197,26 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var utcNow = DateTime.UtcNow;
             var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
             await secrets.ForEachAsync(secret =>
             {
                 dbContext.Attach(secret);
                 dbContext.Remove(secret);
+            });
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task RestoreManyByIdAsync(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
+            await secrets.ForEachAsync(secret =>
+            {
+                dbContext.Attach(secret);
+                secret.DeletedDate = null;
             });
             await dbContext.SaveChangesAsync();
         }
