@@ -138,11 +138,10 @@ public class EmergencyAccessServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task PasswordAsync_Disables_2FA_Providers_And_Unknown_Device_Verification_On_The_Grantor(
+    public async Task PasswordAsync_Disables_2FA_Providers_On_The_Grantor(
         SutProvider<EmergencyAccessService> sutProvider, User requestingUser, User grantor)
     {
         grantor.UsesKeyConnector = true;
-        grantor.UnknownDeviceVerificationEnabled = true;
         grantor.SetTwoFactorProviders(new Dictionary<TwoFactorProviderType, TwoFactorProvider>
         {
             [TwoFactorProviderType.Email] = new TwoFactorProvider
@@ -164,7 +163,6 @@ public class EmergencyAccessServiceTests
 
         await sutProvider.Sut.PasswordAsync(Guid.NewGuid(), requestingUser, "blablahash", "blablakey");
 
-        Assert.False(grantor.UnknownDeviceVerificationEnabled);
         Assert.Empty(grantor.GetTwoFactorProviders());
         await sutProvider.GetDependency<IUserRepository>().Received().ReplaceAsync(grantor);
     }

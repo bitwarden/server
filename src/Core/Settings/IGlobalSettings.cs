@@ -13,8 +13,8 @@ public interface IGlobalSettings
     IFileStorageSettings Attachment { get; set; }
     IConnectionStringSettings Storage { get; set; }
     IBaseServiceUriSettings BaseServiceUri { get; set; }
-    ITwoFactorAuthSettings TwoFactorAuth { get; set; }
     ISsoSettings Sso { get; set; }
     ILogLevelSettings MinLogLevel { get; set; }
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
+    IDomainVerificationSettings DomainVerification { get; set; }
 }

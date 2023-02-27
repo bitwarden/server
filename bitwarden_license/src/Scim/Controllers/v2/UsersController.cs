@@ -97,11 +97,11 @@ public class UsersController : Controller
 
         if (model.Active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RestoreUserAsync(orgUser, null, _userService);
+            await _organizationService.RestoreUserAsync(orgUser, EventSystemUser.SCIM, _userService);
         }
         else if (!model.Active && orgUser.Status != OrganizationUserStatusType.Revoked)
         {
-            await _organizationService.RevokeUserAsync(orgUser, null);
+            await _organizationService.RevokeUserAsync(orgUser, EventSystemUser.SCIM);
         }
 
         // Have to get full details object for response model

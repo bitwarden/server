@@ -3,6 +3,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Utilities;
 using Fido2NetLib;
 
 namespace Bit.Api.Models.Request;
@@ -104,7 +105,7 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!Core.Utilities.Duo.DuoApi.ValidHost(Host))
+        if (!DuoApi.ValidHost(Host))
         {
             yield return new ValidationResult("Host is invalid.", new string[] { nameof(Host) });
         }
@@ -201,8 +202,6 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     [EmailAddress]
     [StringLength(256)]
     public string Email { get; set; }
-
-    public string DeviceIdentifier { get; set; }
 
     public string AuthRequestId { get; set; }
 
