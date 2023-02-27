@@ -76,8 +76,8 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-public Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
-        DateTime? date = null)
+    public Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
+            DateTime? date = null)
     {
         return Task.FromResult(0);
     }

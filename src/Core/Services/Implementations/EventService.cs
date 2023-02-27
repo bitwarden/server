@@ -370,8 +370,8 @@ public class EventService : IEventService
         await _eventWriteService.CreateManyAsync(messages);
     }
 
-public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
-        DateTime? date = null)
+    public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
+            DateTime? date = null)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))

@@ -135,7 +135,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-	public async Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    public async Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
@@ -146,6 +146,6 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 commandTimeout: 120);
 
             return results.ToList();
-		}
-	}
+        }
+    }
 }
