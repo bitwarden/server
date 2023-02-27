@@ -28,7 +28,7 @@ public class FolderRequestModel
 
 public class FolderWithIdRequestModel : FolderRequestModel
 {
-    public Guid? Id { get; set; }   
+    public Guid? Id { get; set; }
 
     public override Folder ToFolder(Folder existingFolder)
     {
