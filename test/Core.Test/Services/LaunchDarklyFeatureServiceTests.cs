@@ -19,4 +19,16 @@ public class LaunchDarklyFeatureServiceTests
     {
         Assert.False(sutProvider.Sut.IsOnline());
     }
+
+    [Fact(Skip = "For local development")]
+    public void Online_WithFileFallback_WhenSdkKeyNull()
+    {
+        var globalSettings = new Core.Settings.GlobalSettings();
+
+        var sut = new LaunchDarklyFeatureService(
+            globalSettings
+        );
+
+        Assert.True(sut.IsOnline());
+    }
 }
