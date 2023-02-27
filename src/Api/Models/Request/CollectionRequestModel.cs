@@ -12,7 +12,6 @@ public class CollectionRequestModel
     public string Name { get; set; }
     [StringLength(300)]
     public string ExternalId { get; set; }
-    public Guid? Id { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Users { get; set; }
 
@@ -24,14 +23,10 @@ public class CollectionRequestModel
         });
     }
 
-    public Collection ToCollection(Collection existingCollection)
+    public virtual Collection ToCollection(Collection existingCollection)
     {
         existingCollection.Name = Name;
         existingCollection.ExternalId = ExternalId;
-        if (Id != null && Id != Guid.Empty)
-        {
-            existingCollection.Id = Id ?? Guid.Empty;
-        }
         return existingCollection;
     }
 }
@@ -41,4 +36,19 @@ public class CollectionBulkDeleteRequestModel
     [Required]
     public IEnumerable<string> Ids { get; set; }
     public string OrganizationId { get; set; }
+}
+
+public class CollectionWithIdRequestModel : CollectionRequestModel
+{
+    public Guid? Id { get; set; }
+
+    public override Collection ToCollection(Collection existingCollection)
+    {
+        if (Id != null && Id != Guid.Empty)
+        {
+            existingCollection.Id = Id ?? Guid.Empty;
+        }
+
+        return base.ToCollection(existingCollection);
+    }
 }
