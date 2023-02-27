@@ -233,8 +233,8 @@ public class HandlebarsMailService : IMailService
             new OrganizationUserInvitedViewModel
             {
                 TitleFirst = isFreeOrg ? freeOrgTitle : "Join ",
-                TitleSecondBold = isFreeOrg ? freeOrgTitle : CoreHelpers.SanitizeForEmail(organizationName, false),
-                TitleThird = isFreeOrg ? freeOrgTitle : " on Bitwarden and start securing your passwords!",
+                TitleSecondBold = isFreeOrg ? string.Empty : CoreHelpers.SanitizeForEmail(organizationName, false),
+                TitleThird = isFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
                 OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false) + invite.orgUser.Status,
                 Email = WebUtility.UrlEncode(invite.orgUser.Email),
                 OrganizationId = invite.orgUser.OrganizationId.ToString(),
