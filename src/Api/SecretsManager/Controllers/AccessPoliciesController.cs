@@ -27,6 +27,7 @@ public class AccessPoliciesController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ISecretRepository _secretRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
     private readonly IUserService _userService;
@@ -36,6 +37,7 @@ public class AccessPoliciesController : Controller
         ICurrentContext currentContext,
         IAccessPolicyRepository accessPolicyRepository,
         IServiceAccountRepository serviceAccountRepository,
+        ISecretRepository secretRepository,
         IGroupRepository groupRepository,
         IProjectRepository projectRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -46,6 +48,7 @@ public class AccessPoliciesController : Controller
         _userService = userService;
         _currentContext = currentContext;
         _serviceAccountRepository = serviceAccountRepository;
+        _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -85,6 +88,38 @@ public class AccessPoliciesController : Controller
 
         var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
         return new ProjectAccessPoliciesResponseModel(results);
+    }
+
+    [HttpGet("/projects/{id}/access")]
+    public async Task<(bool Read, bool Write)> GetProjectAccessAsync([FromRoute] Guid id)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        var (accessClient, userId) = await GetAccessClientTypeAsync(project.OrganizationId);
+
+        return accessClient switch
+        {
+            AccessClientType.NoAccessCheck => (true, true),
+            AccessClientType.User => (await _projectRepository.UserHasReadAccessToProject(id, userId),
+                await _projectRepository.UserHasWriteAccessToProject(id, userId)),
+            _ => (false, false)
+        };
+    }
+
+    [HttpGet("/secrets/{id}/access")]
+    public async Task<(bool Read, bool Write)> GetSecretAccessAsync([FromRoute] Guid id)
+    {
+        var secret = await _secretRepository.GetByIdAsync(id);
+        var (accessClient, userId) = await GetAccessClientTypeAsync(secret.OrganizationId);
+
+
+        var projectId = secret.Projects?.FirstOrDefault()?.Id;
+        return accessClient switch
+        {
+            AccessClientType.NoAccessCheck => (true, true),
+            AccessClientType.User => projectId != null ? (await _projectRepository.UserHasReadAccessToProject((Guid)projectId, userId),
+                await _projectRepository.UserHasWriteAccessToProject((Guid)projectId, userId)) : (false, false),
+            _ => (false, false)
+        };
     }
 
     [HttpPost("/service-accounts/{id}/access-policies")]
