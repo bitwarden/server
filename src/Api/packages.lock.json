@@ -85,8 +85,8 @@
       },
       "Azure.Core": {
         "type": "Transitive",
-        "resolved": "1.24.0",
-        "contentHash": "+/qI1j2oU1S4/nvxb2k/wDsol00iGf1AyJX5g3epV7eOpQEP/2xcgh/cxgKMeFgn3U2fmgSiBnQZdkV+l5y0Uw==",
+        "resolved": "1.25.0",
+        "contentHash": "X8Dd4sAggS84KScWIjEbFAdt2U1KDolQopTPoHVubG2y3CM54f9l6asVrP5Uy384NWXjsspPYaJgz5xHc+KvTA==",
         "dependencies": {
           "Microsoft.Bcl.AsyncInterfaces": "1.1.1",
           "System.Diagnostics.DiagnosticSource": "4.6.0",
@@ -123,28 +123,28 @@
       },
       "Azure.Storage.Blobs": {
         "type": "Transitive",
-        "resolved": "12.11.0",
-        "contentHash": "50eRjIhY7Q1JN7kT2MSawDKCcwSb7uRZUkz00P/BLjSg47gm2hxUYsnJPyvzCHntYMbOWzrvaVQTwYwXabaR5Q==",
+        "resolved": "12.14.1",
+        "contentHash": "DvRBWUDMB2LjdRbsBNtz/LiVIYk56hqzSooxx4uq4rCdLj2M+7Vvoa1r+W35Dz6ZXL6p+SNcgEae3oZ+CkPfow==",
         "dependencies": {
-          "Azure.Storage.Common": "12.10.0",
+          "Azure.Storage.Common": "12.13.0",
           "System.Text.Json": "4.7.2"
         }
       },
       "Azure.Storage.Common": {
         "type": "Transitive",
-        "resolved": "12.10.0",
-        "contentHash": "vYkHGzUkdZTace/cDPZLG+Mh/EoPqQuGxDIBOau9D+XWoDPmuUFGk325aXplkFE4JFGpSwoytNYzk/qBCaiHqg==",
+        "resolved": "12.13.0",
+        "contentHash": "jDv8xJWeZY2Er9zA6QO25BiGolxg87rItt9CwAp7L/V9EPJeaz8oJydaNL9Wj0+3ncceoMgdiyEv66OF8YUwWQ==",
         "dependencies": {
-          "Azure.Core": "1.22.0",
+          "Azure.Core": "1.25.0",
           "System.IO.Hashing": "6.0.0"
         }
       },
       "Azure.Storage.Queues": {
         "type": "Transitive",
-        "resolved": "12.9.0",
-        "contentHash": "jDiyHtsCUCrWNvZW7SjJnJb46UhpdgQrWCbL8aWpapDHlq9LvbvxYpfLh4dfKAz09QiTznLMIU3i+md9+7GzqQ==",
+        "resolved": "12.12.0",
+        "contentHash": "PwrfymLYFmmOt6A0vMiDVhBV7RoOAKftzzvrbSM3W9cJKpkxAg57AhM7/wbNb3P8Uq0B73lBurkFiFzWK9PXHg==",
         "dependencies": {
-          "Azure.Storage.Common": "12.10.0",
+          "Azure.Storage.Common": "12.13.0",
           "System.Memory.Data": "1.0.2",
           "System.Text.Json": "4.7.2"
         }
@@ -170,6 +170,14 @@
         "type": "Transitive",
         "resolved": "2.0.123",
         "contentHash": "RDFF4rBLLmbpi6pwkY7q/M6UXHRJEOerplDGE5jwEkP/JGJnBauAClYavNKJPW1yOTWRPIyfj4is3EaJxQXILQ=="
+      },
+      "DnsClient": {
+        "type": "Transitive",
+        "resolved": "1.7.0",
+        "contentHash": "2hrXR83b5g6/ZMJOA36hXp4t56yb7G1mF3Hg6IkrHxvtyaoXRn2WVdgDPN3V8+GugOlUBbTWXgPaka4dXw1QIg==",
+        "dependencies": {
+          "Microsoft.Win32.Registry": "5.0.0"
+        }
       },
       "Fido2": {
         "type": "Transitive",
@@ -2794,10 +2802,11 @@
           "AspNetCoreRateLimit": "[4.0.2, )",
           "AspNetCoreRateLimit.Redis": "[1.0.1, )",
           "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.2.1, )",
-          "Azure.Storage.Blobs": "[12.11.0, )",
-          "Azure.Storage.Queues": "[12.9.0, )",
+          "Azure.Storage.Blobs": "[12.14.1, )",
+          "Azure.Storage.Queues": "[12.12.0, )",
           "BitPay.Light": "[1.0.1907, )",
           "Braintree": "[5.12.0, )",
+          "DnsClient": "[1.7.0, )",
           "Fido2.AspNet": "[3.0.1, )",
           "Handlebars.Net": "[2.1.2, )",
           "IdentityServer4": "[4.1.2, )",

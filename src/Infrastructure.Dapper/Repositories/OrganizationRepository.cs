@@ -95,7 +95,47 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
         }
     }
 
-    public async Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    public async Task<Organization> GetByLicenseKeyAsync(string licenseKey)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_ReadByLicenseKey]",
+                new { LicenseKey = licenseKey },
+                commandType: CommandType.StoredProcedure);
+
+            return result.SingleOrDefault();
+        }
+    }
+
+    public async Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.QueryMultipleAsync(
+                "[dbo].[Organization_ReadSelfHostedDetailsById]",
+                new { Id = id },
+                commandType: CommandType.StoredProcedure);
+
+            var selfHostOrganization = await result.ReadSingleOrDefaultAsync<SelfHostedOrganizationDetails>();
+            if (selfHostOrganization == null)
+            {
+                return null;
+            }
+
+            selfHostOrganization.OccupiedSeatCount = await result.ReadSingleAsync<int>();
+            selfHostOrganization.CollectionCount = await result.ReadSingleAsync<int>();
+            selfHostOrganization.GroupCount = await result.ReadSingleAsync<int>();
+            selfHostOrganization.OrganizationUsers = await result.ReadAsync<OrganizationUser>();
+            selfHostOrganization.Policies = await result.ReadAsync<Policy>();
+            selfHostOrganization.SsoConfig = await result.ReadFirstOrDefaultAsync<SsoConfig>();
+            selfHostOrganization.ScimConnections = await result.ReadAsync<OrganizationConnection>();
+
+            return selfHostOrganization;
+        }
+    }
+
+	public async Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))
         {
@@ -106,6 +146,6 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 commandTimeout: 120);
 
             return results.ToList();
-        }
-    }
+		}
+	}
 }

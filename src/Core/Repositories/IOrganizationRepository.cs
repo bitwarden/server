@@ -11,5 +11,7 @@ public interface IOrganizationRepository : IRepository<Organization, Guid>
     Task<ICollection<Organization>> SearchAsync(string name, string userEmail, bool? paid, int skip, int take);
     Task UpdateStorageAsync(Guid id);
     Task<ICollection<OrganizationAbility>> GetManyAbilitiesAsync();
+    Task<Organization> GetByLicenseKeyAsync(string licenseKey);
+    Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id);
     Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take);
 }

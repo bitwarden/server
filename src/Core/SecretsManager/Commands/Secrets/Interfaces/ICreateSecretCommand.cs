@@ -4,5 +4,5 @@ namespace Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 
 public interface ICreateSecretCommand
 {
-    Task<Secret> CreateAsync(Secret secret);
+    Task<Secret> CreateAsync(Secret secret, Guid userId);
 }
