@@ -4,6 +4,7 @@ namespace Bit.Admin.Utilities;
 
 public static class RolePermissionMapping
 {
+    //This is temporary and will be moved to the db in the next round of the rbac implementation
     public static readonly Dictionary<string, List<Permission>> RolePermissions = new Dictionary<string, List<Permission>>()
     {
         { "owner", new List<Permission>

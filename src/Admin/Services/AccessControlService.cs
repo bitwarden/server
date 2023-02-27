@@ -24,11 +24,15 @@ public class AccessControlService : IAccessControlService
     public bool UserHasPermission(Permission permission)
     {
         if (_globalSettings.SelfHosted)
+        {
             return true;
+        }   
 
         var userRole = GetUserRoleFromClaim();
         if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.ContainsKey(userRole))
+        {
             return false;
+        }   
 
         return RolePermissionMapping.RolePermissions[userRole].Contains(permission);
     }
@@ -38,7 +42,9 @@ public class AccessControlService : IAccessControlService
         var settings = _configuration.GetSection("adminSettings").GetChildren();
 
         if (settings == null || !settings.Any())
+        {
             return null;
+        } 
 
         var rolePrefix = "role";
         userEmail = userEmail.ToLowerInvariant();
@@ -47,7 +53,9 @@ public class AccessControlService : IAccessControlService
                                                  && (s.Value != null ? s.Value.ToLowerInvariant().Split(',').Contains(userEmail) : false));
 
         if (roleSetting == null)
+        {
             return null;
+        } 
 
         var role = roleSetting.Key.Substring(roleSetting.Key.IndexOf(rolePrefix) + rolePrefix.Length);
         return role.ToLowerInvariant();
