@@ -33,10 +33,6 @@
     -->
     <CoverletCollectorVersion>3.1.2</CoverletCollectorVersion>
     <!--
-      NuGet: https://www.nuget.org/packages/Swashbuckle.AspNetCore/
-    -->
-    <MicrosoftVisualStudioWebCodeGenerationDesignVersion>6.0.3</MicrosoftVisualStudioWebCodeGenerationDesignVersion>
-    <!--
       NuGet: https://www.nuget.org/packages/NSubstitute/
     -->
     <NSubstitueVersion>4.3.0</NSubstitueVersion>
