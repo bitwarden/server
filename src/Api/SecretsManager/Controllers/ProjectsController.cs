@@ -80,9 +80,10 @@ public class ProjectsController : Controller
     }
 
     [HttpGet("projects/{id}")]
-    public async Task<ProjectResponseModel> GetAsync([FromRoute] Guid id)
+    public async Task<ProjectPermissionDetailsResponseModel> GetAsync([FromRoute] Guid id)
     {
-        var project = await _projectRepository.GetByIdAsync(id);
+        var userId = _userService.GetProperUserId(User).Value;
+        var project = await _projectRepository.GetPermissionDetailsByIdAsync(id, userId);
         if (project == null)
         {
             throw new NotFoundException();
@@ -93,26 +94,25 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         bool hasAccess;
-        bool write;
+        var read = project.Read;
+        var write = project.Write;
 
         switch (accessClient)
         {
             case AccessClientType.NoAccessCheck:
                 hasAccess = true;
                 write = true;
+                read = true;
                 break;
             case AccessClientType.User:
-                hasAccess = await _projectRepository.UserHasReadAccessToProject(id, userId);
-                write = await _projectRepository.UserHasWriteAccessToProject(id, userId);
+                hasAccess = project.Read;
                 break;
             default:
                 hasAccess = false;
-                write = false;
                 break;
         }
 
@@ -121,7 +121,7 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        return new ProjectResponseModel(project, true, write);
+        return new ProjectPermissionDetailsResponseModel(project, read, write);
     }
 
     [HttpPost("projects/delete")]

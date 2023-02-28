@@ -5,10 +5,8 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class ProjectResponseModel : ResponseModel
 {
-    private const string _objectName = "project";
-
-    public ProjectResponseModel(Project project)
-        : base(_objectName)
+    public ProjectResponseModel(Project project, string obj = "project")
+        : base(obj)
     {
         if (project == null)
         {
@@ -22,13 +20,7 @@ public class ProjectResponseModel : ResponseModel
         RevisionDate = project.RevisionDate;
     }
 
-    public ProjectResponseModel(Project project, bool read, bool write) : this(project)
-    {
-        Read = read;
-        Write = write;
-    }
-
-    public ProjectResponseModel() : base(_objectName)
+    public ProjectResponseModel() : base("project")
     {
     }
 
@@ -43,8 +35,4 @@ public class ProjectResponseModel : ResponseModel
     public DateTime RevisionDate { get; set; }
 
     public IEnumerable<Guid> Secrets { get; set; }
-
-    public bool Read { get; set; } = false;
-
-    public bool Write { get; set; } = false;
 }
