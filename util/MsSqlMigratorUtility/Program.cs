@@ -22,7 +22,7 @@ internal class Program
         var logger = CreateLogger(verbose);
 
         var migrator = new DbMigrator(databaseConnectionString, logger);
-        var success = migrator.MigrateMsSqlDatabase(verbose);
+        var success = migrator.MigrateMsSqlDatabaseWithRetries(verbose);
     }
 
     private static ILogger<DbMigrator> CreateLogger(bool verbose)

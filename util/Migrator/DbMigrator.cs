@@ -23,7 +23,7 @@ public class DbMigrator
         }.ConnectionString;
     }
 
-    public bool MigrateMsSqlDatabase(bool enableLogging = true,
+    public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         CancellationToken cancellationToken = default(CancellationToken))
     {
         if (_logger != null)
@@ -58,7 +58,7 @@ public class DbMigrator
         return false;
     }
 
-    private bool MigrateDatabase(bool enableLogging = true,
+    public bool MigrateDatabase(bool enableLogging = true,
         CancellationToken cancellationToken = default(CancellationToken))
     {
 
