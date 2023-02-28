@@ -460,18 +460,14 @@ public class ProviderServiceTests
         foreach (var organization in organizations)
         {
             organization.PlanType = PlanType.EnterpriseAnnually;
-            providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
-            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         }
 
         var organizationIds = organizations.Select(o => o.Id).ToArray();
 
         await sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds);
 
-        await providerOrganizationRepository.ReceivedWithAnyArgs().CreateWithManyOrganizations(Arg.Is<ProviderOrganization>(p => p.ProviderId == provider.Id), organizationIds);
-        await sutProvider.GetDependency<IEventService>()
-            .Received().LogProviderOrganizationEventsAsync(provider.Id, Arg.Any<IEnumerable<ProviderOrganization>>(),
-                EventType.ProviderOrganization_Added);
+        await providerOrganizationRepository.Received(1).CreateWithManyOrganizations(Arg.Is<ProviderOrganization>(p => p.ProviderId == provider.Id), organizationIds);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventsAsync(provider.Id, Arg.Is<IEnumerable<ProviderOrganization>>(po => po.All(i => i.ProviderId == provider.Id && organizationIds.Contains(i.OrganizationId))), EventType.ProviderOrganization_Added);
     }
 
     [Theory, BitAutoData]
