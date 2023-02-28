@@ -9,7 +9,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
     private readonly LdClient _client;
 
     public LaunchDarklyFeatureService(
-        GlobalSettings globalSettings)
+        IGlobalSettings globalSettings)
     {
         var ldConfig = Configuration.Builder(globalSettings.LaunchDarkly?.SdkKey);
 

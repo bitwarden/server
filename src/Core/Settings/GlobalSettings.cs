@@ -77,7 +77,7 @@ public class GlobalSettings : IGlobalSettings
         new DistributedIpRateLimitingSettings();
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
-    public virtual LaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
+    public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -540,7 +540,7 @@ public class GlobalSettings : IGlobalSettings
         public int ExpirationPeriod { get; set; } = 7;
     }
 
-    public class LaunchDarklySettings
+    public class LaunchDarklySettings : ILaunchDarklySettings
     {
         public string SdkKey { get; set; }
     }
