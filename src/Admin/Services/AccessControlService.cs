@@ -26,13 +26,13 @@ public class AccessControlService : IAccessControlService
         if (_globalSettings.SelfHosted)
         {
             return true;
-        }   
+        }
 
         var userRole = GetUserRoleFromClaim();
         if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.ContainsKey(userRole))
         {
             return false;
-        }   
+        }
 
         return RolePermissionMapping.RolePermissions[userRole].Contains(permission);
     }
@@ -44,7 +44,7 @@ public class AccessControlService : IAccessControlService
         if (settings == null || !settings.Any())
         {
             return null;
-        } 
+        }
 
         var rolePrefix = "role";
         userEmail = userEmail.ToLowerInvariant();
@@ -55,7 +55,7 @@ public class AccessControlService : IAccessControlService
         if (roleSetting == null)
         {
             return null;
-        } 
+        }
 
         var role = roleSetting.Key.Substring(roleSetting.Key.IndexOf(rolePrefix) + rolePrefix.Length);
         return role.ToLowerInvariant();

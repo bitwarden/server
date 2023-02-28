@@ -1,4 +1,6 @@
-﻿using Bit.Admin.Models;
+﻿using Bit.Admin.Enums;
+using Bit.Admin.Models;
+using Bit.Admin.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -29,6 +31,7 @@ public class UsersController : Controller
         _globalSettings = globalSettings;
     }
 
+    [RequirePermission(Permission.User_List_View)]
     public async Task<IActionResult> Index(string email, int page = 1, int count = 25)
     {
         if (page < 1)
