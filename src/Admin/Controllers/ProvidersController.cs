@@ -167,7 +167,7 @@ public class ProvidersController : Controller
 
         var skip = (page - 1) * count;
         var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(name, ownerEmail, skip, count);
-        var viewModel = new OrganizationSearchViewModel
+        var viewModel = new OrganizationUnassignedToProviderSearchViewModel
         {
             OrganizationName = string.IsNullOrWhiteSpace(name) ? null : name,
             OrganizationOwnerEmail = string.IsNullOrWhiteSpace(ownerEmail) ? null : ownerEmail,
@@ -185,7 +185,7 @@ public class ProvidersController : Controller
     }
 
     [HttpPost]
-    public async Task<IActionResult> AddExistingOrganization(Guid id, OrganizationSearchViewModel model)
+    public async Task<IActionResult> AddExistingOrganization(Guid id, OrganizationUnassignedToProviderSearchViewModel model)
     {
         var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
         if (organizationIds.Any())

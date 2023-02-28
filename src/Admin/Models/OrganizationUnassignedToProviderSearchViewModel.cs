@@ -2,7 +2,7 @@
 
 namespace Bit.Admin.Models;
 
-public class OrganizationSearchViewModel : PagedModel<OrganizationSelectableViewModel>
+public class OrganizationUnassignedToProviderSearchViewModel : PagedModel<OrganizationSelectableViewModel>
 {
     [Display(Name = "Organization Name")]
     public string OrganizationName { get; set; }
