@@ -152,7 +152,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         {
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
-            Note = _mockEncryptedString
+            Note = _mockEncryptedString,
         };
 
         var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets", request);
