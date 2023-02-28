@@ -90,38 +90,6 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    [HttpGet("/projects/{id}/access")]
-    public async Task<(bool Read, bool Write)> GetProjectAccessAsync([FromRoute] Guid id)
-    {
-        var project = await _projectRepository.GetByIdAsync(id);
-        var (accessClient, userId) = await GetAccessClientTypeAsync(project.OrganizationId);
-
-        return accessClient switch
-        {
-            AccessClientType.NoAccessCheck => (true, true),
-            AccessClientType.User => (await _projectRepository.UserHasReadAccessToProject(id, userId),
-                await _projectRepository.UserHasWriteAccessToProject(id, userId)),
-            _ => (false, false)
-        };
-    }
-
-    [HttpGet("/secrets/{id}/access")]
-    public async Task<(bool Read, bool Write)> GetSecretAccessAsync([FromRoute] Guid id)
-    {
-        var secret = await _secretRepository.GetByIdAsync(id);
-        var (accessClient, userId) = await GetAccessClientTypeAsync(secret.OrganizationId);
-
-
-        var projectId = secret.Projects?.FirstOrDefault()?.Id;
-        return accessClient switch
-        {
-            AccessClientType.NoAccessCheck => (true, true),
-            AccessClientType.User => projectId != null ? (await _projectRepository.UserHasReadAccessToProject((Guid)projectId, userId),
-                await _projectRepository.UserHasWriteAccessToProject((Guid)projectId, userId)) : (false, false),
-            _ => (false, false)
-        };
-    }
-
     [HttpPost("/service-accounts/{id}/access-policies")]
     public async Task<ServiceAccountAccessPoliciesResponseModel> CreateServiceAccountAccessPoliciesAsync(
         [FromRoute] Guid id,

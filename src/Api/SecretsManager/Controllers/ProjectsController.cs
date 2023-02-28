@@ -97,19 +97,31 @@ public class ProjectsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var hasAccess = accessClient switch
+        bool hasAccess;
+        bool write;
+
+        switch (accessClient)
         {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(id, userId),
-            _ => false,
-        };
+            case AccessClientType.NoAccessCheck:
+                hasAccess = true;
+                write = true;
+                break;
+            case AccessClientType.User:
+                hasAccess = await _projectRepository.UserHasReadAccessToProject(id, userId);
+                write = await _projectRepository.UserHasWriteAccessToProject(id, userId);
+                break;
+            default:
+                hasAccess = false;
+                write = false;
+                break;
+        }
 
         if (!hasAccess)
         {
             throw new NotFoundException();
         }
 
-        return new ProjectResponseModel(project);
+        return new ProjectResponseModel(project, true, write);
     }
 
     [HttpPost("projects/delete")]

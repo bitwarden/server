@@ -22,6 +22,12 @@ public class ProjectResponseModel : ResponseModel
         RevisionDate = project.RevisionDate;
     }
 
+    public ProjectResponseModel(Project project, bool read, bool write) : this(project)
+    {
+        Read = read;
+        Write = write;
+    }
+
     public ProjectResponseModel() : base(_objectName)
     {
     }
@@ -37,4 +43,8 @@ public class ProjectResponseModel : ResponseModel
     public DateTime RevisionDate { get; set; }
 
     public IEnumerable<Guid> Secrets { get; set; }
+
+    public bool Read { get; set; } = false;
+
+    public bool Write { get; set; } = false;
 }
