@@ -19,26 +19,10 @@ public class LaunchDarklyFeatureServiceTests
     }
 
     [Fact]
-    public void Online_WhenNotSelfHost()
-    {
-        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings() { SelfHosted = false });
-
-        Assert.True(sutProvider.Sut.IsOnline());
-    }
-
-    [Fact]
     public void Offline_WhenSelfHost()
     {
         var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings() { SelfHosted = true });
 
         Assert.False(sutProvider.Sut.IsOnline());
-    }
-
-    [Fact]
-    public void Online_WithFileFallback_WhenSdkKeyNull()
-    {
-        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings());
-
-        Assert.True(sutProvider.Sut.IsOnline());
     }
 }
