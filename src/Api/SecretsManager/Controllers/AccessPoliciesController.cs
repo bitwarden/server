@@ -27,7 +27,6 @@ public class AccessPoliciesController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
-    private readonly ISecretRepository _secretRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
     private readonly IUserService _userService;
@@ -37,7 +36,6 @@ public class AccessPoliciesController : Controller
         ICurrentContext currentContext,
         IAccessPolicyRepository accessPolicyRepository,
         IServiceAccountRepository serviceAccountRepository,
-        ISecretRepository secretRepository,
         IGroupRepository groupRepository,
         IProjectRepository projectRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -48,7 +46,6 @@ public class AccessPoliciesController : Controller
         _userService = userService;
         _currentContext = currentContext;
         _serviceAccountRepository = serviceAccountRepository;
-        _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
