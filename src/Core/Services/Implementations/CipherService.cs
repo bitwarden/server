@@ -650,7 +650,7 @@ public class CipherService : ICipherService
         // Init. ids for folders
         foreach (var folder in folders)
         {
-            if (folder.Id == Guid.Empty || await _folderRepository.GetByIdAsync(folder.Id) == null)
+            if (folder.Id == Guid.Empty || (await _folderRepository.GetByIdAsync(folder.Id))?.UserId != userId)
             {
                 folder.SetNewId();
             }
@@ -718,7 +718,7 @@ public class CipherService : ICipherService
         // Init. ids for collections
         foreach (var collection in collections)
         {
-            if (collection.Id == Guid.Empty || await _collectionRepository.GetByIdAsync(collection.Id) == null)
+            if (collection.Id == Guid.Empty || (await _collectionRepository.GetByIdAsync(collection.Id))?.OrganizationId != org.Id)
             {
                 collection.SetNewId();
             }
