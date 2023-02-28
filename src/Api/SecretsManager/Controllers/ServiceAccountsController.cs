@@ -67,6 +67,21 @@ public class ServiceAccountsController : Controller
         return new ListResponseModel<ServiceAccountResponseModel>(responses);
     }
 
+    [HttpGet("/service-account/{serviceAccountId}/{organizationId}/service-accounts")]
+    public async Task<ServiceAccountResponseModel> GetByServiceAccountIdAsync(
+     [FromRoute] Guid serviceAccountId, [FromRoute] Guid organizationId)
+    {
+        if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var serviceAccount =
+            await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
+
+        return new ServiceAccountResponseModel(serviceAccount);
+    }
+
     [HttpPost("/organizations/{organizationId}/service-accounts")]
     public async Task<ServiceAccountResponseModel> CreateAsync([FromRoute] Guid organizationId,
         [FromBody] ServiceAccountCreateRequestModel createRequest)
