@@ -495,7 +495,7 @@ jobs:
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Restore/Clean project
+      - name: Restore project
         run: |
           echo "Restore"
           dotnet restore
