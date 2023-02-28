@@ -26,11 +26,6 @@ public class DbMigrator
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         CancellationToken cancellationToken = default(CancellationToken))
     {
-        if (_logger != null)
-        {
-            _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
-        }
-
         var attempt = 1;
 
         while (attempt < 10)
@@ -61,6 +56,10 @@ public class DbMigrator
     public bool MigrateDatabase(bool enableLogging = true,
         CancellationToken cancellationToken = default(CancellationToken))
     {
+        if (_logger != null)
+        {
+            _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
+        }
 
         using (var connection = new SqlConnection(_masterConnectionString))
         {
