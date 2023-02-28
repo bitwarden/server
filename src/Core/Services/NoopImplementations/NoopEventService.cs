@@ -69,9 +69,7 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
-    public Task LogProviderOrganizationEventsAsync(Guid providerId,
-        IEnumerable<ProviderOrganization> providerOrganizations, EventType type,
-        DateTime? date = null)
+    public Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
     {
         return Task.FromResult(0);
     }

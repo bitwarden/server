@@ -234,7 +234,7 @@ public class EventServiceTests
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
         sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
 
-        await sutProvider.Sut.LogProviderOrganizationEventsAsync(provider.Id, providerOrganizations, eventType, date);
+        await sutProvider.Sut.LogProviderOrganizationEventsAsync(providerOrganizations.Select(po => (po, eventType, (DateTime?)date)));
 
         var expected = providerOrganizations.Select(po =>
             new EventMessage()

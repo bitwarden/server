@@ -380,7 +380,7 @@ public class ProviderService : IProviderService
 
         var insertedProviderOrganizations = await _providerOrganizationRepository.CreateWithManyOrganizations(providerOrganization, organizationIds);
 
-        await _eventService.LogProviderOrganizationEventsAsync(providerId, insertedProviderOrganizations, EventType.ProviderOrganization_Added);
+        await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
