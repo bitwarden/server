@@ -26,10 +26,41 @@ public class DbMigrator
     public bool MigrateMsSqlDatabase(bool enableLogging = true,
         CancellationToken cancellationToken = default(CancellationToken))
     {
-        if (enableLogging && _logger != null)
+        if (_logger != null)
         {
             _logger.LogInformation(Constants.BypassFiltersEventId, "Migrating database.");
         }
+
+        var attempt = 1;
+
+        while (attempt < 10)
+        {
+            try
+            {
+                var success = MigrateDatabase(enableLogging, cancellationToken);
+                return success;
+            }
+            catch (SqlException e)
+            {
+                if (e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
+                {
+                    attempt++;
+                    _logger.LogInformation("Database is in script upgrade mode. " +
+                        "Trying again (attempt #{0})...", attempt);
+                    Thread.Sleep(20000);
+                }
+                else
+                {
+                    throw;
+                }
+            }
+        }
+        return false;
+    }
+
+    private bool MigrateDatabase(bool enableLogging = true,
+        CancellationToken cancellationToken = default(CancellationToken))
+    {
 
         using (var connection = new SqlConnection(_masterConnectionString))
         {
@@ -89,7 +120,7 @@ public class DbMigrator
         var upgrader = builder.Build();
         var result = upgrader.PerformUpgrade();
 
-        if (enableLogging && _logger != null)
+        if (_logger != null)
         {
             if (result.Successful)
             {

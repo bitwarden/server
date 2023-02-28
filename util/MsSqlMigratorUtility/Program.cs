@@ -21,33 +21,8 @@ internal class Program
     {
         var logger = CreateLogger(verbose);
 
-        try
-        {
-            Console.WriteLine("Migrating database.");
-            var migrator = new DbMigrator(databaseConnectionString, logger);
-            var success = migrator.MigrateMsSqlDatabase(verbose);
-            if (success)
-            {
-                Console.WriteLine("Migration successful.");
-            }
-            else
-            {
-                Console.WriteLine("Migration failed.");
-            }
-        }
-        catch (SqlException e)
-        {
-            if (e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
-            {
-                var nextAttempt = attempt + 1;
-                Console.WriteLine("Database is in script upgrade mode. " +
-                    "Trying again (attempt #{0})...", nextAttempt);
-                Thread.Sleep(20000);
-                MigrateDatabase(databaseConnectionString, verbose, nextAttempt);
-                return;
-            }
-            throw;
-        }
+        var migrator = new DbMigrator(databaseConnectionString, logger);
+        var success = migrator.MigrateMsSqlDatabase(verbose);
     }
 
     private static ILogger<DbMigrator> CreateLogger(bool verbose)
