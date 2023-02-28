@@ -468,14 +468,14 @@ jobs:
           if-no-files-found: error
 
   build-migrator-cli:
-    name: Build MigratorCLI
+    name: Build MsSqlMigratorUtility
     runs-on: ubuntu-22.04
     needs:
       - lint
     defaults:
       run:
         shell: bash
-        working-directory: "util/MigratorCLI"
+        working-directory: "util/MsSqlMigratorUtility"
     strategy:
       fail-fast: false
       matrix:
