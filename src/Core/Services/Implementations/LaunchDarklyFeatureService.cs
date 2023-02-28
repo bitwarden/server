@@ -24,15 +24,19 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
                         .FilePaths(flagOverridePath)
                         .AutoUpdate(true)
                 );
+
+                // do not provide analytics events
+                ldConfig.Events(Components.NoEvents);
             }
-
-            // do not provide analytics events
-            ldConfig.Events(Components.NoEvents);
+            else
+            {
+                // when a file-based fallback isn't available, work offline
+                ldConfig.Offline(true);
+            }
         }
-
-        // when self-hosted, work entirely offline
-        if (globalSettings.SelfHosted)
+        else if (globalSettings.SelfHosted)
         {
+            // when self-hosted, work offline
             ldConfig.Offline(true);
         }
 
