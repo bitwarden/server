@@ -466,7 +466,7 @@ public class ProviderServiceTests
 
         await sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds);
 
-        await providerOrganizationRepository.Received(1).CreateWithManyOrganizations(Arg.Is<ProviderOrganization>(p => p.ProviderId == provider.Id), organizationIds);
+        await providerOrganizationRepository.Received(1).CreateManyAsync(Arg.Is<IEnumerable<ProviderOrganization>>(i => i.All(po => po.ProviderId == provider.Id && organizations.Any(o => o.Id == po.OrganizationId))));
         await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventsAsync(
             Arg.Is<IEnumerable<(ProviderOrganization, EventType, DateTime?)>>(events => events.All(e =>
                 e.Item1.ProviderId == provider.Id && organizationIds.Contains(e.Item1.OrganizationId) && e.Item2 == EventType.ProviderOrganization_Added)));
@@ -491,7 +491,7 @@ public class ProviderServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds));
         Assert.Contains("Organization must be of type Reseller in order to assign Organizations to it.", exception.Message);
 
-        await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateWithManyOrganizations(default, default);
+        await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateManyAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);
     }
 

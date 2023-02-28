@@ -15,27 +15,28 @@ public class ProviderOrganizationRepository :
         : base(serviceScopeFactory, mapper, context => context.ProviderOrganizations)
     { }
 
-    public async Task<ICollection<ProviderOrganization>> CreateWithManyOrganizations(ProviderOrganization providerOrganization, IEnumerable<Guid> organizationIds)
+    public async Task<ICollection<ProviderOrganization>> CreateManyAsync(IEnumerable<ProviderOrganization> providerOrganizations)
     {
+        var entities = providerOrganizations.ToList();
+
+        if (!entities.Any())
+        {
+            return default;
+        }
+
+        foreach (var providerOrganization in entities)
+        {
+            providerOrganization.SetNewId();
+        }
+
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var insert = from o in dbContext.Organizations
-                         where organizationIds.Contains(o.Id) &&
-                               !dbContext.ProviderOrganizations.Any(po => po.ProviderId == providerOrganization.ProviderId && po.OrganizationId == o.Id)
-                         select new ProviderOrganization
-                         {
-                             ProviderId = providerOrganization.ProviderId,
-                             OrganizationId = o.Id,
-                             Key = providerOrganization.Key,
-                             Settings = providerOrganization.Settings
-                         };
-
-            await dbContext.AddRangeAsync(insert);
+            await dbContext.AddRangeAsync(entities);
             await dbContext.SaveChangesAsync();
-
-            return insert.ToList();
         }
+
+        return entities;
     }
 
     public async Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId)

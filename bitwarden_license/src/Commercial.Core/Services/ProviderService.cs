@@ -373,12 +373,8 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Organization must be of type Reseller in order to assign Organizations to it.");
         }
 
-        var providerOrganization = new ProviderOrganization
-        {
-            ProviderId = providerId
-        };
-
-        var insertedProviderOrganizations = await _providerOrganizationRepository.CreateWithManyOrganizations(providerOrganization, organizationIds);
+        var providerOrganizationsToInsert = organizationIds.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
+        var insertedProviderOrganizations = await _providerOrganizationRepository.CreateManyAsync(providerOrganizationsToInsert);
 
         await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
