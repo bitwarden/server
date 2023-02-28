@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Admin.Services;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -23,9 +24,9 @@ public class CustomClaimsPrincipalFactory : UserClaimsPrincipalFactory<IdentityU
     {
         var principal = await base.CreateAsync(user);
 
-        if (!_globalSettings.SelfHosted
-            && !string.IsNullOrEmpty(user.Email)
-            && principal.Identity != null)
+        if (!_globalSettings.SelfHosted &&
+            !string.IsNullOrEmpty(user.Email) &&
+            principal.Identity != null)
         {
             var role = _accessControlService.GetUserRole(user.Email);
 

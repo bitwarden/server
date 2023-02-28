@@ -1,5 +1,9 @@
 ﻿using System.Security.Claims;
+using Bit.Admin.Enums;
+using Bit.Admin.Utilities;
 using Bit.Core.Settings;
+
+namespace Bit.Admin.Services;
 
 public class AccessControlService : IAccessControlService
 {
@@ -17,12 +21,30 @@ public class AccessControlService : IAccessControlService
         _globalSettings = globalSettings;
     }
 
+    public bool UserHasPermission(Permission permission)
+    {
+        if (_globalSettings.SelfHosted)
+        {
+            return true;
+        }   
+
+        var userRole = GetUserRoleFromClaim();
+        if (string.IsNullOrEmpty(userRole) || !RolePermissionMapping.RolePermissions.ContainsKey(userRole))
+        {
+            return false;
+        }   
+
+        return RolePermissionMapping.RolePermissions[userRole].Contains(permission);
+    }
+
     public string GetUserRole(string userEmail)
     {
         var settings = _configuration.GetSection("adminSettings").GetChildren();
 
         if (settings == null || !settings.Any())
+        {
             return null;
+        } 
 
         var rolePrefix = "role";
         userEmail = userEmail.ToLowerInvariant();
@@ -31,10 +53,12 @@ public class AccessControlService : IAccessControlService
                                                  && (s.Value != null ? s.Value.ToLowerInvariant().Split(',').Contains(userEmail) : false));
 
         if (roleSetting == null)
+        {
             return null;
+        } 
 
         var role = roleSetting.Key.Substring(roleSetting.Key.IndexOf(rolePrefix) + rolePrefix.Length);
-        return role;
+        return role.ToLowerInvariant();
     }
 
     private string GetUserRoleFromClaim()

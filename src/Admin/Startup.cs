@@ -7,6 +7,7 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Stripe;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bit.Admin.Services;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -79,7 +80,6 @@ public class Startup
                 options.Cookie.Path = "/admin";
             });
         }
-
 
         // Services
         services.AddBaseServices(globalSettings);
