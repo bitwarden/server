@@ -11,9 +11,9 @@
 <div class="row mb-2">
     <div class="col">
         <form class="form-inline mb-2" method="get" asp-route-id="@providerId">
-            <label class="sr-only" asp-for="OrganizationName">@Html.DisplayNameFor(m => m.OrganizationName)</label>
+            <label class="sr-only" asp-for="OrganizationName"></label>
             <input type="text" class="form-control mb-2 mr-2 flex-fill" placeholder="@Html.DisplayNameFor(m => m.OrganizationName)" asp-for="OrganizationName" name="name">
-            <label class="sr-only" asp-for="OrganizationOwnerEmail">@Html.DisplayNameFor(m => m.OrganizationOwnerEmail)</label>
+            <label class="sr-only" asp-for="OrganizationOwnerEmail"></label>
             <input type="email" class="form-control mb-2 mr-2 flex-fill" placeholder="@Html.DisplayNameFor(m => m.OrganizationOwnerEmail)" asp-for="OrganizationOwnerEmail" name="ownerEmail">
             <button type="submit" class="btn btn-primary mb-2" title="Search" formmethod="get"><i class="fa fa-search"></i> Search</button>
         </form>
@@ -43,7 +43,7 @@
                 {
                     <tr>
                         <td class="text-center">
-                            @Html.HiddenFor(m => Model.Items[i].Id)
+                            @Html.HiddenFor(m => Model.Items[i].Id, new { @readonly = "readonly", autocomplete = "off" })
                             @Html.CheckBoxFor(m => Model.Items[i].Selected)
                         </td>
                         <td>@Html.ActionLink(Model.Items[i].Name, "Edit", "Organizations", new { id = Model.Items[i].Id }, new { target = "_blank" })</td>
