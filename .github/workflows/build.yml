@@ -499,8 +499,6 @@ jobs:
         run: |
           echo "Restore"
           dotnet restore
-          echo "Clean"
-          dotnet clean -c "Release" -o obj/build-output/publish
 
       - name: Publish project
         run: dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} --self-contained true
