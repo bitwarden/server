@@ -2450,14 +2450,12 @@ public class OrganizationService : IOrganizationService
             Key = null,
             Type = OrganizationUserType.Owner,
             Status = OrganizationUserStatusType.Invited,
-            AccessAll = true,
-            CreationDate = organization.CreationDate,
-            RevisionDate = organization.CreationDate
+            AccessAll = true
         };
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 
-        await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
         await SendInviteAsync(ownerOrganizationUser, organization, true);
+        await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
     }
 
     public async Task InitPendingOrganization(Guid organizationId, string publicKey, string privateKey)
