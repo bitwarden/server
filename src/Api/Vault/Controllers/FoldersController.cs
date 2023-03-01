@@ -1,5 +1,7 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Api.Vault.Models.Request;
+using Bit.Api.Vault.Models.Response;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
@@ -7,7 +9,7 @@ using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Vault.Controllers;
 
 [Route("folders")]
 [Authorize("Application")]

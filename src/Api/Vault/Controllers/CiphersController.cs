@@ -5,6 +5,8 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Api.Vault.Models.Request;
+using Bit.Api.Vault.Models.Response;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -22,7 +24,7 @@ using Core.Vault.Models.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Vault.Controllers;
 
 [Route("ciphers")]
 [Authorize("Application")]

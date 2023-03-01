@@ -2,7 +2,7 @@
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 
-namespace Bit.Api.Models;
+namespace Bit.Api.Vault.Models;
 
 public class CipherFieldModel
 {

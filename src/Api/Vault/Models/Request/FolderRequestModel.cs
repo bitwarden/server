@@ -2,7 +2,7 @@
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 
-namespace Bit.Api.Models.Request;
+namespace Bit.Api.Vault.Models.Request;
 
 public class FolderRequestModel
 {

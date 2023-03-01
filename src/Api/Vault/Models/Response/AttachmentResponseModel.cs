@@ -5,7 +5,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.Vault.Models.Response;
 
 public class AttachmentResponseModel : ResponseModel
 {

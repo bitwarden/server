@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Api.Models.Response;
+using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -6,7 +7,7 @@ using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Core.Vault.Models.Data;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.Vault.Models.Response;
 
 public class SyncResponseModel : ResponseModel
 {

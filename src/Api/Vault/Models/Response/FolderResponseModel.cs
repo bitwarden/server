@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.Core.Vault.Entities;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.Vault.Models.Response;
 
 public class FolderResponseModel : ResponseModel
 {

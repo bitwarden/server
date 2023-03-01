@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
@@ -8,7 +7,7 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Core.Vault.Models.Data;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.Vault.Models.Response;
 
 public class CipherMiniResponseModel : ResponseModel
 {
