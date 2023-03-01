@@ -1,11 +1,11 @@
 ﻿using System.Security.Claims;
-using Bit.Api.Controllers;
-using Bit.Api.Models.Request;
-using Bit.Core.Repositories;
+using Bit.Api.Vault.Controllers;
+using Bit.Api.Vault.Models.Request;
 using Bit.Core.Services;
+using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Core.Models.Data;
+using Core.Vault.Models.Data;
 using NSubstitute;
 using Xunit;
 
@@ -29,7 +29,7 @@ public class CiphersControllerTests
         {
             Favorite = isFavorite,
             FolderId = folderId,
-            Type = Core.Enums.CipherType.SecureNote,
+            Type = Core.Vault.Enums.CipherType.SecureNote,
             Data = "{}"
         };
 

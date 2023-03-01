@@ -1,10 +1,13 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Core.Vault.Entities;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using EfVaultRepo = Bit.Infrastructure.EntityFramework.Vault.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
+using SqlVaultRepo = Bit.Infrastructure.Dapper.Vault.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 
@@ -15,9 +18,9 @@ public class FolderRepositoryTests
         Folder folder,
         User user,
         FolderCompare equalityComparer,
-        List<EfRepo.FolderRepository> suts,
+        List<EfVaultRepo.FolderRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
-        SqlRepo.FolderRepository sqlFolderRepo,
+        SqlVaultRepo.FolderRepository sqlFolderRepo,
         SqlRepo.UserRepository sqlUserRepo)
     {
         var savedFolders = new List<Folder>();

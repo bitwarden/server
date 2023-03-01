@@ -3,10 +3,13 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
+using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Castle.Core.Internal;
-using Core.Models.Data;
+using Core.Vault.Models.Data;
 using NSubstitute;
 using Xunit;
 

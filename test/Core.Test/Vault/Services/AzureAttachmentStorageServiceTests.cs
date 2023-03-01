@@ -1,5 +1,5 @@
-﻿using Bit.Core.Services;
-using Bit.Core.Settings;
+﻿using Bit.Core.Settings;
+using Bit.Core.Vault.Services;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Xunit;

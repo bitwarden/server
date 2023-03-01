@@ -1,6 +1,6 @@
 ﻿using AutoFixture;
 using AutoFixture.Dsl;
-using Bit.Core.Models.Data;
+using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Core.Test.AutoFixture.CipherAttachmentMetaData;
 

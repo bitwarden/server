@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Vault.Entities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 

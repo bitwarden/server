@@ -1,11 +1,12 @@
 ﻿using System.Text.Json;
 using AutoFixture;
 using AutoFixture.Kernel;
-using Bit.Core.Entities;
-using Bit.Core.Models.Data;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture.Relays;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
