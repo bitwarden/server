@@ -5,7 +5,9 @@ using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Core.Vault.Models.Data;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +16,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using User = Bit.Core.Entities.User;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Vault.Repositories;
 
 public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, Guid>, ICipherRepository
 {

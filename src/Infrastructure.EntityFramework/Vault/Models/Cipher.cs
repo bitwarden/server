@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Infrastructure.EntityFramework.Models;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
+namespace Bit.Infrastructure.EntityFramework.Vault.Models;
 
 public class Cipher : Core.Vault.Entities.Cipher
 {

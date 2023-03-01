@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Enums;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 

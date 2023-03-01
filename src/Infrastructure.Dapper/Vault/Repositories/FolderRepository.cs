@@ -2,10 +2,11 @@
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.Vault.Repositories;
 
 public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
 {
