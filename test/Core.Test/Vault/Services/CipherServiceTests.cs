@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
