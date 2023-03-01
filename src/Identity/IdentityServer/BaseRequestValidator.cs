@@ -258,7 +258,8 @@ public abstract class BaseRequestValidator<T> where T : class
             new Dictionary<string, object>
             {
                 { "TwoFactorProviders", providers.Keys },
-                { "TwoFactorProviders2", providers }
+                { "TwoFactorProviders2", providers },
+                { "MasterPasswordPolicies", await GetMasterPasswordPolicies(user) }
             });
 
         if (enabledProviders.Count() == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)
