@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Vault.Services;
 
 public class LocalAttachmentStorageService : IAttachmentStorageService
 {

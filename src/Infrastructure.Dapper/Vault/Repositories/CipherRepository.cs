@@ -1,10 +1,10 @@
 ﻿using System.Data;
 using System.Text.Json;
 using Bit.Core.Entities;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Repositories;
 using Core.Vault.Models.Data;
 using Dapper;
 using Microsoft.Data.SqlClient;

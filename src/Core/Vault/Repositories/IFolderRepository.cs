@@ -1,6 +1,7 @@
-﻿using Bit.Core.Vault.Entities;
+﻿using Bit.Core.Repositories;
+using Bit.Core.Vault.Entities;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.Vault.Repositories;
 
 public interface IFolderRepository : IRepository<Folder, Guid>
 {

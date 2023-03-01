@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Vault.Enums;
 
 namespace Bit.Core.Vault.Models.Data;
 

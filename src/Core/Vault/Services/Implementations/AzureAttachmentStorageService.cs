@@ -2,12 +2,13 @@
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Vault.Services;
 
 public class AzureAttachmentStorageService : IAttachmentStorageService
 {

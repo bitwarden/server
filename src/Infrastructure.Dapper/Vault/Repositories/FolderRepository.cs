@@ -1,7 +1,7 @@
 ﻿using System.Data;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 

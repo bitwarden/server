@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Core.Vault.Models.Data;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.Vault.Repositories;
 
 public interface ICipherRepository : IRepository<Cipher, Guid>
 {

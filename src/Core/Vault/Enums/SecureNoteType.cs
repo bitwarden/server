@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Enums;
+﻿namespace Bit.Core.Vault.Enums;
 
 public enum SecureNoteType : byte
 {

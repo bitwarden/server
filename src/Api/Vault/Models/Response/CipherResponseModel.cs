@@ -4,6 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
 using Core.Vault.Models.Data;
 

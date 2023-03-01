@@ -1,8 +1,9 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
-using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Core.Vault.Models.Data;
