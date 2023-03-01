@@ -68,7 +68,7 @@ public interface IOrganizationService
     Task RestoreUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
-    Task CreatePendingOrganization(Organization organization, string ownerEmail);
+    Task CreatePendingOrganization(Organization organization, string ownerEmail, string creatorUserName, bool salesAssistedTrialStarted);
     /// <summary>
     /// Update an Organization entry by setting the public/private keys, set it as 'Enabled' and move the Status from 'Pending' to 'Created'.
     /// </summary>

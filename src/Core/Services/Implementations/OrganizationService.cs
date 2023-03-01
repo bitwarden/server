@@ -2436,7 +2436,7 @@ public class OrganizationService : IOrganizationService
         return status;
     }
 
-    public async Task CreatePendingOrganization(Organization organization, string ownerEmail)
+    public async Task CreatePendingOrganization(Organization organization, string ownerEmail, string creatorUserName, bool salesAssistedTrialStarted)
     {
         organization.Enabled = false;
         organization.Status = OrganizationStatusType.Pending;
@@ -2456,6 +2456,13 @@ public class OrganizationService : IOrganizationService
 
         await SendInviteAsync(ownerOrganizationUser, organization, true);
         await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
+
+        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
+        {
+            EventRaisedByUser = creatorUserName,
+            SalesAssistedTrialStarted = salesAssistedTrialStarted,
+        });
     }
 
     public async Task InitPendingOrganization(Guid organizationId, string publicKey, string privateKey)

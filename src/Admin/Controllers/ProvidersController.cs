@@ -1,8 +1,6 @@
 ﻿using Bit.Admin.Models;
 using Bit.Core.Entities.Provider;
-using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
-using Bit.Core.Models.Business;
 using Bit.Core.Providers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -182,14 +180,7 @@ public class ProvidersController : Controller
         }
 
         var organization = model.CreateOrganization(provider);
-        await _organizationService.CreatePendingOrganization(organization, model.Owners);
-
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
-        {
-            EventRaisedByUser = _userService.GetUserName(User),
-            SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
-        });
+        await _organizationService.CreatePendingOrganization(organization, model.Owners, _userService.GetUserName(User), model.SalesAssistedTrialStarted);
         await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
