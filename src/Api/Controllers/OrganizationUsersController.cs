@@ -186,11 +186,6 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (string.IsNullOrWhiteSpace(model.Key) || model.Keys == null)
-        {
-            throw new BadRequestException();
-        }
-
         // Update the Organization entry with the public/private keys
         await _organizationService.InitPendingOrganization(orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey);
 
