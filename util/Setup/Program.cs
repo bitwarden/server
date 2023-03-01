@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using System.Net.Http.Json;
 using Bit.Migrator;
-using Microsoft.Data.SqlClient;
 
 namespace Bit.Setup;
 
