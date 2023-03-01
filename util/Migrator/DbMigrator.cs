@@ -35,9 +35,9 @@ public class DbMigrator
                 var success = MigrateDatabase(enableLogging, cancellationToken);
                 return success;
             }
-            catch (SqlException e)
+            catch (SqlException ex)
             {
-                if (e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
+                if (ex.Message.Contains("Server is in script upgrade mode") && attempt < 10)
                 {
                     attempt++;
                     _logger.LogInformation("Database is in script upgrade mode. " +
