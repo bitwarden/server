@@ -37,7 +37,7 @@ public class DbMigrator
             }
             catch (SqlException ex)
             {
-                if (ex.Message.Contains("Server is in script upgrade mode") && attempt < 10)
+                if (ex.Message.Contains("Server is in script upgrade mode"))
                 {
                     attempt++;
                     _logger.LogInformation("Database is in script upgrade mode. " +
