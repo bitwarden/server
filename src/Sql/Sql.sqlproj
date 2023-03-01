@@ -444,6 +444,7 @@
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
+    <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_DeleteByIds.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_ReadByServiceAccountId.sql" />
     <Build Include="SecretsManager\dbo\Tables\AccessPolicy.sql" />
     <Build Include="SecretsManager\dbo\Tables\ApiKey.sql" />
@@ -453,5 +454,24 @@
     <Build Include="SecretsManager\dbo\Tables\ServiceAccount.sql" />
     <Build Include="SecretsManager\dbo\Views\ApiKeyDetailsView.sql" />
     <Build Include="SecretsManager\dbo\Views\ApiKeyView.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByLicenseKey.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadSelfHostedDetailsById.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadOccupiedSeatCountByOrganizationId.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_Create.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteById.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteIfExpired.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_OrganizationDeleted.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByClaimedDomain.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByNextRunDate.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadById.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByOrganizationId.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadDomainByOrgIdAndDomainName.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadIfExpired.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomain_Update.sql" />
+    <Content Include="dbo\Stored Procedures\OrganizationDomainSsoDetails_ReadByEmail.sql" />
+    <Content Include="dbo\Tables\OrganizationDomain.sql" />
+    <Content Include="dbo\Views\OrganizationDomainView.sql" />
   </ItemGroup>
 </Project>
