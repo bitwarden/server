@@ -349,6 +349,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<Guid?>("SecretId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("ServiceAccountId")
+                        .HasColumnType("char(36)");
+
                     b.Property<byte?>("SystemUser")
                         .HasColumnType("tinyint unsigned");
 
@@ -1328,9 +1334,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("TwoFactorRecoveryCode")
                         .HasMaxLength(32)
                         .HasColumnType("varchar(32)");
-
-                    b.Property<bool>("UnknownDeviceVerificationEnabled")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsesKeyConnector")
                         .HasColumnType("tinyint(1)");

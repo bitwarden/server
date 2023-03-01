@@ -22,4 +22,6 @@ public interface IEvent
     DateTime Date { get; set; }
     EventSystemUser? SystemUser { get; set; }
     string DomainName { get; set; }
+    Guid? SecretId { get; set; }
+    Guid? ServiceAccountId { get; set; }
 }

@@ -4,6 +4,7 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Identity;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -18,22 +19,32 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class SecretsController : Controller
 {
     private readonly ICurrentContext _currentContext;
-    private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ISecretRepository _secretRepository;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
     private readonly IUserService _userService;
+    private readonly IEventService _eventService;
 
-    public SecretsController(ISecretRepository secretRepository, IProjectRepository projectRepository, ICreateSecretCommand createSecretCommand, IUpdateSecretCommand updateSecretCommand, IDeleteSecretCommand deleteSecretCommand, IUserService userService, ICurrentContext currentContext)
+    public SecretsController(
+        ICurrentContext currentContext,
+        IProjectRepository projectRepository,
+        ISecretRepository secretRepository,
+        ICreateSecretCommand createSecretCommand,
+        IUpdateSecretCommand updateSecretCommand,
+        IDeleteSecretCommand deleteSecretCommand,
+        IUserService userService,
+        IEventService eventService)
     {
         _currentContext = currentContext;
+        _projectRepository = projectRepository;
         _secretRepository = secretRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
-        _projectRepository = projectRepository;
         _userService = userService;
+        _eventService = eventService;
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
@@ -70,6 +81,7 @@ public class SecretsController : Controller
     public async Task<SecretResponseModel> GetAsync([FromRoute] Guid id)
     {
         var secret = await _secretRepository.GetByIdAsync(id);
+
         if (secret == null || !_currentContext.AccessSecretsManager(secret.OrganizationId))
         {
             throw new NotFoundException();
@@ -78,6 +90,12 @@ public class SecretsController : Controller
         if (!await UserHasReadAccessToSecret(secret))
         {
             throw new NotFoundException();
+        }
+
+        if (_currentContext.ClientType == ClientType.ServiceAccount)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
         }
 
         return new SecretResponseModel(secret);
