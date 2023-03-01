@@ -467,7 +467,7 @@ jobs:
           path: swagger.json
           if-no-files-found: error
 
-  build-migrator-cli:
+  build-mssqlmigratorutility:
     name: Build MsSqlMigratorUtility
     runs-on: ubuntu-22.04
     needs:
@@ -530,7 +530,7 @@ jobs:
       - build-artifacts
       - build-docker
       - upload
-      - build-migrator-cli
+      - build-mssqlmigratorutility
     steps:
       - name: Check if any job failed
         if: |
@@ -544,7 +544,7 @@ jobs:
           BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
-          BUILD_MIGRATOR_CLI_STATUS: ${{ needs.build-migrator-cli.result }}
+          BUILD_MIGRATOR_CLI_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
