@@ -5,7 +5,9 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class ProjectResponseModel : ResponseModel
 {
-    public ProjectResponseModel(Project project, string obj = "project")
+    private const string _objectName = "project";
+
+    public ProjectResponseModel(Project project, string obj = _objectName)
         : base(obj)
     {
         if (project == null)
@@ -20,7 +22,7 @@ public class ProjectResponseModel : ResponseModel
         RevisionDate = project.RevisionDate;
     }
 
-    public ProjectResponseModel() : base("project")
+    public ProjectResponseModel() : base(_objectName)
     {
     }
 

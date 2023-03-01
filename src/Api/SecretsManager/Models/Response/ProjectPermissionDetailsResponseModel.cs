@@ -4,7 +4,9 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class ProjectPermissionDetailsResponseModel : ProjectResponseModel
 {
-    public ProjectPermissionDetailsResponseModel(Project project, bool read, bool write, string obj = "projectPermissionDetails") : base(project, obj)
+    private const string _objectName = "projectPermissionDetails";
+
+    public ProjectPermissionDetailsResponseModel(Project project, bool read, bool write, string obj = _objectName) : base(project, obj)
     {
         Read = read;
         Write = write;
