@@ -1,4 +1,7 @@
-﻿internal class Program
+﻿using Bit.Migrator;
+using Microsoft.Extensions.Logging;
+
+internal class Program
 {
     private static int Main(string[] args)
     {
