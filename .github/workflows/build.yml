@@ -507,16 +507,16 @@ jobs:
         if: ${{ contains(matrix.target, 'win') == true }}
         uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
-          name: MigratorCLI-${{ matrix.target }}
-          path: util/MigratorCLI/obj/build-output/publish/MigratorCLI.exe
+          name: MsSqlMigratorUtility-${{ matrix.target }}
+          path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility.exe
           if-no-files-found: error
 
       - name: Upload project artifact
         if: ${{ contains(matrix.target, 'win') == false }}
         uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
         with:
-          name: MigratorCLI-${{ matrix.target }}
-          path: util/MigratorCLI/obj/build-output/publish/MigratorCLI
+          name: MsSqlMigratorUtility-${{ matrix.target }}
+          path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
 
   check-failures:
@@ -544,7 +544,7 @@ jobs:
           BUILD_ARTIFACTS_STATUS: ${{ needs.build-artifacts.result }}
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
-          BUILD_MIGRATOR_CLI_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
+          BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
@@ -558,7 +558,7 @@ jobs:
               exit 1
           elif [ "$UPLOAD_STATUS" = "failure" ]; then
               exit 1
-          elif [ "$BUILD_MIGRATOR_CLI_STATUS" = "failure" ]; then
+          elif [ "$BUILD_MSSQLMIGRATORUTILITY_STATUS" = "failure" ]; then
               exit 1
           fi
 
