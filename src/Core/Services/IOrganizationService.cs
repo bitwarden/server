@@ -69,6 +69,12 @@ public interface IOrganizationService
     Task<List<Tuple<OrganizationUser, string>>> RestoreUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? restoringUserId, IUserService userService);
     Task CreatePendingOrganization(Organization organization, string ownerEmail);
+    /// <summary>
+    /// Update an Organization entry by setting the public/private keys, set it as 'Enabled' and move the Status from 'Pending' to 'Created'.
+    /// </summary>
+    /// <remarks>
+    /// This method must target a disabled Organization that has null keys and status as 'Pending'.
+    /// </remarks>
     Task InitPendingOrganization(Guid organizationId, string publicKey, string privateKey);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 }

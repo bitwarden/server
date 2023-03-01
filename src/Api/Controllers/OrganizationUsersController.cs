@@ -186,13 +186,8 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        // Update the Organization entry with the public/private keys
         await _organizationService.InitPendingOrganization(orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey);
-
-        // Accept the OrgUser
         await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
-
-        // Update the OrgUser entry with their encrypted symmetric key and move into the Confirmed status
         await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
     }
 
