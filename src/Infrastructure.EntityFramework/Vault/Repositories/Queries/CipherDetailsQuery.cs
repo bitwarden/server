@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Core.Vault.Models.Data;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+namespace Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 
 public class CipherDetailsQuery : IQuery<CipherDetails>
 {

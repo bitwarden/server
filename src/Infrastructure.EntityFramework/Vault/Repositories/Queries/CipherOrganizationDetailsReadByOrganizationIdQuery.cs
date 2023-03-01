@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Vault.Models.Data;
+using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+namespace Bit.Infrastructure.EntityFramework.Repositories.Vault.Queries;
 
 public class CipherOrganizationDetailsReadByOrganizationIdQuery : IQuery<CipherOrganizationDetails>
 {

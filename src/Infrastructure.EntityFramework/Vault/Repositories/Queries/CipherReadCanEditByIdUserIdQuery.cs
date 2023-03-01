@@ -1,7 +1,9 @@
 ﻿using Bit.Core.Enums;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+namespace Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 
 public class CipherReadCanEditByIdUserIdQuery : IQuery<Cipher>
 {
