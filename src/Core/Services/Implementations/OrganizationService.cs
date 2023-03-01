@@ -2461,14 +2461,32 @@ public class OrganizationService : IOrganizationService
     public async Task InitPendingOrganization(Guid organizationId, string publicKey, string privateKey)
     {
         var org = await GetOrgById(organizationId);
-        if (!org.Enabled && org.Status == OrganizationStatusType.Pending && string.IsNullOrEmpty(org.PublicKey) && string.IsNullOrEmpty(org.PrivateKey))
-        {
-            org.Enabled = true;
-            org.Status = OrganizationStatusType.Created;
-            org.PublicKey = publicKey;
-            org.PrivateKey = privateKey;
 
-            await UpdateAsync(org);
+        if (org.Enabled)
+        {
+            throw new BadRequestException("Organization is already enabled.");
         }
+
+        if (org.Status != OrganizationStatusType.Pending)
+        {
+            throw new BadRequestException("Organization is not on a Pending status.");
+        }
+
+        if (!string.IsNullOrEmpty(org.PublicKey))
+        {
+            throw new BadRequestException("Organization already has a Public Key.");
+        }
+
+        if (!string.IsNullOrEmpty(org.PrivateKey))
+        {
+            throw new BadRequestException("Organization already has a Private Key.");
+        }
+
+        org.Enabled = true;
+        org.Status = OrganizationStatusType.Created;
+        org.PublicKey = publicKey;
+        org.PrivateKey = privateKey;
+
+        await UpdateAsync(org);
     }
 }
