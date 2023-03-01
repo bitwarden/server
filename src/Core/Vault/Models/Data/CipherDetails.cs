@@ -1,4 +1,6 @@
-﻿namespace Core.Models.Data;
+﻿using Bit.Core.Vault.Models.Data;
+
+namespace Core.Vault.Models.Data;
 
 public class CipherDetails : CipherOrganizationDetails
 {

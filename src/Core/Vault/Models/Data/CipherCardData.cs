@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Models.Data;
+﻿namespace Bit.Core.Vault.Models.Data;
 
 public class CipherCardData : CipherData
 {

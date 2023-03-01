@@ -1,11 +1,11 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
-using Core.Models.Data;
+using Core.Vault.Models.Data;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,13 +15,13 @@ using User = Bit.Core.Entities.User;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
-public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, ICipherRepository
+public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, Guid>, ICipherRepository
 {
     public CipherRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Ciphers)
     { }
 
-    public override async Task<Core.Entities.Cipher> CreateAsync(Core.Entities.Cipher cipher)
+    public override async Task<Core.Vault.Entities.Cipher> CreateAsync(Core.Vault.Entities.Cipher cipher)
     {
         cipher = await base.CreateAsync(cipher);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -40,7 +40,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         return cipher;
     }
 
-    public override async Task DeleteAsync(Core.Entities.Cipher cipher)
+    public override async Task DeleteAsync(Core.Vault.Entities.Cipher cipher)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -74,7 +74,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         }
     }
 
-    public async Task CreateAsync(Core.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
+    public async Task CreateAsync(Core.Vault.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
     {
         cipher = await CreateAsync(cipher);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -105,7 +105,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             cipher.Folders = cipher.FolderId.HasValue ?
                 $"{{{userIdKey}:\"{cipher.FolderId}\"}}" :
                 null;
-            var entity = Mapper.Map<Cipher>((Core.Entities.Cipher)cipher);
+            var entity = Mapper.Map<Cipher>((Core.Vault.Entities.Cipher)cipher);
             await dbContext.AddAsync(entity);
 
             if (cipher.OrganizationId.HasValue)
@@ -134,7 +134,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Folder> folders)
+    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders)
     {
         if (!ciphers.Any())
         {
@@ -153,7 +153,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Collection> collections, IEnumerable<Core.Entities.CollectionCipher> collectionCiphers)
+    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Collection> collections, IEnumerable<Core.Entities.CollectionCipher> collectionCiphers)
     {
         if (!ciphers.Any())
         {
@@ -317,14 +317,14 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         }
     }
 
-    public async Task<ICollection<Core.Entities.Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<Core.Vault.Entities.Cipher>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var query = dbContext.Ciphers.Where(x => !x.UserId.HasValue && x.OrganizationId == organizationId);
             var data = await query.ToListAsync();
-            return Mapper.Map<List<Core.Entities.Cipher>>(data);
+            return Mapper.Map<List<Core.Vault.Entities.Cipher>>(data);
         }
     }
 
@@ -465,7 +465,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
                         cipher.Favorites = JsonConvert.SerializeObject(folders);
                     }
                 }
-                var mappedEntity = Mapper.Map<Cipher>((Core.Entities.Cipher)cipher);
+                var mappedEntity = Mapper.Map<Cipher>((Core.Vault.Entities.Cipher)cipher);
                 dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
 
                 if (cipher.OrganizationId.HasValue)
@@ -545,7 +545,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         return 0;
     }
 
-    public async Task<bool> ReplaceAsync(Core.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
+    public async Task<bool> ReplaceAsync(Core.Vault.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -714,7 +714,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         }
     }
 
-    public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Core.Entities.Cipher> ciphers)
+    public async Task UpdateCiphersAsync(Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
     {
         if (!ciphers.Any())
         {
@@ -766,7 +766,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         }
     }
 
-    public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Core.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Folder> folders, IEnumerable<Core.Entities.Send> sends)
+    public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders, IEnumerable<Core.Entities.Send> sends)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

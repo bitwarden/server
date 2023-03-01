@@ -14,7 +14,9 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Core.Models.Data;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
+using Core.Vault.Models.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

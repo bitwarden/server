@@ -3,7 +3,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Core.Models.Data;
+using Bit.Core.Vault.Models.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

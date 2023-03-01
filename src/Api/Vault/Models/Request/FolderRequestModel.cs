@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Api.Models.Request;
 

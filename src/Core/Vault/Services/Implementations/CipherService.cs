@@ -4,11 +4,12 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Core.Models.Data;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
+using Core.Vault.Models.Data;
 
 namespace Bit.Core.Services;
 

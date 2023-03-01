@@ -7,6 +7,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Vault.Models.Data;
 using Microsoft.AspNetCore.Identity;
 
 namespace Bit.Core.Services;

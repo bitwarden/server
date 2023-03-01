@@ -1,5 +1,5 @@
 ﻿using Bit.Core.Utilities;
-using Core.Models.Data;
+using Core.Vault.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 

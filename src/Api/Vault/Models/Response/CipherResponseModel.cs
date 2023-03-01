@@ -2,9 +2,10 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Data;
 using Bit.Core.Settings;
-using Core.Models.Data;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
+using Core.Vault.Models.Data;
 
 namespace Bit.Api.Models.Response;
 

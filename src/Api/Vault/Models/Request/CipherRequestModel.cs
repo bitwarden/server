@@ -1,10 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
-using Core.Models.Data;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
+using Core.Vault.Models.Data;
 using NS = Newtonsoft.Json;
 using NSL = Newtonsoft.Json.Linq;
 

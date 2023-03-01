@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.Vault.Models.Data;
 
 public class CipherFieldData
 {
