@@ -8,6 +8,7 @@ using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Request.Accounts;
+using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Api.Response.Accounts;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
@@ -36,6 +37,7 @@ public class AccountsController : Controller
     private readonly ISendRepository _sendRepository;
     private readonly ISendService _sendService;
     private readonly ICaptchaValidationService _captchaValidationService;
+    private readonly IPolicyRepository _policyRepository;
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -49,7 +51,8 @@ public class AccountsController : Controller
         IUserService userService,
         ISendRepository sendRepository,
         ISendService sendService,
-        ICaptchaValidationService captchaValidationService)
+        ICaptchaValidationService captchaValidationService,
+        IPolicyRepository policyRepository)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -63,6 +66,7 @@ public class AccountsController : Controller
         _sendRepository = sendRepository;
         _sendService = sendService;
         _captchaValidationService = captchaValidationService;
+        _policyRepository = policyRepository;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -256,7 +260,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("verify-password")]
-    public async Task PostVerifyPassword([FromBody] SecretVerificationRequestModel model)
+    public async Task<VerifyMasterPasswordResponseModel> PostVerifyPassword([FromBody] SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -266,7 +270,11 @@ public class AccountsController : Controller
 
         if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            return;
+            var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
+                .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
+                .Select(p => new PolicyResponseModel(p));
+
+            return new VerifyMasterPasswordResponseModel(policies);
         }
 
         ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");

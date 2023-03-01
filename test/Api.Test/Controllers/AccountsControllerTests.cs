@@ -31,6 +31,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ISendService _sendService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICaptchaValidationService _captchaValidationService;
+    private readonly IPolicyRepository _policyRepository;
 
     public AccountsControllerTests()
     {
@@ -46,6 +47,7 @@ public class AccountsControllerTests : IDisposable
         _sendRepository = Substitute.For<ISendRepository>();
         _sendService = Substitute.For<ISendService>();
         _captchaValidationService = Substitute.For<ICaptchaValidationService>();
+        _policyRepository = Substitute.For<IPolicyRepository>();
         _sut = new AccountsController(
             _globalSettings,
             _cipherRepository,
@@ -58,7 +60,8 @@ public class AccountsControllerTests : IDisposable
             _userService,
             _sendRepository,
             _sendService,
-            _captchaValidationService
+            _captchaValidationService,
+            _policyRepository
         );
     }
 
