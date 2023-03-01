@@ -3,6 +3,7 @@ using Bit.Api.Models.Response;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Vault.Repositories;
+using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

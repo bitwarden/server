@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
