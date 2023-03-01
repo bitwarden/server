@@ -343,7 +343,7 @@ public class ProviderService : IProviderService
         return result;
     }
 
-    public async Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key)
+    public async Task AddOrganization(Guid providerId, Guid organizationId, string key)
     {
         var po = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
         if (po != null)

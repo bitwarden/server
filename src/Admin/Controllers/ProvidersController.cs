@@ -190,7 +190,7 @@ public class ProvidersController : Controller
             EventRaisedByUser = _userService.GetUserName(User),
             SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
         });
-        await _providerService.AddOrganization(providerId, organization.Id, Guid.Empty, null);
+        await _providerService.AddOrganization(providerId, organization.Id, null);
 
         return RedirectToAction("Edit", "Providers", new { id = providerId });
     }

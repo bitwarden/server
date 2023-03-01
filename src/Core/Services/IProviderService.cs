@@ -19,7 +19,7 @@ public interface IProviderService
     Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds,
         Guid deletingUserId);
 
-    Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key);
+    Task AddOrganization(Guid providerId, Guid organizationId, string key);
     Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup,
         string clientOwnerEmail, User user);
     Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId);
