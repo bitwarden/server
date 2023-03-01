@@ -41,7 +41,7 @@ public class DbMigrator
                 {
                     attempt++;
                     _logger.LogInformation("Database is in script upgrade mode. " +
-                        "Trying again (attempt #{0})...", attempt);
+                        $"Trying again (attempt #{attempt})...");
                     Thread.Sleep(20000);
                 }
                 else
