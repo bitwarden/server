@@ -84,7 +84,8 @@ public class AccessPoliciesController : Controller
         await CheckUserHasWriteAccessToProjectAsync(project);
 
         var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
-        return new ProjectAccessPoliciesResponseModel(results);
+        var policies = await SetCurrentUserInGroupAsync(results.ToList(), project.OrganizationId);
+        return new ProjectAccessPoliciesResponseModel(policies);
     }
 
     [HttpPost("/service-accounts/{id}/access-policies")]
@@ -118,7 +119,8 @@ public class AccessPoliciesController : Controller
         await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
 
         var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id);
-        return new ServiceAccountAccessPoliciesResponseModel(results);
+        var policies = await SetCurrentUserInGroupAsync(results.ToList(), serviceAccount.OrganizationId);
+        return new ServiceAccountAccessPoliciesResponseModel(policies);
     }
 
     [HttpGet("/service-accounts/{id}/granted-policies")]
@@ -298,5 +300,35 @@ public class AccessPoliciesController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         return (accessClient, userId);
+    }
+
+    private async Task<List<BaseAccessPolicy>> SetCurrentUserInGroupAsync(
+        List<BaseAccessPolicy> accessPolicies, Guid organizationId)
+    {
+        if (!accessPolicies.OfType<GroupServiceAccountAccessPolicy>().Any()
+            && !accessPolicies.OfType<GroupProjectAccessPolicy>().Any())
+        {
+            return accessPolicies;
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
+        var orgUser = orgUsers.First(x => x.OrganizationId == organizationId);
+        var usersGroups = await _groupRepository.GetManyIdsByUserIdAsync(orgUser.Id);
+
+        foreach (var accessPolicy in accessPolicies)
+        {
+            switch (accessPolicy)
+            {
+                case GroupServiceAccountAccessPolicy ap:
+                    ap.CurrentUserInGroup = usersGroups.Any(g => g == ap.GroupId);
+                    break;
+                case GroupProjectAccessPolicy ap:
+                    ap.CurrentUserInGroup = usersGroups.Any(g => g == ap.GroupId);
+                    break;
+            }
+        }
+
+        return accessPolicies;
     }
 }
