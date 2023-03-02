@@ -186,7 +186,7 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        await _organizationService.InitPendingOrganization(orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey);
+        await _organizationService.InitPendingOrganization(orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
         await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
         await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
     }

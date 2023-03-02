@@ -45,6 +45,8 @@ public class OrganizationUserAcceptInitRequestModel
     public string Key { get; set; }
     [Required]
     public OrganizationKeysRequestModel Keys { get; set; }
+    [EncryptedStringLength(1000)]
+    public string CollectionName { get; set; }
 }
 
 public class OrganizationUserAcceptRequestModel
