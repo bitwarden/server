@@ -31,12 +31,12 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var project = updatedSecret.Projects?.FirstOrDefault();
+        var originalSecretsProject = secret.Projects?.FirstOrDefault();
 
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => project != null && await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
+            AccessClientType.User => originalSecretsProject != null && await _projectRepository.UserHasWriteAccessToProject(originalSecretsProject.Id, userId),
             _ => false,
         };
 
