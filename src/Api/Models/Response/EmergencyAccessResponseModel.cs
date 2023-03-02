@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
-using Core.Vault.Models.Data;
+using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Models.Response;
 

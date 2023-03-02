@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Utilities;
+using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
-using Core.Vault.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 

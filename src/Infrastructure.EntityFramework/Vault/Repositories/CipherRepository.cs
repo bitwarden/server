@@ -10,7 +10,6 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories.Vault.Queries;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
-using Core.Vault.Models.Data;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

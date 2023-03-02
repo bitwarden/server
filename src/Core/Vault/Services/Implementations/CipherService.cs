@@ -11,7 +11,6 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
-using Core.Vault.Models.Data;
 
 namespace Bit.Core.Vault.Services;
 

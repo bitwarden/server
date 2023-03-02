@@ -5,7 +5,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;
-using Core.Vault.Models.Data;
+using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models.Response;
 

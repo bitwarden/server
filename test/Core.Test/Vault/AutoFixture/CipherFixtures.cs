@@ -1,7 +1,7 @@
 ﻿using AutoFixture;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Core.Vault.Models.Data;
 
 namespace Bit.Core.Test.AutoFixture.CipherFixtures;
 

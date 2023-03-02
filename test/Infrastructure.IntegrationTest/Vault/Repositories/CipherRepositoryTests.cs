@@ -1,10 +1,10 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
-using Core.Vault.Models.Data;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Repositories;

@@ -4,7 +4,6 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
-using Core.Vault.Models.Data;
 using NS = Newtonsoft.Json;
 using NSL = Newtonsoft.Json.Linq;
 

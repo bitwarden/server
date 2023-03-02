@@ -2,10 +2,10 @@
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Services;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Core.Vault.Models.Data;
 using NSubstitute;
 using Xunit;
 

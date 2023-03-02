@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.Enums;
+using Bit.Core.Vault.Models.Data;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
-using Core.Vault.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
