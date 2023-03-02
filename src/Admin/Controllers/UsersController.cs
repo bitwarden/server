@@ -102,7 +102,7 @@ public class UsersController : Controller
             user.MaxStorageGb = model.MaxStorageGb;
             user.Premium = model.Premium;
         }
-        
+
         if (_accessControlService.UserHasPermission(Permission.User_Billing_Edit))
         {
             user.Gateway = model.Gateway;
@@ -115,7 +115,7 @@ public class UsersController : Controller
             user.LicenseKey = model.LicenseKey;
             user.PremiumExpirationDate = model.PremiumExpirationDate;
         }
-        
+
         await _userRepository.ReplaceAsync(user);
         return RedirectToAction("Edit", new { id });
     }
