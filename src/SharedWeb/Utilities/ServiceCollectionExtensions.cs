@@ -176,6 +176,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
+        services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
