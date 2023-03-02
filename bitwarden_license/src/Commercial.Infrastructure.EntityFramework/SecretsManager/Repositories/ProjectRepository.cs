@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
@@ -25,6 +26,31 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
                                     .FirstOrDefaultAsync();
             return Mapper.Map<Core.SecretsManager.Entities.Project>(project);
         }
+    }
+
+    public async Task<ProjectPermissionDetails> GetPermissionDetailsByIdAsync(Guid id, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var project = await dbContext.Project
+            .Where(c => c.Id == id && c.DeletedDate == null)
+            .Select(p => new ProjectPermissionDetails
+            {
+                Id = p.Id,
+                OrganizationId = p.OrganizationId,
+                Name = p.Name,
+                CreationDate = p.CreationDate,
+                RevisionDate = p.RevisionDate,
+                DeletedDate = p.DeletedDate,
+                Read = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read)
+                       || p.GroupAccessPolicies.Any(ap =>
+                           ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
+                Write = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                        p.GroupAccessPolicies.Any(ap =>
+                            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
+            }).FirstOrDefaultAsync();
+        return project;
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
