@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
@@ -165,19 +166,18 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Get_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
+    public async void Get_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data).Returns(false);
-
+        SetupAdmin(sutProvider, orgId);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(orgId).Returns(false);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(data));
     }
 
     [Theory]
     [BitAutoData]
-    public async void Get_ThrowsNotFound(SutProvider<ProjectsController> sutProvider, Guid data)
+    public async void Get_ThrowsNotFound(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data).Returns(true);
-
+        SetupAdmin(sutProvider, orgId);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(data));
     }
 
@@ -199,13 +199,13 @@ public class ProjectsControllerTests
                 break;
         }
 
-        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(Arg.Is(data))
-            .ReturnsForAnyArgs(new Project { Id = data, OrganizationId = orgId });
+        sutProvider.GetDependency<IProjectRepository>().GetPermissionDetailsByIdAsync(Arg.Is(data), Arg.Any<Guid>())
+            .ReturnsForAnyArgs(new ProjectPermissionDetails() { Id = data, OrganizationId = orgId, Read = true, Write = true });
 
         await sutProvider.Sut.GetAsync(data);
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
-            .GetByIdAsync(Arg.Is(data));
+            .GetPermissionDetailsByIdAsync(Arg.Is(data), Arg.Any<Guid>());
     }
 
     [Theory]
