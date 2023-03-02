@@ -54,15 +54,20 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     public string ApiKey { get; set; }
     public KdfType Kdf { get; set; } = KdfType.PBKDF2_SHA256;
     public int KdfIterations { get; set; } = 5000;
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public bool ForcePasswordReset { get; set; }
     public bool UsesKeyConnector { get; set; }
     public int FailedLoginCount { get; set; }
     public DateTime? LastFailedLoginDate { get; set; }
-    public bool UnknownDeviceVerificationEnabled { get; set; }
     [MaxLength(7)]
     public string AvatarColor { get; set; }
+    public DateTime? LastPasswordChangeDate { get; set; }
+    public DateTime? LastKdfChangeDate { get; set; }
+    public DateTime? LastKeyRotationDate { get; set; }
+    public DateTime? LastEmailChangeDate { get; set; }
 
     public void SetNewId()
     {

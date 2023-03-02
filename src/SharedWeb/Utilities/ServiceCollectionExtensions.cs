@@ -124,6 +124,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
+        services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -173,6 +174,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
+        services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
@@ -339,7 +341,7 @@ public static class ServiceCollectionExtensions
             {
                 RequireDigit = false,
                 RequireLowercase = false,
-                RequiredLength = 8,
+                RequiredLength = 12,
                 RequireNonAlphanumeric = false,
                 RequireUppercase = false
             };

@@ -92,6 +92,11 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             errorMessage = "Unauthorized.";
             context.HttpContext.Response.StatusCode = 401;
         }
+        else if (exception is ConflictException)
+        {
+            errorMessage = exception.Message;
+            context.HttpContext.Response.StatusCode = 409;
+        }
         else if (exception is AggregateException aggregateException)
         {
             context.HttpContext.Response.StatusCode = 400;

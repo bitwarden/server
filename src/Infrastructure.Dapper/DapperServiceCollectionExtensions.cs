@@ -1,5 +1,7 @@
 ﻿using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.Dapper.Repositories;
+using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.Dapper;
@@ -36,6 +38,7 @@ public static class DapperServiceCollectionExtensions
         services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
+        services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
 
         if (selfHosted)
         {

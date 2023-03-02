@@ -41,4 +41,5 @@ public class OrganizationUserOrganizationDetails
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
+    public bool AccessSecretsManager { get; set; }
 }

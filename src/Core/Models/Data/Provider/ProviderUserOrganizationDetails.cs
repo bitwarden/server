@@ -34,4 +34,5 @@ public class ProviderUserOrganizationDetails
     public Guid? ProviderId { get; set; }
     public Guid? ProviderUserId { get; set; }
     public string ProviderName { get; set; }
+    public Enums.PlanType PlanType { get; set; }
 }
