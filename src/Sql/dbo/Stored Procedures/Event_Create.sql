@@ -17,7 +17,9 @@
     @IpAddress VARCHAR(50),
     @Date DATETIME2(7),
     @SystemUser TINYINT = null,
-    @DomainName VARCHAR(256)
+    @DomainName VARCHAR(256),
+    @SecretId UNIQUEIDENTIFIER = null,
+    @ServiceAccountId UNIQUEIDENTIFIER = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -42,7 +44,9 @@ BEGIN
         [IpAddress],
         [Date],
         [SystemUser],
-        [DomainName]
+        [DomainName],
+        [SecretId],
+        [ServiceAccountId]
     )
     VALUES
     (
@@ -64,6 +68,8 @@ BEGIN
         @IpAddress,
         @Date,
         @SystemUser,
-        @DomainName
+        @DomainName,
+        @SecretId,
+        @ServiceAccountId
     )
 END

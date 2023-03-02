@@ -11,7 +11,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Core.Utilities.Duo;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -153,7 +152,7 @@ public class TwoFactorController : Controller
         try
         {
             var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
-            duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
+            await duoApi.JSONApiCall("GET", "/auth/v2/check");
         }
         catch (DuoException)
         {
@@ -210,7 +209,7 @@ public class TwoFactorController : Controller
         try
         {
             var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
-            duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
+            await duoApi.JSONApiCall("GET", "/auth/v2/check");
         }
         catch (DuoException)
         {
