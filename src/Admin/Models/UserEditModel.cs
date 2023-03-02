@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Admin.Models;
 

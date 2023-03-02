@@ -1,6 +1,7 @@
-﻿using Bit.Core.Utilities;
+﻿using Bit.Core.Entities;
+using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.Vault.Entities;
 
 public class Folder : ITableObject<Guid>
 {
