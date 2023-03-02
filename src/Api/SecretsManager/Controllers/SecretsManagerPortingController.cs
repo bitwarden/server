@@ -29,7 +29,7 @@ public class SecretsManagerPortingController : Controller
     }
 
     [HttpGet("sm/{organizationId}/export")]
-    public async Task<SMExportResponseModel> Export([FromRoute] Guid organizationId, [FromRoute] string format = "json")
+    public async Task<SMExportResponseModel> Export([FromRoute] Guid organizationId)
     {
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
