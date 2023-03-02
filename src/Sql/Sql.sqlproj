@@ -74,6 +74,11 @@
     <Folder Include="SecretsManager\dbo\Stored Procedures\ApiKey\" />
     <Folder Include="SecretsManager\dbo\Tables\" />
     <Folder Include="SecretsManager\dbo\Views\" />
+    <Folder Include="Vault\dbo\" />
+    <Folder Include="Vault\dbo\Functions\" />
+    <Folder Include="Vault\dbo\Stored Procedures\" />
+    <Folder Include="Vault\dbo\Tables\" />
+    <Folder Include="Vault\dbo\Views\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="dbo\Functions\PolicyApplicableToUser.sql" />
@@ -226,6 +231,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOnlyOwner.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadCountByOrganizationIdEmail.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadOccupiedSeatCountByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_ReadWithCollectionsById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_SelectKnownEmails.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationUser_Update.sql" />
@@ -238,8 +244,10 @@
     <Build Include="dbo\Stored Procedures\Organization_ReadByEnabled.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByIdentifier.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadByLicenseKey.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\Organization_ReadSelfHostedDetailsById.sql" />
     <Build Include="dbo\Stored Procedures\Organization_Search.sql" />
     <Build Include="dbo\Stored Procedures\Organization_Update.sql" />
     <Build Include="dbo\Stored Procedures\Organization_UpdateStorage.sql" />
@@ -402,9 +410,6 @@
     <Build Include="dbo\Views\SsoUserView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
-    <Build Include="dbo\Stored Procedures\Organization_ReadByLicenseKey.sql" />
-    <Build Include="dbo\Stored Procedures\Organization_ReadSelfHostedDetailsById.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationUser_ReadOccupiedSeatCountByOrganizationId.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_Create.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKey_DeleteByIds.sql" />
