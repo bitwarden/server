@@ -123,6 +123,7 @@ public static class RolePermissionMapping
                 Permission.User_List_View,
                 Permission.User_UserInformation_View,
                 Permission.User_GeneralDetails_View,
+                Permission.User_UpgradePremium,
                 Permission.User_BillingInformation_View,
                 Permission.User_BillingInformation_DownloadInvoice,
                 Permission.User_BillingInformation_CreateEditTransaction,
