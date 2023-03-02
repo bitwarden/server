@@ -89,6 +89,6 @@ public class LaunchDarklyFeatureServiceTests
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.UserId.Returns(Guid.NewGuid());
 
-        Assert.Equal(null, sutProvider.Sut.GetStringVariation("somekey", currentContext));
+        Assert.Null(sutProvider.Sut.GetStringVariation("somekey", currentContext));
     }
 }
