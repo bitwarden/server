@@ -62,14 +62,6 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
         return Premium.GetValueOrDefault(false);
     }
 
-    public bool OccupiesOrganizationSeat
-    {
-        get
-        {
-            return Status != OrganizationUserStatusType.Revoked;
-        }
-    }
-
     public Permissions GetPermissions()
     {
         return string.IsNullOrWhiteSpace(Permissions) ? null
