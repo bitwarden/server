@@ -16,12 +16,11 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         if (string.IsNullOrEmpty(globalSettings.LaunchDarkly?.SdkKey))
         {
             // support a file to load flag values
-            const string flagOverridePath = "flags.json";
-            if (File.Exists(flagOverridePath))
+            if (File.Exists(globalSettings.LaunchDarkly?.FlagDataFilePath))
             {
                 ldConfig.DataSource(
                     FileData.DataSource()
-                        .FilePaths(flagOverridePath)
+                        .FilePaths(globalSettings.LaunchDarkly?.FlagDataFilePath)
                         .AutoUpdate(true)
                 );
 

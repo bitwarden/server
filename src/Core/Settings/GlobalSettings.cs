@@ -543,5 +543,6 @@ public class GlobalSettings : IGlobalSettings
     public class LaunchDarklySettings : ILaunchDarklySettings
     {
         public string SdkKey { get; set; }
+        public string FlagDataFilePath { get; set; } = "flags.json";
     }
 }
