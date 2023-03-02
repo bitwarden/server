@@ -196,7 +196,7 @@
                 <label asp-for="BillingEmail"></label>
                 @if (Model.Provider?.Type == ProviderType.Reseller)
                 {
-                    <input type="email" class="form-control" asp-for="Provider.BillingEmail" readonly="readonly">
+                    <input type="email" class="form-control" asp-for="BillingEmail" readonly="readonly">
                 }
                 else
                 {
