@@ -1,5 +1,6 @@
 ﻿using Bit.Admin.Enums;
 using Bit.Admin.Models;
+using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -18,17 +19,20 @@ public class UsersController : Controller
     private readonly ICipherRepository _cipherRepository;
     private readonly IPaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
+    private readonly IAccessControlService _accessControlService;
 
     public UsersController(
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
         IPaymentService paymentService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IAccessControlService accessControlService)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
         _paymentService = paymentService;
         _globalSettings = globalSettings;
+        _accessControlService = accessControlService;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -93,13 +97,32 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        model.ToUser(user);
+        if (_accessControlService.UserHasPermission(Permission.User_Premium_Edit))
+        {
+            user.MaxStorageGb = model.MaxStorageGb;
+            user.Premium = model.Premium;
+        }
+        
+        if (_accessControlService.UserHasPermission(Permission.User_Billing_Edit))
+        {
+            user.Gateway = model.Gateway;
+            user.GatewayCustomerId = model.GatewayCustomerId;
+            user.GatewaySubscriptionId = model.GatewaySubscriptionId;
+        }
+
+        if (_accessControlService.UserHasPermission(Permission.User_Licensing_Edit))
+        {
+            user.LicenseKey = model.LicenseKey;
+            user.PremiumExpirationDate = model.PremiumExpirationDate;
+        }
+        
         await _userRepository.ReplaceAsync(user);
         return RedirectToAction("Edit", new { id });
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.User_Delete)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var user = await _userRepository.GetByIdAsync(id);

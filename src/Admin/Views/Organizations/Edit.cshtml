@@ -121,7 +121,7 @@
 @await Html.PartialAsync("_ViewInformation", Model)
 <h2>Billing Information</h2>
 @await Html.PartialAsync("_BillingInformation",
-    new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id })
+    new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
 <form method="post" id="edit-form">
     <input asp-for="SalesAssistedTrialStarted" type="hidden">
     <h2>General</h2>
