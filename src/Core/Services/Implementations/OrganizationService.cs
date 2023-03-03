@@ -763,7 +763,7 @@ public class OrganizationService : IOrganizationService
     }
 
     private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
-        Guid ownerId, string ownerKey, string collectionName, bool withPayment, OrganizationUserStatusType organizationUserStatusType = OrganizationUserStatusType.Confirmed)
+        Guid ownerId, string ownerKey, string collectionName, bool withPayment)
     {
         try
         {
@@ -798,7 +798,7 @@ public class OrganizationService : IOrganizationService
                     UserId = ownerId,
                     Key = ownerKey,
                     Type = OrganizationUserType.Owner,
-                    Status = organizationUserStatusType,
+                    Status = OrganizationUserStatusType.Confirmed,
                     AccessAll = true,
                     CreationDate = organization.CreationDate,
                     RevisionDate = organization.CreationDate
@@ -2438,18 +2438,10 @@ public class OrganizationService : IOrganizationService
 
     public async Task CreatePendingOrganization(Organization organization, string ownerEmail, string creatorUserName, bool salesAssistedTrialStarted)
     {
-        // var ownerUserId = Guid.NewGuid();
-        // await ValidateSignUpPoliciesAsync(ownerUserId);
-
-        // await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-        //     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-        //     signup.PremiumAccessAddon, signup.TaxInfo);
-
         organization.Id = CoreHelpers.GenerateComb();
         organization.Enabled = false;
         organization.Status = OrganizationStatusType.Pending;
         await _organizationRepository.CreateAsync(organization);
-        //var returnValue = await SignUpAsync(organization, ownerUserId, null, "signup.CollectionName", true, OrganizationUserStatusType.Invited);
 
         var ownerOrganizationUser = new OrganizationUser
         {

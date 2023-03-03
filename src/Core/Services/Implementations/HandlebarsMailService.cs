@@ -239,7 +239,7 @@ public class HandlebarsMailService : IMailService
         }
 
         var messageModel = CreateMessage(orgUser.Email,
-            new OrganizationUserInitInvitedViewModel
+            new OrganizationUserInvitedViewModel
             {
                 OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
                 Email = WebUtility.UrlEncode(orgUser.Email),
@@ -249,7 +249,8 @@ public class HandlebarsMailService : IMailService
                 ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
                 OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName
+                SiteName = _globalSettings.SiteName,
+                InitOrganization = true
             }
         );
 
