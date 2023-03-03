@@ -30,17 +30,29 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var originalProject = secret.Projects?.FirstOrDefault();
 
-        var originalSecretsProject = secret.Projects?.FirstOrDefault();
-
-        var hasAccess = accessClient switch
+        var hasAccessToOriginalProject = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => originalSecretsProject != null && await _projectRepository.UserHasWriteAccessToProject(originalSecretsProject.Id, userId),
+            AccessClientType.User => originalProject != null && await _projectRepository.UserHasWriteAccessToProject(originalProject.Id, userId),
             _ => false,
         };
 
-        if (!hasAccess)
+        var newlyAssignedProject = updatedSecret.Projects?.FirstOrDefault();
+        var hasAccessToNewlyAssignedProject = hasAccessToOriginalProject;
+
+        if(newlyAssignedProject.Id != originalProject.Id)
+        {
+            hasAccessToNewlyAssignedProject = accessClient switch
+            {
+                AccessClientType.NoAccessCheck => true,
+                AccessClientType.User => newlyAssignedProject != null && await _projectRepository.UserHasWriteAccessToProject(newlyAssignedProject.Id, userId),
+                _ => false,
+            };
+        }
+
+        if (!hasAccessToOriginalProject || !hasAccessToNewlyAssignedProject)
         {
             throw new NotFoundException();
         }
