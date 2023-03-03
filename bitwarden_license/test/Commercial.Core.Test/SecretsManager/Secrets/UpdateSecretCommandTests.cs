@@ -34,6 +34,7 @@ public class UpdateSecretCommandTests
     public async Task UpdateAsync_Success(PermissionType permissionType, Secret data, SutProvider<UpdateSecretCommand> sutProvider, Guid userId, Project mockProject)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
+        data.Projects = new List<Project>() { mockProject };
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
@@ -41,7 +42,6 @@ public class UpdateSecretCommandTests
         }
         else
         {
-            data.Projects = new List<Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(false);
             sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject((Guid)(data.Projects?.First().Id), userId).Returns(true);
         }
@@ -55,7 +55,7 @@ public class UpdateSecretCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_DoesNotModifyOrganizationId(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider, Guid userId)
+    public async Task UpdateAsync_DoesNotModifyOrganizationId(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider, Guid userId, Project mockProject)
     {
         var updatedOrgId = Guid.NewGuid();
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(existingSecret.OrganizationId).Returns(true);
