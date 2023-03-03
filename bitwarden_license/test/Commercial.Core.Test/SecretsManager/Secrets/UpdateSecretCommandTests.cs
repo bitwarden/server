@@ -55,7 +55,7 @@ public class UpdateSecretCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateAsync_DoesNotModifyOrganizationId(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider, Guid userId, Project mockProject)
+    public async Task UpdateAsync_DoesNotModifyOrganizationId(Secret existingSecret, SutProvider<UpdateSecretCommand> sutProvider, Guid userId)
     {
         var updatedOrgId = Guid.NewGuid();
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(existingSecret.OrganizationId).Returns(true);
