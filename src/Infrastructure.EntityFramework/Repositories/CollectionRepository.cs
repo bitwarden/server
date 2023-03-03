@@ -188,13 +188,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var groups =
                 from c in collections
                 join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
-                group cg by cg.CollectionId into g
-                select g;
+                select cg;
             var users =
                 from c in collections
                 join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                group cu by cu.CollectionId into u
-                select u;
+                select cu;
 
             return collections.Select(collection =>
                 new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
@@ -202,7 +200,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     new CollectionAccessDetails
                     {
                         Groups = groups
-                            .FirstOrDefault(g => g.Key == collection.Id)?
                             .Select(g => new CollectionAccessSelection
                             {
                                 Id = g.GroupId,
@@ -210,7 +207,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                 ReadOnly = g.ReadOnly
                             }).ToList() ?? new List<CollectionAccessSelection>(),
                         Users = users
-                            .FirstOrDefault(u => u.Key == collection.Id)?
                             .Select(c => new CollectionAccessSelection
                             {
                                 Id = c.OrganizationUserId,
@@ -232,13 +228,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             var groups =
                 from c in collections
                 join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
-                group cg by cg.CollectionId into g
-                select g;
+                select cg;
             var users =
                 from c in collections
                 join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
-                group cu by cu.CollectionId into u
-                select u;
+                select cu;
 
             return collections.Select(collection =>
                 new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
@@ -246,7 +240,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     new CollectionAccessDetails
                     {
                         Groups = groups
-                            .FirstOrDefault(g => g.Key == collection.Id)?
                             .Select(g => new CollectionAccessSelection
                             {
                                 Id = g.GroupId,
@@ -254,7 +247,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                 ReadOnly = g.ReadOnly
                             }).ToList() ?? new List<CollectionAccessSelection>(),
                         Users = users
-                            .FirstOrDefault(u => u.Key == collection.Id)?
                             .Select(c => new CollectionAccessSelection
                             {
                                 Id = c.OrganizationUserId,
