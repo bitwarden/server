@@ -42,7 +42,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         var newlyAssignedProject = updatedSecret.Projects?.FirstOrDefault();
         var hasAccessToNewlyAssignedProject = hasAccessToOriginalProject;
 
-        if(newlyAssignedProject.Id != originalProject.Id)
+        if (newlyAssignedProject.Id != originalProject.Id)
         {
             hasAccessToNewlyAssignedProject = accessClient switch
             {
