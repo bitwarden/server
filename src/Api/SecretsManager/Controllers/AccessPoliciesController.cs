@@ -73,7 +73,7 @@ public class AccessPoliciesController : Controller
         var (accessClient, userId) = await GetAccessClientTypeAsync(project.OrganizationId);
         var policies = request.ToBaseAccessPoliciesForProject(id);
         await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
-        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
+        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id, userId);
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
@@ -81,11 +81,9 @@ public class AccessPoliciesController : Controller
     public async Task<ProjectAccessPoliciesResponseModel> GetProjectAccessPoliciesAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToProjectAsync(project);
-
-        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
-        var policies = await SetCurrentUserInGroupAsync(results.ToList(), project.OrganizationId);
-        return new ProjectAccessPoliciesResponseModel(policies);
+        var (_, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
+        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id, userId);
+        return new ProjectAccessPoliciesResponseModel(results);
     }
 
     [HttpPost("/service-accounts/{id}/access-policies")]
@@ -107,7 +105,7 @@ public class AccessPoliciesController : Controller
         var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
         var policies = request.ToBaseAccessPoliciesForServiceAccount(id);
         await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
-        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id);
+        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id, userId);
         return new ServiceAccountAccessPoliciesResponseModel(results);
     }
 
@@ -116,11 +114,9 @@ public class AccessPoliciesController : Controller
         [FromRoute] Guid id)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
-
-        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id);
-        var policies = await SetCurrentUserInGroupAsync(results.ToList(), serviceAccount.OrganizationId);
-        return new ServiceAccountAccessPoliciesResponseModel(policies);
+        var (_, userId) = await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
+        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id, userId);
+        return new ServiceAccountAccessPoliciesResponseModel(results);
     }
 
     [HttpGet("/service-accounts/{id}/granted-policies")]
@@ -246,7 +242,7 @@ public class AccessPoliciesController : Controller
         return new ListResponseModel<PotentialGranteeResponseModel>(projectResponses);
     }
 
-    private async Task CheckUserHasWriteAccessToProjectAsync(Project project)
+    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)
     {
         if (project == null)
         {
@@ -265,9 +261,10 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
+        return (accessClient, userId);
     }
 
-    private async Task CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
+    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
     {
         if (serviceAccount == null)
         {
@@ -287,6 +284,7 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
+        return (accessClient, userId);
     }
 
     private async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientTypeAsync(Guid organizationId)
@@ -300,35 +298,5 @@ public class AccessPoliciesController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         return (accessClient, userId);
-    }
-
-    private async Task<List<BaseAccessPolicy>> SetCurrentUserInGroupAsync(
-        List<BaseAccessPolicy> accessPolicies, Guid organizationId)
-    {
-        if (!accessPolicies.OfType<GroupServiceAccountAccessPolicy>().Any()
-            && !accessPolicies.OfType<GroupProjectAccessPolicy>().Any())
-        {
-            return accessPolicies;
-        }
-
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
-        var orgUser = orgUsers.First(x => x.OrganizationId == organizationId);
-        var usersGroups = await _groupRepository.GetManyIdsByUserIdAsync(orgUser.Id);
-
-        foreach (var accessPolicy in accessPolicies)
-        {
-            switch (accessPolicy)
-            {
-                case GroupServiceAccountAccessPolicy ap:
-                    ap.CurrentUserInGroup = usersGroups.Any(g => g == ap.GroupId);
-                    break;
-                case GroupProjectAccessPolicy ap:
-                    ap.CurrentUserInGroup = usersGroups.Any(g => g == ap.GroupId);
-                    break;
-            }
-        }
-
-        return accessPolicies;
     }
 }

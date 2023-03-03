@@ -138,7 +138,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task Create_Admin_Success()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, orgUser) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
         var request = new ServiceAccountCreateRequestModel { Name = _mockEncryptedString };
@@ -159,7 +159,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         AssertHelper.AssertRecent(createdServiceAccount.CreationDate);
 
         // Check permissions have been bootstrapped.
-        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(createdServiceAccount.Id);
+        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(createdServiceAccount.Id, orgUser.UserId!.Value);
         Assert.NotNull(accessPolicies);
         var ap = accessPolicies!.First();
         Assert.True(ap.Read);
