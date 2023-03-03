@@ -204,7 +204,7 @@ public class CollectionsController : Controller
     {
         var orgId = new Guid(model.OrganizationId);
         var collectionIds = model.Ids.Select(i => new Guid(i));
-        if (!await _currentContext.DeleteAssignedCollections(orgId))
+        if (!await _currentContext.DeleteAssignedCollections(orgId) && !await _currentContext.DeleteAnyCollection(orgId))
         {
             throw new NotFoundException();
         }
