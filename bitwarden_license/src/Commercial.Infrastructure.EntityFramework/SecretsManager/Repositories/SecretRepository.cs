@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Repositories;
@@ -53,23 +54,44 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.UserId == userId && ap.Read)));
 
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    public async Task<IEnumerable<SecretPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Secret.Include(c => c.Projects).Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
+        var query = dbContext.Secret.Include(c => c.Projects)
+            .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null);
 
-        query = accessType switch
+        var secrets = accessType switch
         {
-            AccessClientType.NoAccessCheck => query,
-            AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
-            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)),
+            AccessClientType.NoAccessCheck => query.Select(s => new SecretPermissionDetails
+            {
+                Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
+                Read = true,
+                Write = true,
+            }),
+            AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)).Select(SecretToPermissionsUser(userId)),
+            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)).Select(s => new SecretPermissionDetails
+            {
+                Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
+                Read = true,
+                Write = false,
+            }),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
-        var secrets = await query.OrderBy(c => c.RevisionDate).ToListAsync();
-        return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+        return await secrets.ToListAsync();
     }
+
+    private Expression<Func<Secret, SecretPermissionDetails>> SecretToPermissionsUser(Guid userId) =>
+        s => new SecretPermissionDetails
+        {
+            Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
+            Read = true,
+            Write = s.Projects.Any(p =>
+                p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                p.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
+        };
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
     {
@@ -251,5 +273,27 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             await dbContext.SaveChangesAsync();
         }
         return secrets;
+    }
+
+    public async Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var accessPolicy = await dbContext.Secret
+            .Where(s => s.Id == id)
+            .Select(s => new
+            {
+                Read = s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
+                Write = s.Projects.Any(p =>
+                    p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
+            }).FirstOrDefaultAsync();
+
+        return (accessPolicy.Read, accessPolicy.Write);
     }
 }

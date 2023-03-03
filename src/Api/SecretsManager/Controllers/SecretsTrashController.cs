@@ -42,8 +42,9 @@ public class TrashController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var secrets = await _secretRepository.GetManyByOrganizationIdInTrashAsync(organizationId);
-        return new SecretWithProjectsListResponseModel(secrets);
+        //var secrets = await _secretRepository.GetManyByOrganizationIdInTrashAsync(organizationId);
+        //return new SecretWithProjectsListResponseModel(secrets);
+        return null;
     }
 
     [HttpPost("secrets/{organizationId}/trash/empty")]

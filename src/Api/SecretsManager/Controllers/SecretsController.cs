@@ -74,7 +74,7 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
-        return new SecretResponseModel(result);
+        return new SecretResponseModel(result, false, false);
     }
 
     [HttpGet("secrets/{id}")]
@@ -87,18 +87,23 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        if (!await UserHasReadAccessToSecret(secret))
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var access = await _secretRepository.AccessToSecretAsync(id, userId, accessClient);
+
+        if (!access.Read)
         {
             throw new NotFoundException();
         }
 
         if (_currentContext.ClientType == ClientType.ServiceAccount)
         {
-            var userId = _userService.GetProperUserId(User).Value;
             await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
         }
 
-        return new SecretResponseModel(secret);
+        return new SecretResponseModel(secret, access.Read, access.Write);
     }
 
     [HttpGet("projects/{projectId}/secrets")]
@@ -114,9 +119,10 @@ public class SecretsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId, userId, accessClient);
+        //var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId, userId, accessClient);
 
-        return new SecretWithProjectsListResponseModel(secrets);
+        //return new SecretWithProjectsListResponseModel(secrets);
+        return null;
     }
 
     [HttpPut("secrets/{id}")]
@@ -125,7 +131,7 @@ public class SecretsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var secret = updateRequest.ToSecret(id);
         var result = await _updateSecretCommand.UpdateAsync(secret, userId);
-        return new SecretResponseModel(result);
+        return new SecretResponseModel(result, false, false);
     }
 
     [HttpPost("secrets/delete")]

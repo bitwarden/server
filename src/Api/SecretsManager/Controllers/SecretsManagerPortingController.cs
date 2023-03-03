@@ -45,7 +45,7 @@ public class SecretsManagerPortingController : Controller
             throw new NotFoundException();
         }
 
-        return new SMExportResponseModel(projects, secrets);
+        return new SMExportResponseModel(projects, secrets.Select(s => s.Secret));
     }
 
     [HttpPost("sm/{organizationId}/import")]
