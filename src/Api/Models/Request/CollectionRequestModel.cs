@@ -44,11 +44,7 @@ public class CollectionWithIdRequestModel : CollectionRequestModel
 
     public override Collection ToCollection(Collection existingCollection)
     {
-        if (Id != null && Id != Guid.Empty)
-        {
-            existingCollection.Id = Id ?? Guid.Empty;
-        }
-
+        existingCollection.Id = Id ?? Guid.Empty;
         return base.ToCollection(existingCollection);
     }
 }

@@ -32,10 +32,7 @@ public class FolderWithIdRequestModel : FolderRequestModel
 
     public override Folder ToFolder(Folder existingFolder)
     {
-        if (Id != null && Id != Guid.Empty)
-        {
-            existingFolder.Id = Id ?? Guid.Empty;
-        }
+        existingFolder.Id = Id ?? Guid.Empty;
         return base.ToFolder(existingFolder);
     }
 }
