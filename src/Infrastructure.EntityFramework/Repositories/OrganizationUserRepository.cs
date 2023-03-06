@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -370,7 +371,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
-            OrganizationUserStatusType? status = null)
+            OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -378,7 +379,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var view = new OrganizationUserOrganizationDetailsViewQuery();
             var query = from ou in view.Run(dbContext)
                         where ou.UserId == userId &&
-                        (status == null || ou.Status == status)
+                        (status == null || ou.Status == status) &&
+                        (providerType == null || ou.ProviderType == providerType)
                         select ou;
             var organizationUsers = await query.ToListAsync();
             return organizationUsers;

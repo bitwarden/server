@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
+ALTER VIEW [dbo].[ProviderUserProviderOrganizationDetailsView]
 AS
 SELECT
     PU.[UserId],
@@ -35,9 +35,29 @@ SELECT
     O.[PlanType]
 FROM
     [dbo].[ProviderUser] PU
-INNER JOIN
+    INNER JOIN
     [dbo].[ProviderOrganization] PO ON PO.[ProviderId] = PU.[ProviderId]
-INNER JOIN
+    INNER JOIN
     [dbo].[Organization] O ON O.[Id] = PO.[OrganizationId]
-INNER JOIN
+    INNER JOIN
     [dbo].[Provider] P ON P.[Id] = PU.[ProviderId]
+GO
+
+ALTER PROCEDURE [dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]
+    @UserId UNIQUEIDENTIFIER,
+    @Status TINYINT,
+    @ProviderType TINYINT = 0
+AS
+BEGIN
+    SET NOCOUNT ON
+
+SELECT
+    *
+FROM
+    [dbo].[ProviderUserProviderOrganizationDetailsView]
+WHERE
+    [UserId] = @UserId
+  AND (@Status IS NULL OR [Status] = @Status)
+  AND (@ProviderType IS NULL OR [ProviderType] = @ProviderType)
+END
+GO
