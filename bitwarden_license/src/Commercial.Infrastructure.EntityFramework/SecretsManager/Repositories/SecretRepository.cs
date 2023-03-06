@@ -108,7 +108,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashAsync(Guid organizationId)
+    public async Task<IEnumerable<SecretPermissionDetails>> GetManyByOrganizationIdInTrashAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -119,7 +119,12 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                                     .OrderBy(c => c.RevisionDate)
                                     .ToListAsync();
 
-            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
+            return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets).Select(s => new SecretPermissionDetails
+            {
+                Secret = s,
+                Read = true,
+                Write = true,
+            });
         }
     }
 

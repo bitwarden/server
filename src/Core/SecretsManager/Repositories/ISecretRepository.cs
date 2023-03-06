@@ -7,7 +7,7 @@ namespace Bit.Core.SecretsManager.Repositories;
 public interface ISecretRepository
 {
     Task<IEnumerable<SecretPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType);
-    Task<IEnumerable<Secret>> GetManyByOrganizationIdInTrashAsync(Guid organizationId);
+    Task<IEnumerable<SecretPermissionDetails>> GetManyByOrganizationIdInTrashAsync(Guid organizationId);
     Task<IEnumerable<Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids);
     Task<IEnumerable<Secret>> GetManyByIds(IEnumerable<Guid> ids);
     Task<IEnumerable<Secret>> GetManyByProjectIdAsync(Guid projectId, Guid userId, AccessClientType accessType);
