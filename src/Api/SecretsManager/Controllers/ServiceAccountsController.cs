@@ -67,9 +67,9 @@ public class ServiceAccountsController : Controller
         return new ListResponseModel<ServiceAccountResponseModel>(responses);
     }
 
-    [HttpGet("/service-account/{serviceAccountId}/service-accounts")]
+    [HttpGet("{id}")]
     public async Task<ServiceAccountResponseModel> GetByServiceAccountIdAsync(
-     [FromRoute] Guid serviceAccountId)
+     [FromRoute] Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
