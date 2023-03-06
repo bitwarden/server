@@ -72,7 +72,7 @@ public class ServiceAccountsController : Controller
      [FromRoute] Guid id)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
 
         if (serviceAccount == null)
         {
@@ -90,7 +90,7 @@ public class ServiceAccountsController : Controller
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(serviceAccountId, userId),
+            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
             _ => false,
         };
 
