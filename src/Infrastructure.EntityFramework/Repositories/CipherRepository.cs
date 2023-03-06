@@ -134,7 +134,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Folder> folders)
+    public async Task CreateAsync(IEnumerable<Core.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Folder> folders, IEnumerable<Core.Entities.Folder> existingFolders)
     {
         if (!ciphers.Any())
         {
@@ -145,6 +145,24 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
         {
             var dbContext = GetDatabaseContext(scope);
             var folderEntities = Mapper.Map<List<Folder>>(folders);
+
+            if (existingFolders.Any())
+            {
+                foreach (var existingFolder in existingFolders)
+                {
+                    var entity = await dbContext.Folders.FindAsync(existingFolder.Id);
+                    if (entity != null)
+                    {
+                        var mappedEntity = Mapper.Map<Folder>(existingFolder);
+                        dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
+                    }
+                    else
+                    {
+                        folders.Append(existingFolder);
+                    }
+                }
+            }
+
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);

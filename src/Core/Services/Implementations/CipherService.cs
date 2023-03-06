@@ -646,18 +646,22 @@ public class CipherService : ICipherService
             }
         }
 
-        var existingFolders = new List<Folder>();
-        // Init. ids for folders
+        var foldersGuids = folders.Select(f => f.Id).ToList();
+
+        var dbfolders = (await _folderRepository.GetManyByManyIdsAndUserIdAsync(foldersGuids, ciphers[0].UserId ?? Guid.Empty)).ToList();
+
+        //Get the import items that match the collection we just got
+        var existingFolders = (from f in folders
+                               join db in dbfolders on f.Id equals db.Id
+                               select f).ToList();
+
+        //Assign id to the ones that don't exist in DB
+        //Need to keep the list order to create the relationships
         foreach (var folder in folders)
         {
-            if (folder.Id == Guid.Empty || (await _folderRepository.GetByIdAsync(folder.Id))?.UserId != userId)
+            if (!existingFolders.Contains(folder))
             {
                 folder.SetNewId();
-            }
-            else
-            {
-                await _folderRepository.ReplaceAsync(folder);
-                existingFolders.Add(folder);
             }
         }
 
@@ -679,7 +683,7 @@ public class CipherService : ICipherService
         folders = folders.Except(existingFolders).ToList();
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, folders);
+        await _cipherRepository.CreateAsync(ciphers, folders, existingFolders);
 
         // push
         if (userId.HasValue)

@@ -180,6 +180,7 @@
     <Build Include="dbo\Stored Procedures\Folder_Create.sql" />
     <Build Include="dbo\Stored Procedures\Folder_DeleteById.sql" />
     <Build Include="dbo\Stored Procedures\Folder_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\Folder_ReadByIdsAndUserId.sql" />
     <Build Include="dbo\Stored Procedures\Folder_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Folder_Update.sql" />
     <Build Include="dbo\Stored Procedures\Grant_Delete.sql" />
