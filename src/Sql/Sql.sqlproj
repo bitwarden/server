@@ -459,7 +459,7 @@
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_Create.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_DeleteById.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_ReadById.sql" />
-    <Build Include="Vault\dbo\Stored Procedures\Folder_ReadByIdsAndUserId.sql" />
+    <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_ReadByIdsAndUserId.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_ReadByUserId.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_Update.sql" />
     <Build Include="Vault\dbo\Tables\Cipher.sql" />
