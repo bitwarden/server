@@ -112,13 +112,13 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
     }
 
     public async Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId,
-        ProviderUserStatusType? status = null)
+        ProviderUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<ProviderUserOrganizationDetails>(
                 "[dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]",
-                new { UserId = userId, Status = status },
+                new { UserId = userId, Status = status, ProviderType = providerType },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();

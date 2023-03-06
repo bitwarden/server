@@ -241,7 +241,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId, OrganizationUserStatusType? status = null)
+    public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId, OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -251,7 +251,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var entity = await view.Run(dbContext)
                 .FirstOrDefaultAsync(o => o.UserId == userId &&
                     o.OrganizationId == organizationId &&
-                    (status == null || o.Status == status));
+                    (status == null || o.Status == status) &&
+                    (providerType == null || o.ProviderType == providerType));
             return entity;
         }
     }
