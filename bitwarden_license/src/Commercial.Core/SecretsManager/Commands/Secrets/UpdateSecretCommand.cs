@@ -30,29 +30,8 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var originalProject = secret.Projects?.FirstOrDefault();
 
-        var hasAccessToOriginalProject = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => originalProject != null && await _projectRepository.UserHasWriteAccessToProject(originalProject.Id, userId),
-            _ => false,
-        };
-
-        var newlyAssignedProject = updatedSecret.Projects?.FirstOrDefault();
-        var hasAccessToNewlyAssignedProject = hasAccessToOriginalProject;
-
-        if (newlyAssignedProject != null && (newlyAssignedProject.Id != originalProject?.Id))
-        {
-            hasAccessToNewlyAssignedProject = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => newlyAssignedProject != null && await _projectRepository.UserHasWriteAccessToProject(newlyAssignedProject.Id, userId),
-                _ => false,
-            };
-        }
-
-        if (!hasAccessToOriginalProject || !hasAccessToNewlyAssignedProject)
+        if (!await hasAccess(accessClient, secret, updatedSecret, userId))
         {
             throw new NotFoundException();
         }
@@ -65,5 +44,21 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 
         await _secretRepository.UpdateAsync(secret);
         return secret;
+    }
+
+    public async Task<bool> hasAccess(AccessClientType accessClient, Secret secret, Secret updatedSecret, Guid userId)
+    {
+        switch (accessClient) { 
+            case AccessClientType.NoAccessCheck: 
+                return true; 
+            case AccessClientType.User: 
+                var oldProject = secret.Projects?.FirstOrDefault(); 
+                var newProject = updatedSecret.Projects?.FirstOrDefault(); 
+                var accessToOld = oldProject != null && await _projectRepository.UserHasWriteAccessToProject(oldProject.Id, userId);
+                var accessToNew = newProject != null && await _projectRepository.UserHasWriteAccessToProject(newProject.Id, userId); 
+                return accessToOld && accessToNew; 
+            default:
+                return false; 
+        }
     }
 }
