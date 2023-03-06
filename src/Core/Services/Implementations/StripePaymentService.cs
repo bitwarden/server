@@ -1341,7 +1341,7 @@ public class StripePaymentService : IPaymentService
         try
         {
             stripeCustomerMetadata.Add("Organization", subscriber.OrganizationName());
-            
+
             if (customer == null)
             {
                 customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions

@@ -83,7 +83,7 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     {
         return Name;
     }
-    
+
     public string OrganizationName()
     {
         return Name;
