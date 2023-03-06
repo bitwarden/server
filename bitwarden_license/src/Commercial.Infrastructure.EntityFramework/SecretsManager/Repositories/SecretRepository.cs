@@ -212,11 +212,13 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+            var utcNow = DateTime.UtcNow;
             var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
             await secrets.ForEachAsync(secret =>
             {
                 dbContext.Attach(secret);
                 secret.DeletedDate = null;
+                secret.RevisionDate = utcNow;
             });
             await dbContext.SaveChangesAsync();
         }
