@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
@@ -130,6 +131,29 @@ public class PolicyService : IPolicyService
         policy.RevisionDate = now;
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+    }
+
+    public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(Guid userId)
+    {
+        var policies = (await _policyRepository.GetManyByUserIdAsync(userId))
+            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
+            .ToList();
+
+        // TODO: Potential location to enforce master password requirements globally
+
+        if (!policies.Any())
+        {
+            return null;
+        }
+
+        var enforcedOptions = new MasterPasswordPolicyData();
+
+        foreach (var policy in policies)
+        {
+            enforcedOptions.CombineWith(policy.GetDataModel<MasterPasswordPolicyData>());
+        }
+
+        return enforcedOptions;
     }
 
     private async Task DependsOnSingleOrgAsync(Organization org)
