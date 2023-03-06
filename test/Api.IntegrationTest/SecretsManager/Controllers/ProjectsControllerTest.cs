@@ -302,10 +302,12 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.GetAsync($"/projects/{project.Id}");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectPermissionDetailsResponseModel>();
         Assert.Equal(project.Name, result!.Name);
         Assert.Equal(project.RevisionDate, result.RevisionDate);
         Assert.Equal(project.CreationDate, result.CreationDate);
+        Assert.True(result.Read);
+        Assert.True(result.Write);
     }
 
     [Theory]

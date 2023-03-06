@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Vault.Models.Request;
 
 namespace Bit.Api.Models.Request.Accounts;
 
