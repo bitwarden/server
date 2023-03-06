@@ -10,6 +10,7 @@ public interface ISubscriber
     string GatewaySubscriptionId { get; set; }
     string BillingEmailAddress();
     string BillingName();
+    string OrganizationName();
     string BraintreeCustomerIdPrefix();
     string BraintreeIdField();
     string GatewayIdField();

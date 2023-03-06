@@ -115,6 +115,7 @@ public class StripePaymentService : IPaymentService
         Stripe.Subscription subscription;
         try
         {
+            stripeCustomerMetadata.Add("organization", org.Name);
             customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
             {
                 Description = org.BusinessName,
@@ -124,7 +125,15 @@ public class StripePaymentService : IPaymentService
                 Metadata = stripeCustomerMetadata,
                 InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                 {
-                    DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = "Organization",
+                            Value = org.Name,
+                        },
+                    }
                 },
                 Address = new Stripe.AddressOptions
                 {
@@ -427,7 +436,15 @@ public class StripePaymentService : IPaymentService
                 Source = stipeCustomerSourceToken,
                 InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                 {
-                    DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = "Organization",
+                            Value = user.OrganizationName(),
+                        },
+                    }
                 },
                 Address = new Stripe.AddressOptions
                 {
@@ -1323,6 +1340,8 @@ public class StripePaymentService : IPaymentService
 
         try
         {
+            stripeCustomerMetadata.Add("Organization", subscriber.OrganizationName());
+            
             if (customer == null)
             {
                 customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
@@ -1334,7 +1353,15 @@ public class StripePaymentService : IPaymentService
                     PaymentMethod = stipeCustomerPaymentMethodId,
                     InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                        DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                        CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                        {
+                            new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                            {
+                                Name = "Organization",
+                                Value = subscriber.OrganizationName(),
+                            },
+                        }
                     },
                     Address = taxInfo == null ? null : new Stripe.AddressOptions
                     {
@@ -1406,7 +1433,15 @@ public class StripePaymentService : IPaymentService
                     DefaultSource = defaultSourceId,
                     InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethod = defaultPaymentMethodId
+                        DefaultPaymentMethod = defaultPaymentMethodId,
+                        CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                        {
+                            new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                            {
+                                Name = "Organization",
+                                Value = subscriber.OrganizationName(),
+                            },
+                        }
                     },
                     Address = taxInfo == null ? null : new Stripe.AddressOptions
                     {

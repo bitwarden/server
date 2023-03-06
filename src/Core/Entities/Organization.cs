@@ -87,6 +87,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     {
         return BusinessName;
     }
+    
+    public string OrganizationName()
+    {
+        return Name;
+    }
 
     public string BraintreeCustomerIdPrefix()
     {
