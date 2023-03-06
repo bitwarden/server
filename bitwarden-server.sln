@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29102.190
@@ -111,6 +111,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure.IntegrationTest", "test\Infrastructure.IntegrationTest\Infrastructure.IntegrationTest.csproj", "{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqliteMigrations", "util\SqliteMigrations\SqliteMigrations.csproj", "{07143DFA-F242-47A4-A15E-39C9314D4140}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsSqlMigratorUtility", "util\MsSqlMigratorUtility\MsSqlMigratorUtility.csproj", "{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
