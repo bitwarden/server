@@ -31,7 +31,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        if (!await hasAccess(accessClient, secret, updatedSecret, userId))
+        if (!await hasAccessToOriginalAndUpdatedProject(accessClient, secret, updatedSecret, userId))
         {
             throw new NotFoundException();
         }
@@ -46,7 +46,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         return secret;
     }
 
-    public async Task<bool> hasAccess(AccessClientType accessClient, Secret secret, Secret updatedSecret, Guid userId)
+    public async Task<bool> hasAccessToOriginalAndUpdatedProject(AccessClientType accessClient, Secret secret, Secret updatedSecret, Guid userId)
     {
         switch (accessClient) { 
             case AccessClientType.NoAccessCheck: 
