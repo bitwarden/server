@@ -6,7 +6,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -141,27 +140,5 @@ public class SecretsController : Controller
         var results = await _deleteSecretCommand.DeleteSecrets(ids, userId);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
-    }
-
-    public async Task<bool> UserHasReadAccessToSecret(Secret secret)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var hasAccess = orgAdmin;
-
-        if (secret.Projects?.Count > 0)
-        {
-            Guid projectId = secret.Projects.FirstOrDefault().Id;
-            hasAccess = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId),
-                _ => false,
-            };
-        }
-
-        return hasAccess;
     }
 }
