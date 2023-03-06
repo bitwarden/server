@@ -25,7 +25,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
         OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp);
     Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId,
-        OrganizationUserStatusType? status = null);
+        OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp);
     Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
     Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers);
     Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections);

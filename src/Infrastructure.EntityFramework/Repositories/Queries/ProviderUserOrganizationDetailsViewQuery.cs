@@ -41,6 +41,7 @@ public class ProviderUserOrganizationDetailsViewQuery : IQuery<ProviderUserOrgan
             PrivateKey = x.o.PrivateKey,
             ProviderId = x.p.Id,
             ProviderName = x.p.Name,
+            ProviderType = x.p.Type,
             PlanType = x.o.PlanType
         });
     }

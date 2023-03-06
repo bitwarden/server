@@ -278,13 +278,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId,
-        Guid organizationId, OrganizationUserStatusType? status = null)
+        Guid organizationId, OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
                 "[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]",
-                new { UserId = userId, Status = status, OrganizationId = organizationId },
+                new { UserId = userId, Status = status, OrganizationId = organizationId, ProviderType = providerType },
                 commandType: CommandType.StoredProcedure);
 
             return results.SingleOrDefault();
