@@ -5,7 +5,9 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
 
@@ -391,6 +393,25 @@ public class EventService : IEventService
         await _eventWriteService.CreateAsync(e);
     }
 
+    public async Task LogServiceAccountSecretEventAsync(Guid serviceAccountId, Secret secret, EventType type, DateTime? date = null)
+    {
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+        {
+            return;
+        }
+
+        var e = new EventMessage(_currentContext)
+        {
+            OrganizationId = secret.OrganizationId,
+            Type = type,
+            SecretId = secret.Id,
+            ServiceAccountId = serviceAccountId,
+            Date = date.GetValueOrDefault(DateTime.UtcNow)
+        };
+        await _eventWriteService.CreateAsync(e);
+    }
+
     private async Task<Guid?> GetProviderIdAsync(Guid? orgId)
     {
         if (_currentContext == null || !orgId.HasValue)
@@ -414,12 +435,12 @@ public class EventService : IEventService
     private bool CanUseEvents(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
     {
         return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
-            orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
+               orgAbilities[orgId].Enabled && orgAbilities[orgId].UseEvents;
     }
 
     private bool CanUseProviderEvents(IDictionary<Guid, ProviderAbility> providerAbilities, Guid providerId)
     {
         return providerAbilities != null && providerAbilities.ContainsKey(providerId) &&
-                providerAbilities[providerId].Enabled && providerAbilities[providerId].UseEvents;
+               providerAbilities[providerId].Enabled && providerAbilities[providerId].UseEvents;
     }
 }

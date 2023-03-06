@@ -6,6 +6,7 @@ SELECT
     OU.[OrganizationId],
     U.[Name],
     ISNULL(U.[Email], OU.[Email]) Email,
+    U.[AvatarColor],
     U.[TwoFactorProviders],
     U.[Premium],
     OU.[Status],

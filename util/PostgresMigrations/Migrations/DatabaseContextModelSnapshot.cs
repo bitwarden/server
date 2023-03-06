@@ -353,6 +353,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid?>("ProviderUserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("SecretId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ServiceAccountId")
+                        .HasColumnType("uuid");
+
                     b.Property<byte?>("SystemUser")
                         .HasColumnType("smallint");
 

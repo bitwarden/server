@@ -35,6 +35,7 @@ public class CurrentContext : ICurrentContext
     public virtual string ClientId { get; set; }
     public virtual Version ClientVersion { get; set; }
     public virtual ClientType ClientType { get; set; }
+    public virtual Guid? ServiceAccountOrganizationId { get; set; }
 
     public CurrentContext(IProviderUserRepository providerUserRepository)
     {
@@ -144,6 +145,11 @@ public class CurrentContext : ICurrentContext
         {
             Enum.TryParse(clientType, out ClientType c);
             ClientType = c;
+        }
+
+        if (ClientType == ClientType.ServiceAccount)
+        {
+            ServiceAccountOrganizationId = new Guid(GetClaimValue(claimsDict, Claims.Organization));
         }
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
@@ -445,6 +451,11 @@ public class CurrentContext : ICurrentContext
 
     public bool AccessSecretsManager(Guid orgId)
     {
+        if (ServiceAccountOrganizationId.HasValue && ServiceAccountOrganizationId.Value == orgId)
+        {
+            return true;
+        }
+
         return Organizations?.Any(o => o.Id == orgId && o.AccessSecretsManager) ?? false;
     }
 
