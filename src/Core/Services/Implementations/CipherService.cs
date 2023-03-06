@@ -718,19 +718,22 @@ public class CipherService : ICipherService
             cipher.SetNewId();
         }
 
-        var existingCollections = new List<Collection>();
-        // Init. ids for collections
+        var collectionsGuids = collections.Select(c => c.Id).ToList();
+
+        var dbCollections = (await _collectionRepository.GetManyByManyIdsAndOrgIdAsync(collectionsGuids, ciphers[0].OrganizationId ?? Guid.Empty)).ToList();
+
+        // Get the import items that match the collection we just got
+        var existingCollections = (from c in collections
+                                   join db in dbCollections on c.Id equals db.Id
+                                   select c).ToList();
+
+        // Init. ids for new collection
+        // Keep list order to create relationships
         foreach (var collection in collections)
         {
-            if (collection.Id == Guid.Empty || (await _collectionRepository.GetByIdAsync(collection.Id))?.OrganizationId != org.Id)
+            if (!existingCollections.Contains(collection))
             {
                 collection.SetNewId();
-            }
-            else
-            {
-                //update the collections to grant the import data
-                await _collectionRepository.ReplaceAsync(collection);
-                existingCollections.Add(collection);
             }
         }
 
@@ -756,7 +759,7 @@ public class CipherService : ICipherService
         collections = collections.Except(existingCollections).ToList();
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, collections, collectionCiphers);
+        await _cipherRepository.CreateAsync(ciphers, collections, collectionCiphers, existingCollections);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);

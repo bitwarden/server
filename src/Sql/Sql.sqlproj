@@ -139,6 +139,7 @@
     <Build Include="dbo\Stored Procedures\Collection_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByIds.sql" />
+    <Build Include="dbo\Stored Procedures\Collection_ReadByIdsAndOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadCountByOrganizationId.sql" />

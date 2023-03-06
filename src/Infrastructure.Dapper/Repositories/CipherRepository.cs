@@ -636,7 +636,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers)
+        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<Collection> existingCollections)
     {
         if (!ciphers.Any())
         {
@@ -665,6 +665,59 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                             bulkCopy.DestinationTableName = "[dbo].[Collection]";
                             var dataTable = BuildCollectionsTable(bulkCopy, collections);
                             bulkCopy.WriteToServer(dataTable);
+                        }
+                    }
+
+                    if (existingCollections.Any())
+                    {
+
+                        // 1. Create temp tables to bulk copy into.
+
+                        var sqlCreateTemp = @"
+                            SELECT TOP 0 *
+                            INTO #TempCollection
+                            FROM [dbo].[Collection]";
+
+                        using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
+                        {
+                            cmd.ExecuteNonQuery();
+                        }
+
+
+                        // 2. Bulk copy into temp tables.
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "#TempCollection";
+                            var dataTable = BuildCollectionsTable(bulkCopy, existingCollections);
+                            bulkCopy.WriteToServer(dataTable);
+                        }
+
+                        // 3. Insert into real tables from temp tables and clean up.
+
+                        var sql = string.Empty;
+
+                        sql += @"
+                            UPDATE
+                                [dbo].[Collection]
+                            SET
+                                [Name] = TC.[Name],
+                                [ExternalId] = TC.[ExternalId],
+                                [RevisionDate] = TC.[RevisionDate]
+                            FROM
+                                [dbo].[Collection] C
+                            INNER JOIN
+                                #TempCollection TC ON C.Id = TC.Id
+                            WHERE
+                                C.[OrganizationId] = @OrganizationId";
+
+
+                        sql += @"
+                            DROP TABLE #TempCollection";
+
+                        using (var cmd = new SqlCommand(sql, connection, transaction))
+                        {
+                            cmd.Parameters.Add("@OrganizationId", SqlDbType.UniqueIdentifier).Value = ciphers.First().OrganizationId;
+                            cmd.ExecuteNonQuery();
                         }
                     }
 
