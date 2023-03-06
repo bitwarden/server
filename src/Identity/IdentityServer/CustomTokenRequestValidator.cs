@@ -35,11 +35,12 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IPolicyService policyService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository)
+              userRepository, policyService)
     {
         _userManager = userManager;
         _ssoConfigRepository = ssoConfigRepository;

@@ -5,10 +5,9 @@ namespace Bit.Api.Models.Response;
 
 public class VerifyMasterPasswordResponseModel : ResponseModel
 {
-    public VerifyMasterPasswordResponseModel(IEnumerable<PolicyResponseModel> masterPasswordPolicies = null) : base("secretVerification")
+    public VerifyMasterPasswordResponseModel(MasterPasswordPolicyResponseModel masterPasswordPolicy) : base("verifyMasterPassword")
     {
-        MasterPasswordPolicies = masterPasswordPolicies;
+        MasterPasswordPolicy = masterPasswordPolicy;
     }
-
-    public IEnumerable<PolicyResponseModel> MasterPasswordPolicies { get; set; }
+    public MasterPasswordPolicyResponseModel MasterPasswordPolicy { get; set; }
 }

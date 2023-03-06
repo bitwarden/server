@@ -37,7 +37,7 @@ public class AccountsController : Controller
     private readonly ISendRepository _sendRepository;
     private readonly ISendService _sendService;
     private readonly ICaptchaValidationService _captchaValidationService;
-    private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyService _policyService;
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -52,7 +52,7 @@ public class AccountsController : Controller
         ISendRepository sendRepository,
         ISendService sendService,
         ICaptchaValidationService captchaValidationService,
-        IPolicyRepository policyRepository)
+        IPolicyService policyService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -66,7 +66,7 @@ public class AccountsController : Controller
         _sendRepository = sendRepository;
         _sendService = sendService;
         _captchaValidationService = captchaValidationService;
-        _policyRepository = policyRepository;
+        _policyService = _policyService;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -270,11 +270,9 @@ public class AccountsController : Controller
 
         if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
-                .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
-                .Select(p => new PolicyResponseModel(p));
+            var policyData = await _policyService.GetMasterPasswordPolicyForUserAsync(user.Id);
 
-            return new VerifyMasterPasswordResponseModel(policies);
+            return new VerifyMasterPasswordResponseModel(new MasterPasswordPolicyResponseModel(policyData));
         }
 
         ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");
