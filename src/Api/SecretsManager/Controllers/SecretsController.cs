@@ -118,10 +118,9 @@ public class SecretsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        //var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId, userId, accessClient);
+        var secrets = await _secretRepository.GetManyByProjectIdAsync(projectId, userId, accessClient);
 
-        //return new SecretWithProjectsListResponseModel(secrets);
-        return null;
+        return new SecretWithProjectsListResponseModel(secrets);
     }
 
     [HttpPut("secrets/{id}")]
