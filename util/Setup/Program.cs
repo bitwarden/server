@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
 using System.Net.Http.Json;
 using Bit.Migrator;
-using Microsoft.Data.SqlClient;
 
 namespace Bit.Setup;
 
@@ -187,35 +186,10 @@ public class Program
 
     private static void MigrateDatabase(int attempt = 1)
     {
-        try
-        {
-            Helpers.WriteLine(_context, "Migrating database.");
-            var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
-                "globalSettings__sqlServer__connectionString");
-            var migrator = new DbMigrator(vaultConnectionString, null);
-            var success = migrator.MigrateMsSqlDatabase(false);
-            if (success)
-            {
-                Helpers.WriteLine(_context, "Migration successful.");
-            }
-            else
-            {
-                Helpers.WriteLine(_context, "Migration failed.");
-            }
-        }
-        catch (SqlException e)
-        {
-            if (e.Message.Contains("Server is in script upgrade mode") && attempt < 10)
-            {
-                var nextAttempt = attempt + 1;
-                Helpers.WriteLine(_context, "Database is in script upgrade mode. " +
-                    "Trying again (attempt #{0})...", nextAttempt);
-                System.Threading.Thread.Sleep(20000);
-                MigrateDatabase(nextAttempt);
-                return;
-            }
-            throw;
-        }
+        var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
+            "globalSettings__sqlServer__connectionString");
+        var migrator = new DbMigrator(vaultConnectionString, null);
+        migrator.MigrateMsSqlDatabaseWithRetries(false);
     }
 
     private static bool ValidateInstallation()
