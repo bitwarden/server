@@ -6,7 +6,7 @@
     var canManageTransactions = Model.Entity == "User" ? AccessControlService.UserHasPermission(Permission.User_BillingInformation_CreateEditTransaction) 
                                                        : AccessControlService.UserHasPermission(Permission.Org_BillingInformation_CreateEditTransaction);
 
-    var canDowloadInvoice = Model.Entity == "User" ? AccessControlService.UserHasPermission(Permission.User_BillingInformation_DownloadInvoice) 
+    var canDownloadInvoice = Model.Entity == "User" ? AccessControlService.UserHasPermission(Permission.User_BillingInformation_DownloadInvoice) 
                                                        : AccessControlService.UserHasPermission(Permission.Org_BillingInformation_DownloadInvoice);
 }
 
@@ -27,7 +27,7 @@
                             <td><a target="_blank" href="@invoice.Url" title="View Invoice">@invoice.Number</a></td>
                             <td>@invoice.Amount.ToString("C")</td>
                             <td>@(invoice.Paid ? "Paid" : "Unpaid")</td>
-                            @if (canDowloadInvoice) 
+                            @if (canDownloadInvoice) 
                             {
                                 <td>
                                     <a target="_blank" href="@invoice.PdfUrl" title="Download Invoice">

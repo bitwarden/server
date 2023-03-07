@@ -106,12 +106,12 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="MaxStorageGb"></label>
-                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" disabled='@(canEditPremium ? null : "disabled")'>
+                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPremium)'>
                 </div>
             </div>
         </div>
         <div class="form-check mb-3">
-            <input type="checkbox" class="form-check-input" asp-for="Premium" disabled='@(canUpgradePremium ? null : "disabled")'>
+            <input type="checkbox" class="form-check-input" asp-for="Premium" readonly='@(!canUpgradePremium)'>
             <label class="form-check-label" asp-for="Premium"></label>
         </div>
     }
@@ -122,13 +122,13 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="LicenseKey"></label>
-                    <input type="text" class="form-control" asp-for="LicenseKey" disabled='@(canEditLicensing ? null : "disabled")'>
+                    <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
                 </div>
             </div>
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="PremiumExpirationDate"></label>
-                    <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate" disabled='@(canEditLicensing ? null : "disabled")'>
+                    <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate" readonly='@(!canEditLicensing)'>
                 </div>
             </div>
         </div>
@@ -152,7 +152,7 @@
             <div class="form-group">
                 <label asp-for="GatewayCustomerId"></label>
                 <div class="input-group">
-                    <input type="text" class="form-control" asp-for="GatewayCustomerId" disabled='@(canEditBilling ? null : "disabled")'>
+                    <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
                     @if (canLaunchInStripe)
                     {
                         <div class="input-group-append">
@@ -168,7 +168,7 @@
             <div class="form-group">
                 <label asp-for="GatewaySubscriptionId"></label>
                 <div class="input-group">
-                    <input type="text" class="form-control" asp-for="GatewaySubscriptionId" disabled='@(canEditBilling ? null : "disabled")'>
+                    <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
                     @if (canLaunchInStripe)
                     {
                         <div class="input-group-append">
@@ -181,7 +181,7 @@
             </div>
         </div>
     </div>
-} 
+}
 </form>
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>

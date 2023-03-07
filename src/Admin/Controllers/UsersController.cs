@@ -97,7 +97,10 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        if (_accessControlService.UserHasPermission(Permission.User_Premium_Edit))
+        var canUpgradePremium = _accessControlService.UserHasPermission(Permission.User_UpgradePremium);
+
+        if (_accessControlService.UserHasPermission(Permission.User_Premium_Edit) ||
+            canUpgradePremium)
         {
             user.MaxStorageGb = model.MaxStorageGb;
             user.Premium = model.Premium;
@@ -110,7 +113,8 @@ public class UsersController : Controller
             user.GatewaySubscriptionId = model.GatewaySubscriptionId;
         }
 
-        if (_accessControlService.UserHasPermission(Permission.User_Licensing_Edit))
+        if (_accessControlService.UserHasPermission(Permission.User_Licensing_Edit) ||
+            canUpgradePremium)
         {
             user.LicenseKey = model.LicenseKey;
             user.PremiumExpirationDate = model.PremiumExpirationDate;
