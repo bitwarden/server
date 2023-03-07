@@ -1,5 +1,8 @@
-﻿@inject SignInManager<IdentityUser> SignInManager
+﻿@using Bit.Admin.Enums;
+
+@inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
 <!DOCTYPE html>
 <html>
 <head>
@@ -34,9 +37,12 @@
                 <ul class="navbar-nav mr-auto">
                     @if(SignInManager.IsSignedIn(User))
                     {
-                        <li class="nav-item" active-controller="Users">
-                            <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
-                        </li>
+                        @if(AccessControlService.UserHasPermission(Permission.User_List_View))
+                        {
+                            <li class="nav-item" active-controller="Users">
+                                <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
+                            </li>
+                        }
                         <li class="nav-item" active-controller="Organizations">
                             <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
                         </li>

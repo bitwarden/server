@@ -56,18 +56,4 @@ public class UserEditModel : UserViewModel
     [Display(Name = "Premium Expiration Date")]
     public DateTime? PremiumExpirationDate { get; set; }
 
-    public User ToUser(User existingUser)
-    {
-        existingUser.Name = Name;
-        existingUser.Email = Email;
-        existingUser.EmailVerified = EmailVerified;
-        existingUser.Premium = Premium;
-        existingUser.MaxStorageGb = MaxStorageGb;
-        existingUser.Gateway = Gateway;
-        existingUser.GatewayCustomerId = GatewayCustomerId;
-        existingUser.GatewaySubscriptionId = GatewaySubscriptionId;
-        existingUser.LicenseKey = LicenseKey;
-        existingUser.PremiumExpirationDate = PremiumExpirationDate;
-        return existingUser;
-    }
 }
