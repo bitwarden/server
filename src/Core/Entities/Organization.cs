@@ -88,7 +88,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return BusinessName;
     }
 
-    public string GetName()
+    public string OwnerName()
     {
         return Name;
     }
