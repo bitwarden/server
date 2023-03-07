@@ -84,7 +84,7 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
         return Name;
     }
 
-    public string OwnerName()
+    public string SubscriberName()
     {
         return Name;
     }
