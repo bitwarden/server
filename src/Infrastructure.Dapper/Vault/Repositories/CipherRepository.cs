@@ -587,9 +587,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
                         // 3. Insert into real tables from temp tables and clean up.
 
-                        var sql = string.Empty;
-
-                        sql += @"
+                        var sql = @"
                             UPDATE
                                 [dbo].[Folder]
                             SET
@@ -600,15 +598,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                             INNER JOIN
                                 #TempFolder TF ON F.Id = TF.Id
                             WHERE
-                                F.[UserId] = @UserId";
-
-
-                        sql += @"
+                                F.[UserId] = @UserId
                             DROP TABLE #TempFolder";
 
                         using (var cmd = new SqlCommand(sql, connection, transaction))
                         {
-                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = ciphers.First().UserId;
+                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = existingFolders.First().UserId;
                             cmd.ExecuteNonQuery();
                         }
                     }
@@ -694,10 +689,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                         }
 
                         // 3. Insert into real tables from temp tables and clean up.
-
-                        var sql = string.Empty;
-
-                        sql += @"
+                        var sql = @"
                             UPDATE
                                 [dbo].[Collection]
                             SET
@@ -709,15 +701,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                             INNER JOIN
                                 #TempCollection TC ON C.Id = TC.Id
                             WHERE
-                                C.[OrganizationId] = @OrganizationId";
-
-
-                        sql += @"
+                                C.[OrganizationId] = @OrganizationId
                             DROP TABLE #TempCollection";
 
                         using (var cmd = new SqlCommand(sql, connection, transaction))
                         {
-                            cmd.Parameters.Add("@OrganizationId", SqlDbType.UniqueIdentifier).Value = ciphers.First().OrganizationId;
+                            cmd.Parameters.Add("@OrganizationId", SqlDbType.UniqueIdentifier).Value = existingCollections.First().OrganizationId;
                             cmd.ExecuteNonQuery();
                         }
                     }

@@ -650,12 +650,10 @@ public class CipherService : ICipherService
 
         var foldersGuids = folders.Select(f => f.Id).ToList();
 
-        var dbfolders = (await _folderRepository.GetManyByManyIdsAndUserIdAsync(foldersGuids, ciphers[0].UserId ?? Guid.Empty)).ToList();
+        var dbfolders = (await _folderRepository.GetManyByManyIdsAndUserIdAsync(foldersGuids, userId ?? Guid.Empty)).ToList();
 
         //Get the import items that match the collection we just got
-        var existingFolders = (from f in folders
-                               join db in dbfolders on f.Id equals db.Id
-                               select f).ToList();
+        var existingFolders = folders.Join(dbfolders, f => f.Id, db => db.Id, (f, db) => f).ToList();
 
         //Assign id to the ones that don't exist in DB
         //Need to keep the list order to create the relationships
@@ -722,12 +720,10 @@ public class CipherService : ICipherService
 
         var collectionsGuids = collections.Select(c => c.Id).ToList();
 
-        var dbCollections = (await _collectionRepository.GetManyByManyIdsAndOrgIdAsync(collectionsGuids, ciphers[0].OrganizationId ?? Guid.Empty)).ToList();
+        var dbCollections = (await _collectionRepository.GetManyByManyIdsAndOrgIdAsync(collectionsGuids, org.Id)).ToList();
 
         // Get the import items that match the collection we just got
-        var existingCollections = (from c in collections
-                                   join db in dbCollections on c.Id equals db.Id
-                                   select c).ToList();
+        var existingCollections = collections.Join(dbCollections, c => c.Id, db => db.Id, (c, db) => c).ToList();
 
         // Init. ids for new collection
         // Keep list order to create relationships
