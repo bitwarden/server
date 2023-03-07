@@ -33,6 +33,11 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 
         var project = updatedSecret.Projects?.FirstOrDefault();
 
+        if (secret.Projects != null && secret.Projects.Any() && project == null)
+        {
+            throw new NotFoundException();
+        }
+
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,

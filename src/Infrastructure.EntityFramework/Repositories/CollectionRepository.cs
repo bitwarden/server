@@ -186,13 +186,13 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var groups =
-                from cg in dbContext.CollectionGroups
-                where cg.Collection.OrganizationId == organizationId
+                from c in collections
+                join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
                 group cg by cg.CollectionId into g
                 select g;
             var users =
-                from cu in dbContext.CollectionUsers
-                where cu.Collection.OrganizationId == organizationId
+                from c in collections
+                join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
                 group cu by cu.CollectionId into u
                 select u;
 
@@ -230,18 +230,15 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         {
             var dbContext = GetDatabaseContext(scope);
             var groups =
-                from cg in dbContext.CollectionGroups
-                where cg.Collection.OrganizationId == organizationId
-                 && collections.Select(c => c.Id).Contains(cg.Collection.Id)
+                from c in collections
+                join cg in dbContext.CollectionGroups on c.Id equals cg.CollectionId
                 group cg by cg.CollectionId into g
                 select g;
             var users =
-                from cu in dbContext.CollectionUsers
-                where cu.Collection.OrganizationId == organizationId
-                 && collections.Select(c => c.Id).Contains(cu.Collection.Id)
+                from c in collections
+                join cu in dbContext.CollectionUsers on c.Id equals cu.CollectionId
                 group cu by cu.CollectionId into u
                 select u;
-
 
             return collections.Select(collection =>
                 new Tuple<Core.Entities.Collection, CollectionAccessDetails>(
