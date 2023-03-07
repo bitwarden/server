@@ -16,7 +16,7 @@ public enum Permission
     User_Licensing_Edit,
     User_Billing_View,
     User_Billing_Edit,
-    User_Billing_LaunchIDInStripe,
+    User_Billing_LaunchGateway,
 
     Org_List_View,
     Org_OrgInformation_View,

@@ -14,7 +14,7 @@
     var canEditPremium = AccessControlService.UserHasPermission(Permission.User_Premium_Edit);
     var canEditLicensing = AccessControlService.UserHasPermission(Permission.User_Licensing_Edit);
     var canEditBilling = AccessControlService.UserHasPermission(Permission.User_Billing_Edit);
-    var canLaunchInStripe = AccessControlService.UserHasPermission(Permission.User_Billing_LaunchIDInStripe);
+    var canLaunchGateway = AccessControlService.UserHasPermission(Permission.User_Billing_LaunchGateway);
     var canUpgradePremium = AccessControlService.UserHasPermission(Permission.User_UpgradePremium);
     var canDeleteUser = AccessControlService.UserHasPermission(Permission.User_Delete);
 }
@@ -153,7 +153,7 @@
                 <label asp-for="GatewayCustomerId"></label>
                 <div class="input-group">
                     <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
-                    @if (canLaunchInStripe)
+                    @if (canLaunchGateway)
                     {
                         <div class="input-group-append">
                             <button class="btn btn-secondary" type="button" id="gateway-customer-link">
@@ -169,7 +169,7 @@
                 <label asp-for="GatewaySubscriptionId"></label>
                 <div class="input-group">
                     <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
-                    @if (canLaunchInStripe)
+                    @if (canLaunchGateway)
                     {
                         <div class="input-group-append">
                             <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
