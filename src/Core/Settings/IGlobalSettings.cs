@@ -17,4 +17,5 @@ public interface IGlobalSettings
     ILogLevelSettings MinLogLevel { get; set; }
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
     IDomainVerificationSettings DomainVerification { get; set; }
+    ILaunchDarklySettings LaunchDarkly { get; set; }
 }

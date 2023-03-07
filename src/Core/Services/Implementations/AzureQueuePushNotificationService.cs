@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 
 namespace Bit.Core.Services;

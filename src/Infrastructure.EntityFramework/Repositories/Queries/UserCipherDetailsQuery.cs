@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.Enums;
-using Core.Models.Data;
+using Bit.Core.Vault.Models.Data;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
@@ -76,7 +77,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
         return union;
     }
 
-    private static Guid? GetFolderId(Guid? userId, Models.Cipher cipher)
+    private static Guid? GetFolderId(Guid? userId, Cipher cipher)
     {
         if (userId.HasValue && !string.IsNullOrWhiteSpace(cipher.Folders))
         {

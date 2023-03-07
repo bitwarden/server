@@ -9,6 +9,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;

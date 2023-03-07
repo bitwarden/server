@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Admin.Models;
 

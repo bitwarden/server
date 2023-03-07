@@ -316,6 +316,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<byte?>("DeviceType")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("DomainName")
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("GroupId")
                         .HasColumnType("TEXT");
 
@@ -704,6 +707,43 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("OrganizationId");
 
                     b.ToTable("OrganizationConnection", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationDomain", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DomainName")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("JobRunCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("LastCheckedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("NextRunDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Txt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("VerifiedDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("OrganizationDomain", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationSponsorship", b =>
@@ -1625,7 +1665,7 @@ namespace Bit.SqliteMigrations.Migrations
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
-                        .WithMany()
+                        .WithMany("Collections")
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1774,6 +1814,17 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
                         .WithMany("Connections")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.OrganizationDomain", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("Domains")
                         .HasForeignKey("OrganizationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2075,7 +2126,11 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Navigation("Ciphers");
 
+                    b.Navigation("Collections");
+
                     b.Navigation("Connections");
+
+                    b.Navigation("Domains");
 
                     b.Navigation("Groups");
 
