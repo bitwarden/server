@@ -39,26 +39,23 @@ public class AccessControlService : IAccessControlService
 
     public string GetUserRole(string userEmail)
     {
-        var settings = _configuration.GetSection("adminSettings").GetChildren();
+        var roles = _configuration.GetSection("adminSettings:role").GetChildren();
 
-        if (settings == null || !settings.Any())
+        if (roles == null || !roles.Any())
         {
             return null;
         }
 
-        var rolePrefix = "role";
         userEmail = userEmail.ToLowerInvariant();
 
-        var roleSetting = settings.FirstOrDefault(s => s.Key.StartsWith(rolePrefix)
-                                                 && (s.Value != null ? s.Value.ToLowerInvariant().Split(',').Contains(userEmail) : false));
+        var userRole = roles.FirstOrDefault(s => (s.Value != null ? s.Value.ToLowerInvariant().Split(',').Contains(userEmail) : false));
 
-        if (roleSetting == null)
+        if (userRole == null)
         {
             return null;
         }
 
-        var role = roleSetting.Key.Substring(roleSetting.Key.IndexOf(rolePrefix) + rolePrefix.Length);
-        return role.ToLowerInvariant();
+        return userRole.Key.ToLowerInvariant();
     }
 
     private string GetUserRoleFromClaim()
