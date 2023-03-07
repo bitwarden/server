@@ -1,4 +1,6 @@
-﻿namespace Bit.Api.Models.Request.Accounts;
+﻿using Bit.Api.Vault.Models.Request;
+
+namespace Bit.Api.Models.Request.Accounts;
 
 public class ImportCiphersRequestModel
 {

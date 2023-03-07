@@ -1,5 +1,5 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Repositories;
 
