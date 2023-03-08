@@ -63,6 +63,38 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         return _client.StringVariation(key, BuildContext(currentContext), defaultValue);
     }
 
+    public Dictionary<string, object> GetAll(ICurrentContext currentContext)
+    {
+        var results = new Dictionary<string, object>();
+
+        var keys = FeatureFlagKeys.GetAllKeys();
+
+        var values = _client.AllFlagsState(BuildContext(currentContext));
+        if (values.Valid)
+        {
+            foreach (var key in keys)
+            {
+                var value = values.GetFlagValueJson(key);
+                switch (value.Type)
+                {
+                    case LaunchDarkly.Sdk.LdValueType.Bool:
+                        results.Add(key, value.AsBool);
+                        break;
+
+                    case LaunchDarkly.Sdk.LdValueType.Number:
+                        results.Add(key, value.AsInt);
+                        break;
+
+                    case LaunchDarkly.Sdk.LdValueType.String:
+                        results.Add(key, value.AsString);
+                        break;
+                }
+            }
+        }
+
+        return results;
+    }
+
     public void Dispose()
     {
         _client?.Dispose();
