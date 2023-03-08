@@ -110,7 +110,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
         return Mapper.Map<Core.Entities.OrganizationDomain>(domain);
     }
-
+    
     public async Task<ICollection<Core.Entities.OrganizationDomain>> GetExpiredOrganizationDomainsAsync()
     {
         using var scope = ServiceScopeFactory.CreateScope();
