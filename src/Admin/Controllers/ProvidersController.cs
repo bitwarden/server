@@ -103,6 +103,6 @@ public class ProvidersController : Controller
     {
         await _providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);
         TempData["InviteResentTo"] = ownerId;
-        return RedirectToAction("Edit", new { id = providerId });
+        return RedirectToAction("View", new { id = providerId });
     }
 }
