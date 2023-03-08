@@ -2438,10 +2438,26 @@ public class OrganizationService : IOrganizationService
 
     public async Task CreatePendingOrganization(Organization organization, string ownerEmail, string creatorUserName, bool salesAssistedTrialStarted)
     {
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+        if (!(plan is { LegacyYear: null }))
+        {
+            throw new BadRequestException("Invalid plan selected.");
+        }
+
+        if (plan.Disabled)
+        {
+            throw new BadRequestException("Plan not found.");
+        }
+
         organization.Id = CoreHelpers.GenerateComb();
         organization.Enabled = false;
         organization.Status = OrganizationStatusType.Pending;
-        await _organizationRepository.CreateAsync(organization);
+
+        // await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
+        //     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+        //     signup.PremiumAccessAddon, signup.TaxInfo);
+
+        await SignUpAsync(organization, default, null, null, true);
 
         var ownerOrganizationUser = new OrganizationUser
         {
@@ -2466,8 +2482,10 @@ public class OrganizationService : IOrganizationService
         });
     }
 
-    public async Task InitPendingOrganization(Guid organizationId, string publicKey, string privateKey, string collectionName)
+    public async Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName)
     {
+        await ValidateSignUpPoliciesAsync(userId);
+
         var org = await GetOrgById(organizationId);
 
         if (org.Enabled)
