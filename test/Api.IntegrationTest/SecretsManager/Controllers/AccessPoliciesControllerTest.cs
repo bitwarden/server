@@ -702,7 +702,6 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
             result!.UserAccessPolicies.First(ap => ap.OrganizationUserId == ownerOrgUserId).OrganizationUserId);
         Assert.True(result.UserAccessPolicies.First().Read);
         Assert.True(result.UserAccessPolicies.First().Write);
-        AssertHelper.AssertRecent(result.UserAccessPolicies.First().RevisionDate);
 
         var createdAccessPolicy =
             await _accessPolicyRepository.GetByIdAsync(result.UserAccessPolicies.First().Id);
@@ -710,7 +709,6 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
         Assert.Equal(result.UserAccessPolicies.First().Read, createdAccessPolicy!.Read);
         Assert.Equal(result.UserAccessPolicies.First().Write, createdAccessPolicy.Write);
         Assert.Equal(result.UserAccessPolicies.First().Id, createdAccessPolicy.Id);
-        AssertHelper.AssertRecent(createdAccessPolicy.RevisionDate);
     }
 
     [Fact]

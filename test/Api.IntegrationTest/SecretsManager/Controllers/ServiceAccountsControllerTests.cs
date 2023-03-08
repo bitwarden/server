@@ -138,7 +138,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task Create_Admin_Success()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, orgUser) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
         var request = new ServiceAccountCreateRequestModel { Name = _mockEncryptedString };
@@ -159,7 +159,7 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
         AssertHelper.AssertRecent(createdServiceAccount.CreationDate);
 
         // Check permissions have been bootstrapped.
-        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(createdServiceAccount.Id);
+        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(createdServiceAccount.Id, orgUser.UserId!.Value);
         Assert.NotNull(accessPolicies);
         var ap = accessPolicies!.First();
         Assert.True(ap.Read);
@@ -273,6 +273,92 @@ public class ServiceAccountsControllerTest : IClassFixture<ApiApplicationFactory
 
         var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task Delete_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
+
+        var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var request = new List<Guid> { initialServiceAccount.Id };
+
+        var response = await _client.PutAsJsonAsync("/service-accounts/delete", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_MissingAccessPolicy_AccessDenied()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var ids = new List<Guid> { serviceAccount.Id };
+
+        var response = await _client.PostAsJsonAsync("/service-accounts/delete", ids);
+
+        var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
+        Assert.NotNull(results);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task Delete_Success(PermissionType permissionType)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
+        await _apiKeyRepository.CreateAsync(new ApiKey { ServiceAccountId = serviceAccount.Id });
+
+        if (permissionType == PermissionType.RunAsAdmin)
+        {
+            await LoginAsync(_email);
+        }
+        else
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await LoginAsync(email);
+
+            await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> {
+                new UserServiceAccountAccessPolicy
+                {
+                    GrantedServiceAccountId = serviceAccount.Id,
+                    OrganizationUserId = orgUser.Id,
+                    Write = true,
+                    Read = true,
+                },
+            });
+        }
+
+        var ids = new List<Guid> { serviceAccount.Id };
+
+        var response = await _client.PostAsJsonAsync("/service-accounts/delete", ids);
+        response.EnsureSuccessStatusCode();
+
+        var sa = await _serviceAccountRepository.GetManyByIds(ids);
+        Assert.Empty(sa);
     }
 
     [Theory]
