@@ -110,7 +110,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
         return Mapper.Map<Core.Entities.OrganizationDomain>(domain);
     }
-    
+
     public async Task<ICollection<Core.Entities.OrganizationDomain>> GetExpiredOrganizationDomainsAsync()
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -125,7 +125,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
 
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
-    
+
     public async Task<bool> DeleteExpiredAsync(int expirationPeriod)
     {
         using var scope = ServiceScopeFactory.CreateScope();
