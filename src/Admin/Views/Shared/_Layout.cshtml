@@ -77,9 +77,12 @@
                                     </a>
                                 </div>
                             </li>
-                            <li class="nav-item" active-controller="Logs">
-                                <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
-                            </li>
+                            @if(AccessControlService.UserHasPermission(Permission.Logs_View))
+                            {
+                                <li class="nav-item" active-controller="Logs">
+                                    <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
+                                </li>
+                            }
                         }
                     }
                     @if(GlobalSettings.SelfHosted)

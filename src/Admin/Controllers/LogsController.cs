@@ -1,4 +1,5 @@
 ﻿using Bit.Admin.Models;
+using Bit.Admin.Utilities;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -11,6 +12,7 @@ namespace Bit.Admin.Controllers;
 
 [Authorize]
 [SelfHosted(NotSelfHostedOnly = true)]
+[RequirePermission(Enums.Permission.Logs_View)]
 public class LogsController : Controller
 {
     private const string Database = "Diagnostics";
@@ -71,6 +73,7 @@ public class LogsController : Controller
         }
     }
 
+    [RequirePermission(Enums.Permission.Logs_View)]
     public async Task<IActionResult> View(Guid id)
     {
         using (var client = new CosmosClient(_globalSettings.DocumentDb.Uri,
