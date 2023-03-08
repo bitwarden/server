@@ -48,9 +48,12 @@
                         </li>
                         @if(!GlobalSettings.SelfHosted)
                         {
-                            <li class="nav-item" active-controller="Providers">
-                                <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
-                            </li>
+                            @if(AccessControlService.UserHasPermission(Permission.Provider_List_View))
+                            {
+                                <li class="nav-item" active-controller="Providers">
+                                    <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
+                                </li>
+                            }
                             <li class="nav-item dropdown" active-controller="tools">
                                 <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">

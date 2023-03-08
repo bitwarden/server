@@ -1,4 +1,6 @@
-﻿using Bit.Admin.Models;
+﻿using Bit.Admin.Enums;
+using Bit.Admin.Models;
+using Bit.Admin.Utilities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -32,6 +34,7 @@ public class ProvidersController : Controller
         _applicationCacheService = applicationCacheService;
     }
 
+    [RequirePermission(Permission.Provider_List_View)]
     public async Task<IActionResult> Index(string name = null, string userEmail = null, int page = 1, int count = 25)
     {
         if (page < 1)
@@ -53,7 +56,7 @@ public class ProvidersController : Controller
             UserEmail = string.IsNullOrWhiteSpace(userEmail) ? null : userEmail,
             Page = page,
             Count = count,
-            Action = _globalSettings.SelfHosted ? "View" : "Edit",
+            Action = "View",
             SelfHosted = _globalSettings.SelfHosted
         });
     }
@@ -68,6 +71,7 @@ public class ProvidersController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
     public async Task<IActionResult> Create(CreateProviderModel model)
     {
         if (!ModelState.IsValid)
@@ -80,6 +84,7 @@ public class ProvidersController : Controller
         return RedirectToAction("Index");
     }
 
+    [RequirePermission(Permission.Provider_View)]
     public async Task<IActionResult> View(Guid id)
     {
         var provider = await _providerRepository.GetByIdAsync(id);
@@ -93,37 +98,7 @@ public class ProvidersController : Controller
         return View(new ProviderViewModel(provider, users, providerOrganizations));
     }
 
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<IActionResult> Edit(Guid id)
-    {
-        var provider = await _providerRepository.GetByIdAsync(id);
-        if (provider == null)
-        {
-            return RedirectToAction("Index");
-        }
-
-        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
-        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
-        return View(new ProviderEditModel(provider, users, providerOrganizations));
-    }
-
-    [HttpPost]
-    [ValidateAntiForgeryToken]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
-    {
-        var provider = await _providerRepository.GetByIdAsync(id);
-        if (provider == null)
-        {
-            return RedirectToAction("Index");
-        }
-
-        model.ToProvider(provider);
-        await _providerRepository.ReplaceAsync(provider);
-        await _applicationCacheService.UpsertProviderAbilityAsync(provider);
-        return RedirectToAction("Edit", new { id });
-    }
-
+    [RequirePermission(Permission.Provider_ResendEmailInvite)]
     public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
     {
         await _providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);
