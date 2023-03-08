@@ -73,7 +73,6 @@ public class LogsController : Controller
         }
     }
 
-    [RequirePermission(Enums.Permission.Logs_View)]
     public async Task<IActionResult> View(Guid id)
     {
         using (var client = new CosmosClient(_globalSettings.DocumentDb.Uri,
