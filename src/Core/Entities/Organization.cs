@@ -112,12 +112,12 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     {
         return false;
     }
-    
+
     public void EnableSubscription(bool enabled)
     {
         Enabled = enabled;
     }
-    
+
     public void SetExpirationDate(DateTime? expirationDate)
     {
         ExpirationDate = expirationDate;

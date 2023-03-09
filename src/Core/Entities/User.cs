@@ -108,12 +108,12 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     {
         return true;
     }
-    
+
     public void EnableSubscription(bool enabled)
     {
         Premium = enabled;
     }
-    
+
     public void SetExpirationDate(DateTime? expirationDate)
     {
         PremiumExpirationDate = expirationDate;
