@@ -433,7 +433,7 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ProviderUserForOrgAsync(Guid orgId)
     {
-        return (await GetProviderOrganizations()).Any(po => po.OrganizationId == orgId);
+        return (await GetProviderOrganizations()).Any(po => po.OrganizationId == orgId && po.ProviderType == ProviderType.Msp);
     }
 
     public async Task<Guid?> ProviderIdForOrg(Guid orgId)
