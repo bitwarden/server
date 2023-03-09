@@ -11,5 +11,5 @@ public interface IPolicyService
     /// <summary>
     /// Get the combined master password policy options for the specified user.
     /// </summary>
-    Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(Guid userId);
+    Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user);
 }

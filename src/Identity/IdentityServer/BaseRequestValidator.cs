@@ -584,6 +584,6 @@ public abstract class BaseRequestValidator<T> where T : class
             return null;
         }
 
-        return new MasterPasswordPolicyResponseModel(await _policyService.GetMasterPasswordPolicyForUserAsync(user.Id));
+        return new MasterPasswordPolicyResponseModel(await _policyService.GetMasterPasswordPolicyForUserAsync(user));
     }
 }

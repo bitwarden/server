@@ -133,13 +133,10 @@ public class PolicyService : IPolicyService
         await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
     }
 
-    public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(Guid userId)
+    public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
     {
-        var policies = (await _policyRepository.GetManyByUserIdAsync(userId))
-            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
-            .ToList();
-
-        // TODO: Potential location to enforce master password requirements globally
+        var policies =
+            (await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id, PolicyType.MasterPassword)).ToList();
 
         if (!policies.Any())
         {
