@@ -54,4 +54,9 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         await _secretRepository.UpdateAsync(secret);
         return secret;
     }
+
+    public async Task UpdateSecretRevisionDatesByProjectIds(List<Guid> ids)
+    {
+        await _secretRepository.UpdateSecretRevisionDatesByProjectIds(ids);
+    }
 }

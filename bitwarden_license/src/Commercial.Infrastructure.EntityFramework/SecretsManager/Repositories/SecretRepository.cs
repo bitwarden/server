@@ -254,4 +254,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         }
         return secrets;
     }
+
+    public async Task UpdateSecretRevisionDatesByProjectIds(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var utcNow = DateTime.UtcNow;
+            var secrets = dbContext.Secret.Include(s => s.Projects).Where(s => s.Projects.Any(p => ids.Contains(p.Id)) && s.DeletedDate == null);
+
+            await secrets.ForEachAsync(secret =>
+            {
+                dbContext.Attach(secret);
+                secret.RevisionDate = utcNow;
+            });
+
+            await dbContext.SaveChangesAsync();
+        }
+    }
 }
