@@ -22,3 +22,8 @@ public static class AuthenticationSchemes
 {
     public const string BitwardenExternalCookieAuthenticationScheme = "bw.external";
 }
+
+public static class FeatureFlagKeys
+{
+    public const string SecretsManager = "secrets-manager";
+}

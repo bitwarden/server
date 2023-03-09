@@ -25,6 +25,7 @@ public class ServiceAccountsController : Controller
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
     private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
+    private readonly IDeleteServiceAccountsCommand _deleteServiceAccountsCommand;
     private readonly IRevokeAccessTokensCommand _revokeAccessTokensCommand;
 
     public ServiceAccountsController(
@@ -35,6 +36,7 @@ public class ServiceAccountsController : Controller
         ICreateAccessTokenCommand createAccessTokenCommand,
         ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand,
+        IDeleteServiceAccountsCommand deleteServiceAccountsCommand,
         IRevokeAccessTokensCommand revokeAccessTokensCommand)
     {
         _currentContext = currentContext;
@@ -43,6 +45,7 @@ public class ServiceAccountsController : Controller
         _apiKeyRepository = apiKeyRepository;
         _createServiceAccountCommand = createServiceAccountCommand;
         _updateServiceAccountCommand = updateServiceAccountCommand;
+        _deleteServiceAccountsCommand = deleteServiceAccountsCommand;
         _revokeAccessTokensCommand = revokeAccessTokensCommand;
         _createAccessTokenCommand = createAccessTokenCommand;
     }
@@ -67,6 +70,41 @@ public class ServiceAccountsController : Controller
         return new ListResponseModel<ServiceAccountResponseModel>(responses);
     }
 
+    [HttpGet("{id}")]
+    public async Task<ServiceAccountResponseModel> GetByServiceAccountIdAsync(
+     [FromRoute] Guid id)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var hasAccess = accessClient switch
+        {
+            AccessClientType.NoAccessCheck => true,
+            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
+            _ => false,
+        };
+
+        if (!hasAccess)
+        {
+            throw new NotFoundException();
+        }
+
+        return new ServiceAccountResponseModel(serviceAccount);
+    }
+
     [HttpPost("/organizations/{organizationId}/service-accounts")]
     public async Task<ServiceAccountResponseModel> CreateAsync([FromRoute] Guid organizationId,
         [FromBody] ServiceAccountCreateRequestModel createRequest)
@@ -88,6 +126,16 @@ public class ServiceAccountsController : Controller
 
         var result = await _updateServiceAccountCommand.UpdateAsync(updateRequest.ToServiceAccount(id), userId);
         return new ServiceAccountResponseModel(result);
+    }
+
+    [HttpPost("delete")]
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var results = await _deleteServiceAccountsCommand.DeleteServiceAccounts(ids, userId);
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
+        return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
     [HttpGet("{id}/access-tokens")]

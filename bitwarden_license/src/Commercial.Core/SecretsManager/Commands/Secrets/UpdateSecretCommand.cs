@@ -31,16 +31,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var project = updatedSecret.Projects?.FirstOrDefault();
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => project != null && await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
+        if (!await HasAccessToOriginalAndUpdatedProject(accessClient, secret, updatedSecret, userId))
         {
             throw new NotFoundException();
         }
@@ -53,6 +44,23 @@ public class UpdateSecretCommand : IUpdateSecretCommand
 
         await _secretRepository.UpdateAsync(secret);
         return secret;
+    }
+
+    public async Task<bool> HasAccessToOriginalAndUpdatedProject(AccessClientType accessClient, Secret secret, Secret updatedSecret, Guid userId)
+    {
+        switch (accessClient)
+        {
+            case AccessClientType.NoAccessCheck:
+                return true;
+            case AccessClientType.User:
+                var oldProject = secret.Projects?.FirstOrDefault();
+                var newProject = updatedSecret.Projects?.FirstOrDefault();
+                var accessToOld = oldProject != null && await _projectRepository.UserHasWriteAccessToProject(oldProject.Id, userId);
+                var accessToNew = newProject != null && await _projectRepository.UserHasWriteAccessToProject(newProject.Id, userId);
+                return accessToOld && accessToNew;
+            default:
+                return false;
+        }
     }
 
     public async Task UpdateRevisionDates(List<Guid> ids)

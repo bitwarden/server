@@ -204,7 +204,7 @@ public class AccessPoliciesController : Controller
         var organizationUsers =
             await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var userResponses = organizationUsers
-            .Where(user => user.AccessSecretsManager)
+            .Where(user => user.AccessSecretsManager && user.Status == OrganizationUserStatusType.Confirmed)
             .Select(userDetails => new PotentialGranteeResponseModel(userDetails));
 
         return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses));
