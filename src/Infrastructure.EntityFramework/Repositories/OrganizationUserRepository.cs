@@ -1,6 +1,5 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -241,7 +240,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId, OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
+    public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId, OrganizationUserStatusType? status = null)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -251,8 +250,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var entity = await view.Run(dbContext)
                 .FirstOrDefaultAsync(o => o.UserId == userId &&
                     o.OrganizationId == organizationId &&
-                    (status == null || o.Status == status) &&
-                    (providerType == null || o.ProviderType == providerType));
+                    (status == null || o.Status == status));
             return entity;
         }
     }
@@ -372,7 +370,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
-            OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
+            OrganizationUserStatusType? status = null)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -380,8 +378,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var view = new OrganizationUserOrganizationDetailsViewQuery();
             var query = from ou in view.Run(dbContext)
                         where ou.UserId == userId &&
-                        (status == null || ou.Status == status) &&
-                        (providerType == null || ou.ProviderType == providerType)
+                        (status == null || ou.Status == status)
                         select ou;
             var organizationUsers = await query.ToListAsync();
             return organizationUsers;

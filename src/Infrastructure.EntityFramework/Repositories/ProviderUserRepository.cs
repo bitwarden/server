@@ -152,7 +152,7 @@ public class ProviderUserRepository :
         }
     }
 
-    public async Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
+    public async Task<IEnumerable<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByUserAsync(Guid userId, ProviderUserStatusType? status = null)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -160,8 +160,7 @@ public class ProviderUserRepository :
             var view = new ProviderUserOrganizationDetailsViewQuery();
             var query = from ou in view.Run(dbContext)
                         where ou.UserId == userId &&
-                              (status == null || ou.Status == status) &&
-                              (providerType == null || ou.ProviderType == providerType)
+                              (status == null || ou.Status == status)
                         select ou;
             var organizationUsers = await query.ToListAsync();
             return organizationUsers;

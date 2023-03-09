@@ -45,8 +45,7 @@ GO
 
 ALTER PROCEDURE [dbo].[ProviderUserProviderOrganizationDetails_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
-    @Status TINYINT,
-    @ProviderType TINYINT = 0
+    @Status TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -57,8 +56,7 @@ FROM
     [dbo].[ProviderUserProviderOrganizationDetailsView]
 WHERE
     [UserId] = @UserId
-  AND (@Status IS NULL OR [Status] = @Status)
-  AND (@ProviderType IS NULL OR [ProviderType] = @ProviderType)
+    AND (@Status IS NULL OR [Status] = @Status)
 END
 GO
 
@@ -124,8 +122,7 @@ GO
 
 ALTER PROCEDURE [dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]
     @UserId UNIQUEIDENTIFIER,
-    @Status SMALLINT,
-    @ProviderType TINYINT = 0
+    @Status SMALLINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -136,16 +133,14 @@ FROM
     [dbo].[OrganizationUserOrganizationDetailsView]
 WHERE
     [UserId] = @UserId
-  AND (@Status IS NULL OR [Status] = @Status)
-  AND (@ProviderType IS NULL OR [ProviderType] = @ProviderType)
+    AND (@Status IS NULL OR [Status] = @Status)
 END
 GO
 
 ALTER PROCEDURE [dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]
     @UserId UNIQUEIDENTIFIER,
     @Status SMALLINT,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @ProviderType TINYINT = 0
+    @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -156,8 +151,7 @@ FROM
     [dbo].[OrganizationUserOrganizationDetailsView]
 WHERE
     [UserId] = @UserId
-  AND [OrganizationId] = @OrganizationId
-  AND (@Status IS NULL OR [Status] = @Status)
-  AND (@ProviderType IS NULL OR [ProviderType] = @ProviderType)
+    AND [OrganizationId] = @OrganizationId
+    AND (@Status IS NULL OR [Status] = @Status)
 END
 GO

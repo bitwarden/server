@@ -1,8 +1,7 @@
 CREATE PROCEDURE [dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]
     @UserId UNIQUEIDENTIFIER,
     @Status SMALLINT,
-    @OrganizationId UNIQUEIDENTIFIER,
-    @ProviderType TINYINT = 0
+    @OrganizationId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -15,5 +14,4 @@ BEGIN
         [UserId] = @UserId
         AND [OrganizationId] = @OrganizationId
         AND (@Status IS NULL OR [Status] = @Status)
-        AND (@ProviderType IS NULL OR [ProviderType] = @ProviderType)
 END

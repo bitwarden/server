@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
@@ -264,13 +263,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     public async Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
-        OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
+        OrganizationUserStatusType? status = null)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
                 "[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]",
-                new { UserId = userId, Status = status, ProviderType = providerType },
+                new { UserId = userId, Status = status },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
@@ -278,13 +277,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     }
 
     public async Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId,
-        Guid organizationId, OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp)
+        Guid organizationId, OrganizationUserStatusType? status = null)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserOrganizationDetails>(
                 "[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]",
-                new { UserId = userId, Status = status, OrganizationId = organizationId, ProviderType = providerType },
+                new { UserId = userId, Status = status, OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
             return results.SingleOrDefault();

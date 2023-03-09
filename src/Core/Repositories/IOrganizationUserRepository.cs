@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -23,9 +22,9 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
         GetDetailsByIdWithCollectionsAsync(Guid id);
     Task<ICollection<OrganizationUserUserDetails>> GetManyDetailsByOrganizationAsync(Guid organizationId, bool includeGroups = false, bool includeCollections = false);
     Task<ICollection<OrganizationUserOrganizationDetails>> GetManyDetailsByUserAsync(Guid userId,
-        OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp);
+        OrganizationUserStatusType? status = null);
     Task<OrganizationUserOrganizationDetails> GetDetailsByUserAsync(Guid userId, Guid organizationId,
-        OrganizationUserStatusType? status = null, ProviderType? providerType = ProviderType.Msp);
+        OrganizationUserStatusType? status = null);
     Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds);
     Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers);
     Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections);
