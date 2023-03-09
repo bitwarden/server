@@ -135,7 +135,7 @@ public class ProjectsController : Controller
 
         var results = await _deleteProjectCommand.DeleteProjects(ids, userId);
 
-        var secretIds = results.SelectMany(projTuple => projTuple.Item1.Secrets.Select(s => s.Id)).ToList();
+        var secretIds = results.SelectMany(projTuple => projTuple.Item1?.Secrets?.Select(s => s.Id) ?? Array.Empty<Guid>()).ToList();
         await _updateSecretCommand.UpdateRevisionDates(secretIds);
 
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
