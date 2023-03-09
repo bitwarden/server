@@ -67,7 +67,7 @@ public class StripePaymentServiceTests
             c.Email == organization.BillingEmail &&
             c.Source == paymentToken &&
             c.PaymentMethod == null &&
-            c.Metadata.Any() &&
+            !c.Metadata.Any() &&
             c.InvoiceSettings.DefaultPaymentMethod == null &&
             c.InvoiceSettings.CustomFields != null &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
@@ -118,7 +118,7 @@ public class StripePaymentServiceTests
             c.Email == organization.BillingEmail &&
             c.Source == null &&
             c.PaymentMethod == paymentToken &&
-            c.Metadata.Any() &&
+            !c.Metadata.Any() &&
             c.InvoiceSettings.DefaultPaymentMethod == paymentToken &&
             c.InvoiceSettings.CustomFields != null &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
@@ -273,7 +273,7 @@ public class StripePaymentServiceTests
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&
             c.PaymentMethod == null &&
-            c.Metadata.Count == 2 &&
+            c.Metadata.Count == 1 &&
             c.Metadata["btCustomerId"] == "Braintree-Id" &&
             c.InvoiceSettings.DefaultPaymentMethod == null &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
