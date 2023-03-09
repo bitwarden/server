@@ -249,9 +249,13 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var accessPolicy = await dbContext.Secret
-            .Where(s => s.Id == id)
-            .Select(s => new
+        var secret = dbContext.Secret
+            .Where(s => s.Id == id);
+
+        var query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => secret.Select(_ => new { Read = true, Write = true }),
+            AccessClientType.User => secret.Select(s => new
             {
                 Read = s.Projects.Any(p =>
                     p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
@@ -261,9 +265,20 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                     p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
                     p.GroupAccessPolicies.Any(ap =>
                         ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write))),
-            }).FirstOrDefaultAsync();
+            }),
+            AccessClientType.ServiceAccount => secret.Select(s => new
+            {
+                Read = s.Projects.Any(p =>
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read)),
+                Write = s.Projects.Any(p =>
+                    p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)),
+            }),
+            _ => secret.Select(_ => new { Read = false, Write = false }),
+        };
 
-        return (accessPolicy.Read, accessPolicy.Write);
+        var policy = await query.FirstOrDefaultAsync();
+
+        return (policy.Read, policy.Write);
     }
 
     private IQueryable<SecretPermissionDetails> SecretPermissionDetailsEnumerable(IQueryable<Secret> query, Guid userId, AccessClientType accessType)
