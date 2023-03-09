@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Provider_Update]
+UPDATE PROCEDURE [dbo].[Provider_Update]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
@@ -19,26 +19,26 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    UPDATE
-        [dbo].[Provider]
-    SET
-        [Name] = @Name,
-        [BusinessName] = @BusinessName,
-        [BusinessAddress1] = @BusinessAddress1,
-        [BusinessAddress2] = @BusinessAddress2,
-        [BusinessAddress3] = @BusinessAddress3,
-        [BusinessCountry] = @BusinessCountry,
-        [BusinessTaxNumber] = @BusinessTaxNumber,
-        [BillingEmail] = @BillingEmail,
-        [BillingPhone] = @BillingPhone,
-        [Status] = @Status,
-        [Type] = @Type,
-        [UseEvents] = @UseEvents,
-        [Enabled] = @Enabled,
-        [CreationDate] = @CreationDate,
-        [RevisionDate] = @RevisionDate
-    WHERE
-        [Id] = @Id
+UPDATE
+    [dbo].[Provider]
+SET
+    [Name] = @Name,
+    [BusinessName] = @BusinessName,
+    [BusinessAddress1] = @BusinessAddress1,
+    [BusinessAddress2] = @BusinessAddress2,
+    [BusinessAddress3] = @BusinessAddress3,
+    [BusinessCountry] = @BusinessCountry,
+    [BusinessTaxNumber] = @BusinessTaxNumber,
+    [BillingEmail] = @BillingEmail,
+    [BillingPhone] = @BillingPhone,
+    [Status] = @Status,
+    [Type] = @Type,
+    [UseEvents] = @UseEvents,
+    [Enabled] = @Enabled,
+    [CreationDate] = @CreationDate,
+    [RevisionDate] = @RevisionDate
+WHERE
+    [Id] = @Id
 
     IF @Type = 1 -- Reseller Provider: Update all assigned organization's BillingEmail
     BEGIN
