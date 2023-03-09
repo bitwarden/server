@@ -8,14 +8,14 @@ namespace Bit.Core.Services;
 public interface IPaymentService
 {
     Task CancelAndRecoverChargesAsync(ISubscriber subscriber);
-    Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
+    Task<string> PurchaseOrganizationAsync(ISubscriber org, PaymentMethodType paymentMethodType,
         string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
         bool premiumAccessAddon, TaxInfo taxInfo);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
     Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan,
        short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo);
-    Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
+    Task<string> PurchasePremiumAsync(ISubscriber user, PaymentMethodType paymentMethodType, string paymentToken,
         short additionalStorageGb, TaxInfo taxInfo);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);

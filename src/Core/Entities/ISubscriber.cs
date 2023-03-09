@@ -14,5 +14,7 @@ public interface ISubscriber
     string BraintreeCustomerIdPrefix();
     string BraintreeIdField();
     string GatewayIdField();
+    void EnableSubscription(bool enabled);
+    void SetExpirationDate(DateTime? expirationDate);
     bool IsUser();
 }

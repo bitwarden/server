@@ -5,7 +5,7 @@ namespace Bit.Core.Models.Business;
 
 public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
 {
-    public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats, int additionalStorageGb, bool premiumAccessAddon)
+    public OrganizationSubscriptionOptionsBase(ISubscriber org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats, int additionalStorageGb, bool premiumAccessAddon)
     {
         Items = new List<SubscriptionItemOptions>();
         Metadata = new Dictionary<string, string>
@@ -59,7 +59,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
 public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionOptionsBase
 {
     public OrganizationPurchaseSubscriptionOptions(
-        Organization org, StaticStore.Plan plan,
+        ISubscriber org, StaticStore.Plan plan,
         TaxInfo taxInfo, int additionalSeats = 0,
         int additionalStorageGb = 0, bool premiumAccessAddon = false) :
         base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
@@ -72,7 +72,7 @@ public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionO
 public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOptionsBase
 {
     public OrganizationUpgradeSubscriptionOptions(
-        string customerId, Organization org,
+        string customerId, ISubscriber org,
         StaticStore.Plan plan, TaxInfo taxInfo,
         int additionalSeats = 0, int additionalStorageGb = 0,
         bool premiumAccessAddon = false) :
