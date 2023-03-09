@@ -255,13 +255,13 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return secrets;
     }
 
-    public async Task UpdateSecretRevisionDatesByProjectIds(IEnumerable<Guid> ids)
+    public async Task UpdateRevisionDates(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var utcNow = DateTime.UtcNow;
-            var secrets = dbContext.Secret.Include(s => s.Projects).Where(s => s.Projects.Any(p => ids.Contains(p.Id)) && s.DeletedDate == null);
+            var secrets = dbContext.Secret.Where(s => ids.Contains(s.Id));
 
             await secrets.ForEachAsync(secret =>
             {

@@ -123,6 +123,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             var dbContext = GetDatabaseContext(scope);
             var projects = await dbContext.Project
+                                    .Include(p => p.Secrets)
                                     .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
                                     .ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
