@@ -2,12 +2,13 @@
 
 public class MasterPasswordPolicyData : IPolicyDataModel
 {
-    public int? MinComplexity { get; set; } = 0;
-    public int? MinLength { get; set; } = 0;
-    public bool? RequireUpper { get; set; } = false;
-    public bool? RequireNumbers { get; set; } = false;
-    public bool? RequireSpecial { get; set; } = false;
-    public bool? EnforceOnLogin { get; set; } = false;
+    public int? MinComplexity { get; set; }
+    public int? MinLength { get; set; }
+    public bool? RequireLower { get; set; }
+    public bool? RequireUpper { get; set; }
+    public bool? RequireNumbers { get; set; }
+    public bool? RequireSpecial { get; set; }
+    public bool? EnforceOnLogin { get; set; }
 
     /// <summary>
     /// Combine the other policy data with this instance, taking the most secure options
@@ -30,9 +31,10 @@ public class MasterPasswordPolicyData : IPolicyDataModel
             MinLength = other.MinLength;
         }
 
+        RequireLower = (other.RequireLower ?? false) || (RequireLower ?? false);
         RequireUpper = (other.RequireUpper ?? false) || (RequireUpper ?? false);
         RequireNumbers = (other.RequireNumbers ?? false) || (RequireNumbers ?? false);
-        RequireSpecial = (other.RequireSpecial ?? false) || (RequireNumbers ?? false);
-        EnforceOnLogin = (other.EnforceOnLogin ?? false) || (RequireNumbers ?? false);
+        RequireSpecial = (other.RequireSpecial ?? false) || (RequireSpecial ?? false);
+        EnforceOnLogin = (other.EnforceOnLogin ?? false) || (EnforceOnLogin ?? false);
     }
 }

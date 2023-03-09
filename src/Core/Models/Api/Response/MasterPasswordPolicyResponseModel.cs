@@ -11,23 +11,26 @@ public class MasterPasswordPolicyResponseModel : ResponseModel
             return;
         }
 
-        MinComplexity = data.MinComplexity ?? 0;
-        MinLength = data.MinLength ?? 0;
-        RequireUpper = data.RequireUpper ?? false;
-        RequireNumbers = data.RequireNumbers ?? false;
-        RequireSpecial = data.RequireSpecial ?? false;
-        EnforceOnLogin = data.EnforceOnLogin ?? false;
+        MinComplexity = data.MinComplexity;
+        MinLength = data.MinLength;
+        RequireLower = data.RequireLower;
+        RequireUpper = data.RequireUpper;
+        RequireNumbers = data.RequireNumbers;
+        RequireSpecial = data.RequireSpecial;
+        EnforceOnLogin = data.EnforceOnLogin;
     }
 
-    public int MinComplexity { get; set; }
+    public int? MinComplexity { get; set; }
 
-    public int MinLength { get; set; }
+    public int? MinLength { get; set; }
 
-    public bool RequireUpper { get; set; }
+    public bool? RequireLower { get; set; }
 
-    public bool RequireNumbers { get; set; }
+    public bool? RequireUpper { get; set; }
 
-    public bool RequireSpecial { get; set; }
+    public bool? RequireNumbers { get; set; }
 
-    public bool EnforceOnLogin { get; set; }
+    public bool? RequireSpecial { get; set; }
+
+    public bool? EnforceOnLogin { get; set; }
 }
