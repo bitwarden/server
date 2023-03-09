@@ -1,4 +1,4 @@
-UPDATE PROCEDURE [dbo].[Provider_Update]
+ALTER PROCEDURE [dbo].[Provider_Update]
     @Id UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @BusinessName NVARCHAR(50),
