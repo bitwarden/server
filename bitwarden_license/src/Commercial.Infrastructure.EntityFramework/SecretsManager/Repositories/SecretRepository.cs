@@ -291,7 +291,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 Read = true,
                 Write = true,
             }),
-            AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)).Select(SecretToPermissionsUser(userId)),
+            AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)).Select(SecretToPermissionsUser(userId, true)),
             AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)).Select(s =>
                 new SecretPermissionDetails
                 {
@@ -304,11 +304,11 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return secrets;
     }
 
-    private Expression<Func<Secret, SecretPermissionDetails>> SecretToPermissionsUser(Guid userId) =>
+    private Expression<Func<Secret, SecretPermissionDetails>> SecretToPermissionsUser(Guid userId, bool read) =>
         s => new SecretPermissionDetails
         {
             Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
-            Read = true,
+            Read = read,
             Write = s.Projects.Any(p =>
                 p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
                 p.GroupAccessPolicies.Any(ap =>

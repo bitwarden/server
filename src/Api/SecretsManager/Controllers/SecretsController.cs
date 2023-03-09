@@ -73,6 +73,8 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
+
+        // Creating a secret means you have read & write permission.
         return new SecretResponseModel(result, false, false);
     }
 
@@ -129,7 +131,9 @@ public class SecretsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var secret = updateRequest.ToSecret(id);
         var result = await _updateSecretCommand.UpdateAsync(secret, userId);
-        return new SecretResponseModel(result, false, false);
+
+        // Updating a secret means you have read & write permission.
+        return new SecretResponseModel(result, true, true);
     }
 
     [HttpPost("secrets/delete")]
