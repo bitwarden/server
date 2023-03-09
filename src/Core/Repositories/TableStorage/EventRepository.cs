@@ -1,7 +1,7 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 using Microsoft.Azure.Cosmos.Table;
 
 namespace Bit.Core.Repositories.TableStorage;
