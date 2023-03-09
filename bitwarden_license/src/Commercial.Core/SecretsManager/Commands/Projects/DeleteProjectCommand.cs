@@ -2,6 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
+using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
@@ -11,11 +12,13 @@ public class DeleteProjectCommand : IDeleteProjectCommand
 {
     private readonly IProjectRepository _projectRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IUpdateSecretCommand _updateSecretCommand;
 
-    public DeleteProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext)
+    public DeleteProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext, IUpdateSecretCommand updateSecretCommand)
     {
         _projectRepository = projectRepository;
         _currentContext = currentContext;
+        _updateSecretCommand = updateSecretCommand;
     }
 
     public async Task<List<Tuple<Project, string>>> DeleteProjects(List<Guid> ids, Guid userId)
@@ -25,7 +28,7 @@ public class DeleteProjectCommand : IDeleteProjectCommand
             throw new ArgumentNullException();
         }
 
-        var projects = (await _projectRepository.GetManyByIds(ids))?.ToList();
+        var projects = (await _projectRepository.GetManyWithSecretsByIds(ids))?.ToList();
 
         if (projects?.Any() != true || projects.Count != ids.Count)
         {
@@ -73,7 +76,10 @@ public class DeleteProjectCommand : IDeleteProjectCommand
         if (deleteIds.Count > 0)
         {
             await _projectRepository.DeleteManyByIdAsync(deleteIds);
+            var secretIds = results.SelectMany(projTuple => projTuple.Item1?.Secrets?.Select(s => s.Id) ?? Array.Empty<Guid>()).ToList();
+            await _updateSecretCommand.UpdateRevisionDates(secretIds);
         }
+
         return results;
     }
 }

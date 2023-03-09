@@ -117,7 +117,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByIds(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

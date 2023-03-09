@@ -5,7 +5,6 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
-using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -23,7 +22,6 @@ public class ProjectsController : Controller
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
-    private readonly IUpdateSecretCommand _updateSecretCommand;
 
     public ProjectsController(
         ICurrentContext currentContext,
@@ -31,8 +29,7 @@ public class ProjectsController : Controller
         IProjectRepository projectRepository,
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
-        IDeleteProjectCommand deleteProjectCommand,
-        IUpdateSecretCommand updateSecretCommand)
+        IDeleteProjectCommand deleteProjectCommand)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -40,7 +37,6 @@ public class ProjectsController : Controller
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
         _deleteProjectCommand = deleteProjectCommand;
-        _updateSecretCommand = updateSecretCommand;
     }
 
     [HttpGet("organizations/{organizationId}/projects")]
@@ -132,12 +128,7 @@ public class ProjectsController : Controller
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
         var userId = _userService.GetProperUserId(User).Value;
-
         var results = await _deleteProjectCommand.DeleteProjects(ids, userId);
-
-        var secretIds = results.SelectMany(projTuple => projTuple.Item1?.Secrets?.Select(s => s.Id) ?? Array.Empty<Guid>()).ToList();
-        await _updateSecretCommand.UpdateRevisionDates(secretIds);
-
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
