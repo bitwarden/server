@@ -48,19 +48,6 @@ public class PoliciesController : Controller
             "OrganizationServiceDataProtector");
     }
 
-    [HttpGet("/policies")]
-    public async Task<ListResponseModel<PolicyResponseModel>> Get()
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new BadRequestException("User not found.");
-        }
-        var policies = await _policyRepository.GetManyByUserIdAsync(user.Id);
-        var responses = policies.Select(p => new PolicyResponseModel(p));
-        return new ListResponseModel<PolicyResponseModel>(responses);
-    }
-
     [HttpGet("{type}")]
     public async Task<PolicyResponseModel> Get(string orgId, int type)
     {
