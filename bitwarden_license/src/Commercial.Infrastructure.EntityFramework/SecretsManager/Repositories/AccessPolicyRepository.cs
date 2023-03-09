@@ -157,7 +157,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedProjectIdAsync(Guid id)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedProjectIdAsync(Guid id, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -169,11 +169,19 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
             .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
             .Include(ap => ((ServiceAccountProjectAccessPolicy)ap).ServiceAccount)
+            .Select(ap => new
+            {
+                ap,
+                CurrentUserInGroup = ap is GroupProjectAccessPolicy &&
+                                     ((GroupProjectAccessPolicy)ap).Group.GroupUsers.Any(g =>
+                                         g.OrganizationUser.User.Id == userId),
+            })
             .ToListAsync();
-        return entities.Select(MapToCore);
+
+        return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedServiceAccountIdAsync(Guid id)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedServiceAccountIdAsync(Guid id, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -183,9 +191,16 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id)
             .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
             .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
+            .Select(ap => new
+            {
+                ap,
+                CurrentUserInGroup = ap is GroupServiceAccountAccessPolicy &&
+                                     ((GroupServiceAccountAccessPolicy)ap).Group.GroupUsers.Any(g =>
+                                         g.OrganizationUser.User.Id == userId),
+            })
             .ToListAsync();
 
-        return entities.Select(MapToCore);
+        return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
     }
 
     public async Task DeleteAsync(Guid id)
@@ -237,4 +252,26 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 .Map<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy>(ap),
             _ => throw new ArgumentException("Unsupported access policy type"),
         };
+
+    private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(
+      BaseAccessPolicy baseAccessPolicyEntity, bool currentUserInGroup)
+    {
+        switch (baseAccessPolicyEntity)
+        {
+            case GroupProjectAccessPolicy ap:
+                {
+                    var mapped = Mapper.Map<Core.SecretsManager.Entities.GroupProjectAccessPolicy>(ap);
+                    mapped.CurrentUserInGroup = currentUserInGroup;
+                    return mapped;
+                }
+            case GroupServiceAccountAccessPolicy ap:
+                {
+                    var mapped = Mapper.Map<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy>(ap);
+                    mapped.CurrentUserInGroup = currentUserInGroup;
+                    return mapped;
+                }
+            default:
+                return MapToCore(baseAccessPolicyEntity);
+        }
+    }
 }
