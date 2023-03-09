@@ -135,8 +135,9 @@ public class PolicyService : IPolicyService
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
     {
-        var policies =
-            (await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id, PolicyType.MasterPassword)).ToList();
+        var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
+            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
+            .ToList();
 
         if (!policies.Any())
         {
