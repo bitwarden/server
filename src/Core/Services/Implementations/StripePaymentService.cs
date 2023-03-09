@@ -115,7 +115,6 @@ public class StripePaymentService : IPaymentService
         Stripe.Subscription subscription;
         try
         {
-            stripeCustomerMetadata.Add("organization", org.Name);
             customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
             {
                 Description = org.BusinessName,
@@ -130,7 +129,7 @@ public class StripePaymentService : IPaymentService
                     {
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
-                            Name = "Organization",
+                            Name = "Subscriber",
                             Value = org.Name,
                         },
                     }
@@ -441,8 +440,8 @@ public class StripePaymentService : IPaymentService
                     {
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
-                            Name = "User",
-                            Value = user.Name,
+                            Name = "Subscriber",
+                            Value = string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name,
                         },
                     }
                 },
@@ -1340,8 +1339,6 @@ public class StripePaymentService : IPaymentService
 
         try
         {
-            stripeCustomerMetadata.Add("Organization", subscriber.SubscriberName());
-
             if (customer == null)
             {
                 customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
@@ -1358,7 +1355,7 @@ public class StripePaymentService : IPaymentService
                         {
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
-                                Name = "Organization",
+                                Name = "Subscriber",
                                 Value = subscriber.SubscriberName(),
                             },
                         }
@@ -1438,7 +1435,7 @@ public class StripePaymentService : IPaymentService
                         {
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
-                                Name = "Organization",
+                                Name = "Subscriber",
                                 Value = subscriber.SubscriberName(),
                             },
                         }
