@@ -209,7 +209,7 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
-        var userCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+        var userCollections = await _collectionService.GetOrganizationCollections(orgId);
         var filteredCollections = userCollections.Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == orgId);
 
         if (!filteredCollections.Any())
