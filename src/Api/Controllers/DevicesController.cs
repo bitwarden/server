@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -130,6 +131,14 @@ public class DevicesController : Controller
         await _deviceService.DeleteAsync(device);
     }
 
+    [AllowAnonymous]
+    [HttpGet("knowndevice")]
+    public async Task<bool> GetByIdentifierQuery(
+        [FromHeader(Name = "X-Request-Email")] string email,
+        [FromHeader(Name = "X-Device-Identifier")] string deviceIdentifier)
+        => await GetByIdentifier(CoreHelpers.Base64UrlDecodeString(email), deviceIdentifier);
+
+    [Obsolete("Path is deprecated due to encoding issues, use /knowndevice instead.")]
     [AllowAnonymous]
     [HttpGet("knowndevice/{email}/{identifier}")]
     public async Task<bool> GetByIdentifier(string email, string identifier)
