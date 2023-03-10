@@ -52,7 +52,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             .Where(c => c.OrganizationId == organizationId && c.DeletedDate == null)
             .OrderBy(s => s.RevisionDate);
 
-        var secrets = SecretPermissionDetailsEnumerable(query, userId, accessType);
+        var secrets = SecretToPermissionDetails(query, userId, accessType);
 
         return await secrets.ToListAsync();
     }
@@ -108,7 +108,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };
 
-        var secrets = SecretPermissionDetailsEnumerable(query, userId, accessType);
+        var secrets = SecretToPermissionDetails(query, userId, accessType);
 
         return await secrets.ToListAsync();
     }
@@ -281,7 +281,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return (policy.Read, policy.Write);
     }
 
-    private IQueryable<SecretPermissionDetails> SecretPermissionDetailsEnumerable(IQueryable<Secret> query, Guid userId, AccessClientType accessType)
+    private IQueryable<SecretPermissionDetails> SecretToPermissionDetails(IQueryable<Secret> query, Guid userId, AccessClientType accessType)
     {
         var secrets = accessType switch
         {
