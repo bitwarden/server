@@ -73,6 +73,14 @@ public class PolicyService : IPolicyService
                     await DependsOnSingleOrgAsync(org);
                 }
                 break;
+
+            // Activate Autofill is only available to Enterprise 2020-current plans
+            case PolicyType.ActivateAutofill:
+                if (policy.Enabled)
+                {
+                    LockedTo2020Plan(org);
+                }
+                break;
         }
 
         var now = DateTime.UtcNow;
@@ -89,7 +97,7 @@ public class PolicyService : IPolicyService
                 var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
                     policy.OrganizationId);
                 var removableOrgUsers = orgUsers.Where(ou =>
-                    ou.Status != Enums.OrganizationUserStatusType.Invited &&
+                    ou.Status != Enums.OrganizationUserStatusType.Invited && ou.Status != Enums.OrganizationUserStatusType.Revoked &&
                     ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin &&
                     ou.UserId != savingUserId);
                 switch (policy.Type)
@@ -166,6 +174,14 @@ public class PolicyService : IPolicyService
         if (vaultTimeout?.Enabled == true)
         {
             throw new BadRequestException("Maximum Vault Timeout policy is enabled.");
+        }
+    }
+
+    private void LockedTo2020Plan(Organization org)
+    {
+        if (org.PlanType != PlanType.EnterpriseAnnually && org.PlanType != PlanType.EnterpriseMonthly)
+        {
+            throw new BadRequestException("This policy is only available to 2020 Enterprise plans.");
         }
     }
 }

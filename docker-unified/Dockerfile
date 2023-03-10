@@ -1,18 +1,25 @@
+# syntax = docker/dockerfile:1.2
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM alpine AS web-setup
+FROM --platform=$BUILDPLATFORM debian AS web-setup
 
 # Add packages
-RUN apk add --update-cache \
+RUN apt-get update && apt-get install -y \
     curl \
     jq \
-    && rm -rf /var/cache/apk/*
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /tmp
 
 # Download tags from 'clients' repository
-RUN curl https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json
+RUN --mount=type=secret,id=GH_PAT,target=/etc/secrets/GH_PAT if [ -e "/etc/secrets/GH_PAT" ]; then \
+curl --header "Authorization: token $(cat /etc/secrets/GH_PAT)" \
+  https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json ; else \
+  curl https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json ; fi
+
+RUN cat tags.json
 
 # Grab last tag/release of the 'web' client
 RUN cat tags.json | jq -r 'last(.[] | select(.ref|test("refs/tags/web-v[0-9]{4}.[0-9]{1,2}.[0-9]+"))) | .ref | split("/")[2]' > tag.txt
@@ -49,9 +56,6 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     && echo "RID=$RID" > /tmp/rid.txt
 
 # Add packages
-# RUN apk add --update-cache \
-#     npm \
-#     && rm -rf /var/cache/apk/*
 RUN apt-get update && apt-get install -y \
     npm \
     && rm -rf /var/lib/apt/lists/*
@@ -75,7 +79,9 @@ COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/MySqlMigrations/*.csproj ./util/MySqlMigrations/
 COPY util/PostgresMigrations/*.csproj ./util/PostgresMigrations/
+COPY util/SqliteMigrations/*.csproj ./util/SqliteMigrations/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
+COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
@@ -127,8 +133,10 @@ COPY src/SharedWeb/. ./src/SharedWeb/
 COPY util/Migrator/. ./util/Migrator/
 COPY util/MySqlMigrations/. ./util/MySqlMigrations/
 COPY util/PostgresMigrations/. ./util/PostgresMigrations/
+COPY util/SqliteMigrations/. ./util/SqliteMigrations/
 COPY util/EfShared/. ./util/EfShared/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
+COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY .git/. ./.git/
 
 # Build Admin app
@@ -170,7 +178,7 @@ RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Scim --no-restore --no-s
 ###############################################
 #                  App stage                  #
 ###############################################
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
+FROM mcr.microsoft.com/dotnet/aspnet:6.0
 ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
 LABEL com.bitwarden.project="unified"
@@ -183,6 +191,7 @@ ENV BW_ENABLE_IDENTITY=true
 ENV BW_ENABLE_NOTIFICATIONS=true
 ENV BW_ENABLE_SCIM=false
 ENV BW_ENABLE_SSO=false
+ENV BW_DB_FILE="/etc/bitwarden/vault.db"
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV globalSettings__selfHosted="true"
 ENV globalSettings__pushRelayBaseUri="https://push.bitwarden.com"
@@ -202,23 +211,16 @@ ENV globalSettings__send__baseDirectory="/etc/bitwarden/attachments/send"
 ENV globalSettings__licenseDirectory="/etc/bitwarden/licenses"
 ENV globalSettings__logDirectoryByProject="false"
 ENV globalSettings__logRollBySizeLimit="1073741824"
-EXPOSE 80
-EXPOSE 443
 
 # Add packages
-RUN apk add --update-cache \
+RUN apt-get update && apt-get install -y \
     curl \
-    icu-libs \
     nginx \
     openssl \
-    su-exec \
     supervisor \
     tzdata \
     unzip \
-    && rm -rf /var/cache/apk/*
-
-# Create non-root user to run app
-RUN adduser -s /bin/false -D bitwarden
+    && rm -rf /var/lib/apt/lists/*
 
 # Create required directories
 RUN mkdir -p /etc/bitwarden/attachments/send
@@ -229,27 +231,22 @@ RUN mkdir -p /etc/supervisor
 RUN mkdir -p /etc/supervisor.d
 RUN mkdir -p /var/log/bitwarden
 RUN mkdir -p /var/log/nginx/logs
+RUN mkdir -p /etc/nginx/http.d
+RUN mkdir -p /var/run/nginx
+RUN mkdir -p /var/lib/nginx/tmp
+RUN touch /var/run/nginx/nginx.pid
 RUN mkdir -p /app
-RUN chown -R bitwarden:bitwarden \
-    /app \
-    /etc/bitwarden \
-    /etc/nginx/http.d \
-    /etc/supervisor \
-    /etc/supervisor.d \
-    /var/lib/nginx \
-    /var/log \
-    /run
 
 # Copy all apps from dotnet-build stage
 WORKDIR /app
-COPY --chown=bitwarden:bitwarden --from=dotnet-build /app ./
+COPY --from=dotnet-build /app ./
 
 # Copy Web files from web-setup stage
-COPY --chown=bitwarden:bitwarden --from=web-setup /tmp/build /app/Web
+COPY --from=web-setup /tmp/build /app/Web
 
 # Set up supervisord
-COPY --chown=bitwarden:bitwarden docker-unified/supervisord/*.ini /etc/supervisor.d/
-COPY --chown=bitwarden:bitwarden docker-unified/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
+COPY docker-unified/supervisord/*.ini /etc/supervisor.d/
+COPY docker-unified/supervisord/supervisord.conf /etc/supervisor/supervisord.conf
 RUN rm -f /etc/supervisord.conf
 
 # Set up nginx
@@ -267,9 +264,9 @@ COPY docker-unified/hbs/app-id.hbs /etc/hbs/
 COPY docker-unified/hbs/config.yaml /etc/hbs/
 
 # Download hbs tool for generating final configurations
-RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-x64_dotnet.zip; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-armv7_dotnet.zip; fi
-RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_alpine-arm64_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_linux-x64_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm/v7" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_linux-armv7_dotnet.zip; fi
+RUN if [ "$TARGETPLATFORM" = "linux/arm64" ] ; then curl -L --output hbs.zip https://github.com/bitwarden/Handlebars.conf/releases/download/v1.3.0/hbs_linux-arm64_dotnet.zip; fi
 
 # Extract hbs
 RUN unzip hbs.zip -d /usr/local/bin && rm hbs.zip
@@ -279,14 +276,7 @@ RUN chmod +x /usr/local/bin/hbs
 COPY docker-unified/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# TODO: Remove after testing
-RUN apk add --update-cache \
-    vim \
-    && rm -rf /var/cache/apk/*
-
 VOLUME ["/etc/bitwarden"]
 
 WORKDIR /app
-USER bitwarden:bitwarden
-HEALTHCHECK CMD curl --insecure -Lfs https://localhost/alive || curl -Lfs http://localhost/alive || exit 1
 ENTRYPOINT ["/entrypoint.sh"]

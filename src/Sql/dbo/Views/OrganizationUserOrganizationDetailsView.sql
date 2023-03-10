@@ -19,6 +19,8 @@ SELECT
     O.[UseResetPassword],
     O.[SelfHost],
     O.[UsersGetPremium],
+    O.[UseCustomPermissions],
+    O.[UseSecretsManager],
     O.[Seats],
     O.[MaxCollections],
     O.[MaxStorageGb],
@@ -37,7 +39,8 @@ SELECT
     OS.[FriendlyName] FamilySponsorshipFriendlyName,
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
     OS.[ToDelete] FamilySponsorshipToDelete,
-    OS.[ValidUntil] FamilySponsorshipValidUntil
+    OS.[ValidUntil] FamilySponsorshipValidUntil,
+    OU.[AccessSecretsManager]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

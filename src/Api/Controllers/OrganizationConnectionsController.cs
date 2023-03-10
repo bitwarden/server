@@ -96,7 +96,7 @@ public class OrganizationConnectionsController : Controller
         switch (model.Type)
         {
             case OrganizationConnectionType.CloudBillingSync:
-                return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model);
+                return await CreateOrUpdateOrganizationConnectionAsync<BillingSyncConfig>(organizationConnectionId, model, ValidateBillingSyncConfig);
             case OrganizationConnectionType.Scim:
                 return await CreateOrUpdateOrganizationConnectionAsync<ScimConfig>(organizationConnectionId, model);
             default:
@@ -191,7 +191,7 @@ public class OrganizationConnectionsController : Controller
         Guid? organizationConnectionId,
         OrganizationConnectionRequestModel model,
         Func<OrganizationConnectionRequestModel<T>, Task> validateAction = null)
-        where T : new()
+        where T : IConnectionConfig
     {
         var typedModel = new OrganizationConnectionRequestModel<T>(model);
         if (validateAction != null)

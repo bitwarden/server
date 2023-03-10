@@ -27,6 +27,8 @@
     [LicenseKey]                       VARCHAR (100)    NULL,
     [Kdf]                              TINYINT          NOT NULL,
     [KdfIterations]                    INT              NOT NULL,
+    [KdfMemory]                        INT              NULL,
+    [KdfParallelism]                   INT              NULL,
     [CreationDate]                     DATETIME2 (7)    NOT NULL,
     [RevisionDate]                     DATETIME2 (7)    NOT NULL,
     [ApiKey]                           VARCHAR (30)     NOT NULL,
@@ -35,6 +37,11 @@
     [FailedLoginCount]                 INT              CONSTRAINT [D_User_FailedLoginCount] DEFAULT ((0)) NOT NULL,
     [LastFailedLoginDate]              DATETIME2 (7)    NULL,
     [UnknownDeviceVerificationEnabled] BIT              CONSTRAINT [D_User_UnknownDeviceVerificationEnabled] DEFAULT ((1)) NOT NULL,
+    [AvatarColor]                      VARCHAR (7)      NULL,
+    [LastPasswordChangeDate]           DATETIME2 (7)    NULL,
+    [LastKdfChangeDate]                DATETIME2 (7)    NULL,
+    [LastKeyRotationDate]              DATETIME2 (7)    NULL,
+    [LastEmailChangeDate]              DATETIME2 (7)    NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

@@ -2,7 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
-using Bit.Infrastructure.EntityFramework;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,7 +72,8 @@ public class DatabaseDataAttribute : DataAttribute
             {
                 var efCollection = new ServiceCollection();
                 efCollection.AddLogging(configureLogging);
-                efCollection.AddEFRepositories(SelfHosted, database.ConnectionString, database.Type);
+                efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
+                efCollection.AddPasswordManagerEFRepositories(SelfHosted);
                 efCollection.AddTransient<ITestDatabaseHelper>(sp => new EfTestDatabaseHelper(sp.GetRequiredService<DatabaseContext>(), database));
                 efCollection.AddDataProtection();
                 yield return efCollection.BuildServiceProvider();

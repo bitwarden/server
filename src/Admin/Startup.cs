@@ -54,6 +54,9 @@ public class Startup
             case Core.Enums.SupportedDatabaseProviders.Postgres:
                 services.AddSingleton<IDbMigrator, PostgresMigrations.PostgresDbMigrator>();
                 break;
+            case Core.Enums.SupportedDatabaseProviders.Sqlite:
+                services.AddSingleton<IDbMigrator, SqliteMigrations.SqliteDbMigrator>();
+                break;
             default:
                 break;
         }
@@ -80,9 +83,9 @@ public class Startup
         services.AddDefaultServices(globalSettings);
 
 #if OSS
-            services.AddOosServices();
+        services.AddOosServices();
 #else
-        services.AddCommCoreServices();
+        services.AddCommercialCoreServices();
 #endif
 
         // Mvc

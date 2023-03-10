@@ -7,11 +7,11 @@ services:
       - db
     env_file:
       - settings.env
-    image: ${REGISTRY:-bitwarden}/self-host:${TAG:-latest}
+    image: ${REGISTRY:-bitwarden}/self-host:${TAG:-beta}
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:8080"
+      - "443:8443"
     volumes:
       - bitwarden:/etc/bitwarden
       - logs:/var/log/bitwarden

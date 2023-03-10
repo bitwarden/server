@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using NoopRepos = Bit.Core.Repositories.Noop;
 
 namespace Bit.IntegrationTestCommon.Factories;
 
@@ -26,7 +29,7 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// <remarks>
     /// This will need to be set BEFORE using the <c>Server</c> property
     /// </remarks>
-    public string DatabaseName { get; set; } = FactoryConstants.DefaultDatabaseName;
+    public string DatabaseName { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
     /// Configure the web host to use an EF in memory database
@@ -48,7 +51,14 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 { "globalSettings:postgreSql:connectionString", "Host=localhost;Username=test;Password=test;Database=test" },
 
                 // Clear the redis connection string for distributed caching, forcing an in-memory implementation
-                { "globalSettings:redis:connectionString", ""}
+                { "globalSettings:redis:connectionString", ""},
+
+                // Clear Storage
+                { "globalSettings:attachment:connectionString", null},
+                { "globalSettings:events:connectionString", null},
+                { "globalSettings:send:connectionString", null},
+                { "globalSettings:notifications:connectionString", null},
+                { "globalSettings:storage:connectionString", null},
             });
         });
 
@@ -56,10 +66,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         {
             var dbContextOptions = services.First(sd => sd.ServiceType == typeof(DbContextOptions<DatabaseContext>));
             services.Remove(dbContextOptions);
-            services.AddScoped(_ =>
+            services.AddScoped(services =>
             {
                 return new DbContextOptionsBuilder<DatabaseContext>()
                     .UseInMemoryDatabase(DatabaseName)
+                    .UseApplicationServiceProvider(services)
                     .Options;
             });
 
@@ -94,6 +105,28 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             services.Remove(captchaValidationService);
             services.AddSingleton<ICaptchaValidationService, NoopCaptchaValidationService>();
 
+            // Disable blocking
+            var blockingService = services.First(sd => sd.ServiceType == typeof(IBlockIpService));
+            services.Remove(blockingService);
+            services.AddSingleton<IBlockIpService, NoopBlockIpService>();
+
+            // TODO: Install and use azurite in CI pipeline
+            var installationDeviceRepository =
+                services.First(sd => sd.ServiceType == typeof(IInstallationDeviceRepository));
+            services.Remove(installationDeviceRepository);
+            services.AddSingleton<IInstallationDeviceRepository, NoopRepos.InstallationDeviceRepository>();
+
+            // TODO: Install and use azurite in CI pipeline
+            var metaDataRepository =
+                services.First(sd => sd.ServiceType == typeof(IMetaDataRepository));
+            services.Remove(metaDataRepository);
+            services.AddSingleton<IMetaDataRepository, NoopRepos.MetaDataRepository>();
+
+            // TODO: Install and use azurite in CI pipeline
+            var referenceEventService = services.First(sd => sd.ServiceType == typeof(IReferenceEventService));
+            services.Remove(referenceEventService);
+            services.AddSingleton<IReferenceEventService, NoopReferenceEventService>();
+
             // Our Rate limiter works so well that it begins to fail tests unless we carve out
             // one whitelisted ip. We should still test the rate limiter though and they should change the Ip
             // to something that is NOT whitelisted
@@ -107,6 +140,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Fix IP Rate Limiting
             services.AddSingleton<IStartupFilter, CustomStartupFilter>();
+
+            // Disable logs
+            services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
         });
     }
 
@@ -114,5 +150,11 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     {
         var scope = Services.CreateScope();
         return scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+    }
+
+    public T GetService<T>()
+    {
+        var scope = Services.CreateScope();
+        return scope.ServiceProvider.GetRequiredService<T>();
     }
 }

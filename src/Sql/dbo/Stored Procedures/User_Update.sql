@@ -27,6 +27,8 @@
     @LicenseKey VARCHAR(100),
     @Kdf TINYINT,
     @KdfIterations INT,
+    @KdfMemory INT = NULL,
+    @KdfParallelism INT = NULL,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @ApiKey VARCHAR(30),
@@ -34,7 +36,12 @@
     @UsesKeyConnector BIT = 0,
     @FailedLoginCount INT,
     @LastFailedLoginDate DATETIME2(7),
-    @UnknownDeviceVerificationEnabled BIT = 1
+    @UnknownDeviceVerificationEnabled BIT = 1,
+    @AvatarColor VARCHAR(7),
+    @LastPasswordChangeDate DATETIME2(7) = NULL,
+    @LastKdfChangeDate DATETIME2(7) = NULL,
+    @LastKeyRotationDate DATETIME2(7) = NULL,
+    @LastEmailChangeDate DATETIME2(7) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -69,6 +76,8 @@ BEGIN
         [LicenseKey] = @LicenseKey,
         [Kdf] = @Kdf,
         [KdfIterations] = @KdfIterations,
+        [KdfMemory] = @KdfMemory,
+        [KdfParallelism] = @KdfParallelism,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [ApiKey] = @ApiKey,
@@ -76,7 +85,12 @@ BEGIN
         [UsesKeyConnector] = @UsesKeyConnector,
         [FailedLoginCount] = @FailedLoginCount,
         [LastFailedLoginDate] = @LastFailedLoginDate,
-        [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled
+        [UnknownDeviceVerificationEnabled] = @UnknownDeviceVerificationEnabled,
+        [AvatarColor] = @AvatarColor,
+        [LastPasswordChangeDate] = @LastPasswordChangeDate,
+        [LastKdfChangeDate] = @LastKdfChangeDate,
+        [LastKeyRotationDate] = @LastKeyRotationDate,
+        [LastEmailChangeDate] = @LastEmailChangeDate
     WHERE
         [Id] = @Id
 END

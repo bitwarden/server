@@ -1,5 +1,5 @@
-﻿using System.Data.SqlClient;
-using Bit.Core.Utilities;
+﻿using Bit.Core.Utilities;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Admin.HostedServices;
 
