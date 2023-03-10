@@ -55,12 +55,15 @@ jobs:
         run: "pwsh ./migrate.ps1"
         shell: pwsh
 
+      - name: Display Files
+        run: ls -R
+
       - name: Diff sqlproj to migrations
-        run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"../Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
         shell: pwsh
 
       - name: Generate SQL file
-        run: /usr/local/sqlpackage/sqlpackage /action:Script /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"diff.sql" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        run: /usr/local/sqlpackage/sqlpackage /action:Script /SourceFile:"../Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"diff.sql" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
         shell: pwsh
 
       - name: Upload Report
