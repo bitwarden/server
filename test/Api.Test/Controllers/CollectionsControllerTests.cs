@@ -148,7 +148,7 @@ public class CollectionsControllerTests
             OrganizationId = orgId.ToString()
         };
 
-        var collections = new List<CollectionDetails>
+        var collections = new List<Collection>
             {
                 new CollectionDetails
                 {
@@ -171,7 +171,7 @@ public class CollectionsControllerTests
             .Returns(user.Id);
 
         sutProvider.GetDependency<ICollectionService>()
-            .GetOrganizationCollections(user.Id)
+            .GetOrganizationCollections(orgId)
             .Returns(collections);
 
         // Act
@@ -219,7 +219,7 @@ public class CollectionsControllerTests
             OrganizationId = orgId.ToString()
         };
 
-        var collections = new List<CollectionDetails>
+        var collections = new List<Collection>
             {
                 new CollectionDetails
                 {
@@ -237,7 +237,7 @@ public class CollectionsControllerTests
             .Returns(user.Id);
 
         sutProvider.GetDependency<ICollectionService>()
-            .GetOrganizationCollections(user.Id)
+            .GetOrganizationCollections(orgId)
             .Returns(collections);
 
         // Act
