@@ -170,8 +170,8 @@ public class CollectionsControllerTests
             .UserId
             .Returns(user.Id);
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(user.Id)
+        sutProvider.GetDependency<ICollectionService>()
+            .GetOrganizationCollections(user.Id)
             .Returns(collections);
 
         // Act
@@ -236,8 +236,8 @@ public class CollectionsControllerTests
             .UserId
             .Returns(user.Id);
 
-        sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByUserIdAsync(user.Id)
+        sutProvider.GetDependency<ICollectionService>()
+            .GetOrganizationCollections(user.Id)
             .Returns(collections);
 
         // Act
