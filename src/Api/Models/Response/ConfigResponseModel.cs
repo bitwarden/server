@@ -10,15 +10,19 @@ public class ConfigResponseModel : ResponseModel
     public string GitHash { get; set; }
     public ServerConfigResponseModel Server { get; set; }
     public EnvironmentConfigResponseModel Environment { get; set; }
+    public IDictionary<string, object> FeatureStates { get; set; }
 
-    public ConfigResponseModel(string obj = "config") : base(obj)
+    public ConfigResponseModel() : base("config")
     {
         Version = AssemblyHelpers.GetVersion();
         GitHash = AssemblyHelpers.GetGitHash();
         Environment = new EnvironmentConfigResponseModel();
+        FeatureStates = new Dictionary<string, object>();
     }
 
-    public ConfigResponseModel(IGlobalSettings globalSettings, string obj = "config") : base(obj)
+    public ConfigResponseModel(
+        IGlobalSettings globalSettings,
+        IDictionary<string, object> featureStates) : base("config")
     {
         Version = AssemblyHelpers.GetVersion();
         GitHash = AssemblyHelpers.GetGitHash();
@@ -30,6 +34,7 @@ public class ConfigResponseModel : ResponseModel
             Notifications = globalSettings.BaseServiceUri.Notifications,
             Sso = globalSettings.BaseServiceUri.Sso
         };
+        FeatureStates = featureStates;
     }
 }
 
