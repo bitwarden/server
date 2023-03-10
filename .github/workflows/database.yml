@@ -40,7 +40,7 @@ jobs:
           echo "GitHub event: $GITHUB_EVENT"
 
       - name: Build DACPAC
-        run: dotnet build src/Sql --configuration Release --verbosity minimal --output Sql.dacpac
+        run: dotnet build src/Sql --configuration Release --verbosity minimal --output .
         shell: pwsh
 
       - name: Docker Compose up
@@ -54,11 +54,6 @@ jobs:
         working-directory: "dev"
         run: "pwsh ./migrate.ps1"
         shell: pwsh
-
-      - name: Display Files
-        run: |
-          pwd
-          ls -R
 
       - name: Diff sqlproj to migrations
         run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
