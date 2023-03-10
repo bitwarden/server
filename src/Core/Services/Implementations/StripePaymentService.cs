@@ -43,7 +43,7 @@ public class StripePaymentService : IPaymentService
         _btGateway = braintreeGateway;
     }
 
-    public async Task<string> PurchaseOrganizationAsync(ISubscriber org, PaymentMethodType paymentMethodType,
+    public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
         int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
     {
@@ -71,7 +71,7 @@ public class StripePaymentService : IPaymentService
             var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
             {
                 PaymentMethodNonce = paymentToken,
-                Email = org.BillingEmailAddress(),
+                Email = org.BillingEmail,
                 Id = org.BraintreeCustomerIdPrefix() + org.Id.ToString("N").ToLower() + randomSuffix,
                 CustomFields = new Dictionary<string, string>
                 {
@@ -117,8 +117,8 @@ public class StripePaymentService : IPaymentService
         {
             customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
             {
-                Description = org.BillingName(),
-                Email = org.BillingEmailAddress(),
+                Description = org.BusinessName,
+                Email = org.BillingEmail,
                 Source = stipeCustomerSourceToken,
                 PaymentMethod = stipeCustomerPaymentMethodId,
                 Metadata = stripeCustomerMetadata,
@@ -186,13 +186,13 @@ public class StripePaymentService : IPaymentService
         if (subscription.Status == "incomplete" &&
             subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
         {
-            org.EnableSubscription(false);
+            org.Enabled = false;
             return subscription.LatestInvoice.PaymentIntent.ClientSecret;
         }
         else
         {
-            org.EnableSubscription(true);
-            org.SetExpirationDate(subscription.CurrentPeriodEnd);
+            org.Enabled = true;
+            org.ExpirationDate = subscription.CurrentPeriodEnd;
             return null;
         }
     }
@@ -318,7 +318,7 @@ public class StripePaymentService : IPaymentService
         return (stripePaymentMethod, paymentMethodType);
     }
 
-    public async Task<string> PurchasePremiumAsync(ISubscriber user, PaymentMethodType paymentMethodType,
+    public async Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType,
         string paymentToken, short additionalStorageGb, TaxInfo taxInfo)
     {
         if (paymentMethodType != PaymentMethodType.Credit && string.IsNullOrWhiteSpace(paymentToken))
@@ -393,7 +393,7 @@ public class StripePaymentService : IPaymentService
                 var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
                 {
                     PaymentMethodNonce = paymentToken,
-                    Email = user.BillingEmailAddress(),
+                    Email = user.Email,
                     Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix,
                     CustomFields = new Dictionary<string, string>
                     {
@@ -428,8 +428,8 @@ public class StripePaymentService : IPaymentService
 
             customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
             {
-                Description = user.BillingName(),
-                Email = user.BillingEmailAddress(),
+                Description = user.Name,
+                Email = user.Email,
                 Metadata = stripeCustomerMetadata,
                 PaymentMethod = stipeCustomerPaymentMethodId,
                 Source = stipeCustomerSourceToken,
@@ -441,7 +441,7 @@ public class StripePaymentService : IPaymentService
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
                             Name = "Subscriber",
-                            Value = string.IsNullOrWhiteSpace(user.SubscriberName()) ? user.BillingEmailAddress() : user.SubscriberName(),
+                            Value = user.SubscriberName(),
                         },
                     }
                 },
@@ -519,8 +519,8 @@ public class StripePaymentService : IPaymentService
         }
         else
         {
-            user.EnableSubscription(true);
-            user.SetExpirationDate(subscription.CurrentPeriodEnd);
+            user.Premium = true;
+            user.PremiumExpirationDate = subscription.CurrentPeriodEnd;
             return null;
         }
     }
@@ -1339,6 +1339,7 @@ public class StripePaymentService : IPaymentService
 
         try
         {
+
             if (customer == null)
             {
                 customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions

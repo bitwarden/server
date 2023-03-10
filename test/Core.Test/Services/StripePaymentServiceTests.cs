@@ -70,6 +70,8 @@ public class StripePaymentServiceTests
             !c.Metadata.Any() &&
             c.InvoiceSettings.DefaultPaymentMethod == null &&
             c.InvoiceSettings.CustomFields != null &&
+            c.InvoiceSettings.CustomFields[0].Name == "Subscriber" &&
+            c.InvoiceSettings.CustomFields[0].Value == organization.SubscriberName() &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
             c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
             c.Address.Line1 == taxInfo.BillingAddressLine1 &&
@@ -121,6 +123,8 @@ public class StripePaymentServiceTests
             !c.Metadata.Any() &&
             c.InvoiceSettings.DefaultPaymentMethod == paymentToken &&
             c.InvoiceSettings.CustomFields != null &&
+            c.InvoiceSettings.CustomFields[0].Name == "Subscriber" &&
+            c.InvoiceSettings.CustomFields[0].Value == organization.SubscriberName() &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
             c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
             c.Address.Line1 == taxInfo.BillingAddressLine1 &&
@@ -235,10 +239,7 @@ public class StripePaymentServiceTests
     public async void PurchaseOrganizationAsync_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
-        var customFields = new List<CustomerInvoiceSettingsCustomFieldOptions>()
-        {
-            new CustomerInvoiceSettingsCustomFieldOptions() { Name = "Organization", Value = organization.Name },
-        };
+        
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {

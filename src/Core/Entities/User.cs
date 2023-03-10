@@ -86,7 +86,7 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
 
     public string SubscriberName()
     {
-        return Name;
+        return string.IsNullOrWhiteSpace(Name) ? Email : Name;
     }
 
     public string BraintreeCustomerIdPrefix()
@@ -107,16 +107,6 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     public bool IsUser()
     {
         return true;
-    }
-
-    public void EnableSubscription(bool enabled)
-    {
-        Premium = enabled;
-    }
-
-    public void SetExpirationDate(DateTime? expirationDate)
-    {
-        PremiumExpirationDate = expirationDate;
     }
 
     public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()
