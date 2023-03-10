@@ -43,9 +43,12 @@
                                 <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
                             </li>
                         }
-                        <li class="nav-item" active-controller="Organizations">
-                            <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
-                        </li>
+                        @if(AccessControlService.UserHasPermission(Permission.Org_List_View))
+                        {
+                            <li class="nav-item" active-controller="Organizations">
+                                <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
+                            </li>
+                        }
                         @if(!GlobalSettings.SelfHosted)
                         {
                             <li class="nav-item" active-controller="Providers">
