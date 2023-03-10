@@ -36,4 +36,11 @@ public interface IFeatureService
     /// <param name="defaultValue">The default value for the feature.</param>
     /// <returns>The feature variation value.</returns>
     string GetStringVariation(string key, ICurrentContext currentContext, string defaultValue = null);
+
+    /// <summary>
+    /// Gets all feature values.
+    /// </summary>
+    /// <param name="currentContext">A context providing information that can be used to evaluate the feature values.</param>
+    /// <returns>A dictionary of feature keys and their values.</returns>
+    Dictionary<string, object> GetAll(ICurrentContext currentContext);
 }
