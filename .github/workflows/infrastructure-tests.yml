@@ -61,11 +61,15 @@ jobs:
 
       - name: Migrate MySQL
         working-directory: 'util/MySqlMigrations'
-        run: 'dotnet ef database update --connection "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true" -- --GLOBALSETTINGS:MYSQL:CONNECTIONSTRING="server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"'
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GLOBALSETTINGS:MYSQL:CONNECTIONSTRING="$CONN_STR"'
+        env:
+          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
 
       - name: Migrate Postgres
         working-directory: 'util/PostgresMigrations'
-        run: 'dotnet ef database update --connection "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"'
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GLOBALSETTINGS:POSTGRES:CONNECTIONSTRING="$CONN_STR"'
+        env:
+          CONN_STR: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
         
       - name: Run Tests
         working-directory: 'test/Infrastructure.IntegrationTest'
