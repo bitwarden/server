@@ -61,7 +61,7 @@ jobs:
 
       - name: Migrate MySQL
         working-directory: 'util/MySqlMigrations'
-        run: 'dotnet ef database update --connection "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev" -- --GLOBALSETTINGS__MYSQL__CONNECTIONSTRING="server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"'
+        run: 'dotnet ef database update --connection "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev" -- --GLOBALSETTINGS:MYSQL:CONNECTIONSTRING="server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"'
 
       - name: Migrate Postgres
         working-directory: 'util/PostgresMigrations'

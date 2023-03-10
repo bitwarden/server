@@ -20,9 +20,6 @@ public class GlobalSettingsFactory
             .AddCommandLine(args)
             .Build();
 
-        // TODO: Remove before merging
-        Console.WriteLine(config.GetDebugView());
-
         config.GetSection("GlobalSettings").Bind(GlobalSettings);
     }
 }
