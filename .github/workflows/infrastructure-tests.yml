@@ -49,7 +49,7 @@ jobs:
         # We could think about not using profiles and pulling images directly to cover multiple versions
         run: |
           cp .env.example .env
-          docker compose --profile mssql postgres mysql up -d
+          docker compose --profile mssql --profile postgres --profile mysql up -d
         shell: pwsh
       
       - name: Migrate SQL Server
