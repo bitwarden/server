@@ -54,6 +54,11 @@ jobs:
           docker compose --profile mssql --profile postgres --profile mysql up -d
         shell: pwsh
       
+      - name: Debug
+        run: |
+          docker ps -a
+          docker exec -it bitwardenserver-mssql-1 printenv
+
       - name: Migrate SQL Server
         working-directory: 'dev'
         run: "pwsh ./migrate.ps1"
