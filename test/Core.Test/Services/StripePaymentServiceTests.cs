@@ -9,7 +9,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using NSubstitute;
-using Stripe;
 using Xunit;
 using Customer = Braintree.Customer;
 using PaymentMethod = Braintree.PaymentMethod;
