@@ -40,7 +40,7 @@ jobs:
           echo "GitHub event: $GITHUB_EVENT"
 
       - name: Build DACPAC
-        run: dotnet build src/Sql --configuration Release --verbosity minimal --output sql.dacpac
+        run: dotnet build src/Sql --configuration Release --verbosity minimal --output Sql.dacpac
         shell: pwsh
 
       - name: Docker Compose up
@@ -56,14 +56,16 @@ jobs:
         shell: pwsh
 
       - name: Display Files
-        run: ls -R
+        run: |
+          pwd
+          ls -R
 
       - name: Diff sqlproj to migrations
-        run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"../Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        run: /usr/local/sqlpackage/sqlpackage /action:DeployReport /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"report.xml" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
         shell: pwsh
 
       - name: Generate SQL file
-        run: /usr/local/sqlpackage/sqlpackage /action:Script /SourceFile:"../Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"diff.sql" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
+        run: /usr/local/sqlpackage/sqlpackage /action:Script /SourceFile:"Sql.dacpac" /TargetConnectionString:"Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;" /OutputPath:"diff.sql" /p:IgnoreColumnOrder=True /p:IgnoreComments=True
         shell: pwsh
 
       - name: Upload Report
