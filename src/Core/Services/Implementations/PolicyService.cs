@@ -152,25 +152,31 @@ public class PolicyService : IPolicyService
     private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId);
-        var minUserType = GetMinimumOrganizationUserTypeForPolicyType(policyType);
+        var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
         return organizationUserPolicyDetails.Where(o =>
             o.PolicyType == policyType &&
             o.PolicyEnabled &&
-            o.OrganizationUserType >= minUserType &&
+            !excludedUserTypes.Contains(o.OrganizationUserType) &&
             o.OrganizationUserStatus >= minStatus &&
             !o.IsProvider);
     }
 
-    private OrganizationUserType GetMinimumOrganizationUserTypeForPolicyType(PolicyType policyType)
+    private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)
     {
         switch (policyType)
         {
+            case PolicyType.MasterPassword:
+                return Array.Empty<OrganizationUserType>();
             case PolicyType.RequireSso:
                 // If 'EnforceSsoPolicyForAllUsers' is set to true then SSO policy applies to all user types otherwise it does not apply to Owner or Admin
-                return _globalSettings.Sso.EnforceSsoPolicyForAllUsers ? OrganizationUserType.Owner : OrganizationUserType.User;
-            default:
-                return OrganizationUserType.User;
+                if (_globalSettings.Sso.EnforceSsoPolicyForAllUsers)
+                {
+                    return Array.Empty<OrganizationUserType>();
+                }
+                break;
         }
+
+        return new[] { OrganizationUserType.Owner, OrganizationUserType.Admin };
     }
 
     private async Task DependsOnSingleOrgAsync(Organization org)
