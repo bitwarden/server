@@ -18,7 +18,7 @@ public class OrganizationUserPolicyDetails
 
     public OrganizationUserStatusType OrganizationUserStatus { get; set; }
 
-    public bool CanManagePolicies { get; set; }
+    public string OrganizationUserPermissionsData { get; set; }
 
     public bool IsProvider { get; set; }
 }

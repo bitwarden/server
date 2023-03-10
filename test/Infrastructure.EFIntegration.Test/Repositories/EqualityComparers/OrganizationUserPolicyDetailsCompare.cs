@@ -32,12 +32,12 @@ public class OrganizationUserPolicyDetailsCompare : IEqualityComparer<Organizati
                x.PolicyData == y.PolicyData &&
                x.OrganizationUserType == y.OrganizationUserType &&
                x.OrganizationUserStatus == y.OrganizationUserStatus &&
-               x.CanManagePolicies == y.CanManagePolicies &&
+               x.OrganizationUserPermissionsData == y.OrganizationUserPermissionsData &&
                x.IsProvider == y.IsProvider;
     }
 
     public int GetHashCode(OrganizationUserPolicyDetails obj)
     {
-        return HashCode.Combine(obj.OrganizationId, (int)obj.PolicyType, obj.PolicyEnabled, obj.PolicyData, (int)obj.OrganizationUserType, (int)obj.OrganizationUserStatus, obj.CanManagePolicies, obj.IsProvider);
+        return HashCode.Combine(obj.OrganizationId, (int)obj.PolicyType, obj.PolicyEnabled, obj.PolicyData, (int)obj.OrganizationUserType, (int)obj.OrganizationUserStatus, obj.OrganizationUserPermissionsData, obj.IsProvider);
     }
 }

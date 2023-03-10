@@ -615,7 +615,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                             PolicyData = p.Data,
                             OrganizationUserType = ou.Type,
                             OrganizationUserStatus = ou.Status,
-                            CanManagePolicies = ou.Permissions != null && ou.Permissions.Contains($"\"managePolicies\":true"),
+                            OrganizationUserPermissionsData = ou.Permissions,
                             IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
                         };
             return await query.ToListAsync();

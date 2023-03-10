@@ -11,7 +11,7 @@ SELECT
     P.[Data] as PolicyData,
     OU.[Type] as OrganizationUserType,
     OU.[Status] as OrganizationUserStatus,
-    (CASE WHEN OU.[Permissions] IS NULL THEN 0 ELSE (CASE WHEN COALESCE(JSON_VALUE(OU.[Permissions], '$.managePolicies'), 'false') = 'false' THEN 0 ELSE 1 END) END) as CanManagePolicies,
+    OU.[Permissions] as OrganizationUserPermissionsData,
     (CASE WHEN PUPO.[UserId] IS NULL THEN 0 ELSE 1 END) as IsProvider
 FROM
     [dbo].[PolicyView] P
