@@ -91,4 +91,18 @@ public class LaunchDarklyFeatureServiceTests
 
         Assert.Null(sutProvider.Sut.GetStringVariation(FeatureFlagKeys.SecretsManager, currentContext));
     }
+
+    [Fact(Skip = "For local development")]
+    public void GetAll()
+    {
+        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings());
+
+        var currentContext = Substitute.For<ICurrentContext>();
+        currentContext.UserId.Returns(Guid.NewGuid());
+
+        var results = sutProvider.Sut.GetAll(currentContext);
+
+        Assert.NotNull(results);
+        Assert.NotEmpty(results);
+    }
 }
