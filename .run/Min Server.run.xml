@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Min Server" type="CompoundRunConfigurationType">
+    <toRun name="Api" type="LaunchSettings" />
+    <toRun name="Identity" type="LaunchSettings" />
+    <method v="2" />
+  </configuration>
+</component>

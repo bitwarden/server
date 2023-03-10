@@ -13,7 +13,7 @@ public class AccessPoliciesCreateRequest
 
     public IEnumerable<AccessPolicyRequest>? ServiceAccountAccessPolicyRequests { get; set; }
 
-    public List<BaseAccessPolicy> ToBaseAccessPoliciesForProject(Guid projectId)
+    public List<BaseAccessPolicy> ToBaseAccessPoliciesForProject(Guid grantedProjectId)
     {
         if (UserAccessPolicyRequests == null && GroupAccessPolicyRequests == null && ServiceAccountAccessPolicyRequests == null)
         {
@@ -21,19 +21,76 @@ public class AccessPoliciesCreateRequest
         }
 
         var userAccessPolicies = UserAccessPolicyRequests?
-            .Select(x => x.ToUserProjectAccessPolicy(projectId)).ToList();
+            .Select(x => x.ToUserProjectAccessPolicy(grantedProjectId)).ToList();
 
         var groupAccessPolicies = GroupAccessPolicyRequests?
-            .Select(x => x.ToGroupProjectAccessPolicy(projectId)).ToList();
+            .Select(x => x.ToGroupProjectAccessPolicy(grantedProjectId)).ToList();
 
         var serviceAccountAccessPolicies = ServiceAccountAccessPolicyRequests?
-            .Select(x => x.ToServiceAccountProjectAccessPolicy(projectId)).ToList();
+            .Select(x => x.ToServiceAccountProjectAccessPolicy(grantedProjectId)).ToList();
 
         var policies = new List<BaseAccessPolicy>();
-        if (userAccessPolicies != null) { policies.AddRange(userAccessPolicies); }
-        if (groupAccessPolicies != null) { policies.AddRange(groupAccessPolicies); }
-        if (serviceAccountAccessPolicies != null) { policies.AddRange(serviceAccountAccessPolicies); }
+        if (userAccessPolicies != null)
+        {
+            policies.AddRange(userAccessPolicies);
+        }
+
+        if (groupAccessPolicies != null)
+        {
+            policies.AddRange(groupAccessPolicies);
+        }
+
+        if (serviceAccountAccessPolicies != null)
+        {
+            policies.AddRange(serviceAccountAccessPolicies);
+        }
         return policies;
+    }
+
+    public List<BaseAccessPolicy> ToBaseAccessPoliciesForServiceAccount(Guid grantedServiceAccountId)
+    {
+        if (UserAccessPolicyRequests == null && GroupAccessPolicyRequests == null)
+        {
+            throw new BadRequestException("No creation requests provided.");
+        }
+
+        var userAccessPolicies = UserAccessPolicyRequests?
+            .Select(x => x.ToUserServiceAccountAccessPolicy(grantedServiceAccountId)).ToList();
+
+        var groupAccessPolicies = GroupAccessPolicyRequests?
+            .Select(x => x.ToGroupServiceAccountAccessPolicy(grantedServiceAccountId)).ToList();
+
+        var policies = new List<BaseAccessPolicy>();
+        if (userAccessPolicies != null)
+        {
+            policies.AddRange(userAccessPolicies);
+        }
+
+        if (groupAccessPolicies != null)
+        {
+            policies.AddRange(groupAccessPolicies);
+        }
+        return policies;
+    }
+
+    public int Count()
+    {
+        var total = 0;
+
+        if (UserAccessPolicyRequests != null)
+        {
+            total += UserAccessPolicyRequests.Count();
+        }
+        if (GroupAccessPolicyRequests != null)
+        {
+            total += GroupAccessPolicyRequests.Count();
+        }
+        if (ServiceAccountAccessPolicyRequests != null)
+        {
+            total += ServiceAccountAccessPolicyRequests.Count();
+        }
+
+        return total;
     }
 }
 
@@ -71,6 +128,24 @@ public class AccessPolicyRequest
         {
             ServiceAccountId = GranteeId,
             GrantedProjectId = projectId,
+            Read = Read,
+            Write = Write
+        };
+
+    public UserServiceAccountAccessPolicy ToUserServiceAccountAccessPolicy(Guid id) =>
+        new()
+        {
+            OrganizationUserId = GranteeId,
+            GrantedServiceAccountId = id,
+            Read = Read,
+            Write = Write
+        };
+
+    public GroupServiceAccountAccessPolicy ToGroupServiceAccountAccessPolicy(Guid id) =>
+        new()
+        {
+            GroupId = GranteeId,
+            GrantedServiceAccountId = id,
             Read = Read,
             Write = Write
         };

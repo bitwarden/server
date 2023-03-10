@@ -86,6 +86,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<int> GetOccupiedSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.ExecuteScalarAsync<int>(
+                "[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
     public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
         bool onlyRegisteredUsers)
     {
@@ -405,7 +418,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(_marsConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_CreateMany]",
+                $"[{Schema}].[{Table}_CreateMany2]",
                 new { OrganizationUsersInput = orgUsersTVP },
                 commandType: CommandType.StoredProcedure);
         }
@@ -424,7 +437,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(_marsConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[{Table}_UpdateMany]",
+                $"[{Schema}].[{Table}_UpdateMany2]",
                 new { OrganizationUsersInput = orgUsersTVP },
                 commandType: CommandType.StoredProcedure);
         }

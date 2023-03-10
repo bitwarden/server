@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Business;
+using Bit.Core.Vault.Entities;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 
@@ -19,7 +20,7 @@ public interface IUserService
     Task<IdentityResult> RegisterUserAsync(User user, string masterPassword, string token, Guid? orgUserId);
     Task<IdentityResult> RegisterUserAsync(User user);
     Task SendMasterPasswordHintAsync(string email);
-    Task SendTwoFactorEmailAsync(User user, bool isBecauseNewDeviceLogin = false);
+    Task SendTwoFactorEmailAsync(User user);
     Task<bool> VerifyTwoFactorEmailAsync(User user, string token);
     Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
@@ -76,6 +77,4 @@ public interface IUserService
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
     Task<bool> VerifySecretAsync(User user, string secret);
-    Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType);
-    bool CanEditDeviceVerificationSettings(User user);
 }

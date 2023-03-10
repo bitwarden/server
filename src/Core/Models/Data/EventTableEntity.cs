@@ -27,6 +27,9 @@ public class EventTableEntity : TableEntity, IEvent
         IpAddress = e.IpAddress;
         ActingUserId = e.ActingUserId;
         SystemUser = e.SystemUser;
+        DomainName = e.DomainName;
+        SecretId = e.SecretId;
+        ServiceAccountId = e.ServiceAccountId;
     }
 
     public DateTime Date { get; set; }
@@ -46,6 +49,9 @@ public class EventTableEntity : TableEntity, IEvent
     public string IpAddress { get; set; }
     public Guid? ActingUserId { get; set; }
     public EventSystemUser? SystemUser { get; set; }
+    public string DomainName { get; set; }
+    public Guid? SecretId { get; set; }
+    public Guid? ServiceAccountId { get; set; }
 
     public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
     {
@@ -149,6 +155,24 @@ public class EventTableEntity : TableEntity, IEvent
             {
                 PartitionKey = pKey,
                 RowKey = $"CipherId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.OrganizationId.HasValue && e.ServiceAccountId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"ServiceAccountId={e.ServiceAccountId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.SecretId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"SecretId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}"
             });
         }
 

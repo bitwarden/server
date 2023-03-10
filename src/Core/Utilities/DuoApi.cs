@@ -15,8 +15,9 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Web;
+using Bit.Core.Models.Api.Response.Duo;
 
-namespace Bit.Core.Utilities.Duo;
+namespace Bit.Core.Utilities;
 
 public class DuoApi
 {
@@ -26,6 +27,8 @@ public class DuoApi
     private readonly string _host;
     private readonly string _ikey;
     private readonly string _skey;
+
+    private readonly HttpClient _httpClient = new();
 
     public DuoApi(string ikey, string skey, string host)
     {
@@ -92,11 +95,6 @@ public class DuoApi
         return string.Concat("Basic ", Encode64(auth));
     }
 
-    public string ApiCall(string method, string path, Dictionary<string, string> parameters = null)
-    {
-        return ApiCall(method, path, parameters, 0, out var statusCode);
-    }
-
     /// <param name="timeout">The request timeout, in milliseconds.
     /// Specify 0 to use the system-default timeout. Use caution if
     /// you choose to specify a custom timeout - some API
@@ -104,8 +102,7 @@ public class DuoApi
     /// return a response until an out-of-band authentication process
     /// has completed. In some cases, this may take as much as a
     /// small number of minutes.</param>
-    public string ApiCall(string method, string path, Dictionary<string, string> parameters, int timeout,
-        out HttpStatusCode statusCode)
+    private async Task<(string result, HttpStatusCode statusCode)> ApiCall(string method, string path, Dictionary<string, string> parameters, int timeout)
     {
         if (parameters == null)
         {
@@ -121,58 +118,39 @@ public class DuoApi
                 query = "?" + canonParams;
             }
         }
-        var url = string.Format("{0}://{1}{2}{3}", UrlScheme, _host, path, query);
+        var url = $"{UrlScheme}://{_host}{path}{query}";
 
         var dateString = RFC822UtcNow();
         var auth = Sign(method, path, canonParams, dateString);
 
-        var request = (HttpWebRequest)WebRequest.Create(url);
-        request.Method = method;
-        request.Accept = "application/json";
+        var request = new HttpRequestMessage
+        {
+            Method = new HttpMethod(method),
+            RequestUri = new Uri(url),
+        };
         request.Headers.Add("Authorization", auth);
         request.Headers.Add("X-Duo-Date", dateString);
-        request.UserAgent = UserAgent;
+        request.Headers.UserAgent.ParseAdd(UserAgent);
+
+        if (timeout > 0)
+        {
+            _httpClient.Timeout = TimeSpan.FromMilliseconds(timeout);
+        }
 
         if (method.Equals("POST") || method.Equals("PUT"))
         {
-            var data = Encoding.UTF8.GetBytes(canonParams);
-            request.ContentType = "application/x-www-form-urlencoded";
-            request.ContentLength = data.Length;
-            using (var requestStream = request.GetRequestStream())
-            {
-                requestStream.Write(data, 0, data.Length);
-            }
-        }
-        if (timeout > 0)
-        {
-            request.Timeout = timeout;
+            request.Content = new StringContent(canonParams, Encoding.UTF8, "application/x-www-form-urlencoded");
         }
 
-        // Do the request and process the result.
-        HttpWebResponse response;
-        try
-        {
-            response = (HttpWebResponse)request.GetResponse();
-        }
-        catch (WebException ex)
-        {
-            response = (HttpWebResponse)ex.Response;
-            if (response == null)
-            {
-                throw;
-            }
-        }
-        using (var reader = new StreamReader(response.GetResponseStream()))
-        {
-            statusCode = response.StatusCode;
-            return reader.ReadToEnd();
-        }
+        var response = await _httpClient.SendAsync(request);
+        var result = await response.Content.ReadAsStringAsync();
+        var statusCode = response.StatusCode;
+        return (result, statusCode);
     }
 
-    public T JSONApiCall<T>(string method, string path, Dictionary<string, string> parameters = null)
-        where T : class
+    public async Task<Response> JSONApiCall(string method, string path, Dictionary<string, string> parameters = null)
     {
-        return JSONApiCall<T>(method, path, parameters, 0);
+        return await JSONApiCall(method, path, parameters, 0);
     }
 
     /// <param name="timeout">The request timeout, in milliseconds.
@@ -182,27 +160,18 @@ public class DuoApi
     /// return a response until an out-of-band authentication process
     /// has completed. In some cases, this may take as much as a
     /// small number of minutes.</param>
-    public T JSONApiCall<T>(string method, string path, Dictionary<string, string> parameters, int timeout)
-        where T : class
+    private async Task<Response> JSONApiCall(string method, string path, Dictionary<string, string> parameters, int timeout)
     {
-        var res = ApiCall(method, path, parameters, timeout, out var statusCode);
+        var (res, statusCode) = await ApiCall(method, path, parameters, timeout);
         try
         {
-            // TODO: We should deserialize this into our own DTO and not work on dictionaries.
-            var dict = JsonSerializer.Deserialize<Dictionary<string, object>>(res);
-            if (dict["stat"].ToString() == "OK")
+            var obj = JsonSerializer.Deserialize<DuoResponseModel>(res);
+            if (obj.Stat == "OK")
             {
-                return JsonSerializer.Deserialize<T>(dict["response"].ToString());
+                return obj.Response;
             }
 
-            var check = ToNullableInt(dict["code"].ToString());
-            var code = check.GetValueOrDefault(0);
-            var messageDetail = string.Empty;
-            if (dict.ContainsKey("message_detail"))
-            {
-                messageDetail = dict["message_detail"].ToString();
-            }
-            throw new ApiException(code, (int)statusCode, dict["message"].ToString(), messageDetail);
+            throw new ApiException(obj.Code ?? 0, (int)statusCode, obj.Message, obj.MessageDetail);
         }
         catch (ApiException)
         {

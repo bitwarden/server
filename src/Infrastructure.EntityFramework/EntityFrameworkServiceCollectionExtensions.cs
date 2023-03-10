@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Repositories;
+using Bit.Infrastructure.EntityFramework.Vault.Repositories;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -73,6 +75,7 @@ public static class EntityFrameworkServiceCollectionExtensions
         services.AddSingleton<ITaxRateRepository, TaxRateRepository>();
         services.AddSingleton<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IUserRepository, UserRepository>();
+        services.AddSingleton<IOrganizationDomainRepository, OrganizationDomainRepository>();
 
         if (selfHosted)
         {

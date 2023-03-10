@@ -25,6 +25,7 @@ public class ApiResources
                 Claims.OrganizationCustom,
                 Claims.ProviderAdmin,
                 Claims.ProviderServiceUser,
+                Claims.SecretsManagerAccess,
             }),
             new(ApiScopes.Internal, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiPush, new[] { JwtClaimTypes.Subject }),

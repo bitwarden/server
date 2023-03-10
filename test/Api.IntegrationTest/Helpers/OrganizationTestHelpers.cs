@@ -9,8 +9,7 @@ namespace Bit.Api.IntegrationTest.Helpers;
 
 public static class OrganizationTestHelpers
 {
-    public static async Task<Tuple<Organization, OrganizationUser>> SignUpAsync<T>(
-        WebApplicationFactoryBase<T> factory,
+    public static async Task<Tuple<Organization, OrganizationUser>> SignUpAsync<T>(WebApplicationFactoryBase<T> factory,
         PlanType plan = PlanType.Free,
         string ownerEmail = "integration-test@bitwarden.com",
         string name = "Integration Test Org",
@@ -36,7 +35,8 @@ public static class OrganizationTestHelpers
         WebApplicationFactoryBase<T> factory,
         Guid organizationId,
         string userEmail,
-        OrganizationUserType type
+        OrganizationUserType type,
+        bool accessSecretsManager = false
     ) where T : class
     {
         var userRepository = factory.GetService<IUserRepository>();
@@ -50,9 +50,10 @@ public static class OrganizationTestHelpers
             UserId = user.Id,
             Key = null,
             Type = type,
-            Status = OrganizationUserStatusType.Invited,
+            Status = OrganizationUserStatusType.Confirmed,
             AccessAll = false,
             ExternalId = null,
+            AccessSecretsManager = accessSecretsManager,
         };
 
         await organizationUserRepository.CreateAsync(orgUser);

@@ -12,11 +12,13 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
     public Guid? UserId { get; set; }
     public string Name { get; set; }
     public string Email { get; set; }
+    public string AvatarColor { get; set; }
     public string TwoFactorProviders { get; set; }
     public bool? Premium { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public OrganizationUserType Type { get; set; }
     public bool AccessAll { get; set; }
+    public bool AccessSecretsManager { get; set; }
     public string ExternalId { get; set; }
     public string SsoExternalId { get; set; }
     public string Permissions { get; set; }
@@ -60,11 +62,9 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser
         return Premium.GetValueOrDefault(false);
     }
 
-    public bool OccupiesOrganizationSeat
+    public Permissions GetPermissions()
     {
-        get
-        {
-            return Status != OrganizationUserStatusType.Revoked;
-        }
+        return string.IsNullOrWhiteSpace(Permissions) ? null
+            : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Admin.Models;
 
@@ -18,7 +19,7 @@ public class OrganizationViewModel
         UserInvitedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Invited);
         UserAcceptedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Accepted);
         UserConfirmedCount = orgUsers.Count(u => u.Status == OrganizationUserStatusType.Confirmed);
-        OccupiedSeatCount = orgUsers.Count(u => u.OccupiesOrganizationSeat);
+        OccupiedSeatCount = UserInvitedCount + UserAcceptedCount + UserConfirmedCount;
         CipherCount = ciphers.Count();
         CollectionCount = collections.Count();
         GroupCount = groups?.Count() ?? 0;

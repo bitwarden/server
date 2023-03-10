@@ -62,9 +62,12 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     public bool UsesKeyConnector { get; set; }
     public int FailedLoginCount { get; set; }
     public DateTime? LastFailedLoginDate { get; set; }
-    public bool UnknownDeviceVerificationEnabled { get; set; }
     [MaxLength(7)]
     public string AvatarColor { get; set; }
+    public DateTime? LastPasswordChangeDate { get; set; }
+    public DateTime? LastKdfChangeDate { get; set; }
+    public DateTime? LastKeyRotationDate { get; set; }
+    public DateTime? LastEmailChangeDate { get; set; }
 
     public void SetNewId()
     {
