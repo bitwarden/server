@@ -68,9 +68,16 @@ jobs:
       - name: Run Tests
         working-directory: 'test/Infrastructure.IntegrationTest'
         env:
-          BW_TEST_DAPPER__SQLSERVER: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
-          BW_TEST_EF__MYSQL: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
-          BW_TEST_EF__POSTGRES: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
+          # Default Postgres:
+          BW_TEST_DATABASES__0__TYPE: "Postgres"
+          BW_TEST_DATABASES__0__CONNECTIONSTRING: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
+          # Default MySql
+          BW_TEST_DATABASES__1__TYPE: "MySql"
+          BW_TEST_DATABASES__1__CONNECTIONSTRING: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
+          # Default Dapper SqlServer
+          BW_TEST_DATABASES__2__TYPE: "SqlServer"
+          BW_TEST_DATABASES__2__CONNECTIONSTRING: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+          BW_TEST_DATABASES__2__USEEF: "false" # Defaults to false so this isn't needed but this is how it is possible to also run the EF version of SqlServer by setting this to false
         run: dotnet test
         shell: pwsh
       
