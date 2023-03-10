@@ -57,7 +57,7 @@ jobs:
       - name: Debug
         run: |
           docker ps -a
-          docker exec -it bitwardenserver-mssql-1 printenv
+          docker exec bitwardenserver-mssql-1 printenv
 
       - name: Migrate SQL Server
         working-directory: 'dev'
