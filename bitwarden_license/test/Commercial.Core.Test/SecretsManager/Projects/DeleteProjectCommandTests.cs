@@ -19,7 +19,7 @@ public class DeleteProjectCommandTests
     public async Task DeleteProjects_Throws_NotFoundException(List<Guid> data, Guid userId,
       SutProvider<DeleteProjectCommand> sutProvider)
     {
-        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>());
+        sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(data).Returns(new List<Project>());
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, userId));
 
@@ -35,7 +35,7 @@ public class DeleteProjectCommandTests
         {
             Id = Guid.NewGuid()
         };
-        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(new List<Project>() { project });
+        sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(data).Returns(new List<Project>() { project });
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteProjects(data, userId));
 
@@ -51,7 +51,7 @@ public class DeleteProjectCommandTests
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ClientType = ClientType.User;
-        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
+        sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(data).Returns(projects);
         sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(Arg.Any<Guid>(), userId).Returns(true);
 
         var results = await sutProvider.Sut.DeleteProjects(data, userId);
@@ -73,7 +73,7 @@ public class DeleteProjectCommandTests
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ClientType = ClientType.User;
-        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
+        sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(data).Returns(projects);
         sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(userId, userId).Returns(false);
 
         var results = await sutProvider.Sut.DeleteProjects(data, userId);
@@ -95,7 +95,7 @@ public class DeleteProjectCommandTests
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
-        sutProvider.GetDependency<IProjectRepository>().GetManyByIds(data).Returns(projects);
+        sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(data).Returns(projects);
 
         var results = await sutProvider.Sut.DeleteProjects(data, userId);
 
