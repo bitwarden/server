@@ -76,7 +76,7 @@ public class DeleteProjectCommand : IDeleteProjectCommand
         {
             var secretIds = results.SelectMany(projTuple => projTuple.Item1?.Secrets?.Select(s => s.Id) ?? Array.Empty<Guid>()).ToList();
 
-            if (secretIds != null && secretIds.Count > 0)
+            if (secretIds.Count > 0)
             {
                 await _secretRepository.UpdateRevisionDates(secretIds);
             }
