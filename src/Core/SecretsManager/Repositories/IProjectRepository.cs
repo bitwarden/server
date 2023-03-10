@@ -17,4 +17,5 @@ public interface IProjectRepository
     Task<bool> UserHasWriteAccessToProject(Guid id, Guid userId);
     Task<bool> ServiceAccountHasWriteAccessToProject(Guid id, Guid userId);
     Task<bool> ServiceAccountHasReadAccessToProject(Guid id, Guid userId);
+    Task<(bool Read, bool Write)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType);
 }

@@ -5,7 +5,6 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Api.SecretsManager;
-using Bit.Api.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -39,6 +38,7 @@ public class OrganizationsController : Controller
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
 
@@ -56,6 +56,7 @@ public class OrganizationsController : Controller
         IRotateOrganizationApiKeyCommand rotateOrganizationApiKeyCommand,
         ICreateOrganizationApiKeyCommand createOrganizationApiKeyCommand,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
+        IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         GlobalSettings globalSettings)
     {
@@ -72,6 +73,7 @@ public class OrganizationsController : Controller
         _rotateOrganizationApiKeyCommand = rotateOrganizationApiKeyCommand;
         _createOrganizationApiKeyCommand = createOrganizationApiKeyCommand;
         _organizationApiKeyRepository = organizationApiKeyRepository;
+        _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _globalSettings = globalSettings;
     }
@@ -219,28 +221,6 @@ public class OrganizationsController : Controller
 
         var organizationSignup = model.ToOrganizationSignup(user);
         var result = await _organizationService.SignUpAsync(organizationSignup);
-        return new OrganizationResponseModel(result.Item1);
-    }
-
-    [Obsolete("2022-12-7 Moved to SelfHostedOrganizationLicensesController, to be removed in EC-815")]
-    [HttpPost("license")]
-    [SelfHosted(SelfHostedOnly = true)]
-    public async Task<OrganizationResponseModel> PostLicense(OrganizationCreateLicenseRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(HttpContext, model.License);
-        if (license == null)
-        {
-            throw new BadRequestException("Invalid license");
-        }
-
-        var result = await _organizationService.SignUpAsync(license, user, model.Key,
-            model.CollectionName, model.Keys?.PublicKey, model.Keys?.EncryptedPrivateKey);
         return new OrganizationResponseModel(result.Item1);
     }
 
@@ -442,26 +422,6 @@ public class OrganizationsController : Controller
         {
             await _organizationService.DeleteAsync(organization);
         }
-    }
-
-    [Obsolete("2022-12-7 Moved to SelfHostedOrganizationLicensesController, to be removed in EC-815")]
-    [HttpPost("{id}/license")]
-    [SelfHosted(SelfHostedOnly = true)]
-    public async Task PostLicense(string id, LicenseRequestModel model)
-    {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.OrganizationOwner(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var license = await ApiHelpers.ReadJsonFileFromBody<OrganizationLicense>(HttpContext, model.License);
-        if (license == null)
-        {
-            throw new BadRequestException("Invalid license");
-        }
-
-        await _organizationService.UpdateLicenseAsync(new Guid(id), license);
     }
 
     [HttpPost("{id}/import")]

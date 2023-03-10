@@ -6,6 +6,7 @@ using Bit.Core.Settings;
 using Bit.Infrastructure.EFIntegration.Test.Helpers;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;

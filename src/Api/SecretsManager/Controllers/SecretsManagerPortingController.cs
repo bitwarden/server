@@ -33,7 +33,7 @@ public class SecretsManagerPortingController : Controller
     {
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
@@ -53,12 +53,17 @@ public class SecretsManagerPortingController : Controller
     {
         if (!await _currentContext.OrganizationAdmin(organizationId))
         {
-            throw new UnauthorizedAccessException();
+            throw new NotFoundException();
         }
 
         if (importRequest.Projects?.Count() > 1000 || importRequest.Secrets?.Count() > 6000)
         {
             throw new BadRequestException("You cannot import this much data at once, the limit is 1000 projects and 6000 secrets.");
+        }
+
+        if (importRequest.Secrets.Any(s => s.ProjectIds.Count() > 1))
+        {
+            throw new BadRequestException("A secret can only be in one project at a time.");
         }
 
         await _importCommand.ImportAsync(organizationId, importRequest.ToSMImport());
