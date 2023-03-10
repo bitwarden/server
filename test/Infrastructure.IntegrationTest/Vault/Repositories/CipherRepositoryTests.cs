@@ -20,7 +20,7 @@ public class CipherRepositoryTests
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
-            Email = "test@email.com",
+            Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -29,6 +29,7 @@ public class CipherRepositoryTests
         {
             Type = CipherType.Login,
             UserId = user.Id,
+            Data = "", // TODO: EF does not enforce this as NOT NULL
         });
 
         helper.ClearTracker();
@@ -55,7 +56,7 @@ public class CipherRepositoryTests
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
-            Email = "test@email.com",
+            Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -63,6 +64,8 @@ public class CipherRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Organization",
+            BillingEmail = user.Email,
+            Plan = "Test" // TODO: EF does not enforce this as NOT NULL
         });
 
         await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -85,6 +88,7 @@ public class CipherRepositoryTests
         {
             Type = CipherType.Login,
             OrganizationId = organization.Id,
+            Data = "", // TODO: EF does not enforce this as NOT NULL
         }, new List<Guid>
         {
             collection.Id,
