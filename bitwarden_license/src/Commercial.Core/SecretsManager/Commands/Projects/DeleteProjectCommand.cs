@@ -2,7 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
-using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
@@ -12,13 +11,13 @@ public class DeleteProjectCommand : IDeleteProjectCommand
 {
     private readonly IProjectRepository _projectRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IUpdateSecretCommand _updateSecretCommand;
+    private readonly ISecretRepository _secretRepository;
 
-    public DeleteProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext, IUpdateSecretCommand updateSecretCommand)
+    public DeleteProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext, ISecretRepository secretRepository)
     {
         _projectRepository = projectRepository;
         _currentContext = currentContext;
-        _updateSecretCommand = updateSecretCommand;
+        _secretRepository = secretRepository;
     }
 
     public async Task<List<Tuple<Project, string>>> DeleteProjects(List<Guid> ids, Guid userId)
@@ -76,11 +75,15 @@ public class DeleteProjectCommand : IDeleteProjectCommand
         if (deleteIds.Count > 0)
         {
             var secretIds = results.SelectMany(projTuple => projTuple.Item1?.Secrets?.Select(s => s.Id) ?? Array.Empty<Guid>()).ToList();
-            await _updateSecretCommand.UpdateRevisionDates(secretIds);
+
+            if (secretIds != null && secretIds.Count > 0)
+            {
+                await _secretRepository.UpdateRevisionDates(secretIds);
+            }
+
             await _projectRepository.DeleteManyByIdAsync(deleteIds);
         }
 
         return results;
     }
 }
-

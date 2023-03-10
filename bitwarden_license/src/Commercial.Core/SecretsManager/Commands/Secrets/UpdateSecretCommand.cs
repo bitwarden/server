@@ -62,14 +62,4 @@ public class UpdateSecretCommand : IUpdateSecretCommand
                 return false;
         }
     }
-
-    public async Task UpdateRevisionDates(List<Guid> ids)
-    {
-        if (ids == null || ids.Count == 0)
-        {
-            return;
-        }
-
-        await _secretRepository.UpdateRevisionDates(ids);
-    }
 }
