@@ -239,7 +239,7 @@ public class StripePaymentServiceTests
     public async void PurchaseOrganizationAsync_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
-        
+
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
