@@ -58,6 +58,8 @@ jobs:
         run: |
           docker ps -a
           docker exec bitwardenserver-mssql-1 printenv
+          docker logs bitwardenserver-mssql-1
+          sleep 15s
 
       - name: Migrate SQL Server
         working-directory: 'dev'
