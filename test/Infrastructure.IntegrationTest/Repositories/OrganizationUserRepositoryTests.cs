@@ -16,7 +16,7 @@ public class OrganizationUserRepositoryTests
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
-            Email = "test@email.com",
+            Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -24,6 +24,7 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
+            BillingEmail = user.Email, // TODO: EF does not enfore this being NOT NULL
         });
 
         var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -50,7 +51,7 @@ public class OrganizationUserRepositoryTests
         var user1 = await userRepository.CreateAsync(new User
         {
             Name = "Test User 1",
-            Email = "test1@email.com",
+            Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -58,7 +59,7 @@ public class OrganizationUserRepositoryTests
         var user2 = await userRepository.CreateAsync(new User
         {
             Name = "Test User 2",
-            Email = "test1@email.com",
+            Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });

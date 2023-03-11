@@ -54,12 +54,9 @@ jobs:
           docker compose --profile mssql --profile postgres --profile mysql up -d
         shell: pwsh
       
-      - name: Debug
-        run: |
-          docker ps -a
-          docker exec bitwardenserver-mssql-1 printenv
-          docker logs bitwardenserver-mssql-1
-          sleep 15s
+      # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
+      - name: Sleep
+        run: sleep 15s
 
       - name: Migrate SQL Server
         working-directory: 'dev'
