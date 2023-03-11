@@ -46,7 +46,7 @@
             background-color: #f6f6f6;
         }
 
-        white-title {
+        .white-title {
             font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
             box-sizing: border-box;
             font-size: 24px;
@@ -57,7 +57,7 @@
             color: #ffffff;
         }
 
-        @media only screen and (max-width: 600px) {
+        @media only screen and (max-width: 350px) {
             body {
                 padding: 0 !important;
             }
@@ -102,9 +102,13 @@
                 padding-left: 10px;
             }
 
-            .title-header {
+            .title-header-text {
                 width: 100%;
                 display: block;
+                padding-top: 75px;
+                padding-bottom: 0px;
+                padding-left: 35px;
+                padding-right: 20px;
             }
 
             .title-header-image {
@@ -121,10 +125,14 @@
             }
         }
 
-        @media only screen and (min-width: 600px) {
+        @media only screen and (min-width: 350px) {
             .title-header-text {
-                width: 66%;
+                width: 65%;
                 display: inline-block;
+                padding-top: 75px;
+                padding-bottom: 75px;
+                padding-left: 35px;
+                padding-right: 20px;
             }
 
             .title-header-image {
@@ -141,7 +149,7 @@
             }
 
             .footer-text {
-                width: 66%;
+                width: 65%;
             }
         }
 
