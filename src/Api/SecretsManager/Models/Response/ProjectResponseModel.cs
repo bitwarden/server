@@ -7,8 +7,8 @@ public class ProjectResponseModel : ResponseModel
 {
     private const string _objectName = "project";
 
-    public ProjectResponseModel(Project project)
-        : base(_objectName)
+    public ProjectResponseModel(Project project, string obj = _objectName)
+        : base(obj)
     {
         if (project == null)
         {

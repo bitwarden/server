@@ -16,6 +16,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
@@ -175,6 +176,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
+        services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&

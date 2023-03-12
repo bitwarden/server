@@ -1,11 +1,11 @@
 ﻿using System.Text;
 using AutoFixture;
-using Bit.Core.Entities;
-using Bit.Core.Models.Data;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.CipherAttachmentMetaData;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

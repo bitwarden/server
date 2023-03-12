@@ -1,5 +1,5 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.Models.Data;
+using Bit.Core.Vault.Entities;
 using Event = Bit.Infrastructure.EntityFramework.Models.Event;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;

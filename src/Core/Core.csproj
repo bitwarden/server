@@ -56,6 +56,7 @@
     <PackageReference Include="Otp.NET" Version="1.2.2" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.6" />
+    <PackageReference Include="LaunchDarkly.ServerSdk" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>

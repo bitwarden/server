@@ -11,11 +11,13 @@ public class DeleteProjectCommand : IDeleteProjectCommand
 {
     private readonly IProjectRepository _projectRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretRepository _secretRepository;
 
-    public DeleteProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext)
+    public DeleteProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext, ISecretRepository secretRepository)
     {
         _projectRepository = projectRepository;
         _currentContext = currentContext;
+        _secretRepository = secretRepository;
     }
 
     public async Task<List<Tuple<Project, string>>> DeleteProjects(List<Guid> ids, Guid userId)
@@ -25,7 +27,7 @@ public class DeleteProjectCommand : IDeleteProjectCommand
             throw new ArgumentNullException();
         }
 
-        var projects = (await _projectRepository.GetManyByIds(ids))?.ToList();
+        var projects = (await _projectRepository.GetManyWithSecretsByIds(ids))?.ToList();
 
         if (projects?.Any() != true || projects.Count != ids.Count)
         {
@@ -72,9 +74,16 @@ public class DeleteProjectCommand : IDeleteProjectCommand
 
         if (deleteIds.Count > 0)
         {
+            var secretIds = results.SelectMany(projTuple => projTuple.Item1?.Secrets?.Select(s => s.Id) ?? Array.Empty<Guid>()).ToList();
+
+            if (secretIds.Count > 0)
+            {
+                await _secretRepository.UpdateRevisionDates(secretIds);
+            }
+
             await _projectRepository.DeleteManyByIdAsync(deleteIds);
         }
+
         return results;
     }
 }
-
