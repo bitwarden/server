@@ -16,6 +16,7 @@ public class StripePaymentService : IPaymentService
     private const string PremiumPlanAppleIapId = "premium-annually-appleiap";
     private const decimal PremiumPlanAppleIapPrice = 14.99M;
     private const string StoragePlanId = "storage-gb-annually";
+    private const string ProviderDiscountId = "3524-percent-off";
 
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
@@ -45,7 +46,7 @@ public class StripePaymentService : IPaymentService
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
+        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo,bool provider = false)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -147,6 +148,10 @@ public class StripePaymentService : IPaymentService
             });
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
             subCreateOptions.Customer = customer.Id;
+            if (provider)
+            {
+                subCreateOptions.Coupon = ProviderDiscountId;
+            }
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {

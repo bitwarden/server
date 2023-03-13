@@ -664,7 +664,7 @@ public class OrganizationService : IOrganizationService
         {
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                 signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                signup.PremiumAccessAddon, signup.TaxInfo);
+                signup.PremiumAccessAddon, signup.TaxInfo,provider);
         }
 
         var ownerId = provider ? default : signup.Owner.Id;

@@ -10,7 +10,7 @@ public interface IPaymentService
     Task CancelAndRecoverChargesAsync(ISubscriber subscriber);
     Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
-        bool premiumAccessAddon, TaxInfo taxInfo);
+        bool premiumAccessAddon, TaxInfo taxInfo,bool provider = false);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
     Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan,
