@@ -61,6 +61,11 @@ public class SecretsManagerPortingController : Controller
             throw new BadRequestException("You cannot import this much data at once, the limit is 1000 projects and 6000 secrets.");
         }
 
+        if (importRequest.Secrets.Any(s => s.ProjectIds.Count() > 1))
+        {
+            throw new BadRequestException("A secret can only be in one project at a time.");
+        }
+
         await _importCommand.ImportAsync(organizationId, importRequest.ToSMImport());
     }
 }

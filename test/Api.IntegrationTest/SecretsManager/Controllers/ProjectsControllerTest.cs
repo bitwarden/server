@@ -361,7 +361,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
             results!.Data.Select(x => x.Id).OrderBy(x => x));
         Assert.DoesNotContain(results.Data, x => x.Error != null);
 
-        var projects = await _projectRepository.GetManyByIds(projectIds);
+        var projects = await _projectRepository.GetManyWithSecretsByIds(projectIds);
         Assert.Empty(projects);
     }
 

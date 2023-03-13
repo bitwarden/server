@@ -203,11 +203,13 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
+            var utcNow = DateTime.UtcNow;
             var secrets = dbContext.Secret.Where(c => ids.Contains(c.Id));
             await secrets.ForEachAsync(secret =>
             {
                 dbContext.Attach(secret);
                 secret.DeletedDate = null;
+                secret.RevisionDate = utcNow;
             });
             await dbContext.SaveChangesAsync();
         }
@@ -242,6 +244,24 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
             await dbContext.SaveChangesAsync();
         }
         return secrets;
+    }
+
+    public async Task UpdateRevisionDates(IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var utcNow = DateTime.UtcNow;
+            var secrets = dbContext.Secret.Where(s => ids.Contains(s.Id));
+
+            await secrets.ForEachAsync(secret =>
+            {
+                dbContext.Attach(secret);
+                secret.RevisionDate = utcNow;
+            });
+
+            await dbContext.SaveChangesAsync();
+        }
     }
 
     public async Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType)

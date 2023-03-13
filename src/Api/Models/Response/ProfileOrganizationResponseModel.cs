@@ -28,6 +28,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UseSecretsManager = organization.UseSecretsManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
+        UseActivateAutofillPolicy = organization.PlanType == PlanType.EnterpriseAnnually ||
+            organization.PlanType == PlanType.EnterpriseMonthly;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -78,6 +80,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool UseSecretsManager { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool UseCustomPermissions { get; set; }
+    public bool UseActivateAutofillPolicy { get; set; }
     public bool SelfHost { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
