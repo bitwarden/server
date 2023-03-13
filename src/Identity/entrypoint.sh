@@ -35,10 +35,15 @@ mkdir -p /etc/bitwarden/logs
 mkdir -p /etc/bitwarden/ca-certificates
 chown -R $USERNAME:$GROUPNAME /etc/bitwarden
 
-cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx
+if [[ $globalSettings__selfHosted == "true" ]]; then
+  cp /etc/bitwarden/identity/identity.pfx /app/identity.pfx
+fi
+
 chown -R $USERNAME:$GROUPNAME /app
 
-cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
+if [[ $globalSettings__selfHosted == "true" ]]; then
+  cp /etc/bitwarden/ca-certificates/*.crt /usr/local/share/ca-certificates/ >/dev/null 2>&1 \
     && update-ca-certificates
+fi
 
 exec gosu $USERNAME:$GROUPNAME dotnet /app/Identity.dll
