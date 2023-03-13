@@ -75,7 +75,7 @@ public class SecretsController : Controller
         var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
 
         // Creating a secret means you have read & write permission.
-        return new SecretResponseModel(result, false, false);
+        return new SecretResponseModel(result, true, true);
     }
 
     [HttpGet("secrets/{id}")]
