@@ -213,7 +213,7 @@ public class HandlebarsMailService : IMailService
             var message = CreateDefaultMessage($"Join {organizationName}", email);
             return new MailQueueMessage(message, "OrganizationUserInvited", model);
         }
-        var freeOrgTitle = CoreHelpers.SanitizeForEmail("A Bitwarden member invited you to an organization. Join now to start securing your passwords!", false);
+        var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
         var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
             new OrganizationUserInvitedViewModel
             {
