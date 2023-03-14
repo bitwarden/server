@@ -46,7 +46,7 @@ public class StripePaymentService : IPaymentService
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo,bool provider = false)
+        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;

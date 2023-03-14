@@ -33,8 +33,8 @@ public class StripePaymentServiceTests
         Assert.Equal("Payment method is not supported at this time.", exception.Message);
     }
 
-     [Theory, BitAutoData]
-    public async void PurchaseOrganizationAsync_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo,bool provider = true)
+    [Theory, BitAutoData]
+    public async void PurchaseOrganizationAsync_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
         var plan = StaticStore.Plans.First(p => p.Type == PlanType.EnterpriseAnnually);
 
@@ -49,7 +49,7 @@ public class StripePaymentServiceTests
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
         });
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo,provider);
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo, provider);
 
         Assert.Null(result);
         Assert.Equal(GatewayType.Stripe, organization.Gateway);
@@ -82,7 +82,7 @@ public class StripePaymentServiceTests
             s.Items.Count == 0
         ));
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
