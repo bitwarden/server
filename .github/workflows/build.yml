@@ -325,7 +325,7 @@ jobs:
           if [[ "$IMAGE_TAG" == "master" ]]; then
             IMAGE_TAG=dev
           fi
-          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: Setup project name
         id: setup
