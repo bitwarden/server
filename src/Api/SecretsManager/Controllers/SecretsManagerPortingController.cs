@@ -6,11 +6,13 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [SecretsManager]
+[Authorize("secrets")]
 public class SecretsManagerPortingController : Controller
 {
     private readonly ISecretRepository _secretRepository;
