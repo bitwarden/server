@@ -100,14 +100,6 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         var query = dbContext.Secret.Include(s => s.Projects)
             .Where(s => s.Projects.Any(p => p.Id == projectId) && s.DeletedDate == null);
 
-        query = accessType switch
-        {
-            AccessClientType.NoAccessCheck => query,
-            AccessClientType.User => query.Where(UserHasReadAccessToSecret(userId)),
-            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToSecret(userId)),
-            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
-        };
-
         var secrets = SecretToPermissionDetails(query, userId, accessType);
 
         return await secrets.ToListAsync();
