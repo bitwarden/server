@@ -1,4 +1,6 @@
-﻿namespace Bit.Core;
+﻿using System.Reflection;
+
+namespace Bit.Core;
 
 public static class Constants
 {
@@ -21,4 +23,17 @@ public static class TokenPurposes
 public static class AuthenticationSchemes
 {
     public const string BitwardenExternalCookieAuthenticationScheme = "bw.external";
+}
+
+public static class FeatureFlagKeys
+{
+    public const string SecretsManager = "secrets-manager";
+
+    public static List<string> GetAllKeys()
+    {
+        return typeof(FeatureFlagKeys).GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
+            .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
+            .Select(x => (string)x.GetRawConstantValue())
+            .ToList();
+    }
 }

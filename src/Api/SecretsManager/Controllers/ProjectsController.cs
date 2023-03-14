@@ -80,7 +80,7 @@ public class ProjectsController : Controller
     }
 
     [HttpGet("projects/{id}")]
-    public async Task<ProjectResponseModel> GetAsync([FromRoute] Guid id)
+    public async Task<ProjectPermissionDetailsResponseModel> GetAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
         if (project == null)
@@ -97,26 +97,20 @@ public class ProjectsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(id, userId),
-            _ => false,
-        };
+        var access = await _projectRepository.AccessToProjectAsync(id, userId, accessClient);
 
-        if (!hasAccess)
+        if (!access.Read)
         {
             throw new NotFoundException();
         }
 
-        return new ProjectResponseModel(project);
+        return new ProjectPermissionDetailsResponseModel(project, access.Read, access.Write);
     }
 
     [HttpPost("projects/delete")]
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
         var userId = _userService.GetProperUserId(User).Value;
-
         var results = await _deleteProjectCommand.DeleteProjects(ids, userId);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
