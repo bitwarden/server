@@ -16,7 +16,7 @@ public class StripePaymentService : IPaymentService
     private const string PremiumPlanAppleIapId = "premium-annually-appleiap";
     private const decimal PremiumPlanAppleIapPrice = 14.99M;
     private const string StoragePlanId = "storage-gb-annually";
-    private const string ProviderDiscountId = "3524-percent-off";
+    private const string ProviderDiscountId = "msp-discount-35";
 
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;

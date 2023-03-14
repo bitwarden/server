@@ -76,7 +76,7 @@ public class StripePaymentServiceTests
 
         await stripeAdapter.Received().SubscriptionCreateAsync(Arg.Is<Stripe.SubscriptionCreateOptions>(s =>
             s.Customer == "C-1" &&
-            s.Coupon == "3524-percent-off" &&
+            s.Coupon == "msp-discount-35" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
             s.Items.Count == 0
