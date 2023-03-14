@@ -33,7 +33,7 @@ public class SecretsManagerPortingController : Controller
     [HttpGet("sm/{organizationId}/export")]
     public async Task<SMExportResponseModel> Export([FromRoute] Guid organizationId, [FromRoute] string format = "json")
     {
-        if (!await _currentContext.OrganizationAdmin(organizationId))
+        if (!await _currentContext.OrganizationAdmin(organizationId) || !_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
@@ -53,7 +53,7 @@ public class SecretsManagerPortingController : Controller
     [HttpPost("sm/{organizationId}/import")]
     public async Task Import([FromRoute] Guid organizationId, [FromBody] SMImportRequestModel importRequest)
     {
-        if (!await _currentContext.OrganizationAdmin(organizationId))
+        if (!await _currentContext.OrganizationAdmin(organizationId) || !_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
