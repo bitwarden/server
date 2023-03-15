@@ -7,6 +7,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.Models;

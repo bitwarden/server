@@ -123,12 +123,14 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
         var orgUserId = adminOrgUser.Id;
+        var currentUserId = adminOrgUser.UserId!.Value;
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
             await LoginAsync(email);
             orgUserId = orgUser.Id;
+            currentUserId = orgUser.UserId!.Value;
         }
 
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
@@ -150,7 +152,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(createdProject.DeletedDate);
 
         // Check permissions have been bootstrapped.
-        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(createdProject.Id);
+        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(createdProject.Id, currentUserId);
         Assert.NotNull(accessPolicies);
         var ap = (UserProjectAccessPolicy)accessPolicies.First();
         Assert.Equal(createdProject.Id, ap.GrantedProjectId);
@@ -302,10 +304,12 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.GetAsync($"/projects/{project.Id}");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectPermissionDetailsResponseModel>();
         Assert.Equal(project.Name, result!.Name);
         Assert.Equal(project.RevisionDate, result.RevisionDate);
         Assert.Equal(project.CreationDate, result.CreationDate);
+        Assert.True(result.Read);
+        Assert.True(result.Write);
     }
 
     [Theory]
