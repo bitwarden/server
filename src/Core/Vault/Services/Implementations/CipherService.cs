@@ -697,8 +697,6 @@ public class CipherService : ICipherService
             await _organizationRepository.GetByIdAsync(collections[0].OrganizationId) :
             await _organizationRepository.GetByIdAsync(ciphers.FirstOrDefault(c => c.OrganizationId.HasValue).OrganizationId.Value);
 
-        var userId = ciphers.FirstOrDefault()?.UserId;
-
         if (collections.Count > 0 && org != null && org.MaxCollections.HasValue)
         {
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
