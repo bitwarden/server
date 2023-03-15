@@ -1339,7 +1339,6 @@ public class StripePaymentService : IPaymentService
 
         try
         {
-
             if (customer == null)
             {
                 customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
