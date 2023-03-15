@@ -4,7 +4,6 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -12,7 +11,6 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
-using Org.BouncyCastle.Asn1.X509;
 
 namespace Bit.Core.Vault.Services;
 
@@ -649,8 +647,6 @@ public class CipherService : ICipherService
                 cipher.Favorites = $"{{\"{cipher.UserId.ToString().ToUpperInvariant()}\":\"true\"}}";
             }
         }
-
-        var foldersGuids = folders.Select(f => f.Id).ToList();
 
         var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(userId ?? Guid.Empty)).Select(f => f.Id).ToList();
 

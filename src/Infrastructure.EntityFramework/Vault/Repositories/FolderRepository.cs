@@ -36,19 +36,4 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
             return Mapper.Map<List<Core.Vault.Entities.Folder>>(folders);
         }
     }
-
-    public async Task<ICollection<Core.Vault.Entities.Folder>> Update(Guid userId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = from f in dbContext.Folders
-                        where f.UserId == userId
-                        select f;
-            var folders = await query.ToListAsync();
-            return Mapper.Map<List<Core.Vault.Entities.Folder>>(folders);
-        }
-    }
-
-    public Task<ICollection<Core.Vault.Entities.Folder>> UpdateManyAsync(Guid userId) => throw new NotImplementedException();
 }
