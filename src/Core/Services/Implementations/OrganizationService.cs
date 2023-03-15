@@ -2453,10 +2453,6 @@ public class OrganizationService : IOrganizationService
         organization.Enabled = false;
         organization.Status = OrganizationStatusType.Pending;
 
-        // await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-        //     signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-        //     signup.PremiumAccessAddon, signup.TaxInfo);
-
         await SignUpAsync(organization, default, null, null, true);
 
         var ownerOrganizationUser = new OrganizationUser
