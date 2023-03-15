@@ -12,8 +12,7 @@ public class AuthRequestCompare : IEqualityComparer<AuthRequest>
         x.PublicKey == y.PublicKey &&
         x.RequestDeviceIdentifier == y.RequestDeviceIdentifier &&
         x.RequestDeviceType == y.RequestDeviceType &&
-        x.RequestIpAddress == y.RequestIpAddress &&
-        x.RequestFingerprint == y.RequestFingerprint;
+        x.RequestIpAddress == y.RequestIpAddress;
     }
 
     public int GetHashCode([DisallowNull] AuthRequest obj)

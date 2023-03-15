@@ -17,7 +17,6 @@ public class AuthRequestCreateRequestModel
     public string AccessCode { get; set; }
     [Required]
     public AuthRequestType? Type { get; set; }
-    [Required]
     public string FingerprintPhrase { get; set; }
 }
 
