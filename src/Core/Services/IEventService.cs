@@ -2,6 +2,7 @@
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
 
