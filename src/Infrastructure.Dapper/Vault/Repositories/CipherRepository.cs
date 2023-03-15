@@ -537,7 +537,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Folder> existingFolders)
+    public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders)
     {
         if (!ciphers.Any())
         {
@@ -559,52 +559,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                             bulkCopy.DestinationTableName = "[dbo].[Folder]";
                             var dataTable = BuildFoldersTable(bulkCopy, folders);
                             bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    if (existingFolders.Any())
-                    {
-
-                        // 1. Create temp tables to bulk copy into.
-
-                        var sqlCreateTemp = @"
-                            SELECT TOP 0 *
-                            INTO #TempFolder
-                            FROM [dbo].[Folder]";
-
-                        using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
-
-                        // 2. Bulk copy into temp tables.
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "#TempFolder";
-                            var dataTable = BuildFoldersTable(bulkCopy, existingFolders);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-
-                        // 3. Insert into real tables from temp tables and clean up.
-
-                        var sql = @"
-                            UPDATE
-                                [dbo].[Folder]
-                            SET
-                                [Name] = TF.[Name],
-                                [RevisionDate] = TF.[RevisionDate]
-                            FROM
-                                [dbo].[Folder] F
-                            INNER JOIN
-                                #TempFolder TF ON F.Id = TF.Id
-                            WHERE
-                                F.[UserId] = @UserId
-                            DROP TABLE #TempFolder";
-
-                        using (var cmd = new SqlCommand(sql, connection, transaction))
-                        {
-                            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = existingFolders.First().UserId;
-                            cmd.ExecuteNonQuery();
                         }
                     }
 
@@ -632,7 +586,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<Collection> existingCollections)
+        IEnumerable<CollectionCipher> collectionCiphers)
     {
         if (!ciphers.Any())
         {
@@ -661,53 +615,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                             bulkCopy.DestinationTableName = "[dbo].[Collection]";
                             var dataTable = BuildCollectionsTable(bulkCopy, collections);
                             bulkCopy.WriteToServer(dataTable);
-                        }
-                    }
-
-                    if (existingCollections.Any())
-                    {
-
-                        // 1. Create temp tables to bulk copy into.
-
-                        var sqlCreateTemp = @"
-                            SELECT TOP 0 *
-                            INTO #TempCollection
-                            FROM [dbo].[Collection]";
-
-                        using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
-                        {
-                            cmd.ExecuteNonQuery();
-                        }
-
-
-                        // 2. Bulk copy into temp tables.
-                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                        {
-                            bulkCopy.DestinationTableName = "#TempCollection";
-                            var dataTable = BuildCollectionsTable(bulkCopy, existingCollections);
-                            bulkCopy.WriteToServer(dataTable);
-                        }
-
-                        // 3. Insert into real tables from temp tables and clean up.
-                        var sql = @"
-                            UPDATE
-                                [dbo].[Collection]
-                            SET
-                                [Name] = TC.[Name],
-                                [ExternalId] = TC.[ExternalId],
-                                [RevisionDate] = TC.[RevisionDate]
-                            FROM
-                                [dbo].[Collection] C
-                            INNER JOIN
-                                #TempCollection TC ON C.Id = TC.Id
-                            WHERE
-                                C.[OrganizationId] = @OrganizationId
-                            DROP TABLE #TempCollection";
-
-                        using (var cmd = new SqlCommand(sql, connection, transaction))
-                        {
-                            cmd.Parameters.Add("@OrganizationId", SqlDbType.UniqueIdentifier).Value = existingCollections.First().OrganizationId;
-                            cmd.ExecuteNonQuery();
                         }
                     }
 

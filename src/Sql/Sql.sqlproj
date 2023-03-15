@@ -115,7 +115,6 @@
     <Build Include="dbo\Stored Procedures\Collection_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByIdUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByIds.sql" />
-    <Build Include="dbo\Stored Procedures\Collection_ReadByIdsAndOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Collection_ReadCountByOrganizationId.sql" />
@@ -459,7 +458,6 @@
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_Create.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_DeleteById.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_ReadById.sql" />
-    <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_ReadByIdsAndUserId.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_ReadByUserId.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Folder\Folder_Update.sql" />
     <Build Include="Vault\dbo\Tables\Cipher.sql" />

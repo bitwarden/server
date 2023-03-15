@@ -138,7 +138,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders, IEnumerable<Core.Vault.Entities.Folder> existingFolders)
+    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders)
     {
         if (!ciphers.Any())
         {
@@ -149,24 +149,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         {
             var dbContext = GetDatabaseContext(scope);
             var folderEntities = Mapper.Map<List<Folder>>(folders);
-
-            if (existingFolders.Any())
-            {
-                foreach (var existingFolder in existingFolders)
-                {
-                    var entity = await dbContext.Folders.FindAsync(existingFolder.Id);
-                    if (entity != null)
-                    {
-                        var mappedEntity = Mapper.Map<Folder>(existingFolder);
-                        dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                    }
-                    else
-                    {
-                        folders.Append(existingFolder);
-                    }
-                }
-            }
-
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
@@ -175,7 +157,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Collection> collections, IEnumerable<Core.Entities.CollectionCipher> collectionCiphers, IEnumerable<Core.Entities.Collection> existingCollections)
+    public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Entities.Collection> collections, IEnumerable<Core.Entities.CollectionCipher> collectionCiphers)
     {
         if (!ciphers.Any())
         {
@@ -186,23 +168,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var dbContext = GetDatabaseContext(scope);
             var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-
-            if (existingCollections.Any())
-            {
-                foreach (var existingCollection in existingCollections)
-                {
-                    var mappedEntity = Mapper.Map<Collection>(existingCollection);
-                    var entity = await dbContext.Collections.FindAsync(mappedEntity.Id);
-                    if (entity != null)
-                    {
-                        dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
-                    }
-                    else
-                    {
-                        collections.Append(existingCollection);
-                    }
-                }
-            }
 
             if (collections.Any())
             {

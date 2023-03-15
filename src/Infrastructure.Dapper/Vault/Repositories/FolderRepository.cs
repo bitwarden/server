@@ -29,19 +29,6 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
         return folder;
     }
 
-    public async Task<ICollection<Folder>> GetManyByManyIdsAndUserIdAsync(IEnumerable<Guid> collectionIds, Guid userId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<Folder>(
-                $"[{Schema}].[{Table}_ReadByIdsAndUserId]",
-                new { Ids = collectionIds.ToGuidIdArrayTVP(), UserId = userId },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
     public async Task<ICollection<Folder>> GetManyByUserIdAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))

@@ -82,19 +82,6 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<Collection>> GetManyByManyIdsAndOrgIdAsync(IEnumerable<Guid> collectionIds, Guid organizationId)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<Collection>(
-                $"[{Schema}].[{Table}_ReadByIdsAndOrganizationId]",
-                new { Ids = collectionIds.ToGuidIdArrayTVP(), OrganizationId = organizationId },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
     public async Task<ICollection<Collection>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))

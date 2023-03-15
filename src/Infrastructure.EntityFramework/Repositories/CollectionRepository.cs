@@ -280,19 +280,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<ICollection<Core.Entities.Collection>> GetManyByManyIdsAndOrgIdAsync(IEnumerable<Guid> collectionIds, Guid organizationId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = from c in dbContext.Collections
-                        where collectionIds.Contains(c.Id) & organizationId == c.OrganizationId
-                        select c;
-            var data = await query.ToArrayAsync();
-            return data;
-        }
-    }
-
     public async Task<int> GetCountByOrganizationIdAsync(Guid organizationId)
     {
         var query = new CollectionReadCountByOrganizationIdQuery(organizationId);

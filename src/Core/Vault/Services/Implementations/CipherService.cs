@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -11,6 +12,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Org.BouncyCastle.Asn1.X509;
 
 namespace Bit.Core.Vault.Services;
 
@@ -650,18 +652,17 @@ public class CipherService : ICipherService
 
         var foldersGuids = folders.Select(f => f.Id).ToList();
 
-        var dbfolders = (await _folderRepository.GetManyByManyIdsAndUserIdAsync(foldersGuids, userId ?? Guid.Empty)).ToList();
-
-        //Get the import items that match the collection we just got
-        var existingFolders = folders.Join(dbfolders, f => f.Id, db => db.Id, (f, db) => f).ToList();
+        var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(userId ?? Guid.Empty)).Select(f => f.Id).ToList();
 
         //Assign id to the ones that don't exist in DB
         //Need to keep the list order to create the relationships
+        List<Folder> newFolders = new List<Folder>();
         foreach (var folder in folders)
         {
-            if (!existingFolders.Contains(folder))
+            if (!userfoldersIds.Contains(folder.Id))
             {
                 folder.SetNewId();
+                newFolders.Add(folder);
             }
         }
 
@@ -680,10 +681,8 @@ public class CipherService : ICipherService
                 $"\"{folder.Id.ToString().ToUpperInvariant()}\"}}";
         }
 
-        folders = folders.Except(existingFolders).ToList();
-
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, folders, existingFolders);
+        await _cipherRepository.CreateAsync(ciphers, newFolders);
 
         // push
         if (userId.HasValue)
@@ -702,6 +701,8 @@ public class CipherService : ICipherService
             await _organizationRepository.GetByIdAsync(collections[0].OrganizationId) :
             await _organizationRepository.GetByIdAsync(ciphers.FirstOrDefault(c => c.OrganizationId.HasValue).OrganizationId.Value);
 
+        var userId = ciphers.FirstOrDefault()?.UserId;
+
         if (collections.Count > 0 && org != null && org.MaxCollections.HasValue)
         {
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(org.Id);
@@ -718,20 +719,18 @@ public class CipherService : ICipherService
             cipher.SetNewId();
         }
 
-        var collectionsGuids = collections.Select(c => c.Id).ToList();
+        var userCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
 
-        var dbCollections = (await _collectionRepository.GetManyByManyIdsAndOrgIdAsync(collectionsGuids, org.Id)).ToList();
+        //Assign id to the ones that don't exist in DB
+        //Need to keep the list order to create the relationships
+        List<Collection> newCollections = new List<Collection>();
 
-        // Get the import items that match the collection we just got
-        var existingCollections = collections.Join(dbCollections, c => c.Id, db => db.Id, (c, db) => c).ToList();
-
-        // Init. ids for new collection
-        // Keep list order to create relationships
         foreach (var collection in collections)
         {
-            if (!existingCollections.Contains(collection))
+            if (!userCollectionsIds.Contains(collection.Id))
             {
                 collection.SetNewId();
+                newCollections.Add(collection);
             }
         }
 
@@ -754,10 +753,8 @@ public class CipherService : ICipherService
             });
         }
 
-        collections = collections.Except(existingCollections).ToList();
-
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, collections, collectionCiphers, existingCollections);
+        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);

@@ -24,19 +24,6 @@ public class FolderRepository : Repository<Core.Vault.Entities.Folder, Folder, G
         return folder;
     }
 
-    public async Task<ICollection<Core.Vault.Entities.Folder>> GetManyByManyIdsAndUserIdAsync(IEnumerable<Guid> collectionIds, Guid userId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = from f in dbContext.Folders
-                        where collectionIds.Contains(f.Id) & userId == f.UserId
-                        select f;
-            var data = await query.ToArrayAsync();
-            return data;
-        }
-    }
-
     public async Task<ICollection<Core.Vault.Entities.Folder>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
