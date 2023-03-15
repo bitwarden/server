@@ -30,7 +30,8 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
-    Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<CollectionCipher> collectionCiphers);
+    Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
+        IEnumerable<CollectionCipher> collectionCiphers);
     Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
     Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
