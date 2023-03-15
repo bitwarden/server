@@ -4,6 +4,7 @@ using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

@@ -2,10 +2,12 @@
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.Models;
@@ -17,6 +19,7 @@ public class OrganizationEditModel : OrganizationViewModel
     public OrganizationEditModel(Provider provider)
     {
         Provider = provider;
+        BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
         PlanType = Core.Enums.PlanType.TeamsMonthly;
         Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
     }
@@ -32,7 +35,7 @@ public class OrganizationEditModel : OrganizationViewModel
 
         Name = org.Name;
         BusinessName = org.BusinessName;
-        BillingEmail = org.BillingEmail;
+        BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
         Seats = org.Seats;
