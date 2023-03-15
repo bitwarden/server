@@ -34,7 +34,7 @@ public class OrganizationEditModel : OrganizationViewModel
 
         Name = org.Name;
         BusinessName = org.BusinessName;
-        BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
+        BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
         Seats = org.Seats;
