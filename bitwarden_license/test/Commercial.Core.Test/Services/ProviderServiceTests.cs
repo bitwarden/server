@@ -482,8 +482,6 @@ public class ProviderServiceTests
         foreach (var organization in organizations)
         {
             organization.PlanType = PlanType.EnterpriseAnnually;
-            providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
-            sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         }
 
         var organizationIds = organizations.Select(o => o.Id).ToArray();
