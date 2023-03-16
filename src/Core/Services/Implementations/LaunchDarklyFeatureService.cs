@@ -106,16 +106,23 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
 
         if (currentContext.UserId.HasValue)
         {
-            var user = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
-            user.Kind(LaunchDarkly.Sdk.ContextKind.Default);
-            builder.Add(user.Build());
+            var ldUser = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+            ldUser.Kind(LaunchDarkly.Sdk.ContextKind.Default);
+
+            if (currentContext.Organizations != null && currentContext.Organizations.Any())
+            {
+                var ldOrgs = currentContext.Organizations.Select(o => LaunchDarkly.Sdk.LdValue.Of(o.Id.ToString()));
+                ldUser.Set("orgs", LaunchDarkly.Sdk.LdValue.ArrayFrom(ldOrgs));
+            }
+
+            builder.Add(ldUser.Build());
         }
 
         if (currentContext.OrganizationId.HasValue)
         {
-            var org = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
-            org.Kind("org");
-            builder.Add(org.Build());
+            var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+            ldOrg.Kind("org");
+            builder.Add(ldOrg.Build());
         }
 
         return builder.Build();
