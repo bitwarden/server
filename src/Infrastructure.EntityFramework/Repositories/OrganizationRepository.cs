@@ -96,21 +96,24 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = (from o in dbContext.Organizations
-                         let ownerEmails = (from ou in dbContext.OrganizationUsers
-                                            join u in dbContext.Users
-                                                on ou.UserId equals u.Id
-                                            where ou.OrganizationId == o.Id && ou.Type == OrganizationUserType.Owner
-                                            select u.Email).ToList()
-                         where o.PlanType >= PlanType.TeamsMonthly && o.PlanType <= PlanType.EnterpriseAnnually &&
-                               !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
-                               (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%")) &&
-                               (string.IsNullOrWhiteSpace(ownerEmail) || ownerEmails.Any(email => email == ownerEmail))
-                         orderby o.CreationDate descending
-                         select o)
-                .Skip(skip).Take(take);
+            var query = from o in dbContext.Organizations
+                        where o.PlanType >= PlanType.TeamsMonthly && o.PlanType <= PlanType.EnterpriseAnnually &&
+                              !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                              (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
+                        select o;
 
-            return await query.ToArrayAsync();
+            if (!string.IsNullOrWhiteSpace(ownerEmail))
+            {
+                query = from o in query
+                        join ou in dbContext.OrganizationUsers
+                            on o.Id equals ou.OrganizationId
+                        join u in dbContext.Users
+                            on ou.UserId equals u.Id
+                        where u.Email == ownerEmail && ou.Type == OrganizationUserType.Owner
+                        select o;
+            }
+
+            return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
         }
     }
 
