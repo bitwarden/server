@@ -7,6 +7,7 @@ using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Azure.NotificationHubs;
 using Microsoft.Extensions.Logging;

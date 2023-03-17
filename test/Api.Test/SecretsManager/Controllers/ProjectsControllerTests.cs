@@ -165,19 +165,18 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Get_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
+    public async void Get_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data).Returns(false);
-
+        SetupAdmin(sutProvider, orgId);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(orgId).Returns(false);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(data));
     }
 
     [Theory]
     [BitAutoData]
-    public async void Get_ThrowsNotFound(SutProvider<ProjectsController> sutProvider, Guid data)
+    public async void Get_ThrowsNotFound(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data).Returns(true);
-
+        SetupAdmin(sutProvider, orgId);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetAsync(data));
     }
 
@@ -201,6 +200,9 @@ public class ProjectsControllerTests
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(Arg.Is(data))
             .ReturnsForAnyArgs(new Project { Id = data, OrganizationId = orgId });
+
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+            .ReturnsForAnyArgs((true, false));
 
         await sutProvider.Sut.GetAsync(data);
 
