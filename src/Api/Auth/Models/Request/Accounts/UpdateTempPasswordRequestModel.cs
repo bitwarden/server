@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Models.Request.Organizations;
 
-namespace Bit.Api.Models.Request.Accounts;
+namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class UpdateTempPasswordRequestModel : OrganizationUserResetPasswordRequestModel
 {

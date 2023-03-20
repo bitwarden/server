@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request.Accounts;
+namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class SetPasswordRequestModel : IValidatableObject
 {

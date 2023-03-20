@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request.Accounts;
+namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class EmailRequestModel : SecretVerificationRequestModel
 {

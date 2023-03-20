@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Controllers;
-using Bit.Api.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;

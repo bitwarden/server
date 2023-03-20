@@ -3,7 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using OtpNet;
 
-namespace Bit.Api.Models.Response.TwoFactor;
+namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 public class TwoFactorAuthenticatorResponseModel : ResponseModel
 {

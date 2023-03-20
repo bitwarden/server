@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Request;
+﻿using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;

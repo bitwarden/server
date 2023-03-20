@@ -1,7 +1,8 @@
-﻿using Bit.Api.Models.Request;
-using Bit.Api.Models.Request.Accounts;
+﻿using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Response.TwoFactor;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Bit.Api.Models.Response.TwoFactor;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -16,7 +17,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Auth.Controllers;
 
 [Route("two-factor")]
 [Authorize("Web")]

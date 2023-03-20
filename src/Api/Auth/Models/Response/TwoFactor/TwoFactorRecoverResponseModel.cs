@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response.TwoFactor;
+namespace Bit.Api.Auth.Models.Response.TwoFactor;
 
 public class TwoFactorRecoverResponseModel : ResponseModel
 {

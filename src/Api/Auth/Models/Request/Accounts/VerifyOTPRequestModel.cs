@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request.Accounts;
+namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class VerifyOTPRequestModel
 {

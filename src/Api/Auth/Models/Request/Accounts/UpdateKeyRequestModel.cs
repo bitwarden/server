@@ -1,7 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Models.Request;
 using Bit.Api.Vault.Models.Request;
 
-namespace Bit.Api.Models.Request.Accounts;
+namespace Bit.Api.Auth.Models.Request.Accounts;
 
 public class UpdateKeyRequestModel
 {

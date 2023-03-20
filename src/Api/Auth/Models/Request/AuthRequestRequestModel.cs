@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Newtonsoft.Json;
 
-namespace Bit.Api.Models.Request;
+namespace Bit.Api.Auth.Models.Request;
 
 public class AuthRequestCreateRequestModel
 {
