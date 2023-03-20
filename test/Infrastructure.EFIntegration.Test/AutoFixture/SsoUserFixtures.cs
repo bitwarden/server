@@ -1,4 +1,5 @@
 ﻿using AutoFixture;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Infrastructure.EntityFramework.Repositories;

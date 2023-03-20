@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
@@ -6,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
-public class SsoUserRepository : Repository<Core.Entities.SsoUser, SsoUser, long>, ISsoUserRepository
+public class SsoUserRepository : Repository<Core.Auth.Entities.SsoUser, SsoUser, long>, ISsoUserRepository
 {
     public SsoUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.SsoUsers)
@@ -23,7 +24,7 @@ public class SsoUserRepository : Repository<Core.Entities.SsoUser, SsoUser, long
         }
     }
 
-    public async Task<Core.Entities.SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
+    public async Task<Core.Auth.Entities.SsoUser> GetByUserIdOrganizationIdAsync(Guid organizationId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

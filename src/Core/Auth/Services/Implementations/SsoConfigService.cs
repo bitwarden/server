@@ -1,9 +1,12 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Auth.Services;
 
 public class SsoConfigService : ISsoConfigService
 {

@@ -1,6 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Entities;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 
 namespace Bit.Api.Auth.Models.Response.Organizations;

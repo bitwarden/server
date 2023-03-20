@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Enums;
+﻿namespace Bit.Core.Auth.Enums;
 
 public enum SsoType : byte
 {

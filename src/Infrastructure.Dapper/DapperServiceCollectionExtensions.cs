@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Auth.Repositories;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.Dapper.Repositories;

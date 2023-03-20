@@ -2,9 +2,9 @@
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Services;
 using Bit.Core.Sso;
 using Bit.Core.Utilities;

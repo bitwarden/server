@@ -1,8 +1,8 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.Auth.Models.Data;
 
 public class SsoConfigurationData
 {

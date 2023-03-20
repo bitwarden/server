@@ -1,5 +1,7 @@
 ﻿using AutoFixture;
 using AutoFixture.Kernel;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Infrastructure.EntityFramework.Repositories;

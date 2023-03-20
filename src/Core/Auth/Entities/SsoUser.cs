@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Entities;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.Auth.Entities;
 
 public class SsoUser : ITableObject<long>
 {

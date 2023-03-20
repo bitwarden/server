@@ -1,6 +1,7 @@
-﻿using Bit.Core.Models.Data;
+﻿using Bit.Core.Auth.Models.Data;
+using Bit.Core.Entities;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.Auth.Entities;
 
 public class SsoConfig : ITableObject<long>
 {
