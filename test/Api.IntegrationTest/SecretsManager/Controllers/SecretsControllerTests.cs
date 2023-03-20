@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
 
-public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly string _mockEncryptedString =
         "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
@@ -27,7 +27,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
 
-    public SecretsControllerTest(ApiApplicationFactory factory)
+    public SecretsControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
