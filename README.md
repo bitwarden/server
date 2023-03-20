@@ -1,5 +1,6 @@
 <p align="center">
-  <img src="https://github.com/bitwarden/brand/blob/master/screenshots/apps-combo-logo.png" alt="Bitwarden" />
+  <img src="https://github.com/bitwarden/brand/blob/master/screenshots/apps-combo-logo.png#gh-light-mode-only" alt="Bitwarden" />
+  <img src="https://user-images.githubusercontent.com/3369400/139447912-e0f43f33-6d9f-45f8-be46-2df5bbc91289.png#gh-light-mode-only" alt="Bitwarden" />
 </p>
 <p align="center">
   <a href="https://github.com/bitwarden/server/actions/workflows/build.yml?query=branch:master" target="_blank">
