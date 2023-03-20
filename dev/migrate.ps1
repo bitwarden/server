@@ -41,7 +41,7 @@ if ($all -or $mssql) {
     -v "$(pwd)/../util/Migrator:/mnt/migrator/" `
     -v "$(pwd)/.data/mssql:/mnt/data" `
     --env-file .env `
-    --network=BitwardenServer_default `
+    --network=bitwardenserver_default `
     --rm `
     mcr.microsoft.com/mssql-tools `
     /mnt/helpers/run_migrations.sh $migrationArgs
