@@ -112,7 +112,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
             if (currentContext.Organizations?.Any() ?? false)
             {
                 var ldOrgs = currentContext.Organizations.Select(o => LaunchDarkly.Sdk.LdValue.Of(o.Id.ToString()));
-                ldUser.Set("orgs", LaunchDarkly.Sdk.LdValue.ArrayFrom(ldOrgs));
+                ldUser.Set("organizations", LaunchDarkly.Sdk.LdValue.ArrayFrom(ldOrgs));
             }
 
             builder.Add(ldUser.Build());
@@ -121,7 +121,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         if (currentContext.OrganizationId.HasValue)
         {
             var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
-            ldOrg.Kind("org");
+            ldOrg.Kind("organization");
             builder.Add(ldOrg.Build());
         }
 
