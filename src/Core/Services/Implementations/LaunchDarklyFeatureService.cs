@@ -109,7 +109,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
             var ldUser = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
             ldUser.Kind(LaunchDarkly.Sdk.ContextKind.Default);
 
-            if (currentContext.Organizations != null && currentContext.Organizations.Any())
+            if (currentContext.Organizations?.Any() ?? false)
             {
                 var ldOrgs = currentContext.Organizations.Select(o => LaunchDarkly.Sdk.LdValue.Of(o.Id.ToString()));
                 ldUser.Set("orgs", LaunchDarkly.Sdk.LdValue.ArrayFrom(ldOrgs));
