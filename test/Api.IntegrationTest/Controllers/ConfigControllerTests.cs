@@ -69,7 +69,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
 
         await LoginAsync();
 
-        var response = await _client.GetAsync($"/config");
+        var response = await _client.GetAsync("/config");
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ConfigResponseModel>();
 
