@@ -2,7 +2,8 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-## Auth team files
+## Auth team files ##
+**/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
 
 **/SecretsManager @bitwarden/team-secrets-manager-dev
