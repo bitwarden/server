@@ -104,18 +104,42 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
     {
         var builder = LaunchDarkly.Sdk.Context.MultiBuilder();
 
-        if (currentContext.UserId.HasValue)
+        switch (currentContext.ClientType)
         {
-            var user = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
-            user.Kind(LaunchDarkly.Sdk.ContextKind.Default);
-            builder.Add(user.Build());
-        }
+            case Identity.ClientType.User:
+                {
+                    var ldUser = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                    ldUser.Kind(LaunchDarkly.Sdk.ContextKind.Default);
 
-        if (currentContext.OrganizationId.HasValue)
-        {
-            var org = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
-            org.Kind("org");
-            builder.Add(org.Build());
+                    if (currentContext.Organizations?.Any() ?? false)
+                    {
+                        var ldOrgs = currentContext.Organizations.Select(o => LaunchDarkly.Sdk.LdValue.Of(o.Id.ToString()));
+                        ldUser.Set("organizations", LaunchDarkly.Sdk.LdValue.ArrayFrom(ldOrgs));
+                    }
+
+                    builder.Add(ldUser.Build());
+                }
+                break;
+
+            case Identity.ClientType.Organization:
+                {
+                    var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+                    ldOrg.Kind("organization");
+                    builder.Add(ldOrg.Build());
+                }
+                break;
+
+            case Identity.ClientType.ServiceAccount:
+                {
+                    var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                    ldServiceAccount.Kind("service-account");
+                    builder.Add(ldServiceAccount.Build());
+
+                    var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+                    ldOrg.Kind("organization");
+                    builder.Add(ldOrg.Build());
+                }
+                break;
         }
 
         return builder.Build();
