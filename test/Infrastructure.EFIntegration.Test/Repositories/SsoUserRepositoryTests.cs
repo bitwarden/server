@@ -5,6 +5,7 @@ using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -15,7 +16,7 @@ public class SsoUserRepositoryTests
     public async void CreateAsync_Works_DataMatches(SsoUser ssoUser, User user, Organization org,
         SsoUserCompare equalityComparer, List<EfRepo.SsoUserRepository> suts,
         List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
-        SqlRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo,
+        SqlAuthRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo,
         SqlRepo.UserRepository sqlUserRepo)
     {
         var createdSsoUsers = new List<SsoUser>();
@@ -53,7 +54,7 @@ public class SsoUserRepositoryTests
     public async void ReplaceAsync_Works_DataMatches(SsoUser postSsoUser, SsoUser replaceSsoUser,
         Organization org, User user, SsoUserCompare equalityComparer,
         List<EfRepo.SsoUserRepository> suts, List<EfRepo.UserRepository> efUserRepos,
-        List<EfRepo.OrganizationRepository> efOrgRepos, SqlRepo.SsoUserRepository sqlSsoUserRepo,
+        List<EfRepo.OrganizationRepository> efOrgRepos, SqlAuthRepo.SsoUserRepository sqlSsoUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo, SqlRepo.UserRepository sqlUserRepo)
     {
         var savedSsoUsers = new List<SsoUser>();
@@ -101,7 +102,7 @@ public class SsoUserRepositoryTests
     [CiSkippedTheory, EfSsoUserAutoData]
     public async void DeleteAsync_Works_DataMatches(SsoUser ssoUser, Organization org, User user, List<EfRepo.SsoUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
-        SqlRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo,
+        SqlAuthRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo)
     {
         foreach (var sut in suts)
@@ -144,7 +145,7 @@ public class SsoUserRepositoryTests
     public async void DeleteAsync_UserIdOrganizationId_Works_DataMatches(SsoUser ssoUser,
         User user, Organization org, List<EfRepo.SsoUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
-        SqlRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo
+        SqlAuthRepo.SsoUserRepository sqlSsoUserRepo, SqlRepo.UserRepository sqlUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo
             )
     {
         foreach (var sut in suts)

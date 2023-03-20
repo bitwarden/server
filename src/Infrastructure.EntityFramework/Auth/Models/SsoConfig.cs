@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core.Entities;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
+namespace Bit.Infrastructure.EntityFramework.Auth.Models;
 
 public class SsoConfig : Core.Auth.Entities.SsoConfig
 {
