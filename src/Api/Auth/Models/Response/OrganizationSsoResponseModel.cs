@@ -3,7 +3,7 @@ using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 
-namespace Bit.Api.Models.Response.Organizations;
+namespace Bit.Api.Auth.Models.Response.Organizations;
 
 public class OrganizationSsoResponseModel : ResponseModel
 {

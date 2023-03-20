@@ -10,7 +10,7 @@ using Bit.Core.Sso;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
-namespace Bit.Api.Models.Request.Organizations;
+namespace Bit.Api.Auth.Models.Request.Organizations;
 
 public class OrganizationSsoRequestModel
 {

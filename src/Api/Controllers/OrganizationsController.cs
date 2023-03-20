@@ -1,4 +1,6 @@
 ﻿using System.Text.Json;
+using Bit.Api.Auth.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;

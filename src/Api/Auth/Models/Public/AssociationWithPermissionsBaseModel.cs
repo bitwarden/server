@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Public;
+namespace Bit.Api.Auth.Models.Public;
 
 public abstract class AssociationWithPermissionsBaseModel
 {
