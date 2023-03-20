@@ -1,14 +1,14 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
-using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
+using Bit.Infrastructure.EFIntegration.Test.Auth.AutoFixture;
+using Bit.Infrastructure.EFIntegration.Test.Auth.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
+namespace Bit.Infrastructure.EFIntegration.Test.Auth.Repositories;
 
 public class SsoUserRepositoryTests
 {

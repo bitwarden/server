@@ -11,7 +11,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.Auth.Services;
 
 [SutProviderCustomize]
 public class SsoConfigServiceTests
