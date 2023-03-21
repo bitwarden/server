@@ -4,7 +4,7 @@ using Microsoft.Extensions.Primitives;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.IdentityServer;
+namespace Bit.Core.Test.Auth.IdentityServer;
 
 public class TokenRetrievalTests
 {

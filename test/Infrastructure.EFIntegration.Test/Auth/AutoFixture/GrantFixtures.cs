@@ -1,12 +1,13 @@
 ﻿using AutoFixture;
 using AutoFixture.Kernel;
+using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture.Relays;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
+namespace Bit.Infrastructure.EFIntegration.Test.Auth.AutoFixture;
 
 internal class GrantBuilder : ISpecimenBuilder
 {

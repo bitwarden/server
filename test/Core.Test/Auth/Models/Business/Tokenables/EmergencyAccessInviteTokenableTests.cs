@@ -4,7 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Xunit;
 
-namespace Bit.Core.Test.Models.Business.Tokenables;
+namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 
 public class EmergencyAccessInviteTokenableTests
 {

@@ -2,13 +2,14 @@
 using AutoFixture.Kernel;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture.Relays;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
+namespace Bit.Infrastructure.EFIntegration.Test.Auth.AutoFixture;
 
 internal class AuthRequestBuilder : ISpecimenBuilder
 {

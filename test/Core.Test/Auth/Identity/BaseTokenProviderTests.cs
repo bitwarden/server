@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
-using Bit.Core.Models;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -12,7 +11,7 @@ using Microsoft.Extensions.Options;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.Identity;
+namespace Bit.Core.Test.Auth.Identity;
 
 [SutProviderCustomize]
 public abstract class BaseTokenProviderTests<T>

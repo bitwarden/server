@@ -5,7 +5,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.Identity;
+namespace Bit.Core.Test.Auth.Identity;
 
 public class EmailTokenProviderTests : BaseTokenProviderTests<EmailTokenProvider>
 {
