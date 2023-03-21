@@ -1,11 +1,10 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
 
 public class EmergencyAccessRepositoriesTests
 {
