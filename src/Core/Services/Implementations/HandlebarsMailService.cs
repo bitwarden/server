@@ -589,7 +589,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "EmergencyAccessInvited", model);
+        await AddMessageContentAsync(message, "Auth.EmergencyAccessInvited", model);
         message.Category = "EmergencyAccessInvited";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -603,7 +603,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "EmergencyAccessAccepted", model);
+        await AddMessageContentAsync(message, "Auth.EmergencyAccessAccepted", model);
         message.Category = "EmergencyAccessAccepted";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -617,7 +617,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "EmergencyAccessConfirmed", model);
+        await AddMessageContentAsync(message, "Auth.EmergencyAccessConfirmed", model);
         message.Category = "EmergencyAccessConfirmed";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -634,7 +634,7 @@ public class HandlebarsMailService : IMailService
             Action = emergencyAccess.Type.ToString(),
             DaysLeft = emergencyAccess.WaitTimeDays - Convert.ToInt32((remainingTime).TotalDays),
         };
-        await AddMessageContentAsync(message, "EmergencyAccessRecovery", model);
+        await AddMessageContentAsync(message, "Auth.EmergencyAccessRecovery", model);
         message.Category = "EmergencyAccessRecovery";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -646,7 +646,7 @@ public class HandlebarsMailService : IMailService
         {
             Name = CoreHelpers.SanitizeForEmail(approvingName),
         };
-        await AddMessageContentAsync(message, "EmergencyAccessApproved", model);
+        await AddMessageContentAsync(message, "Auth.EmergencyAccessApproved", model);
         message.Category = "EmergencyAccessApproved";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -658,7 +658,7 @@ public class HandlebarsMailService : IMailService
         {
             Name = CoreHelpers.SanitizeForEmail(rejectingName),
         };
-        await AddMessageContentAsync(message, "EmergencyAccessRejected", model);
+        await AddMessageContentAsync(message, "Auth.EmergencyAccessRejected", model);
         message.Category = "EmergencyAccessRejected";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -675,7 +675,7 @@ public class HandlebarsMailService : IMailService
             Action = emergencyAccess.Type.ToString(),
             DaysLeft = emergencyAccess.WaitTimeDays - Convert.ToInt32((remainingTime).TotalDays),
         };
-        await AddMessageContentAsync(message, "EmergencyAccessRecoveryReminder", model);
+        await AddMessageContentAsync(message, "Auth.EmergencyAccessRecoveryReminder", model);
         message.Category = "EmergencyAccessRecoveryReminder";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -688,7 +688,7 @@ public class HandlebarsMailService : IMailService
             Name = CoreHelpers.SanitizeForEmail(initiatingName),
             Action = emergencyAccess.Type.ToString(),
         };
-        await AddMessageContentAsync(message, "EmergencyAccessRecoveryTimedOut", model);
+        await AddMessageContentAsync(message, "Auth.EmergencyAccessRecoveryTimedOut", model);
         message.Category = "EmergencyAccessRecoveryTimedOut";
         await _mailDeliveryService.SendEmailAsync(message);
     }
