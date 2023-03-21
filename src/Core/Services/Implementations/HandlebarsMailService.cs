@@ -44,7 +44,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "VerifyEmail", model);
+        await AddMessageContentAsync(message, "Auth.VerifyEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "VerifyEmail";
         await _mailDeliveryService.SendEmailAsync(message);
@@ -62,7 +62,7 @@ public class HandlebarsMailService : IMailService
             Email = email,
             EmailEncoded = WebUtility.UrlEncode(email)
         };
-        await AddMessageContentAsync(message, "VerifyDelete", model);
+        await AddMessageContentAsync(message, "Auth.VerifyDelete", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "VerifyDelete";
         await _mailDeliveryService.SendEmailAsync(message);
@@ -107,7 +107,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "TwoFactorEmail", model);
+        await AddMessageContentAsync(message, "Auth.TwoFactorEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "TwoFactorEmail";
         await _mailDeliveryService.SendEmailAsync(message);
@@ -122,7 +122,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "MasterPasswordHint", model);
+        await AddMessageContentAsync(message, "Auth.MasterPasswordHint", model);
         message.Category = "MasterPasswordHint";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -135,7 +135,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
-        await AddMessageContentAsync(message, "NoMasterPasswordHint", model);
+        await AddMessageContentAsync(message, "Auth.NoMasterPasswordHint", model);
         message.Category = "NoMasterPasswordHint";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -277,7 +277,7 @@ public class HandlebarsMailService : IMailService
         {
             Url = url.ToString()
         };
-        await AddMessageContentAsync(message, "PasswordlessSignIn", model);
+        await AddMessageContentAsync(message, "Auth.PasswordlessSignIn", model);
         message.Category = "PasswordlessSignIn";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -371,7 +371,7 @@ public class HandlebarsMailService : IMailService
             TimeZone = "UTC",
             IpAddress = ip
         };
-        await AddMessageContentAsync(message, "RecoverTwoFactor", model);
+        await AddMessageContentAsync(message, "Auth.RecoverTwoFactor", model);
         message.Category = "RecoverTwoFactor";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -841,7 +841,7 @@ public class HandlebarsMailService : IMailService
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName,
         };
-        await AddMessageContentAsync(message, "OTPEmail", model);
+        await AddMessageContentAsync(message, "Auth.OTPEmail", model);
         message.MetaData.Add("SendGridBypassListManagement", true);
         message.Category = "OTP";
         await _mailDeliveryService.SendEmailAsync(message);
@@ -859,7 +859,7 @@ public class HandlebarsMailService : IMailService
             AffectedEmail = email
 
         };
-        await AddMessageContentAsync(message, "FailedLoginAttempts", model);
+        await AddMessageContentAsync(message, "Auth.FailedLoginAttempts", model);
         message.Category = "FailedLoginAttempts";
         await _mailDeliveryService.SendEmailAsync(message);
     }
@@ -876,7 +876,7 @@ public class HandlebarsMailService : IMailService
             AffectedEmail = email
 
         };
-        await AddMessageContentAsync(message, "FailedTwoFactorAttempts", model);
+        await AddMessageContentAsync(message, "Auth.FailedTwoFactorAttempts", model);
         message.Category = "FailedTwoFactorAttempts";
         await _mailDeliveryService.SendEmailAsync(message);
     }
