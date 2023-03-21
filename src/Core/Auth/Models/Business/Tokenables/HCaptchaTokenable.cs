@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
 
-namespace Bit.Core.Models.Business.Tokenables;
+namespace Bit.Core.Auth.Models.Business.Tokenables;
 
 public class HCaptchaTokenable : ExpiringTokenable
 {

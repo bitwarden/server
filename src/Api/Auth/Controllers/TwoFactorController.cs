@@ -5,6 +5,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;

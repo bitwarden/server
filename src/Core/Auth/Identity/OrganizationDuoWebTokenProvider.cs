@@ -1,9 +1,8 @@
 ﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Utilities.Duo;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Models;
 using Bit.Core.Settings;
-using Bit.Core.Utilities.Duo;
 
 namespace Bit.Core.Auth.Identity;
 

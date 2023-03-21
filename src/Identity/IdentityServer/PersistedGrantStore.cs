@@ -1,4 +1,4 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Auth.Repositories;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
 using Grant = Bit.Core.Auth.Entities.Grant;

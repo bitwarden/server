@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Models.Business.Tokenables;
+namespace Bit.Core.Auth.Models.Business.Tokenables;
 
 public class EmergencyAccessInviteTokenable : Tokens.ExpiringTokenable
 {

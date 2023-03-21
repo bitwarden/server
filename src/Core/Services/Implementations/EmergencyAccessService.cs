@@ -1,9 +1,9 @@
 ﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models;
-using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;

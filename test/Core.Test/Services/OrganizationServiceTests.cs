@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;

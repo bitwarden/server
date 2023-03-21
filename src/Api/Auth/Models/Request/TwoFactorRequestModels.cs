@@ -1,10 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Models;
-using Bit.Core.Utilities;
 using Fido2NetLib;
 
 namespace Bit.Api.Auth.Models.Request;

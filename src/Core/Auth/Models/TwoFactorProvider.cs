@@ -3,7 +3,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Enums;
 using Fido2NetLib.Objects;
 
-namespace Bit.Core.Models;
+namespace Bit.Core.Auth.Models;
 
 public class TwoFactorProvider
 {

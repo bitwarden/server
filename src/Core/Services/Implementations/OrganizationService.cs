@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;

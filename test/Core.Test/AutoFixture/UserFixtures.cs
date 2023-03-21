@@ -1,8 +1,8 @@
 ﻿using AutoFixture;
 using AutoFixture.Kernel;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
-using Bit.Core.Models;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

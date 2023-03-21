@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Auth.Enums;
 
-namespace Bit.Core.Models;
+namespace Bit.Core.Auth.Models;
 
 public interface ITwoFactorProvidersUser
 {

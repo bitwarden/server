@@ -1,10 +1,10 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Controllers;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

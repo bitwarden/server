@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.Auth.Repositories;
 
 public interface IGrantRepository
 {

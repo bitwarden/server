@@ -17,7 +17,7 @@ using System.Text.RegularExpressions;
 using System.Web;
 using Bit.Core.Models.Api.Response.Duo;
 
-namespace Bit.Core.Utilities;
+namespace Bit.Core.Auth.Utilities;
 
 public class DuoApi
 {

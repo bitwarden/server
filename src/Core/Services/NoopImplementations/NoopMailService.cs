@@ -1,6 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Models.Business;
+using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services;

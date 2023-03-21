@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Bit.Core.Repositories;
+using Bit.Core.Auth.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

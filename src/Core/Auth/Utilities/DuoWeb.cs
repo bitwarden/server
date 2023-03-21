@@ -36,7 +36,7 @@ THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Bit.Core.Utilities.Duo;
+namespace Bit.Core.Auth.Utilities.Duo;
 
 public static class DuoWeb
 {

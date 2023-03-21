@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Models.Api.Response.Accounts;
+﻿namespace Bit.Core.Auth.Models.Api.Response.Accounts;
 
 public interface ICaptchaProtectedResponseModel
 {

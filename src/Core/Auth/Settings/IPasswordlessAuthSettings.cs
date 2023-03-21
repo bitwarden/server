@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Settings;
+﻿namespace Bit.Core.Auth.Settings;
 
 public interface IPasswordlessAuthSettings
 {
