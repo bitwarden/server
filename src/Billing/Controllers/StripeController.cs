@@ -118,6 +118,7 @@ public class StripeController : Controller
 
             var subCanceled = subDeleted && subscription.Status == "canceled";
             var subUnpaid = subUpdated && subscription.Status == "unpaid";
+            var subActive = subUpdated && subscription.Status == "active";
             var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
 
             if (subCanceled || subUnpaid || subIncompleteExpired)
@@ -131,6 +132,25 @@ public class StripeController : Controller
                 else if (ids.Item2.HasValue)
                 {
                     await _userService.DisablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+                }
+            }
+
+            if (subActive)
+            {
+                //org
+                if (ids.Item1.HasValue)
+                {
+                    await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                    if (IsSponsoredSubscription(subscription))
+                    {
+                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                    }
+                }
+                // user
+                else if (ids.Item2.HasValue)
+                {
+                    await _userService.EnablePremiumAsync(ids.Item2.Value,
+                        subscription.CurrentPeriodEnd);
                 }
             }
 
