@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -10,7 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
-public class EmergencyAccessRepository : Repository<Core.Entities.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
+public class EmergencyAccessRepository : Repository<Core.Auth.Entities.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
 {
     public EmergencyAccessRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.EmergencyAccesses)
@@ -22,7 +24,7 @@ public class EmergencyAccessRepository : Repository<Core.Entities.EmergencyAcces
         return await GetCountFromQuery(query);
     }
 
-    public override async Task DeleteAsync(Core.Entities.EmergencyAccess emergencyAccess)
+    public override async Task DeleteAsync(Core.Auth.Entities.EmergencyAccess emergencyAccess)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

@@ -3,6 +3,7 @@ using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;

@@ -1,6 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿
+using Bit.Core.Auth.Entities;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.Auth.Models.Data;
 
 public class EmergencyAccessNotify : EmergencyAccess
 {

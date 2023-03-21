@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Reflection;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Mail;
 using Bit.Core.Entities;

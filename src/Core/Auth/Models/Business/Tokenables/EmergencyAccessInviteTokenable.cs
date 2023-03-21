@@ -1,5 +1,5 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.Entities;
+using Bit.Core.Auth.Entities;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 

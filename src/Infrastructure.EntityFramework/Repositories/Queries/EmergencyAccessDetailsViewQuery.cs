@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Data;
+﻿using Bit.Core.Auth.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 

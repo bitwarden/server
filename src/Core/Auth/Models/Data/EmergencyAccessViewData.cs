@@ -1,7 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Vault.Models.Data;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.Auth.Models.Data;
 
 public class EmergencyAccessViewData
 {

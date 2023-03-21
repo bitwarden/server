@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;

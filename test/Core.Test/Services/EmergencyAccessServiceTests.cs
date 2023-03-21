@@ -1,9 +1,9 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -23,7 +23,7 @@ public class EmergencyAccessServiceTests
         savingUser.Premium = false;
         var emergencyAccess = new EmergencyAccess
         {
-            Type = Enums.EmergencyAccessType.Takeover,
+            Type = EmergencyAccessType.Takeover,
             GrantorId = savingUser.Id,
         };
 
@@ -44,7 +44,7 @@ public class EmergencyAccessServiceTests
         sutProvider.GetDependency<IUserService>().CanAccessPremium(invitingUser).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.InviteAsync(invitingUser, email, Enums.EmergencyAccessType.Takeover, waitTime));
+            () => sutProvider.Sut.InviteAsync(invitingUser, email, EmergencyAccessType.Takeover, waitTime));
 
         Assert.Contains("You cannot use Emergency Access Takeover because you are using Key Connector", exception.Message);
         await sutProvider.GetDependency<IEmergencyAccessRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
@@ -57,9 +57,9 @@ public class EmergencyAccessServiceTests
         confirmingUser.UsesKeyConnector = true;
         var emergencyAccess = new EmergencyAccess
         {
-            Status = Enums.EmergencyAccessStatusType.Accepted,
+            Status = EmergencyAccessStatusType.Accepted,
             GrantorId = confirmingUser.Id,
-            Type = Enums.EmergencyAccessType.Takeover,
+            Type = EmergencyAccessType.Takeover,
         };
 
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(confirmingUser.Id).Returns(confirmingUser);
@@ -79,7 +79,7 @@ public class EmergencyAccessServiceTests
         savingUser.UsesKeyConnector = true;
         var emergencyAccess = new EmergencyAccess
         {
-            Type = Enums.EmergencyAccessType.Takeover,
+            Type = EmergencyAccessType.Takeover,
             GrantorId = savingUser.Id,
         };
 
@@ -101,10 +101,10 @@ public class EmergencyAccessServiceTests
         grantor.UsesKeyConnector = true;
         var emergencyAccess = new EmergencyAccess
         {
-            Status = Enums.EmergencyAccessStatusType.Confirmed,
+            Status = EmergencyAccessStatusType.Confirmed,
             GranteeId = initiatingUser.Id,
             GrantorId = grantor.Id,
-            Type = Enums.EmergencyAccessType.Takeover,
+            Type = EmergencyAccessType.Takeover,
         };
 
         sutProvider.GetDependency<IEmergencyAccessRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(emergencyAccess);
@@ -126,8 +126,8 @@ public class EmergencyAccessServiceTests
         {
             GrantorId = grantor.Id,
             GranteeId = requestingUser.Id,
-            Status = Enums.EmergencyAccessStatusType.RecoveryApproved,
-            Type = Enums.EmergencyAccessType.Takeover,
+            Status = EmergencyAccessStatusType.RecoveryApproved,
+            Type = EmergencyAccessType.Takeover,
         };
 
         sutProvider.GetDependency<IEmergencyAccessRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(emergencyAccess);
@@ -156,8 +156,8 @@ public class EmergencyAccessServiceTests
         {
             GrantorId = grantor.Id,
             GranteeId = requestingUser.Id,
-            Status = Enums.EmergencyAccessStatusType.RecoveryApproved,
-            Type = Enums.EmergencyAccessType.Takeover,
+            Status = EmergencyAccessStatusType.RecoveryApproved,
+            Type = EmergencyAccessType.Takeover,
         };
 
         sutProvider.GetDependency<IEmergencyAccessRepository>().GetByIdAsync(Arg.Any<Guid>()).Returns(emergencyAccess);

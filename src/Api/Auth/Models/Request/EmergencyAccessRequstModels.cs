@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;

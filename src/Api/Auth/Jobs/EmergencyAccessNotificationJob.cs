@@ -1,4 +1,5 @@
-﻿using Bit.Core.Jobs;
+﻿using Bit.Core.Auth.Services;
+using Bit.Core.Jobs;
 using Bit.Core.Services;
 using Quartz;
 
