@@ -1,10 +1,11 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
 {

@@ -4,7 +4,9 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
+using EfAuthRepo = Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -15,8 +17,8 @@ public class AuthRequestRepositoryTests
     public async void CreateAsync_Works_DataMatches(
         AuthRequest authRequest,
         AuthRequestCompare equalityComparer,
-        List<EfRepo.AuthRequestRepository> suts,
-        SqlRepo.AuthRequestRepository sqlAuthRequestRepo,
+        List<EfAuthRepo.AuthRequestRepository> suts,
+        SqlAuthRepo.AuthRequestRepository sqlAuthRequestRepo,
         User user,
         List<EfRepo.UserRepository> efUserRepos,
         SqlRepo.UserRepository sqlUserRepo

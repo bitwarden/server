@@ -1,6 +1,8 @@
 ﻿using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
+namespace Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
 
 public class EmergencyAccessReadCountByGrantorIdEmailQuery : IQuery<EmergencyAccess>
 {

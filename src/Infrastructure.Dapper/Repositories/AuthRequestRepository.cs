@@ -2,10 +2,11 @@
 using Bit.Core.Auth.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequestRepository
 {
