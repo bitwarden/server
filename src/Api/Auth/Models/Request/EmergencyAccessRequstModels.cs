@@ -3,7 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request;
+namespace Bit.Api.Auth.Models.Request;
 
 public class EmergencyAccessInviteRequestModel
 {

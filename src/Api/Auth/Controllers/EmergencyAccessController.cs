@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Request;
+﻿using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
@@ -10,7 +11,7 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Auth.Controllers;
 
 [Route("emergency-access")]
 [Authorize("Application")]

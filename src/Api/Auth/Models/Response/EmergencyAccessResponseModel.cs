@@ -6,7 +6,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Models.Data;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Api.Auth.Models.Response;
 
 public class EmergencyAccessResponseModel : ResponseModel
 {

@@ -2,7 +2,7 @@
 using Bit.Core.Services;
 using Quartz;
 
-namespace Bit.Api.Jobs;
+namespace Bit.Api.Auth.Jobs;
 
 public class EmergencyAccessNotificationJob : BaseJob
 {
