@@ -1,14 +1,13 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Entities;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEmergencyAccessRepository
 {

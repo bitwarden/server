@@ -4,7 +4,9 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
+using EfAuthRepo = Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -16,9 +18,9 @@ public class EmergencyAccessRepositoryTests
         EmergencyAccess emergencyAccess,
         List<User> users,
         EmergencyAccessCompare equalityComparer,
-        List<EfRepo.EmergencyAccessRepository> suts,
+        List<EfAuthRepo.EmergencyAccessRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
-        SqlRepo.EmergencyAccessRepository sqlEmergencyAccessRepo,
+        SqlAuthRepo.EmergencyAccessRepository sqlEmergencyAccessRepo,
         SqlRepo.UserRepository sqlUserRepo
         )
     {

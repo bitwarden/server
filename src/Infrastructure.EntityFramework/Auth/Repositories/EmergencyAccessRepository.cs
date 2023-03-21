@@ -1,16 +1,15 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Repositories.Queries;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
 public class EmergencyAccessRepository : Repository<Core.Auth.Entities.EmergencyAccess, EmergencyAccess, Guid>, IEmergencyAccessRepository
 {
