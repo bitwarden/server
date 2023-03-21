@@ -1,11 +1,11 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Models;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Identity;
+namespace Bit.Core.Auth.Identity;
 
 public class EmailTokenProvider : IUserTwoFactorTokenProvider<User>
 {

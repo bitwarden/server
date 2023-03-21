@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.Auth.Entities;
 
 public class Grant
 {

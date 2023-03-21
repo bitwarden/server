@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.Auth.Entities;
 
 public class AuthRequest : ITableObject<Guid>
 {
@@ -10,7 +12,7 @@ public class AuthRequest : ITableObject<Guid>
     public Enums.AuthRequestType Type { get; set; }
     [MaxLength(50)]
     public string RequestDeviceIdentifier { get; set; }
-    public Enums.DeviceType RequestDeviceType { get; set; }
+    public DeviceType RequestDeviceType { get; set; }
     [MaxLength(50)]
     public string RequestIpAddress { get; set; }
     public Guid? ResponseDeviceId { get; set; }

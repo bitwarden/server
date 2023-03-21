@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Enums;
+using Bit.Core.Auth.Enums;
 using Newtonsoft.Json;
 
 namespace Bit.Api.Auth.Models.Request;

@@ -1,8 +1,8 @@
-﻿using Bit.Core.LoginFeatures.PasswordlessLogin;
-using Bit.Core.LoginFeatures.PasswordlessLogin.Interfaces;
+﻿using Bit.Core.Auth.LoginFeatures.PasswordlessLogin;
+using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.LoginFeatures;
+namespace Bit.Core.Auth.LoginFeatures;
 
 public static class LoginServiceCollectionExtensions
 {

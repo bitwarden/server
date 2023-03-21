@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Core.Identity;
+namespace Bit.Core.Auth.Identity;
 
 public class RoleStore : IRoleStore<Role>
 {

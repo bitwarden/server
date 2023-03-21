@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
@@ -10,7 +11,7 @@ using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Identity;
+namespace Bit.Core.Auth.Identity;
 
 public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
 {

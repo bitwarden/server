@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.LoginFeatures.PasswordlessLogin.Interfaces;
+﻿namespace Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 
 public interface IVerifyAuthRequestCommand
 {

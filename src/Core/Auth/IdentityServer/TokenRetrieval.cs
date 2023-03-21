@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 
-namespace Bit.Core.IdentityServer;
+namespace Bit.Core.Auth.IdentityServer;
 
 public static class TokenRetrieval
 {

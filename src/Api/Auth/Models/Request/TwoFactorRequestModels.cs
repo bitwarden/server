@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;

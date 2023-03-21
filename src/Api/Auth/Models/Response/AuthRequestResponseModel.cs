@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;

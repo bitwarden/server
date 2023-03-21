@@ -1,5 +1,5 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Identity;
+﻿using Bit.Core.Auth.Identity;
+using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;

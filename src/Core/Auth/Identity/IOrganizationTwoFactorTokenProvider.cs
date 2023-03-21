@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.Identity;
+namespace Bit.Core.Auth.Identity;
 
 public interface IOrganizationTwoFactorTokenProvider
 {

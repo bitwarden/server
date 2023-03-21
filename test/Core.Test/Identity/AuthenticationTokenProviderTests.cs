@@ -1,6 +1,6 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Identity;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;

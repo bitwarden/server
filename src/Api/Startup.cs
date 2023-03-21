@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bit.Core.Auth.Identity;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;

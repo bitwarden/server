@@ -1,11 +1,11 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using OtpNet;
 
-namespace Bit.Core.Identity;
+namespace Bit.Core.Auth.Identity;
 
 public class AuthenticatorTokenProvider : IUserTwoFactorTokenProvider<User>
 {

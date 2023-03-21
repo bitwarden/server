@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 
-namespace Bit.Core.Identity;
+namespace Bit.Core.Auth.Identity;
 
 public class LowerInvariantLookupNormalizer : ILookupNormalizer
 {

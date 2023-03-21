@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Exceptions;
+﻿namespace Bit.Core.Auth.Exceptions;
 
 public class DuplicateAuthRequestException : Exception
 {

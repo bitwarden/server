@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
-public class AuthRequestRepository : Repository<Core.Entities.AuthRequest, AuthRequest, Guid>, IAuthRequestRepository
+public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, AuthRequest, Guid>, IAuthRequestRepository
 {
     public AuthRequestRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.AuthRequests)
@@ -23,13 +23,13 @@ public class AuthRequestRepository : Repository<Core.Entities.AuthRequest, AuthR
         }
     }
 
-    public async Task<ICollection<Core.Entities.AuthRequest>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<Core.Auth.Entities.AuthRequest>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var userAuthRequests = await dbContext.AuthRequests.Where(a => a.UserId.Equals(userId)).ToListAsync();
-            return Mapper.Map<List<Core.Entities.AuthRequest>>(userAuthRequests);
+            return Mapper.Map<List<Core.Auth.Entities.AuthRequest>>(userAuthRequests);
         }
     }
 }

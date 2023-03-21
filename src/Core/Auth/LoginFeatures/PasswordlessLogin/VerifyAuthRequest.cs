@@ -1,8 +1,8 @@
-﻿using Bit.Core.LoginFeatures.PasswordlessLogin.Interfaces;
+﻿using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.LoginFeatures.PasswordlessLogin;
+namespace Bit.Core.Auth.LoginFeatures.PasswordlessLogin;
 
 public class VerifyAuthRequestCommand : IVerifyAuthRequestCommand
 {

@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;

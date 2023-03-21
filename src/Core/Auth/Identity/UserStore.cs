@@ -5,7 +5,7 @@ using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Identity;
+namespace Bit.Core.Auth.Identity;
 
 public class UserStore :
     IUserStore<User>,

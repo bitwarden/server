@@ -1,4 +1,4 @@
-﻿using Bit.Core.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using NSubstitute;

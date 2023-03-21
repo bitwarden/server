@@ -1,5 +1,5 @@
 ﻿using System.Data;
-using Bit.Core.Entities;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;

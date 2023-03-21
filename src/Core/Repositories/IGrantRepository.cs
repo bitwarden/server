@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Entities;
 
 namespace Bit.Core.Repositories;
 

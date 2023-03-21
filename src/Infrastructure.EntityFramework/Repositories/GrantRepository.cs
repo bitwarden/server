@@ -41,7 +41,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         }
     }
 
-    public async Task<Core.Entities.Grant> GetByKeyAsync(string key)
+    public async Task<Core.Auth.Entities.Grant> GetByKeyAsync(string key)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -54,7 +54,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         }
     }
 
-    public async Task<ICollection<Core.Entities.Grant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
+    public async Task<ICollection<Core.Auth.Entities.Grant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -66,11 +66,11 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
                             g.Type == type
                         select g;
             var grants = await query.ToListAsync();
-            return (ICollection<Core.Entities.Grant>)grants;
+            return (ICollection<Core.Auth.Entities.Grant>)grants;
         }
     }
 
-    public async Task SaveAsync(Core.Entities.Grant obj)
+    public async Task SaveAsync(Core.Auth.Entities.Grant obj)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

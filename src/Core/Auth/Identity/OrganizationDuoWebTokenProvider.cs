@@ -1,10 +1,11 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Settings;
 using Bit.Core.Utilities.Duo;
 
-namespace Bit.Core.Identity;
+namespace Bit.Core.Auth.Identity;
 
 public interface IOrganizationDuoWebTokenProvider : IOrganizationTwoFactorTokenProvider { }
 
