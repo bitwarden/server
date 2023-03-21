@@ -5,7 +5,9 @@ namespace Bit.Api.SecretsManager.Models.Response;
 
 public class AccessTokenResponseModel : ResponseModel
 {
-    public AccessTokenResponseModel(ApiKey apiKey, string obj = "accessToken")
+    private const string _objectName = "accessToken";
+
+    public AccessTokenResponseModel(ApiKey apiKey, string obj = _objectName)
         : base(obj)
     {
         Id = apiKey.Id;
@@ -15,6 +17,10 @@ public class AccessTokenResponseModel : ResponseModel
         ExpireAt = apiKey.ExpireAt;
         CreationDate = apiKey.CreationDate;
         RevisionDate = apiKey.RevisionDate;
+    }
+
+    public AccessTokenResponseModel() : base(_objectName)
+    {
     }
 
     public Guid Id { get; set; }
