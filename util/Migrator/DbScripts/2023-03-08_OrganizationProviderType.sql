@@ -44,16 +44,16 @@ SELECT
     OU.[AccessSecretsManager]
 FROM
     [dbo].[OrganizationUser] OU
-    LEFT JOIN
+LEFT JOIN
     [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
-    LEFT JOIN
+LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
-    LEFT JOIN
+LEFT JOIN
     [dbo].[ProviderOrganization] PO ON PO.[OrganizationId] = O.[Id]
-    LEFT JOIN
+LEFT JOIN
     [dbo].[Provider] P ON P.[Id] = PO.[ProviderId]
-    LEFT JOIN
+LEFT JOIN
     [dbo].[SsoConfig] SS ON SS.[OrganizationId] = OU.[OrganizationId]
-    LEFT JOIN
+LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
 GO
