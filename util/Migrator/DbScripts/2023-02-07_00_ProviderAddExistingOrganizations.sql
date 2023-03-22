@@ -1,3 +1,10 @@
+-- Drop existing SPROC
+IF OBJECT_ID('[dbo].[Organization_UnassignedToProviderSearch]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
+END
+GO
+
 CREATE PROCEDURE [dbo].[Organization_UnassignedToProviderSearch]
     @Name NVARCHAR(50),
     @OwnerEmail NVARCHAR(256),
