@@ -27,6 +27,7 @@ public class ToolsController : Controller
     private readonly IPaymentService _paymentService;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IWebHostEnvironment _environment;
 
     public ToolsController(
         GlobalSettings globalSettings,
@@ -38,7 +39,8 @@ public class ToolsController : Controller
         IOrganizationUserRepository organizationUserRepository,
         ITaxRateRepository taxRateRepository,
         IPaymentService paymentService,
-        IStripeAdapter stripeAdapter)
+        IStripeAdapter stripeAdapter,
+        IWebHostEnvironment environment)
     {
         _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
@@ -50,6 +52,7 @@ public class ToolsController : Controller
         _taxRateRepository = taxRateRepository;
         _paymentService = paymentService;
         _stripeAdapter = stripeAdapter;
+        _environment = environment;
     }
 
     public IActionResult ChargeBraintree()
@@ -450,11 +453,12 @@ public class ToolsController : Controller
             subscriptions.FirstOrDefault()?.Id :
             null;
 
+        var isProduction = _environment.IsProduction();
         var model = new StripeSubscriptionsModel()
         {
             Items = subscriptions.Select(s => new StripeSubscriptionRowModel(s)).ToList(),
             Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
-            TestClocks = await _stripeAdapter.TestClockListAsync(),
+            TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync(),
             Filter = options
         };
         return View(model);
@@ -465,8 +469,9 @@ public class ToolsController : Controller
     {
         if (!ModelState.IsValid)
         {
+            var isProduction = _environment.IsProduction();
             model.Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
-            model.TestClocks = await _stripeAdapter.TestClockListAsync();
+            model.TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync();
             return View(model);
         }
 

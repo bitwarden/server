@@ -1,9 +1,11 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Vault.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Core.Models.Data;
+using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 

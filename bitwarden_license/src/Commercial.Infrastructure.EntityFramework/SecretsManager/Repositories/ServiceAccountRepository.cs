@@ -32,6 +32,16 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return Mapper.Map<List<Core.SecretsManager.Entities.ServiceAccount>>(serviceAccounts);
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.ServiceAccount>> GetManyByIds(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var serviceAccounts = await dbContext.ServiceAccount
+            .Where(c => ids.Contains(c.Id))
+            .ToListAsync();
+        return Mapper.Map<List<Core.SecretsManager.Entities.ServiceAccount>>(serviceAccounts);
+    }
+
     public async Task<bool> UserHasReadAccessToServiceAccount(Guid id, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
@@ -69,6 +79,26 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
 
         var serviceAccounts = await query.OrderBy(c => c.RevisionDate).ToListAsync();
         return Mapper.Map<List<Core.SecretsManager.Entities.ServiceAccount>>(serviceAccounts);
+    }
+
+    public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Policies can't have a cascade delete, so we need to delete them manually.
+        var policies = dbContext.AccessPolicies.Where(ap =>
+            ((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId.HasValue && ids.Contains(((ServiceAccountProjectAccessPolicy)ap).ServiceAccountId!.Value) ||
+            ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue && ids.Contains(((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value) ||
+            ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId.HasValue && ids.Contains(((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId!.Value));
+        dbContext.RemoveRange(policies);
+
+        var apiKeys = dbContext.ApiKeys.Where(a => a.ServiceAccountId.HasValue && ids.Contains(a.ServiceAccountId!.Value));
+        dbContext.RemoveRange(apiKeys);
+
+        var serviceAccounts = dbContext.ServiceAccount.Where(c => ids.Contains(c.Id));
+        dbContext.RemoveRange(serviceAccounts);
+        await dbContext.SaveChangesAsync();
     }
 
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>

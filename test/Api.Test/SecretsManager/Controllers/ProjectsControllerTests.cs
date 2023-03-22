@@ -6,7 +6,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
-using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
@@ -199,13 +198,16 @@ public class ProjectsControllerTests
                 break;
         }
 
-        sutProvider.GetDependency<IProjectRepository>().GetPermissionDetailsByIdAsync(Arg.Is(data), Arg.Any<Guid>())
-            .ReturnsForAnyArgs(new ProjectPermissionDetails() { Id = data, OrganizationId = orgId, Read = true, Write = true });
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(Arg.Is(data))
+            .ReturnsForAnyArgs(new Project { Id = data, OrganizationId = orgId });
+
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+            .ReturnsForAnyArgs((true, false));
 
         await sutProvider.Sut.GetAsync(data);
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
-            .GetPermissionDetailsByIdAsync(Arg.Is(data), Arg.Any<Guid>());
+            .GetByIdAsync(Arg.Is(data));
     }
 
     [Theory]

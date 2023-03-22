@@ -123,12 +123,14 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
         var orgUserId = adminOrgUser.Id;
+        var currentUserId = adminOrgUser.UserId!.Value;
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
             await LoginAsync(email);
             orgUserId = orgUser.Id;
+            currentUserId = orgUser.UserId!.Value;
         }
 
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
@@ -150,7 +152,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(createdProject.DeletedDate);
 
         // Check permissions have been bootstrapped.
-        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(createdProject.Id);
+        var accessPolicies = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(createdProject.Id, currentUserId);
         Assert.NotNull(accessPolicies);
         var ap = (UserProjectAccessPolicy)accessPolicies.First();
         Assert.Equal(createdProject.Id, ap.GrantedProjectId);
@@ -359,7 +361,7 @@ public class ProjectsControllerTest : IClassFixture<ApiApplicationFactory>, IAsy
             results!.Data.Select(x => x.Id).OrderBy(x => x));
         Assert.DoesNotContain(results.Data, x => x.Error != null);
 
-        var projects = await _projectRepository.GetManyByIds(projectIds);
+        var projects = await _projectRepository.GetManyWithSecretsByIds(projectIds);
         Assert.Empty(projects);
     }
 

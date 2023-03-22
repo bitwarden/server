@@ -6,11 +6,13 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [SecretsManager]
+[Authorize("secrets")]
 public class SecretsManagerPortingController : Controller
 {
     private readonly ISecretRepository _secretRepository;
@@ -31,7 +33,7 @@ public class SecretsManagerPortingController : Controller
     [HttpGet("sm/{organizationId}/export")]
     public async Task<SMExportResponseModel> Export([FromRoute] Guid organizationId, [FromRoute] string format = "json")
     {
-        if (!await _currentContext.OrganizationAdmin(organizationId))
+        if (!await _currentContext.OrganizationAdmin(organizationId) || !_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
@@ -51,7 +53,7 @@ public class SecretsManagerPortingController : Controller
     [HttpPost("sm/{organizationId}/import")]
     public async Task Import([FromRoute] Guid organizationId, [FromBody] SMImportRequestModel importRequest)
     {
-        if (!await _currentContext.OrganizationAdmin(organizationId))
+        if (!await _currentContext.OrganizationAdmin(organizationId) || !_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
@@ -59,6 +61,11 @@ public class SecretsManagerPortingController : Controller
         if (importRequest.Projects?.Count() > 1000 || importRequest.Secrets?.Count() > 6000)
         {
             throw new BadRequestException("You cannot import this much data at once, the limit is 1000 projects and 6000 secrets.");
+        }
+
+        if (importRequest.Secrets.Any(s => s.ProjectIds.Count() > 1))
+        {
+            throw new BadRequestException("A secret can only be in one project at a time.");
         }
 
         await _importCommand.ImportAsync(organizationId, importRequest.ToSMImport());

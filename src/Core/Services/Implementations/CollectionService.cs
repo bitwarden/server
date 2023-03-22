@@ -97,7 +97,7 @@ public class CollectionService : ICollectionService
 
     public async Task<IEnumerable<Collection>> GetOrganizationCollections(Guid organizationId)
     {
-        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.ManageUsers(organizationId))
+        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.ManageUsers(organizationId) && !await _currentContext.ManageGroups(organizationId))
         {
             throw new NotFoundException();
         }

@@ -24,6 +24,8 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UseResetPassword = organization.UseResetPassword;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
+        UseActivateAutofillPolicy = organization.PlanType == PlanType.EnterpriseAnnually ||
+            organization.PlanType == PlanType.EnterpriseMonthly;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
