@@ -5,6 +5,9 @@
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 
 @{
+    var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
+    var canViewProviders = AccessControlService.UserHasPermission(Permission.Provider_List_View);
+    var canViewLogs = AccessControlService.UserHasPermission(Permission.Logs_View);
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
     var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
     var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
@@ -50,7 +53,7 @@
                 <ul class="navbar-nav mr-auto">
                     @if (SignInManager.IsSignedIn(User))
                     {
-                        @if (AccessControlService.UserHasPermission(Permission.User_List_View))
+                        @if (canViewUsers)
                         {
                             <li class="nav-item" active-controller="Users">
                                 <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
@@ -61,7 +64,7 @@
                         </li>
                         @if (!GlobalSettings.SelfHosted)
                         {
-                            @if (AccessControlService.UserHasPermission(Permission.Provider_List_View))
+                            @if (canViewProviders)
                             {
                                 <li class="nav-item" active-controller="Providers">
                                     <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
@@ -114,7 +117,7 @@
                                     </div>
                                 </li>
                             }
-                            @if (AccessControlService.UserHasPermission(Permission.Logs_View))
+                            @if (canViewLogs)
                             {
                                 <li class="nav-item" active-controller="Logs">
                                     <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
