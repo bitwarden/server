@@ -41,8 +41,23 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
     }
 
     [Fact]
-    public async Task GetConfigs()
+    public async Task GetConfigs_Unauthenticated()
     {
+        _client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await _client.GetAsync("/config");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ConfigResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.NotEmpty(result!.Version);
+    }
+
+    [Fact]
+    public async Task GetConfigs_Authenticated()
+    {
+        await LoginAsync();
+
         var response = await _client.GetAsync("/config");
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ConfigResponseModel>();

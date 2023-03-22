@@ -8,6 +8,7 @@ namespace Bit.Core.Services;
 public class LaunchDarklyFeatureService : IFeatureService, IDisposable
 {
     private readonly LdClient _client;
+    private const string _anonymousUser = "25a15cac-58cf-4ac0-ad0f-b17c4bd92294";
 
     public LaunchDarklyFeatureService(
         IGlobalSettings globalSettings)
@@ -108,7 +109,18 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         {
             case Identity.ClientType.User:
                 {
-                    var ldUser = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                    LaunchDarkly.Sdk.ContextBuilder ldUser;
+                    if (currentContext.UserId.HasValue)
+                    {
+                        ldUser = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                    }
+                    else
+                    {
+                        // group all unauthenticated activity under one anonymous user key and mark as such
+                        ldUser = LaunchDarkly.Sdk.Context.Builder(_anonymousUser);
+                        ldUser.Anonymous(true);
+                    }
+
                     ldUser.Kind(LaunchDarkly.Sdk.ContextKind.Default);
 
                     if (currentContext.Organizations?.Any() ?? false)
@@ -123,21 +135,30 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
 
             case Identity.ClientType.Organization:
                 {
-                    var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
-                    ldOrg.Kind("organization");
-                    builder.Add(ldOrg.Build());
+                    if (currentContext.OrganizationId.HasValue)
+                    {
+                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+                        ldOrg.Kind("organization");
+                        builder.Add(ldOrg.Build());
+                    }
                 }
                 break;
 
             case Identity.ClientType.ServiceAccount:
                 {
-                    var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
-                    ldServiceAccount.Kind("service-account");
-                    builder.Add(ldServiceAccount.Build());
+                    if (currentContext.UserId.HasValue)
+                    {
+                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                        ldServiceAccount.Kind("service-account");
+                        builder.Add(ldServiceAccount.Build());
+                    }
 
-                    var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
-                    ldOrg.Kind("organization");
-                    builder.Add(ldOrg.Build());
+                    if (currentContext.OrganizationId.HasValue)
+                    {
+                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+                        ldOrg.Kind("organization");
+                        builder.Add(ldOrg.Build());
+                    }
                 }
                 break;
         }
