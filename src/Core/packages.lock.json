@@ -256,6 +256,16 @@
           "Microsoft.Extensions.Configuration.Abstractions": "6.0.0"
         }
       },
+      "Microsoft.Extensions.Configuration.KeyPerFile": {
+        "type": "Direct",
+        "requested": "[5.0.0, )",
+        "resolved": "5.0.0",
+        "contentHash": "Gly0uTcuES6zQTTB55r2h2LZGVp+f9DUGW9ACPHTVRuVHir2lZPOaBZinl6dkAOpOVgM42I/YnNyiSWRf65DiA==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration": "5.0.0",
+          "Microsoft.Extensions.FileProviders.Physical": "5.0.0"
+        }
+      },
       "Microsoft.Extensions.Configuration.UserSecrets": {
         "type": "Direct",
         "requested": "[6.0.1, )",
