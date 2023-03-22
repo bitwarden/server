@@ -56,7 +56,7 @@ public class ProvidersController : Controller
             UserEmail = string.IsNullOrWhiteSpace(userEmail) ? null : userEmail,
             Page = page,
             Count = count,
-            Action = "View",
+            Action = _globalSettings.SelfHosted ? "View" : "Edit",
             SelfHosted = _globalSettings.SelfHosted
         });
     }
@@ -135,6 +135,6 @@ public class ProvidersController : Controller
     {
         await _providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);
         TempData["InviteResentTo"] = ownerId;
-        return RedirectToAction("View", new { id = providerId });
+        return RedirectToAction("Edit", new { id = providerId });
     }
 }

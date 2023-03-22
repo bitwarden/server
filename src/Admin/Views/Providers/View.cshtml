@@ -1,32 +1,11 @@
-﻿@inject Bit.Core.Settings.GlobalSettings GlobalSettings
-@model ProviderViewModel
+﻿@model ProviderViewModel
 @{
     ViewData["Title"] = "Provider: " + Model.Provider.Name;
 }
 
 <h1>Provider <small>@Model.Provider.Name</small></h1>
 
-<h2>Provider Information</h2>
+<h2>Information</h2>
 @await Html.PartialAsync("_ViewInformation", Model)
 @await Html.PartialAsync("Admins", Model)
-
-@if (!GlobalSettings.SelfHosted)
-{
-    <h2>General</h2>
-    <dl class="row">
-        <dt class="col-sm-4 col-lg-3">Name</dt>
-        <dd class="col-sm-8 col-lg-9">@Model.Provider.Name</dd>
-    </dl>
-    <h2>Business Information</h2>
-    <dl class="row">
-        <dt class="col-sm-4 col-lg-3">Business Name</dt>
-        <dd class="col-sm-8 col-lg-9">@Model.Provider.BusinessName</dd>
-    </dl>
-    <h2>Billing</h2>
-    <dl class="row">
-        <dt class="col-sm-4 col-lg-3">Billing Email</dt>
-        <dd class="col-sm-8 col-lg-9">@Model.Provider.BillingEmail</dd>
-    </dl>
-}
-
 @await Html.PartialAsync("Organizations", Model)
