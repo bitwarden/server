@@ -147,6 +147,8 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_View,
                 Permission.Org_Billing_Edit,
                 Permission.Org_Billing_LaunchIDInStripe,
+                Permission.Provider_Edit,
+                Permission.Provider_View,
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
@@ -176,6 +178,7 @@ public static class RolePermissionMapping
                 Permission.Org_Licensing_Edit,
                 Permission.Provider_List_View,
                 Permission.Provider_Create,
+                Permission.Provider_Edit,
                 Permission.Provider_View,
                 Permission.Provider_ResendEmailInvite,
                 Permission.Logs_View

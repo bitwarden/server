@@ -61,7 +61,7 @@
                         </li>
                         @if (!GlobalSettings.SelfHosted)
                         {
-                            @if(AccessControlService.UserHasPermission(Permission.Provider_List_View))
+                            @if (AccessControlService.UserHasPermission(Permission.Provider_List_View))
                             {
                                 <li class="nav-item" active-controller="Providers">
                                     <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>

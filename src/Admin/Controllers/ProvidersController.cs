@@ -98,6 +98,38 @@ public class ProvidersController : Controller
         return View(new ProviderViewModel(provider, users, providerOrganizations));
     }
 
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<IActionResult> Edit(Guid id)
+    {
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        var users = await _providerUserRepository.GetManyDetailsByProviderAsync(id);
+        var providerOrganizations = await _providerOrganizationRepository.GetManyDetailsByProviderAsync(id);
+        return View(new ProviderEditModel(provider, users, providerOrganizations));
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
+    public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
+    {
+        var provider = await _providerRepository.GetByIdAsync(id);
+        if (provider == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        model.ToProvider(provider);
+        await _providerRepository.ReplaceAsync(provider);
+        await _applicationCacheService.UpsertProviderAbilityAsync(provider);
+        return RedirectToAction("Edit", new { id });
+    }
+
     [RequirePermission(Permission.Provider_ResendEmailInvite)]
     public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
     {

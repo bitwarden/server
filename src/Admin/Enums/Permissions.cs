@@ -37,6 +37,7 @@ public enum Permission
 
     Provider_List_View,
     Provider_Create,
+    Provider_Edit,
     Provider_View,
     Provider_ResendEmailInvite,
 
