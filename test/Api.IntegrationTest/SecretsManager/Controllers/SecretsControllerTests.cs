@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
 
-public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly string _mockEncryptedString =
         "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
@@ -27,7 +27,7 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
 
-    public SecretsControllerTest(ApiApplicationFactory factory)
+    public SecretsControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();
@@ -329,6 +329,108 @@ public class SecretsControllerTest : IClassFixture<ApiApplicationFactory>, IAsyn
         Assert.Equal(secret.Note, result.Note);
         Assert.Equal(secret.RevisionDate, result.RevisionDate);
         Assert.Equal(secret.CreationDate, result.CreationDate);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task GetSecretsByProject_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var response = await _client.GetAsync($"/projects/{project.Id}/secrets");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetSecretsByProject_UserWithNoPermission_EmptyList()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var project = await _projectRepository.CreateAsync(new Project()
+        {
+            Id = new Guid(),
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        var secret = await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = org.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString,
+            Projects = new List<Project> { project },
+        });
+
+        var response = await _client.GetAsync($"/projects/{project.Id}/secrets");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
+        Assert.NotNull(result);
+        Assert.Empty(result!.Secrets);
+        Assert.Empty(result!.Projects);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task GetSecretsByProject_Success(PermissionType permissionType)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project()
+        {
+            Id = new Guid(),
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        if (permissionType == PermissionType.RunAsUserWithPermission)
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await LoginAsync(email);
+
+            var accessPolicies = new List<BaseAccessPolicy>
+            {
+                new UserProjectAccessPolicy
+                {
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                },
+            };
+            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+        }
+
+        var secret = await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = org.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString,
+            Projects = new List<Project> { project },
+        });
+
+        var response = await _client.GetAsync($"/projects/{project.Id}/secrets");
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
+        Assert.NotEmpty(result!.Secrets);
+        Assert.Equal(secret.Id.ToString(), result.Secrets.First().Id);
+        Assert.Equal(secret.OrganizationId.ToString(), result.Secrets.First().OrganizationId);
+        Assert.Equal(secret.Key, result.Secrets.First().Key);
+        Assert.Equal(secret.CreationDate, result.Secrets.First().CreationDate);
+        Assert.Equal(secret.RevisionDate, result.Secrets.First().RevisionDate);
+        Assert.Equal(secret.Projects!.First().Id, result.Projects.First().Id);
+        Assert.Equal(secret.Projects!.First().Name, result.Projects.First().Name);
     }
 
     [Theory]
