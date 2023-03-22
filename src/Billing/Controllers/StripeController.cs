@@ -140,11 +140,7 @@ public class StripeController : Controller
                 //org
                 if (ids.Item1.HasValue)
                 {
-                    await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
-                    if (IsSponsoredSubscription(subscription))
-                    {
-                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
-                    }
+                    await _organizationService.EnableAsync(ids.Item1.Value);
                 }
                 // user
                 else if (ids.Item2.HasValue)
