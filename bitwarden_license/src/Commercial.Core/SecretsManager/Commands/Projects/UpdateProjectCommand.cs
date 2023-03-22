@@ -34,14 +34,8 @@ public class UpdateProjectCommand : IUpdateProjectCommand
         var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(updatedProject.Id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
+        var access = await _projectRepository.AccessToProjectAsync(updatedProject.Id, userId, accessClient);
+        if (!access.Write)
         {
             throw new NotFoundException();
         }

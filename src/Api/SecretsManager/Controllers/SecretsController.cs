@@ -147,13 +147,7 @@ public class SecretsController : Controller
         if (secret.Projects?.Count > 0)
         {
             Guid projectId = secret.Projects.FirstOrDefault().Id;
-            hasAccess = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId),
-                _ => false,
-            };
+            hasAccess = (await _projectRepository.AccessToProjectAsync(projectId, userId, accessClient)).Read;
         }
 
         return hasAccess;

@@ -56,7 +56,8 @@ public class SecretsControllerTests
         {
             resultSecret.Projects = new List<Core.SecretsManager.Entities.Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+                .Returns((true, true));
         }
 
 
@@ -100,11 +101,14 @@ public class SecretsControllerTests
         {
             resultSecret.OrganizationId = organizationId;
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.NoAccessCheck)
+                .Returns((true, true));
         }
         else
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.User)
+                .Returns((true, true));
         }
 
         var result = await sutProvider.Sut.GetAsync(resultSecret.Id);
@@ -129,7 +133,8 @@ public class SecretsControllerTests
         {
             resultSecret.Projects = new List<Core.SecretsManager.Entities.Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.User)
+                .Returns((true, true));
         }
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
@@ -155,7 +160,8 @@ public class SecretsControllerTests
         {
             data.ProjectIds = new Guid[] { mockProject.Id };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+                .Returns((true, true));
         }
 
         var resultSecret = data.ToSecret(secretId);
@@ -181,7 +187,8 @@ public class SecretsControllerTests
         {
             data.FirstOrDefault().Projects = new List<Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+                .Returns((true, true));
         }
 
 

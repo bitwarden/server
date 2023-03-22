@@ -46,7 +46,7 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         return secret;
     }
 
-    public async Task<bool> HasAccessToOriginalAndUpdatedProject(AccessClientType accessClient, Secret secret, Secret updatedSecret, Guid userId)
+    private async Task<bool> HasAccessToOriginalAndUpdatedProject(AccessClientType accessClient, Secret secret, Secret updatedSecret, Guid userId)
     {
         switch (accessClient)
         {
@@ -55,8 +55,8 @@ public class UpdateSecretCommand : IUpdateSecretCommand
             case AccessClientType.User:
                 var oldProject = secret.Projects?.FirstOrDefault();
                 var newProject = updatedSecret.Projects?.FirstOrDefault();
-                var accessToOld = oldProject != null && await _projectRepository.UserHasWriteAccessToProject(oldProject.Id, userId);
-                var accessToNew = newProject != null && await _projectRepository.UserHasWriteAccessToProject(newProject.Id, userId);
+                var accessToOld = oldProject != null && (await _projectRepository.AccessToProjectAsync(oldProject.Id, userId, accessClient)).Write;
+                var accessToNew = newProject != null && (await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient)).Write;
                 return accessToOld && accessToNew;
             default:
                 return false;

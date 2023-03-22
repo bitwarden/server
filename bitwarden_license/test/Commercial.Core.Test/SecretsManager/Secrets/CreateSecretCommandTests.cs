@@ -1,6 +1,7 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -27,11 +28,14 @@ public class CreateSecretCommandTests
         if (permissionType == PermissionType.RunAsAdmin)
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync((Guid)data.Projects?.First().Id, userId, AccessClientType.NoAccessCheck)
+                .Returns((true, true));
         }
         else
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject((Guid)(data.Projects?.First().Id), userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync((Guid)data.Projects?.First().Id, userId, AccessClientType.User)
+                .Returns((true, true));
         }
 
         await sutProvider.Sut.CreateAsync(data, userId);
@@ -49,7 +53,8 @@ public class CreateSecretCommandTests
         data.Projects = new List<Project>() { mockProject };
 
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(false);
-        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject((Guid)(data.Projects?.First().Id), userId).Returns(false);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync((Guid)data.Projects?.First().Id, userId, AccessClientType.User)
+            .Returns((false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.CreateAsync(data, userId));
