@@ -16,9 +16,9 @@ public class Program
     {
         return Host
             .CreateDefaultBuilder(args)
-            .ConfigureAppConfiguration(webBuilder =>
+            .ConfigureAppConfiguration((hostingContext, config) =>
             {
-                webBuilder.AddKeyPerFile("/mnt/secrets-store", optional: true, reloadOnChange: true);
+                config.AddKeyPerFile("/mnt/secrets-store", optional: true, reloadOnChange: true);
             })
             .ConfigureCustomAppConfiguration(args)
             .ConfigureWebHostDefaults(webBuilder =>
