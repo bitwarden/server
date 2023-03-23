@@ -28,6 +28,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IProviderRepository _providerRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IPaymentService _paymentService;
@@ -46,6 +47,7 @@ public class OrganizationsController : Controller
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
+        IProviderRepository providerRepository,
         IOrganizationService organizationService,
         IUserService userService,
         IPaymentService paymentService,
@@ -63,6 +65,7 @@ public class OrganizationsController : Controller
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
+        _providerRepository = providerRepository;
         _organizationService = organizationService;
         _userService = userService;
         _paymentService = paymentService;
@@ -139,7 +142,10 @@ public class OrganizationsController : Controller
                 throw new NotFoundException();
             }
 
-            return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo);
+            var provider = await _providerRepository.GetByOrganizationIdAsync(orgIdGuid);
+            var hideSensitiveData = provider != null && !_currentContext.ProviderUser(provider.Id);
+
+            return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, hideSensitiveData);
         }
         else
         {

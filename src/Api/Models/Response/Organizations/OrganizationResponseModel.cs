@@ -84,26 +84,32 @@ public class OrganizationResponseModel : ResponseModel
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 {
-    public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription = null)
-        : base(organization, "organizationSubscription")
+    public OrganizationSubscriptionResponseModel(Organization organization) : base(organization, "organizationSubscription")
     {
-        if (subscription != null)
-        {
-            Subscription = subscription.Subscription != null ?
-                new BillingSubscription(subscription.Subscription) : null;
-            UpcomingInvoice = subscription.UpcomingInvoice != null ?
-                new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
-            Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
-        }
-        else
-        {
-            Expiration = organization.ExpirationDate;
-        }
-
+        Expiration = organization.ExpirationDate;
         StorageName = organization.Storage.HasValue ?
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+    }
+
+    public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
+        : this(organization)
+    {
+        Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
+        UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
+        Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
+
+        if (hideSensitiveData)
+        {
+            BillingEmail = null;
+            Subscription.Items = Subscription.Items.Select(i =>
+            {
+                i.Amount = 0;
+                return i;
+            });
+            UpcomingInvoice.Amount = 0;
+        }
     }
 
     public string StorageName { get; set; }
