@@ -107,8 +107,7 @@ public class AuthRequestsController : Controller
             AccessCode = model.AccessCode,
             PublicKey = model.PublicKey,
             UserId = user.Id,
-            Type = model.Type.Value,
-            RequestFingerprint = model.FingerprintPhrase
+            Type = model.Type.Value
         };
         authRequest = await _authRequestRepository.CreateAsync(authRequest);
         await _pushNotificationService.PushAuthRequestAsync(authRequest);
