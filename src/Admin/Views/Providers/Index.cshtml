@@ -1,6 +1,11 @@
-﻿@model ProvidersModel
+﻿@using Bit.Admin.Enums;
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+
+@model ProvidersModel
 @{
     ViewData["Title"] = "Providers";
+
+    var canCreateProvider = AccessControlService.UserHasPermission(Permission.Provider_Create);
 }
 
 <h1>Providers</h1>
@@ -15,9 +20,12 @@
             <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
         </form>
     </div>
-    <div class="col-auto">
-        <a asp-action="Create" class="btn btn-secondary">Create Provider</a>
-    </div>
+    @if (canCreateProvider)
+    {
+        <div class="col-auto">
+            <a asp-action="Create" class="btn btn-secondary">Create Provider</a>
+        </div>
+    }
 </div>
 
 <div class="table-responsive">

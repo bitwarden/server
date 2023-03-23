@@ -1,4 +1,6 @@
-﻿using Bit.Admin.Models;
+﻿using Bit.Admin.Enums;
+using Bit.Admin.Models;
+using Bit.Admin.Utilities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -32,6 +34,7 @@ public class ProvidersController : Controller
         _applicationCacheService = applicationCacheService;
     }
 
+    [RequirePermission(Permission.Provider_List_View)]
     public async Task<IActionResult> Index(string name = null, string userEmail = null, int page = 1, int count = 25)
     {
         if (page < 1)
@@ -68,6 +71,7 @@ public class ProvidersController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
     public async Task<IActionResult> Create(CreateProviderModel model)
     {
         if (!ModelState.IsValid)
@@ -80,6 +84,7 @@ public class ProvidersController : Controller
         return RedirectToAction("Index");
     }
 
+    [RequirePermission(Permission.Provider_View)]
     public async Task<IActionResult> View(Guid id)
     {
         var provider = await _providerRepository.GetByIdAsync(id);
@@ -110,6 +115,7 @@ public class ProvidersController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
     {
         var provider = await _providerRepository.GetByIdAsync(id);
@@ -124,6 +130,7 @@ public class ProvidersController : Controller
         return RedirectToAction("Edit", new { id });
     }
 
+    [RequirePermission(Permission.Provider_ResendEmailInvite)]
     public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
     {
         await _providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);

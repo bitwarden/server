@@ -36,9 +36,11 @@ public enum Permission
     Org_Billing_Edit,
     Org_Billing_LaunchGateway,
 
-    Provider_ViewList,
+    Provider_List_View,
     Provider_Create,
+    Provider_Edit,
     Provider_View,
+    Provider_ResendEmailInvite,
 
     Tools_ChargeBrainTreeCustomer,
     Tools_PromoteAdmin,

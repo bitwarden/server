@@ -3,6 +3,23 @@
 @inject SignInManager<IdentityUser> SignInManager
 @inject Bit.Core.Settings.GlobalSettings GlobalSettings
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+
+@{
+    var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
+    var canViewOrgs = AccessControlService.UserHasPermission(Permission.Org_List_View);
+    var canViewProviders = AccessControlService.UserHasPermission(Permission.Provider_List_View);
+    var canViewLogs = AccessControlService.UserHasPermission(Permission.Logs_View);
+    var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
+    var canCreateTransaction = AccessControlService.UserHasPermission(Permission.Tools_CreateEditTransaction);
+    var canPromoteAdmin = AccessControlService.UserHasPermission(Permission.Tools_PromoteAdmin);
+    var canGenerateLicense = AccessControlService.UserHasPermission(Permission.Tools_GenerateLicenseFile);
+    var canManageTaxRates = AccessControlService.UserHasPermission(Permission.Tools_ManageTaxRates);
+    var canManageStripeSubscriptions = AccessControlService.UserHasPermission(Permission.Tools_ManageStripeSubscriptions);
+
+    var canViewTools = canChargeBraintree || canCreateTransaction || canPromoteAdmin ||
+                        canGenerateLicense || canManageTaxRates || canManageStripeSubscriptions;
+}
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -35,52 +52,76 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarCollapse">
                 <ul class="navbar-nav mr-auto">
-                    @if(SignInManager.IsSignedIn(User))
+                    @if (SignInManager.IsSignedIn(User))
                     {
-                        @if(AccessControlService.UserHasPermission(Permission.User_List_View))
+                        @if (canViewUsers)
                         {
                             <li class="nav-item" active-controller="Users">
                                 <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
                             </li>
                         }
-                        @if(AccessControlService.UserHasPermission(Permission.Org_List_View))
+                        @if (canViewOrgs)
                         {
                             <li class="nav-item" active-controller="Organizations">
                                 <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
                             </li>
                         }
-                        @if(!GlobalSettings.SelfHosted)
+                        @if (!GlobalSettings.SelfHosted)
                         {
-                            <li class="nav-item" active-controller="Providers">
-                                <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
-                            </li>
-                            <li class="nav-item dropdown" active-controller="tools">
-                                <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
-                                   data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                    Tools
-                                </a>
-                                <div class="dropdown-menu" aria-labelledby="toolsDropdown">
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="ChargeBraintree">
-                                        Charge Braintree Customer
+                            @if (canViewProviders)
+                            {
+                                <li class="nav-item" active-controller="Providers">
+                                    <a class="nav-link" asp-controller="Providers" asp-action="Index">Providers</a>
+                                </li>
+                            }
+                            @if (canViewTools)
+                            {
+                                <li class="nav-item dropdown" active-controller="tools">
+                                    <a class="nav-link dropdown-toggle" href="#" id="toolsDropdown" role="button"
+                                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        Tools
                                     </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="CreateTransaction">
-                                        Create Transaction
-                                    </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
-                                        Promote Admin
-                                    </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="GenerateLicense">
-                                        Generate License
-                                    </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="TaxRate">
-                                        Manage Tax Rates
-                                    </a>
-                                    <a class="dropdown-item" asp-controller="Tools" asp-action="StripeSubscriptions">
-                                        Manage Stripe Subscriptions
-                                    </a>
-                                </div>
-                            </li>
-                            @if(AccessControlService.UserHasPermission(Permission.Logs_View))
+                                    <div class="dropdown-menu" aria-labelledby="toolsDropdown">
+                                        @if (canChargeBraintree)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="ChargeBraintree">
+                                                Charge Braintree Customer
+                                            </a>
+                                        }
+                                        @if (canCreateTransaction)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="CreateTransaction">
+                                                Create Transaction
+                                            </a>
+                                        }
+                                        @if (canPromoteAdmin)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="PromoteAdmin">
+                                                Promote Admin
+                                            </a>
+                                        }
+                                        @if (canGenerateLicense)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="GenerateLicense">
+                                                Generate License
+                                            </a>
+                                        }
+                                        @if (canManageTaxRates)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="TaxRate">
+                                                Manage Tax Rates
+                                            </a>
+                                        }
+                                        @if (canManageStripeSubscriptions)
+                                        {
+                                            <a class="dropdown-item" asp-controller="Tools" asp-action="StripeSubscriptions">
+                                                Manage Stripe Subscriptions
+                                            </a>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                            @if (canViewLogs)
                             {
                                 <li class="nav-item" active-controller="Logs">
                                     <a class="nav-link" asp-controller="Logs" asp-action="Index">Logs</a>
@@ -88,14 +129,14 @@
                             }
                         }
                     }
-                    @if(GlobalSettings.SelfHosted)
+                    @if (GlobalSettings.SelfHosted)
                     {
                         <li class="nav-item">
                             <a class="nav-link" href="https://help.bitwarden.com/hosting/" target="_blank">Docs</a>
                         </li>
                     }
                 </ul>
-                @if(SignInManager.IsSignedIn(User))
+                @if (SignInManager.IsSignedIn(User))
                 {
                     <form asp-controller="Login" asp-action="Logout" method="post">
                         <button type="submit" class="btn btn-sm btn-secondary">Log Out</button>
