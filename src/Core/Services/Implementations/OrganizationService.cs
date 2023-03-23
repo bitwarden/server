@@ -1205,14 +1205,7 @@ public class OrganizationService : IOrganizationService
         var token = _dataProtector.Protect(
             $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
 
-        if (initOrganization)
-        {
-            await _mailService.SendOrganizationInitInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
-        }
-        else
-        {
-            await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
-        }
+        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)), initOrganization);
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,

@@ -200,10 +200,10 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token) =>
-        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) });
+    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool initOrganization = false) =>
+        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) }, initOrganization);
 
-    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool initOrganization = false)
     {
         MailQueueMessage CreateMessage(string email, object model)
         {
@@ -223,38 +223,11 @@ public class HandlebarsMailService : IMailService
                 OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
+                InitOrganization = initOrganization
             }
         ));
 
         await EnqueueMailAsync(messageModels);
-    }
-
-    public async Task SendOrganizationInitInviteEmailAsync(string organizationName, OrganizationUser orgUser,
-        ExpiringToken token)
-    {
-        MailQueueMessage CreateMessage(string email, object model)
-        {
-            var message = CreateDefaultMessage($"Join {organizationName}", email);
-            return new MailQueueMessage(message, "OrganizationUserInvited", model);
-        }
-
-        var messageModel = CreateMessage(orgUser.Email,
-            new OrganizationUserInvitedViewModel
-            {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
-                Email = WebUtility.UrlEncode(orgUser.Email),
-                OrganizationId = orgUser.OrganizationId.ToString(),
-                OrganizationUserId = orgUser.Id.ToString(),
-                Token = WebUtility.UrlEncode(token.Token),
-                ExpirationDate = $"{token.ExpirationDate.ToLongDateString()} {token.ExpirationDate.ToShortTimeString()} UTC",
-                OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName,
-                InitOrganization = true
-            }
-        );
-
-        await EnqueueMailAsync(messageModel);
     }
 
     public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)

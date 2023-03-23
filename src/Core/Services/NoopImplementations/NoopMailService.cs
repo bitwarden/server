@@ -32,11 +32,6 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationInitInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token)
-    {
-        return Task.FromResult(0);
-    }
-
     public Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
     {
         return Task.FromResult(0);
@@ -57,12 +52,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token)
+    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool initOrganization = false)
     {
         return Task.FromResult(0);
     }
 
-    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool initOrganization = false)
     {
         return Task.FromResult(0);
     }
