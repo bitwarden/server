@@ -598,7 +598,7 @@ public class OrganizationService : IOrganizationService
         bool provider = false)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
-        if (!(plan is { LegacyYear: null }))
+        if (plan is not { LegacyYear: null })
         {
             throw new BadRequestException("Invalid plan selected.");
         }
@@ -2439,7 +2439,7 @@ public class OrganizationService : IOrganizationService
     public async Task CreatePendingOrganization(Organization organization, string ownerEmail, string creatorUserName, bool salesAssistedTrialStarted)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (!(plan is { LegacyYear: null }))
+        if (plan is not { LegacyYear: null })
         {
             throw new BadRequestException("Invalid plan selected.");
         }
