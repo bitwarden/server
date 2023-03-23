@@ -28,7 +28,7 @@ public static class AuthenticationSchemes
 public static class FeatureFlagKeys
 {
     public const string SecretsManager = "secrets-manager";
-    public const string DisplayEuFlag = "display-eu-environment";
+    public const string DisplayEuEnvironment = "display-eu-environment";
 
     public static List<string> GetAllKeys()
     {
