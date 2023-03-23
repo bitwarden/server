@@ -2470,7 +2470,6 @@ public class OrganizationService : IOrganizationService
         await SendInviteAsync(ownerOrganizationUser, organization, true);
         await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
 
-        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
         {
             EventRaisedByUser = creatorUserName,
