@@ -52,12 +52,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token)
+    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg)
     {
         return Task.FromResult(0);
     }
 
-    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg)
     {
         return Task.FromResult(0);
     }
