@@ -5,7 +5,6 @@
     [RequestDeviceIdentifier]   NVARCHAR(50)     NOT NULL,
     [RequestDeviceType]         SMALLINT         NOT NULL,
     [RequestIpAddress]          VARCHAR(50)      NOT NULL,
-    [RequestFingerprint]        VARCHAR(MAX)     NOT NULL,
     [ResponseDeviceId]          UNIQUEIDENTIFIER NULL,
     [AccessCode]                VARCHAR(25)      NOT NULL,
     [PublicKey]                 VARCHAR(MAX)     NOT NULL,
