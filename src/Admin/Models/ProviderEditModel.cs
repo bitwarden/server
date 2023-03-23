@@ -25,8 +25,6 @@ public class ProviderEditModel : ProviderViewModel
 
     public Provider ToProvider(Provider existingProvider)
     {
-        existingProvider.Name = Name;
-        existingProvider.BusinessName = BusinessName;
         existingProvider.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
         return existingProvider;
     }
