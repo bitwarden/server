@@ -13,6 +13,7 @@ namespace Bit.Core.Context;
 
 public class CurrentContext : ICurrentContext
 {
+    private readonly IProviderRepository _providerRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
@@ -37,8 +38,11 @@ public class CurrentContext : ICurrentContext
     public virtual ClientType ClientType { get; set; }
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
 
-    public CurrentContext(IProviderUserRepository providerUserRepository)
+    public CurrentContext(
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository)
     {
+        _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
     }
 
@@ -392,13 +396,32 @@ public class CurrentContext : ICurrentContext
                     && (o.Permissions?.ManageResetPassword ?? false)) ?? false);
     }
 
-    public async Task<bool> ManageBilling(Guid orgId)
+    public async Task<bool> ViewSubscription(Guid orgId)
     {
-        var orgManagedByProvider = await ProviderIdForOrg(orgId) != null;
+        var orgManagedByMspProvider = (await _providerRepository.GetByOrganizationIdAsync(orgId))?.Type == ProviderType.Msp;
+
+        return orgManagedByMspProvider
+            ? await ProviderUserForOrgAsync(orgId)
+            : await OrganizationOwner(orgId);
+    }
+
+    public async Task<bool> EditSubscription(Guid orgId)
+    {
+        var orgManagedByProvider = await _providerRepository.GetByOrganizationIdAsync(orgId) != null;
 
         return orgManagedByProvider
             ? await ProviderUserForOrgAsync(orgId)
             : await OrganizationOwner(orgId);
+    }
+
+    public async Task<bool> EditPaymentMethods(Guid orgId)
+    {
+        return await EditSubscription(orgId);
+    }
+
+    public async Task<bool> ViewBillingHistory(Guid orgId)
+    {
+        return await EditSubscription(orgId);
     }
 
     public bool ProviderProviderAdmin(Guid providerId)
