@@ -103,11 +103,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         if (hideSensitiveData)
         {
             BillingEmail = null;
-            Subscription.Items = Subscription.Items.Select(i =>
-            {
-                i.Amount = null;
-                return i;
-            });
+            Subscription.Items = null;
             UpcomingInvoice.Amount = null;
         }
     }

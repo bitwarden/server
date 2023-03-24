@@ -85,7 +85,7 @@ public class BillingSubscription
         }
 
         public string Name { get; set; }
-        public decimal? Amount { get; set; }
+        public decimal Amount { get; set; }
         public int Quantity { get; set; }
         public string Interval { get; set; }
         public bool SponsoredSubscriptionItem { get; set; }
