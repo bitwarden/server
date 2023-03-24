@@ -72,7 +72,7 @@ public class CipherRepositoryTests
         {
             UserId = user.Id,
             OrganizationId = organization.Id,
-            Status = OrganizationUserStatusType.Accepted,
+            Status = OrganizationUserStatusType.Confirmed,
             Type = OrganizationUserType.Owner,
         });
 

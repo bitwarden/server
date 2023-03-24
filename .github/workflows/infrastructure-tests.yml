@@ -99,11 +99,20 @@ jobs:
           # Default Sqlite
           BW_TEST_DATABASES__3__TYPE: "Sqlite"
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
-        run: dotnet test
+        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx
         shell: pwsh
+
+      - name: Report test results
+        uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226
+        if: always()
+        with:
+          name: Test Results
+          path: "**/*-test-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: true
       
       - name: Docker compose down
-        if: ${{ always() }}
+        if: always()
         working-directory: "dev"
         run: docker compose down
         shell: pwsh

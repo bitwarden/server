@@ -76,12 +76,14 @@ public class OrganizationUserRepositoryTests
         {
             OrganizationId = organization.Id,
             UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
         });
 
         var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             OrganizationId = organization.Id,
             UserId = user2.Id,
+            Status = OrganizationUserStatusType.Confirmed,
         });
 
         helper.ClearTracker();
