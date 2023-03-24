@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Models.Business;
+﻿namespace Bit.Core.Auth.Models.Business;
 
 public class CaptchaResponse
 {

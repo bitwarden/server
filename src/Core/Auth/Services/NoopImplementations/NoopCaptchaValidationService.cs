@@ -1,8 +1,8 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.Auth.Models.Business;
+using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Models.Business;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Auth.Services;
 
 public class NoopCaptchaValidationService : ICaptchaValidationService
 {

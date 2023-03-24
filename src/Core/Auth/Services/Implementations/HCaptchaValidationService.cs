@@ -1,15 +1,14 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json.Serialization;
+using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Models.Business;
-using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Auth.Services;
 
 public class HCaptchaValidationService : ICaptchaValidationService
 {

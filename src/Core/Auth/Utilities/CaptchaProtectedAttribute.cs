@@ -1,11 +1,11 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.Auth.Models.Api;
+using Bit.Core.Auth.Services;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.Utilities;
+namespace Bit.Core.Auth.Utilities;
 
 public class CaptchaProtectedAttribute : ActionFilterAttribute
 {

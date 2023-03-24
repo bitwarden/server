@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;

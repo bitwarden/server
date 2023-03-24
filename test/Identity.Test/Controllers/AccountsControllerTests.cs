@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
