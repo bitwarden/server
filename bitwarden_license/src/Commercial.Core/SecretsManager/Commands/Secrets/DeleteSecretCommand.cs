@@ -57,7 +57,7 @@ public class DeleteSecretCommand : IDeleteSecretCommand
                 hasAccess = (await _projectRepository.AccessToProjectAsync(projectId, userId, accessClient)).Write;
             }
 
-            if (!hasAccess)
+            if (!hasAccess || accessClient == AccessClientType.ServiceAccount)
             {
                 results.Add(new Tuple<Secret, string>(secret, "access denied"));
             }

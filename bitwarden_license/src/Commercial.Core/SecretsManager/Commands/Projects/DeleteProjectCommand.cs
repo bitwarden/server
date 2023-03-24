@@ -55,7 +55,7 @@ public class DeleteProjectCommand : IDeleteProjectCommand
         foreach (var project in projects)
         {
             var access = await _projectRepository.AccessToProjectAsync(project.Id, userId, accessClient);
-            if (!access.Write)
+            if (!access.Write || accessClient == AccessClientType.ServiceAccount)
             {
                 results.Add(new Tuple<Project, string>(project, "access denied"));
             }

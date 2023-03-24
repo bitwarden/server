@@ -35,7 +35,7 @@ public class UpdateProjectCommand : IUpdateProjectCommand
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         var access = await _projectRepository.AccessToProjectAsync(updatedProject.Id, userId, accessClient);
-        if (!access.Write)
+        if (!access.Write || accessClient == AccessClientType.ServiceAccount)
         {
             throw new NotFoundException();
         }
