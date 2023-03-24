@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -2429,7 +2430,7 @@ public class OrganizationService : IOrganizationService
         return status;
     }
 
-    public async Task CreatePendingOrganization(Organization organization, string ownerEmail, string creatorUserName, bool salesAssistedTrialStarted)
+    public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
         if (plan is not { LegacyYear: null })
@@ -2465,7 +2466,7 @@ public class OrganizationService : IOrganizationService
 
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
         {
-            EventRaisedByUser = creatorUserName,
+            EventRaisedByUser = userService.GetUserName(user),
             SalesAssistedTrialStarted = salesAssistedTrialStarted,
         });
     }
