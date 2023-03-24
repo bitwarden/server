@@ -99,7 +99,7 @@ jobs:
           # Default Sqlite
           BW_TEST_DATABASES__3__TYPE: "Sqlite"
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
-        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx
+        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
         shell: pwsh
 
       - name: Report test results
