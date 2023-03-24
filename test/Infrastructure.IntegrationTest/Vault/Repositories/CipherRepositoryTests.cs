@@ -44,7 +44,7 @@ public class CipherRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateAsync_UpdateWithCollecitons_Works(
+    public async Task CreateAsync_UpdateWithCollections_Works(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -84,6 +84,8 @@ public class CipherRepositoryTests
 
         helper.ClearTracker();
 
+        await Task.Delay(100);
+
         await cipherRepository.CreateAsync(new CipherDetails
         {
             Type = CipherType.Login,
@@ -96,7 +98,8 @@ public class CipherRepositoryTests
 
         var updatedUser = await userRepository.GetByIdAsync(user.Id);
 
-        Assert.NotEqual(updatedUser.AccountRevisionDate, user.AccountRevisionDate);
+        Assert.True(updatedUser.AccountRevisionDate - user.AccountRevisionDate > TimeSpan.Zero,
+            "The AccountRevisionDate is expected to be changed");
 
         var collectionCiphers = await collectionCipherRepository.GetManyByOrganizationIdAsync(organization.Id);
         Assert.NotEmpty(collectionCiphers);
