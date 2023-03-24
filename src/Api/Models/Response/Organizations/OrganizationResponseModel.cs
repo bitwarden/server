@@ -105,10 +105,10 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             BillingEmail = null;
             Subscription.Items = Subscription.Items.Select(i =>
             {
-                i.Amount = 0;
+                i.Amount = null;
                 return i;
             });
-            UpcomingInvoice.Amount = 0;
+            UpcomingInvoice.Amount = null;
         }
     }
 
