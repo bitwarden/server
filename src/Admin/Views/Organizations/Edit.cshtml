@@ -1,6 +1,26 @@
-﻿@model OrganizationEditModel
+﻿@using Bit.Admin.Enums;
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+@model OrganizationEditModel
 @{
     ViewData["Title"] = "Organization: " + Model.Organization.Name;
+
+    var canViewOrganizationInformation = AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View);
+    var canViewBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_View);
+    var canViewBusinessInformation = AccessControlService.UserHasPermission(Permission.Org_BusinessInformation_View);
+    var canViewGeneralDetails = AccessControlService.UserHasPermission(Permission.Org_GeneralDetails_View);
+    var canViewPlan = AccessControlService.UserHasPermission(Permission.Org_Plan_View);
+    var canViewLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_View);
+    var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_View);
+
+    var canCheckEnabled = AccessControlService.UserHasPermission(Permission.Org_CheckEnabledBox);
+    var canEditPlan = AccessControlService.UserHasPermission(Permission.Org_Plan_Edit);
+    var canEditLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_Edit);
+    var canEditBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_Edit);
+    var canLaunchGateway = AccessControlService.UserHasPermission(Permission.Org_Billing_LaunchGateway);
+    var canManangeTransaction = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_CreateEditTransaction);
+    var canDownloadInvoice = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_DownloadInvoice);
+    var canInitiateTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateTrial);
+    var canDelete = AccessControlService.UserHasPermission(Permission.Org_Delete);
 }
 
 @section Scripts {
@@ -117,228 +137,258 @@
 
 <h1>Organization <small>@Model.Organization.Name</small></h1>
 
-<h2>Organization Information</h2>
-@await Html.PartialAsync("_ViewInformation", Model)
-<h2>Billing Information</h2>
-@await Html.PartialAsync("_BillingInformation",
-    new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
+@if (canViewOrganizationInformation)
+{
+    <h2>Organization Information</h2>
+    @await Html.PartialAsync("_ViewInformation", Model)
+}
+
+@if (canViewBillingInformation)
+{
+    <h2>Billing Information</h2>
+    @await Html.PartialAsync("_BillingInformation",
+        new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
+}
+
 <form method="post" id="edit-form">
     <input asp-for="SalesAssistedTrialStarted" type="hidden">
-    <h2>General</h2>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="Name"></label>
-                <input type="text" class="form-control" asp-for="Name" required>
-            </div>
+    @if (canViewGeneralDetails)
+    {
+        <h2>General</h2>
+        <dl class="row">
+            <dt class="col-sm-4 col-lg-3">Name</dt>
+            <dd class="col-sm-8 col-lg-9">@Model.Name</dd>
+        </dl>
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" disabled='@(canCheckEnabled ? null : "disabled")'>
+            <label class="form-check-label" asp-for="Enabled"></label>
         </div>
-    </div>
-    <div class="form-check mb-3">
-        <input type="checkbox" class="form-check-input" asp-for="Enabled">
-        <label class="form-check-label" asp-for="Enabled"></label>
-    </div>
-    <h2>Business Information</h2>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="BusinessName"></label>
-                <input type="text" class="form-control" asp-for="BusinessName">
-            </div>
-        </div>
-    </div>
-    <h2>Plan</h2>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="PlanType"></label>
-                <select class="form-control" asp-for="PlanType"
-                        asp-items="Html.GetEnumSelectList<Bit.Core.Enums.PlanType>()"></select>
-            </div>
-        </div>
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="Plan"></label>
-                <input type="text" class="form-control" asp-for="Plan" required>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="Seats"></label>
-                <input type="number" class="form-control" asp-for="Seats" min="1">
-            </div>
-        </div>
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="MaxCollections"></label>
-                <input type="number" class="form-control" asp-for="MaxCollections" min="1">
-            </div>
-        </div>
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="MaxStorageGb"></label>
-                <input type="number" class="form-control" asp-for="MaxStorageGb" min="1">
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-4">
-            <div class="form-group">
-                <label asp-for="MaxAutoscaleSeats"></label>
-                <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1">
-            </div>
-        </div>
-    </div>
-    <h2>Features</h2>
-    <div class="row mb-3">
-        <div class="col-4">
-            <h3>General</h3>
-            <div class="form-check mb-2">
-                <input type="checkbox" class="form-check-input" asp-for="SelfHost">
-                <label class="form-check-label" asp-for="SelfHost"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="Use2fa">
-                <label class="form-check-label" asp-for="Use2fa"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseApi">
-                <label class="form-check-label" asp-for="UseApi"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseGroups">
-                <label class="form-check-label" asp-for="UseGroups"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UsePolicies">
-                <label class="form-check-label" asp-for="UsePolicies"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseSso">
-                <label class="form-check-label" asp-for="UseSso"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseKeyConnector">
-                <label class="form-check-label" asp-for="UseKeyConnector"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseScim">
-                <label class="form-check-label" asp-for="UseScim"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseDirectory">
-                <label class="form-check-label" asp-for="UseDirectory"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseEvents">
-                <label class="form-check-label" asp-for="UseEvents"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseResetPassword">
-                <label class="form-check-label" asp-for="UseResetPassword"></label>
-            </div>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseCustomPermissions">
-                <label class="form-check-label" asp-for="UseCustomPermissions"></label>
-            </div>
-        </div>
-        <div class="col-4">
-            <h3>Password Manager</h3>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseTotp">
-                <label class="form-check-label" asp-for="UseTotp"></label>
-            </div>
-           <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium">
-                <label class="form-check-label" asp-for="UsersGetPremium"></label>
-            </div>
-        </div>
-        <div class="col-4">
-            <h3>Secrets Manager</h3>
-            <div class="form-check">
-                <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager">
-                <label class="form-check-label" asp-for="UseSecretsManager"></label>
-            </div>
-        </div>
-    </div>
+    }
 
-    <h2>Licensing</h2>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="LicenseKey"></label>
-                <input type="text" class="form-control" asp-for="LicenseKey">
-            </div>
-        </div>
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="ExpirationDate"></label>
-                <input type="datetime-local" class="form-control" asp-for="ExpirationDate">
-            </div>
-        </div>
-    </div>
-    <h2>Billing</h2>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="BillingEmail"></label>
-                <input type="email" class="form-control" asp-for="BillingEmail">
-            </div>
-        </div>
-        <div class="col-sm">
-            <div class="form-group">
+    @if (canViewBusinessInformation)
+    {
+        <h2>Business Information</h2>
+        <dl class="row">
+            <dt class="col-sm-4 col-lg-3">Business Name</dt>
+            <dd class="col-sm-8 col-lg-9">@Model.BusinessName</dd>
+        </dl>
+    }
+    
+    @if (canViewPlan)
+    {
+        <h2>Plan</h2>
+        <div class="row">
+            <div class="col-sm">
                 <div class="form-group">
-                    <label asp-for="Gateway"></label>
-                    <select class="form-control" asp-for="Gateway"
-                            asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                        <option value="">--</option>
-                    </select>
+                    <label asp-for="PlanType"></label>
+                    <select class="form-control" asp-for="PlanType" disabled='@(canEditPlan ? null : "disabled")'
+                            asp-items="Html.GetEnumSelectList<Bit.Core.Enums.PlanType>()"></select>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="Plan"></label>
+                    <input type="text" class="form-control" asp-for="Plan" readonly='@(!canEditPlan)' required>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="GatewayCustomerId"></label>
-                <div class="input-group">
-                    <input type="text" class="form-control" asp-for="GatewayCustomerId">
-                    <div class="input-group-append">
-                        <button class="btn btn-secondary" type="button" id="gateway-customer-link">
-                            <i class="fa fa-external-link"></i>
-                        </button>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="Seats"></label>
+                    <input type="number" class="form-control" asp-for="Seats" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="MaxCollections"></label>
+                    <input type="number" class="form-control" asp-for="MaxCollections" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="MaxStorageGb"></label>
+                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label asp-for="MaxAutoscaleSeats"></label>
+                    <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+        </div>
+        <h2>Features</h2>
+        <div class="row mb-3">
+            <div class="col-4">
+                <h3>General</h3>
+                <div class="form-check mb-2">
+                    <input type="checkbox" class="form-check-input" asp-for="SelfHost" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="SelfHost"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="Use2fa" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="Use2fa"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseApi" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseApi"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseGroups" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseGroups"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UsePolicies" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UsePolicies"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseSso" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseSso"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseKeyConnector" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseKeyConnector"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseScim" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseScim"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseDirectory" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseDirectory"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseEvents" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseEvents"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseResetPassword" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseResetPassword"></label>
+                </div>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseCustomPermissions" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseCustomPermissions"></label>
+                </div>
+            </div>
+            <div class="col-4">
+                <h3>Password Manager</h3>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseTotp" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseTotp"></label>
+                </div>
+            <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UsersGetPremium"></label>
+                </div>
+            </div>
+            <div class="col-4">
+                <h3>Secrets Manager</h3>
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager" disabled='@(canEditPlan ? null : "disabled")'>
+                    <label class="form-check-label" asp-for="UseSecretsManager"></label>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (canViewLicensing)
+    {
+        <h2>Licensing</h2>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="LicenseKey"></label>
+                    <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="ExpirationDate"></label>
+                    <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)'>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (canViewBilling)
+    {
+        <h2>Billing</h2>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="BillingEmail"></label>
+                    <input type="email" class="form-control" asp-for="BillingEmail" readonly='@(!canEditBilling)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <div class="form-group">
+                        <label asp-for="Gateway"></label>
+                        <select class="form-control" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
+                                asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
+                            <option value="">--</option>
+                        </select>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="GatewaySubscriptionId"></label>
-                <div class="input-group">
-                    <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
-                    <div class="input-group-append">
-                        <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
-                            <i class="fa fa-external-link"></i>
-                        </button>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="GatewayCustomerId"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
+                        @if (canLaunchGateway)
+                        {
+                            <div class="input-group-append">
+                                <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                                    <i class="fa fa-external-link"></i>
+                                </button>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="GatewaySubscriptionId"></label>
+                    <div class="input-group">
+                        <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
+                        @if (canLaunchGateway) 
+                        {
+                            <div class="input-group-append">
+                                <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                                    <i class="fa fa-external-link"></i>
+                                </button>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    }
 </form>
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
     <div class="ml-auto d-flex">
-        <button class="btn btn-secondary mr-2" type="button" id="teams-trial">
-            Teams Trial
-        </button>
-        <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
-            Enterprise Trial
-        </button>
-        <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
-              onsubmit="return confirm('Are you sure you want to delete this organization?')">
-            <button class="btn btn-danger" type="submit">Delete</button>
-        </form>
+        @if (canInitiateTrial)
+        {
+            <button class="btn btn-secondary mr-2" type="button" id="teams-trial">
+                Teams Trial
+            </button>
+            <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
+                Enterprise Trial
+            </button>
+        }
+        @if (canDelete)
+        {
+            <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
+                onsubmit="return confirm('Are you sure you want to delete this organization?')">
+                <button class="btn btn-danger" type="submit">Delete</button>
+            </form>
+        }
     </div>
 </div>

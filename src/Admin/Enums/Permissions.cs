@@ -21,6 +21,7 @@ public enum Permission
     Org_List_View,
     Org_OrgInformation_View,
     Org_GeneralDetails_View,
+    Org_CheckEnabledBox,
     Org_BusinessInformation_View,
     Org_InitiateTrial,
     Org_Delete,
@@ -33,7 +34,7 @@ public enum Permission
     Org_Licensing_Edit,
     Org_Billing_View,
     Org_Billing_Edit,
-    Org_Billing_LaunchIDInStripe,
+    Org_Billing_LaunchGateway,
 
     Provider_List_View,
     Provider_Create,

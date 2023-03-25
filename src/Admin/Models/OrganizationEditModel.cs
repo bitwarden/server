@@ -122,39 +122,4 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "Expiration Date")]
     public DateTime? ExpirationDate { get; set; }
     public bool SalesAssistedTrialStarted { get; set; }
-
-    public Organization ToOrganization(Organization existingOrganization)
-    {
-        existingOrganization.Name = Name;
-        existingOrganization.BusinessName = BusinessName;
-        existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
-        existingOrganization.PlanType = PlanType.Value;
-        existingOrganization.Plan = Plan;
-        existingOrganization.Seats = Seats;
-        existingOrganization.MaxCollections = MaxCollections;
-        existingOrganization.UsePolicies = UsePolicies;
-        existingOrganization.UseSso = UseSso;
-        existingOrganization.UseKeyConnector = UseKeyConnector;
-        existingOrganization.UseScim = UseScim;
-        existingOrganization.UseGroups = UseGroups;
-        existingOrganization.UseDirectory = UseDirectory;
-        existingOrganization.UseEvents = UseEvents;
-        existingOrganization.UseTotp = UseTotp;
-        existingOrganization.Use2fa = Use2fa;
-        existingOrganization.UseApi = UseApi;
-        existingOrganization.UseSecretsManager = UseSecretsManager;
-        existingOrganization.UseResetPassword = UseResetPassword;
-        existingOrganization.SelfHost = SelfHost;
-        existingOrganization.UsersGetPremium = UsersGetPremium;
-        existingOrganization.UseCustomPermissions = UseCustomPermissions;
-        existingOrganization.MaxStorageGb = MaxStorageGb;
-        existingOrganization.Gateway = Gateway;
-        existingOrganization.GatewayCustomerId = GatewayCustomerId;
-        existingOrganization.GatewaySubscriptionId = GatewaySubscriptionId;
-        existingOrganization.Enabled = Enabled;
-        existingOrganization.LicenseKey = LicenseKey;
-        existingOrganization.ExpirationDate = ExpirationDate;
-        existingOrganization.MaxAutoscaleSeats = MaxAutoscaleSeats;
-        return existingOrganization;
-    }
 }

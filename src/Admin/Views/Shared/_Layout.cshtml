@@ -6,6 +6,7 @@
 
 @{
     var canViewUsers = AccessControlService.UserHasPermission(Permission.User_List_View);
+    var canViewOrgs = AccessControlService.UserHasPermission(Permission.Org_List_View);
     var canViewProviders = AccessControlService.UserHasPermission(Permission.Provider_List_View);
     var canViewLogs = AccessControlService.UserHasPermission(Permission.Logs_View);
     var canChargeBraintree = AccessControlService.UserHasPermission(Permission.Tools_ChargeBrainTreeCustomer);
@@ -59,9 +60,12 @@
                                 <a class="nav-link" asp-controller="Users" asp-action="Index">Users</a>
                             </li>
                         }
-                        <li class="nav-item" active-controller="Organizations">
-                            <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
-                        </li>
+                        @if (canViewOrgs)
+                        {
+                            <li class="nav-item" active-controller="Organizations">
+                                <a class="nav-link" asp-controller="Organizations" asp-action="Index">Organizations</a>
+                            </li>
+                        }
                         @if (!GlobalSettings.SelfHosted)
                         {
                             @if (canViewProviders)
