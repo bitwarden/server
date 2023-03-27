@@ -1,9 +1,9 @@
-﻿using Bit.Admin.IdentityServer;
-using Bit.Admin.Models;
+﻿using Bit.Admin.Auth.IdentityServer;
+using Bit.Admin.Auth.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Admin.Controllers;
+namespace Bit.Admin.Auth.Controllers;
 
 public class LoginController : Controller
 {

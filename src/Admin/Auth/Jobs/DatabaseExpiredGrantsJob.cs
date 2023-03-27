@@ -3,7 +3,7 @@ using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Quartz;
 
-namespace Bit.Admin.Jobs;
+namespace Bit.Admin.Auth.Jobs;
 
 public class DatabaseExpiredGrantsJob : BaseJob
 {

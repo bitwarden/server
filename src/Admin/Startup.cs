@@ -6,6 +6,7 @@ using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Stripe;
+using Microsoft.AspNetCore.Mvc.Razor;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -94,6 +95,11 @@ public class Startup
             config.Filters.Add(new LoggingExceptionHandlerFilterAttribute());
         });
         services.Configure<RouteOptions>(options => options.LowercaseUrls = true);
+
+        services.Configure<RazorViewEngineOptions>(o =>
+         {
+             o.ViewLocationFormats.Add("/Auth/Views/{1}/{0}.cshtml");
+         });
 
         // Jobs service
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);

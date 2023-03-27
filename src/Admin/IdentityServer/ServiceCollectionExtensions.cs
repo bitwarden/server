@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Identity;
+﻿using Bit.Admin.Auth.IdentityServer;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;

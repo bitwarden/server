@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Admin.Models;
+namespace Bit.Admin.Auth.Models;
 
 public class LoginModel
 {

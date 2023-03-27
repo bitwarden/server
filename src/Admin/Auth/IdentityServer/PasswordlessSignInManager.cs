@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
-namespace Bit.Admin.IdentityServer;
+namespace Bit.Admin.Auth.IdentityServer;
 
 public class PasswordlessSignInManager<TUser> : SignInManager<TUser> where TUser : class
 {
