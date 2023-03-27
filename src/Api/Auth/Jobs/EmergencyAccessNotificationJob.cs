@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Auth.Services;
 using Bit.Core.Jobs;
-using Bit.Core.Services;
 using Quartz;
 
 namespace Bit.Api.Auth.Jobs;

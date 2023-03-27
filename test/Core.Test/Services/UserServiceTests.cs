@@ -2,7 +2,6 @@
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
-using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;

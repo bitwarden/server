@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Enums;
 using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.Models;

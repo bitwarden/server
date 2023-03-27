@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Auth.Models.Response.TwoFactor;
