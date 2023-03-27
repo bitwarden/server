@@ -18,6 +18,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
+using Bit.Infrastructure.EntityFramework;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
