@@ -463,7 +463,7 @@ public static class ServiceCollectionExtensions
     }
 
     public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
-        IConfiguration configuration, IWebHostEnvironment environment)
+        IConfiguration configuration, IHostEnvironment environment)
     {
         var globalSettings = new GlobalSettings();
         ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);
