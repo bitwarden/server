@@ -116,7 +116,7 @@ public class StripeController : Controller
             var subscription = await GetSubscriptionAsync(parsedEvent, true);
             var ids = GetIdsFromMetaData(subscription.Metadata);
             var organizationId = ids.Item1 ?? Guid.Empty;
-            var userId = ids.Item2 ?? Guid.Empty;;
+            var userId = ids.Item2 ?? Guid.Empty;
             var subCanceled = subDeleted && subscription.Status == "canceled";
             var subUnpaid = subUpdated && subscription.Status == "unpaid";
             var subActive = subUpdated && subscription.Status == "active";
