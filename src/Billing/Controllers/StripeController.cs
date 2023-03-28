@@ -8,6 +8,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Documents.SystemFunctions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Stripe;
@@ -137,15 +138,15 @@ public class StripeController : Controller
 
             if (subActive)
             {
-                //org
-                if (ids.Item1.HasValue)
+                var organizationId = ids.Item1.Value;
+                var userId = ids.Item2.Value;
+                if (organizationId != null && organizationId != Guid.Empty)
                 {
-                    await _organizationService.EnableAsync(ids.Item1.Value);
+                    await _organizationService.EnableAsync(organizationId);
                 }
-                // user
-                else if (ids.Item2.HasValue)
+                else if (userId != null && userId != Guid.Empty)
                 {
-                    await _userService.EnablePremiumAsync(ids.Item2.Value,
+                    await _userService.EnablePremiumAsync(userId,
                         subscription.CurrentPeriodEnd);
                 }
             }
