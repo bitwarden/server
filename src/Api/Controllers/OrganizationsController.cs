@@ -41,6 +41,7 @@ public class OrganizationsController : Controller
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly GlobalSettings _globalSettings;
+    private readonly ILicensingService _licensingService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -58,7 +59,8 @@ public class OrganizationsController : Controller
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        ILicensingService licensingService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -76,6 +78,7 @@ public class OrganizationsController : Controller
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _globalSettings = globalSettings;
+        _licensingService = licensingService;
     }
 
     [HttpGet("{id}")]
@@ -141,10 +144,14 @@ public class OrganizationsController : Controller
 
             return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo);
         }
-        else
+
+        if (_globalSettings.SelfHosted)
         {
-            return new OrganizationSubscriptionResponseModel(organization);
+            var orgLicense = await _licensingService.ReadOrganizationLicenseAsync(organization);
+            return new OrganizationSubscriptionResponseModel(organization, license: orgLicense);
         }
+
+        return new OrganizationSubscriptionResponseModel(organization);
     }
 
     [HttpGet("{id}/license")]
