@@ -78,7 +78,7 @@ public class OrganizationLicense : ILicense
                 subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
             {
                 Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo?.Subscription.PeriodEndDate.Value.AddDays(60);
+                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
             }
             else
             {
