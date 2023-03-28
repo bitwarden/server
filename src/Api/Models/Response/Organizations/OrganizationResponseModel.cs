@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
+using Constants = Bit.Core.Constants;
 
 namespace Bit.Api.Models.Response.Organizations;
 
@@ -84,7 +85,7 @@ public class OrganizationResponseModel : ResponseModel
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 {
-    public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription = null)
+    public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription = null, OrganizationLicense license = null)
         : base(organization, "organizationSubscription")
     {
         if (subscription != null)
@@ -95,9 +96,20 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
                 new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
             Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
         }
+        else if (license != null)
+        {
+            // License expiration should always include grace period - See OrganizationLicense.cs
+            Expiration = license.Expires;
+            // Use license subscription expiration if available, otherwise assume license expiration minus grace period
+            SelfHostSubscriptionExpiration = license.SubscriptionExpiration ??
+                                             license.Expires?.AddDays(-Constants
+                                                 .OrganizationSelfHostSubscriptionGracePeriodDays);
+        }
         else
         {
+            // No subscription or license, assume organization expiration date is end of grace period
             Expiration = organization.ExpirationDate;
+            // No way to know the SelfHostSubscriptionExpiration, so leave it empty
         }
 
         StorageName = organization.Storage.HasValue ?
@@ -110,5 +122,14 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     public double? StorageGb { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
+
+    /// <summary>
+    /// Date when a self-hosted organization's subscription expires (does not include grace period).
+    /// </summary>
+    public DateTime? SelfHostSubscriptionExpiration { get; set; }
+
+    /// <summary>
+    /// Date when a self-hosted organization expires (includes grace period).
+    /// </summary>
     public DateTime? Expiration { get; set; }
 }
