@@ -13,10 +13,11 @@ namespace Bit.Core.Context;
 
 public class CurrentContext : ICurrentContext
 {
-    private readonly IProviderRepository _providerRepository;
+    private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private bool _builtHttpContext;
     private bool _builtClaimsPrincipal;
+    private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
     private IEnumerable<ProviderUserOrganizationDetails> _providerUserOrganizations;
 
     public virtual HttpContext HttpContext { get; set; }
@@ -39,10 +40,10 @@ public class CurrentContext : ICurrentContext
     public virtual Guid? ServiceAccountOrganizationId { get; set; }
 
     public CurrentContext(
-        IProviderRepository providerRepository,
+        IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository)
     {
-        _providerRepository = providerRepository;
+        _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
     }
 
@@ -398,7 +399,7 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewSubscription(Guid orgId)
     {
-        var orgManagedByMspProvider = (await _providerRepository.GetByOrganizationIdAsync(orgId))?.Type == ProviderType.Msp;
+        var orgManagedByMspProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId && po.ProviderType == ProviderType.Msp);
 
         return orgManagedByMspProvider
             ? await ProviderUserForOrgAsync(orgId)
@@ -407,7 +408,7 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> EditSubscription(Guid orgId)
     {
-        var orgManagedByProvider = await _providerRepository.GetByOrganizationIdAsync(orgId) != null;
+        var orgManagedByProvider = (await GetOrganizationProviderDetails()).Any(po => po.OrganizationId == orgId);
 
         return orgManagedByProvider
             ? await ProviderUserForOrgAsync(orgId)
@@ -456,7 +457,7 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ProviderUserForOrgAsync(Guid orgId)
     {
-        return (await GetProviderOrganizations()).Any(po => po.OrganizationId == orgId);
+        return (await GetProviderUserOrganizations()).Any(po => po.OrganizationId == orgId);
     }
 
     public async Task<Guid?> ProviderIdForOrg(Guid orgId)
@@ -466,7 +467,7 @@ public class CurrentContext : ICurrentContext
             return null;
         }
 
-        var po = (await GetProviderOrganizations())
+        var po = (await GetProviderUserOrganizations())
             ?.FirstOrDefault(po => po.OrganizationId == orgId);
 
         return po?.ProviderId;
@@ -543,7 +544,7 @@ public class CurrentContext : ICurrentContext
         };
     }
 
-    protected async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderOrganizations()
+    protected async Task<IEnumerable<ProviderUserOrganizationDetails>> GetProviderUserOrganizations()
     {
         if (_providerUserOrganizations == null && UserId.HasValue)
         {
@@ -551,5 +552,15 @@ public class CurrentContext : ICurrentContext
         }
 
         return _providerUserOrganizations;
+    }
+
+    protected async Task<IEnumerable<ProviderOrganizationProviderDetails>> GetOrganizationProviderDetails()
+    {
+        if (_providerOrganizationProviderDetails == null && UserId.HasValue)
+        {
+            _providerOrganizationProviderDetails = await _providerOrganizationRepository.GetManyByUserAsync(UserId.Value);
+        }
+
+        return _providerOrganizationProviderDetails;
     }
 }
