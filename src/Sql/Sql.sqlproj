@@ -117,6 +117,7 @@
     <Build Include="Auth\dbo\Stored Procedures\SsoConfig_ReadByOrganizationId.sql" />
     <Build Include="Auth\dbo\Stored Procedures\SsoConfig_ReadManyByNotBeforeRevisionDate.sql" />
     <Build Include="Auth\dbo\Stored Procedures\SsoConfig_Update.sql" />
+    <Build Include="Auth\dbo\Stored Procedures\SsoUser_Create.sql" />
     <Build Include="Auth\dbo\Stored Procedures\SsoUser_Delete.sql" />
     <Build Include="Auth\dbo\Stored Procedures\SsoUser_DeleteById.sql" />
     <Build Include="Auth\dbo\Stored Procedures\SsoUser_DeleteMany.sql" />
@@ -327,7 +328,6 @@
     <Build Include="dbo\Stored Procedures\Send_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Send_ReadByUserId.sql" />
     <Build Include="dbo\Stored Procedures\Send_Update.sql" />
-    <Build Include="dbo\Stored Procedures\SsoUser_Create.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_Archive.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_Create.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_ReadAllActive.sql" />
