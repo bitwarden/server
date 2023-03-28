@@ -43,4 +43,17 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
             return results.SingleOrDefault();
         }
     }
+
+    public async Task<IEnumerable<ProviderOrganizationProviderDetails>> GetManyByUserAsync(Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<ProviderOrganizationProviderDetails>(
+                "[dbo].[ProviderOrganizationProviderDetails_ReadByUserId]",
+                new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
 }
