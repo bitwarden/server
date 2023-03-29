@@ -588,7 +588,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId)
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -604,8 +604,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         join ou in dbContext.OrganizationUsers
                             on p.OrganizationId equals ou.OrganizationId
                         let email = dbContext.Users.Find(userId).Email  // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
-                        where
-                            ou.UserId == userId || ou.Email == email
+                        where p.Type == policyType &&
+                            (ou.UserId == userId || ou.Email == email)
                         select new OrganizationUserPolicyDetails
                         {
                             OrganizationUserId = ou.Id,

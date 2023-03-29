@@ -151,10 +151,9 @@ public class PolicyService : IPolicyService
 
     private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
-        var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId);
+        var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
         return organizationUserPolicyDetails.Where(o =>
-            o.PolicyType == policyType &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
             o.OrganizationUserStatus >= minStatus &&

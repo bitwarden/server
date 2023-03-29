@@ -1,5 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
-    @UserId UNIQUEIDENTIFIER
+    @UserId UNIQUEIDENTIFIER,
+    @PolicyType TINYINT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -38,4 +39,5 @@ WHERE
             AND OU.[Email] IN (SELECT U.Email FROM [dbo].[UserView] U WHERE U.Id = @UserId)
         )
     )
+    AND P.[Type] = @PolicyType
 END
