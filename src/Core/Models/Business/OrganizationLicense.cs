@@ -135,7 +135,9 @@ public class OrganizationLicense : ILicense
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
-    private const int CURRENT_LICENSE_FILE_VERSION = 12;
+    /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
+    /// getting out of date license errors</remarks>
+    private const int CURRENT_LICENSE_FILE_VERSION = 11;
     private bool ValidLicenseVersion
     {
         get => Version is >= 1 and <= 12;
