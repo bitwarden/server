@@ -482,13 +482,4 @@
     <Content Include="dbo\Tables\OrganizationDomain.sql" />
     <Content Include="dbo\Views\OrganizationDomainView.sql" />
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="dbo_future\Functions\PolicyApplicableToUser.sql" />
-    <Content Include="dbo_future\Stored Procedures\Policy_CountByTypeApplicableToUser.sql" />
-    <Content Include="dbo_future\Stored Procedures\Collection_CreateWithGroups.sql" />
-    <Content Include="dbo_future\Stored Procedures\Collection_ReadWithGroupsById.sql" />
-    <Content Include="dbo_future\Stored Procedures\Collection_ReadWithGroupsByIdUserId.sql" />
-    <Content Include="dbo_future\Stored Procedures\Collection_UpdateWithGroups.sql" />
-    <Content Include="dbo_future\Stored Procedures\Policy_ReadByTypeApplicableToUser.sql" />
-  </ItemGroup>
 </Project>
