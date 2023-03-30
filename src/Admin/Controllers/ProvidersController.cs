@@ -195,4 +195,24 @@ public class ProvidersController : Controller
 
         return RedirectToAction("Edit", "Providers", new { id = id });
     }
+
+    [HttpGet]
+    public async Task<IActionResult> CreateOrganization(Guid providerId)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider is not { Type: ProviderType.Reseller })
+        {
+            return RedirectToAction("Index");
+        }
+
+        return View(new OrganizationEditModel(provider));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateOrganization(Guid providerId, OrganizationEditModel model)
+    {
+        // TODO : Insert logic to create the new Organization entry, create an OrganizationUser entry for the owner and send the invitation email
+
+        return RedirectToAction("Edit", "Providers", new { id = providerId });
+    }
 }
