@@ -16,13 +16,11 @@ public class OrganizationDomainSsoDetailsResponseModel : ResponseModel
         SsoAvailable = data.SsoAvailable;
         DomainName = data.DomainName;
         OrganizationIdentifier = data.OrganizationIdentifier;
-        SsoRequired = data.SsoRequired;
         VerifiedDate = data.VerifiedDate;
     }
 
     public bool SsoAvailable { get; private set; }
     public string DomainName { get; private set; }
     public string OrganizationIdentifier { get; private set; }
-    public bool SsoRequired { get; private set; }
     public DateTime? VerifiedDate { get; private set; }
 }
