@@ -8,7 +8,6 @@ using Bit.Core.Identity;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -83,7 +82,9 @@ public class SecretsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
-        return new SecretResponseModel(result);
+
+        // Creating a secret means you have read & write permission.
+        return new SecretResponseModel(result, true, true);
     }
 
     [HttpGet("secrets/{id}")]
@@ -96,21 +97,26 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        if (!await UserHasReadAccessToSecret(secret))
+        var userId = _userService.GetProperUserId(User).Value;
+        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+
+        var access = await _secretRepository.AccessToSecretAsync(id, userId, accessClient);
+
+        if (!access.Read)
         {
             throw new NotFoundException();
         }
 
         if (_currentContext.ClientType == ClientType.ServiceAccount)
         {
-            var userId = _userService.GetProperUserId(User).Value;
             await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
 
             var org = await _organizationRepository.GetByIdAsync(secret.OrganizationId);
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org));
         }
 
-        return new SecretResponseModel(secret);
+        return new SecretResponseModel(secret, access.Read, access.Write);
     }
 
     [HttpGet("projects/{projectId}/secrets")]
@@ -137,7 +143,9 @@ public class SecretsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var secret = updateRequest.ToSecret(id);
         var result = await _updateSecretCommand.UpdateAsync(secret, userId);
-        return new SecretResponseModel(result);
+
+        // Updating a secret means you have read & write permission.
+        return new SecretResponseModel(result, true, true);
     }
 
     [HttpPost("secrets/delete")]
@@ -147,27 +155,5 @@ public class SecretsController : Controller
         var results = await _deleteSecretCommand.DeleteSecrets(ids, userId);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
-    }
-
-    public async Task<bool> UserHasReadAccessToSecret(Secret secret)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var hasAccess = orgAdmin;
-
-        if (secret.Projects?.Count > 0)
-        {
-            Guid projectId = secret.Projects.FirstOrDefault().Id;
-            hasAccess = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasReadAccessToProject(projectId, userId),
-                AccessClientType.ServiceAccount => await _projectRepository.ServiceAccountHasReadAccessToProject(projectId, userId),
-                _ => false,
-            };
-        }
-
-        return hasAccess;
     }
 }
