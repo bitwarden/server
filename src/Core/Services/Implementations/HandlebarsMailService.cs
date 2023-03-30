@@ -200,10 +200,10 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token) =>
-        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) });
+    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool initOrganization = false) =>
+        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) }, initOrganization);
 
-    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool initOrganization = false)
     {
         MailQueueMessage CreateMessage(string email, object model)
         {
@@ -223,6 +223,7 @@ public class HandlebarsMailService : IMailService
                 OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
+                InitOrganization = initOrganization
             }
         ));
 

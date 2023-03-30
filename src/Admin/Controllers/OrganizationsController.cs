@@ -17,6 +17,7 @@ namespace Bit.Admin.Controllers;
 [Authorize]
 public class OrganizationsController : Controller
 {
+    private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
@@ -35,6 +36,7 @@ public class OrganizationsController : Controller
     private readonly ILogger<OrganizationsController> _logger;
 
     public OrganizationsController(
+        IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
@@ -52,6 +54,7 @@ public class OrganizationsController : Controller
         IProviderRepository providerRepository,
         ILogger<OrganizationsController> logger)
     {
+        _organizationService = organizationService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationConnectionRepository = organizationConnectionRepository;
@@ -219,4 +222,21 @@ public class OrganizationsController : Controller
         return RedirectToAction("Index");
     }
 
+    [HttpPost]
+    public async Task<IActionResult> ResendOwnerInvite(Guid id)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, OrganizationUserType.Owner);
+        foreach (var organizationUser in organizationUsers)
+        {
+            await _organizationService.ResendInviteAsync(id, null, organizationUser.Id, true);
+        }
+
+        return Json(null);
+    }
 }

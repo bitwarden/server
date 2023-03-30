@@ -418,7 +418,7 @@ public class ProviderServiceTests
 
     [Theory, BitAutoData]
     public async Task AddOrganization_OrganizationAlreadyBelongsToAProvider_Throws(Provider provider,
-        Organization organization, ProviderOrganization po, User user, string key,
+        Organization organization, ProviderOrganization po, string key,
         SutProvider<ProviderService> sutProvider)
     {
         po.OrganizationId = organization.Id;
@@ -427,12 +427,12 @@ public class ProviderServiceTests
             .Returns(po);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, user.Id, key));
+            () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key));
         Assert.Equal("Organization already belongs to a provider.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task AddOrganization_Success(Provider provider, Organization organization, User user, string key,
+    public async Task AddOrganization_Success(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
@@ -442,7 +442,7 @@ public class ProviderServiceTests
         providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
-        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, user.Id, key);
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
 
         await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<IEventService>()

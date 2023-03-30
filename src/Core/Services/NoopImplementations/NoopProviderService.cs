@@ -23,7 +23,7 @@ public class NoopProviderService : IProviderService
 
     public Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds, Guid deletingUserId) => throw new NotImplementedException();
 
-    public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
+    public Task AddOrganization(Guid providerId, Guid organizationId, string key) => throw new NotImplementedException();
 
     public Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds) => throw new NotImplementedException();
 

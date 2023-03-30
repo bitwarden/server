@@ -54,9 +54,7 @@ public class ProviderOrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
-
-        await _providerService.AddOrganization(providerId, model.OrganizationId, userId, model.Key);
+        await _providerService.AddOrganization(providerId, model.OrganizationId, model.Key);
     }
 
     [HttpPost("")]
