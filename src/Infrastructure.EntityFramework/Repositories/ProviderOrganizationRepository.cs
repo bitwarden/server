@@ -15,6 +15,30 @@ public class ProviderOrganizationRepository :
         : base(serviceScopeFactory, mapper, context => context.ProviderOrganizations)
     { }
 
+    public async Task<ICollection<ProviderOrganization>> CreateManyAsync(IEnumerable<ProviderOrganization> providerOrganizations)
+    {
+        var entities = providerOrganizations.ToList();
+
+        if (!entities.Any())
+        {
+            return default;
+        }
+
+        foreach (var providerOrganization in entities)
+        {
+            providerOrganization.SetNewId();
+        }
+
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            await dbContext.AddRangeAsync(entities);
+            await dbContext.SaveChangesAsync();
+        }
+
+        return entities;
+    }
+
     public async Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
