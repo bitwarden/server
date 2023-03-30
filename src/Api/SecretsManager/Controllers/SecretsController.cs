@@ -5,6 +5,8 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
+using Bit.Core.Models.Business;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -21,30 +23,37 @@ public class SecretsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
+    private readonly IReferenceEventService _referenceEventService;
 
     public SecretsController(
         ICurrentContext currentContext,
         IProjectRepository projectRepository,
         ISecretRepository secretRepository,
+        IOrganizationRepository organizationRepository,
         ICreateSecretCommand createSecretCommand,
         IUpdateSecretCommand updateSecretCommand,
         IDeleteSecretCommand deleteSecretCommand,
         IUserService userService,
-        IEventService eventService)
+        IEventService eventService,
+        IReferenceEventService referenceEventService)
     {
         _currentContext = currentContext;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
+        _organizationRepository = organizationRepository;
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
         _userService = userService;
         _eventService = eventService;
+        _referenceEventService = referenceEventService;
+
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
@@ -96,6 +105,9 @@ public class SecretsController : Controller
         {
             var userId = _userService.GetProperUserId(User).Value;
             await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
+
+            var org = await _organizationRepository.GetByIdAsync(secret.OrganizationId);
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org));
         }
 
         return new SecretResponseModel(secret);
