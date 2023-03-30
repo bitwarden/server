@@ -14,7 +14,7 @@
             <label class="sr-only" asp-for="OrganizationName"></label>
             <input type="text" class="form-control mb-2 mr-2 flex-fill" placeholder="@Html.DisplayNameFor(m => m.OrganizationName)" asp-for="OrganizationName" name="name">
             <label class="sr-only" asp-for="OrganizationOwnerEmail"></label>
-            <input type="email" class="form-control mb-2 mr-2 flex-fill" placeholder="@Html.DisplayNameFor(m => m.OrganizationOwnerEmail)" asp-for="OrganizationOwnerEmail" name="ownerEmail">
+            <input pattern="^\w+([\.-]?\w+)*@@\w+([\.-]?\w+)*(\.\w{2,3})+$" type="email" class="form-control mb-2 mr-2 flex-fill" placeholder="@Html.DisplayNameFor(m => m.OrganizationOwnerEmail)" asp-for="OrganizationOwnerEmail" name="ownerEmail">
             <button type="submit" class="btn btn-primary mb-2" title="Search" formmethod="get"><i class="fa fa-search"></i> Search</button>
         </form>
     </div>
