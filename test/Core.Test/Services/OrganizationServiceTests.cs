@@ -64,7 +64,7 @@ public class OrganizationServiceTests
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(org.Name,
-            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
+            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), org.PlanType == PlanType.Free);
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -122,7 +122,7 @@ public class OrganizationServiceTests
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(org.Name,
-            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
+            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), org.PlanType == PlanType.Free);
 
         // Sent events
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -217,7 +217,7 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invite.Emails.Distinct().Count()));
+                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invite.Emails.Distinct().Count()), organization.PlanType == PlanType.Free);
     }
 
     [Theory]
@@ -460,7 +460,7 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()));
+                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()), organization.PlanType == PlanType.Free);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
     }
@@ -494,7 +494,7 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()));
+                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()), organization.PlanType == PlanType.Free);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>());
     }
