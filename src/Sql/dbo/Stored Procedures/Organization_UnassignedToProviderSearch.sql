@@ -8,7 +8,8 @@ AS
 BEGIN
     SET NOCOUNT ON
     DECLARE @NameLikeSearch NVARCHAR(55) = '%' + @Name + '%'
-
+    DECLARE @OwnerLikeSearch NVARCHAR(55) = @OwnerEmail + '%'
+        
     IF @OwnerEmail IS NOT NULL
     BEGIN
         SELECT
@@ -23,7 +24,7 @@ BEGIN
             O.[PlanType] >= 8 AND O.[PlanType] <= 11 -- Get 'Team' and 'Enterprise' Organizations
             AND NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] PO WHERE PO.[OrganizationId] = O.[Id])
             AND (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
-            AND (U.[Email] = @OwnerEmail)
+            AND (U.[Email] LIKE @OwnerLikeSearch)
         ORDER BY O.[CreationDate] DESC
         OFFSET @Skip ROWS
         FETCH NEXT @Take ROWS ONLY
