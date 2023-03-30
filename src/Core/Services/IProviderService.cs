@@ -20,6 +20,7 @@ public interface IProviderService
         Guid deletingUserId);
 
     Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key);
+    Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds);
     Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup,
         string clientOwnerEmail, User user);
     Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId);

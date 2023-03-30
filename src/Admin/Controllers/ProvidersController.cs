@@ -15,6 +15,7 @@ namespace Bit.Admin.Controllers;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class ProvidersController : Controller
 {
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
@@ -24,6 +25,7 @@ public class ProvidersController : Controller
     private readonly ICreateProviderCommand _createProviderCommand;
 
     public ProvidersController(
+        IOrganizationRepository organizationRepository,
         IProviderRepository providerRepository,
         IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository,
@@ -32,6 +34,7 @@ public class ProvidersController : Controller
         IApplicationCacheService applicationCacheService,
         ICreateProviderCommand createProviderCommand)
     {
+        _organizationRepository = organizationRepository;
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
@@ -147,5 +150,49 @@ public class ProvidersController : Controller
         await _providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);
         TempData["InviteResentTo"] = ownerId;
         return RedirectToAction("Edit", new { id = providerId });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> AddExistingOrganization(Guid id, string name = null, string ownerEmail = null, int page = 1, int count = 25)
+    {
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (count < 1)
+        {
+            count = 1;
+        }
+
+        var skip = (page - 1) * count;
+        var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(name, ownerEmail, skip, count);
+        var viewModel = new OrganizationUnassignedToProviderSearchViewModel
+        {
+            OrganizationName = string.IsNullOrWhiteSpace(name) ? null : name,
+            OrganizationOwnerEmail = string.IsNullOrWhiteSpace(ownerEmail) ? null : ownerEmail,
+            Page = page,
+            Count = count,
+            Items = unassignedOrganizations.Select(uo => new OrganizationSelectableViewModel
+            {
+                Id = uo.Id,
+                Name = uo.Name,
+                PlanType = uo.PlanType
+            }).ToList()
+        };
+
+        return View(viewModel);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddExistingOrganization(Guid id, OrganizationUnassignedToProviderSearchViewModel model)
+    {
+        var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
+        if (organizationIds.Any())
+        {
+            await _providerService.AddOrganizationsToReseller(id, organizationIds);
+        }
+
+        return RedirectToAction("Edit", "Providers", new { id = id });
     }
 }
