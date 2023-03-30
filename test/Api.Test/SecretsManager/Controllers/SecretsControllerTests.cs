@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
@@ -45,7 +46,11 @@ public class SecretsControllerTests
     public async void GetSecretsByOrganization_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, Core.SecretsManager.Entities.Secret resultSecret, Guid organizationId, Guid userId, Core.SecretsManager.Entities.Project mockProject, AccessClientType accessType)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<ISecretRepository>().GetManyByOrganizationIdAsync(default, default, default).ReturnsForAnyArgs(new List<Core.SecretsManager.Entities.Secret> { resultSecret });
+        sutProvider.GetDependency<ISecretRepository>().GetManyByOrganizationIdAsync(default, default, default)
+            .ReturnsForAnyArgs(new List<SecretPermissionDetails>
+            {
+                new() { Secret = resultSecret, Read = true, Write = true },
+            });
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
         if (permissionType == PermissionType.RunAsAdmin)
@@ -96,6 +101,8 @@ public class SecretsControllerTests
         resultSecret.OrganizationId = organizationId;
 
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(default).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(default, default, default)
+            .ReturnsForAnyArgs(Task.FromResult((true, true)));
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
@@ -111,7 +118,7 @@ public class SecretsControllerTests
                 .Returns((true, true));
         }
 
-        var result = await sutProvider.Sut.GetAsync(resultSecret.Id);
+        await sutProvider.Sut.GetAsync(resultSecret.Id);
 
         await sutProvider.GetDependency<ISecretRepository>().Received(1)
                      .GetByIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultSecret.Id)));
