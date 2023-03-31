@@ -343,7 +343,7 @@ public class ProviderService : IProviderService
         return result;
     }
 
-    public async Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key)
+    public async Task AddOrganization(Guid providerId, Guid organizationId, string key)
     {
         var po = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
         if (po != null)
@@ -363,6 +363,20 @@ public class ProviderService : IProviderService
 
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
+    }
+
+    public async Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider.Type != ProviderType.Reseller)
+        {
+            throw new BadRequestException("Organization must be of type Reseller in order to assign Organizations to it.");
+        }
+
+        var providerOrganizationsToInsert = organizationIds.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
+        var insertedProviderOrganizations = await _providerOrganizationRepository.CreateManyAsync(providerOrganizationsToInsert);
+
+        await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,

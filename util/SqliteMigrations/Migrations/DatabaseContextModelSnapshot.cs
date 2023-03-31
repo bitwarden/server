@@ -51,9 +51,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<byte>("RequestDeviceType")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("RequestFingerprint")
-                        .HasColumnType("TEXT");
-
                     b.Property<string>("RequestIpAddress")
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
@@ -77,53 +74,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("AuthRequest", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Attachments")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Data")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("DeletedDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Favorites")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Folders")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<byte?>("Reprompt")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Cipher", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
@@ -365,30 +315,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Event", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Folder", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Folder", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Grant", b =>
@@ -1514,6 +1440,77 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("ServiceAccount", (string)null);
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Attachments")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DeletedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Favorites")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Folders")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte?>("Reprompt")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Cipher", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Folder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Folder", (string)null);
+                });
+
             modelBuilder.Entity("ProjectSecret", b =>
                 {
                     b.Property<Guid>("ProjectsId")
@@ -1650,21 +1647,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
-                        .WithMany("Ciphers")
-                        .HasForeignKey("OrganizationId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany("Ciphers")
-                        .HasForeignKey("UserId");
-
-                    b.Navigation("Organization");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
@@ -1678,7 +1660,7 @@ namespace Bit.SqliteMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.CollectionCipher", b =>
                 {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Cipher", "Cipher")
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", "Cipher")
                         .WithMany("CollectionCiphers")
                         .HasForeignKey("CipherId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1759,17 +1741,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Grantee");
 
                     b.Navigation("Grantor");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Folder", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany("Folders")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>
@@ -2014,6 +1985,32 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("Ciphers")
+                        .HasForeignKey("OrganizationId");
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany("Ciphers")
+                        .HasForeignKey("UserId");
+
+                    b.Navigation("Organization");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Folder", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany("Folders")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ProjectSecret", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", null)
@@ -2104,11 +2101,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("OrganizationUser");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Cipher", b =>
-                {
-                    b.Navigation("CollectionCiphers");
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
                 {
                     b.Navigation("CollectionCiphers");
@@ -2182,6 +2174,11 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("GroupAccessPolicies");
 
                     b.Navigation("UserAccessPolicies");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Vault.Models.Cipher", b =>
+                {
+                    b.Navigation("CollectionCiphers");
                 });
 #pragma warning restore 612, 618
         }

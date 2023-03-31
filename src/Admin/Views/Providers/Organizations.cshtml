@@ -1,4 +1,7 @@
 @model ProviderViewModel
+
+@await Html.PartialAsync("_ProviderScripts")
+
 <h2>Provider Organizations</h2>
 <div class="row">
     <div class="col-sm">
@@ -12,7 +15,7 @@
                             @if (Model.Provider.Type == ProviderType.Reseller)
                             {
                                 <div class="float-right text-nowrap">
-                                    <a asp-controller="Organizations" asp-action="Create" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary">New Organization</a>
+                                    <a asp-controller="Providers" asp-action="CreateOrganization" asp-route-providerId="@Model.Provider.Id" class="btn btn-sm btn-primary">New Organization</a>
                                     <a asp-controller="Providers" asp-action="AddExistingOrganization" asp-route-id="@Model.Provider.Id" class="btn btn-sm btn-outline-primary">Add Existing Organization</a>
                                 </div>
                             }
@@ -41,7 +44,7 @@
                                     <div class="float-right">
                                         @if (org.Status == OrganizationStatusType.Pending)
                                         {
-                                            <a asp-controller="Organizations" asp-action="ResendInvite" asp-route-id="@org.Id" class="float-right">
+                                            <a href="#" class="float-right" onclick="return resendOwnerInvite('@org.OrganizationId', '@org.OrganizationName');">
                                                 <i class="fa fa-envelope-o fa-lg" title="Resend Setup Invite"></i>
                                             </a>
                                         }

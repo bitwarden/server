@@ -134,4 +134,18 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             return selfHostOrganization;
         }
     }
+
+    public async Task<ICollection<Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    {
+        using (var connection = new SqlConnection(ReadOnlyConnectionString))
+        {
+            var results = await connection.QueryAsync<Organization>(
+                "[dbo].[Organization_UnassignedToProviderSearch]",
+                new { Name = name, OwnerEmail = ownerEmail, Skip = skip, Take = take },
+                commandType: CommandType.StoredProcedure,
+                commandTimeout: 120);
+
+            return results.ToList();
+        }
+    }
 }

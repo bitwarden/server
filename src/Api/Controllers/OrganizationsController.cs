@@ -708,8 +708,11 @@ public class OrganizationsController : Controller
         if (model.Enabled)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(id, userId);
-            orgUser.AccessSecretsManager = true;
-            await _organizationUserRepository.ReplaceAsync(orgUser);
+            if (orgUser != null)
+            {
+                orgUser.AccessSecretsManager = true;
+                await _organizationUserRepository.ReplaceAsync(orgUser);
+            }
         }
     }
 }

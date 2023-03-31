@@ -13,7 +13,6 @@ public class AuthRequest : ITableObject<Guid>
     public Enums.DeviceType RequestDeviceType { get; set; }
     [MaxLength(50)]
     public string RequestIpAddress { get; set; }
-    public string RequestFingerprint { get; set; }
     public Guid? ResponseDeviceId { get; set; }
     [MaxLength(25)]
     public string AccessCode { get; set; }
