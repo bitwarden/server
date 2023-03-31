@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Models.Mail;
 
-public class OrganizationUserInvitedViewModel : BaseMailModel
+public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
 {
     public string OrganizationName { get; set; }
     public string OrganizationId { get; set; }

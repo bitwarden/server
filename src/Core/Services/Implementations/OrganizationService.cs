@@ -1196,7 +1196,7 @@ public class OrganizationService : IOrganizationService
             _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
         await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
-            orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
+            orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))), organization.PlanType == PlanType.Free);
     }
 
     private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
@@ -1205,8 +1205,7 @@ public class OrganizationService : IOrganizationService
         var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
         var token = _dataProtector.Protect(
             $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-
-        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)), initOrganization);
+        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)), organization.PlanType == PlanType.Free, initOrganization);
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,

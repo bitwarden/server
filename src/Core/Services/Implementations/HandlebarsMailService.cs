@@ -191,6 +191,9 @@ public class HandlebarsMailService : IMailService
         var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
         var model = new OrganizationUserConfirmedViewModel
         {
+            TitleFirst = "You're confirmed as a member of ",
+            TitleSecondBold = CoreHelpers.SanitizeForEmail(organizationName, false),
+            TitleThird = "!",
             OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
@@ -200,21 +203,24 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool initOrganization = false) =>
-        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) }, initOrganization);
+    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg, bool initOrganization = false) =>
+        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) }, isFreeOrg, initOrganization);
 
-    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool initOrganization = false)
+    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg, bool initOrganization = false)
     {
         MailQueueMessage CreateMessage(string email, object model)
         {
             var message = CreateDefaultMessage($"Join {organizationName}", email);
             return new MailQueueMessage(message, "OrganizationUserInvited", model);
         }
-
+        var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
         var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
             new OrganizationUserInvitedViewModel
             {
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+                TitleFirst = isFreeOrg ? freeOrgTitle : "Join ",
+                TitleSecondBold = isFreeOrg ? string.Empty : CoreHelpers.SanitizeForEmail(organizationName, false),
+                TitleThird = isFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
+                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false) + invite.orgUser.Status,
                 Email = WebUtility.UrlEncode(invite.orgUser.Email),
                 OrganizationId = invite.orgUser.OrganizationId.ToString(),
                 OrganizationUserId = invite.orgUser.Id.ToString(),
@@ -479,6 +485,10 @@ public class HandlebarsMailService : IMailService
         Handlebars.RegisterTemplate("FullHtmlLayout", fullHtmlLayoutSource);
         var fullTextLayoutSource = await ReadSourceAsync("Layouts.Full.text");
         Handlebars.RegisterTemplate("FullTextLayout", fullTextLayoutSource);
+        var titleContactUsHtmlLayoutSource = await ReadSourceAsync("Layouts.TitleContactUs.html");
+        Handlebars.RegisterTemplate("TitleContactUsHtmlLayout", titleContactUsHtmlLayoutSource);
+        var titleContactUsTextLayoutSource = await ReadSourceAsync("Layouts.TitleContactUs.text");
+        Handlebars.RegisterTemplate("TitleContactUsTextLayout", titleContactUsTextLayoutSource);
 
         Handlebars.RegisterHelper("date", (writer, context, parameters) =>
         {
