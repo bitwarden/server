@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
-using static Fido2NetLib.Objects.COSE;
 
 namespace Bit.Api.Models;
 
@@ -11,19 +10,27 @@ public class CipherFido2KeyModel
 
     public CipherFido2KeyModel(CipherFido2KeyData data)
     {
+        NonDiscoverableId = data.NonDiscoverableId;
         KeyType = data.KeyType;
+        KeyAlgorithm = data.KeyAlgorithm;
         KeyCurve = data.KeyCurve;
         KeyValue = data.KeyValue;
         RpId = data.RpId;
         RpName = data.RpName;
         UserHandle = data.UserHandle;
         UserName = data.UserName;
-        Origin = data.Origin;
+        Counter = data.Counter;
     }
 
     [EncryptedString]
     [EncryptedStringLength(1000)]
+    public string NonDiscoverableId { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string KeyType { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string KeyAlgorithm { get; set; }
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string KeyCurve { get; set; }
@@ -44,5 +51,5 @@ public class CipherFido2KeyModel
     public string UserName { get; set; }
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string Origin { get; set; }
+    public string Counter { get; set; }
 }
