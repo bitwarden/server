@@ -12,11 +12,9 @@ SELECT
     P.[Type] as ProviderType
 FROM
     [dbo].[ProviderOrganizationView] PO
-    INNER JOIN
-        [dbo].[Organization] O ON PO.OrganizationId = O.Id
-    INNER JOIN
-        [dbo].[OrganizationUser] OU ON PO.OrganizationId = OU.OrganizationId
-    INNER JOIN
+INNER JOIN
+    [dbo].[OrganizationUser] OU ON PO.OrganizationId = OU.OrganizationId
+INNER JOIN
         [dbo].[Provider] P ON PO.ProviderId = P.Id
 WHERE
     OU.UserId = @UserId

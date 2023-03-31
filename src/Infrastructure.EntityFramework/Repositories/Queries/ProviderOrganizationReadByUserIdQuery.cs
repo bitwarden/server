@@ -14,8 +14,6 @@ public class ProviderOrganizationReadByUserIdQuery : IQuery<ProviderOrganization
     public IQueryable<ProviderOrganizationProviderDetails> Run(DatabaseContext dbContext)
     {
         var query = from po in dbContext.ProviderOrganizations
-                    join o in dbContext.Organizations
-                        on po.OrganizationId equals o.Id
                     join ou in dbContext.OrganizationUsers
                         on po.OrganizationId equals ou.OrganizationId
                     join p in dbContext.Providers

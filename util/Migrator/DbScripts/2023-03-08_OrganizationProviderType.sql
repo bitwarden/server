@@ -58,7 +58,7 @@ LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
 GO
 
-CREATE PROCEDURE [dbo].[ProviderOrganizationProviderDetails_ReadByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[ProviderOrganizationProviderDetails_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -72,8 +72,6 @@ SELECT
     P.[Type] as ProviderType
 FROM
     [dbo].[ProviderOrganizationView] PO
-INNER JOIN
-    [dbo].[Organization] O ON PO.OrganizationId = O.Id
 INNER JOIN
     [dbo].[OrganizationUser] OU ON PO.OrganizationId = OU.OrganizationId
 INNER JOIN
