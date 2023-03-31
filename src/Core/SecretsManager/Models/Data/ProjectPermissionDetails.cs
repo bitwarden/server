@@ -4,7 +4,7 @@ namespace Bit.Core.SecretsManager.Models.Data;
 
 public class ProjectPermissionDetails
 {
-    public Project Project;
+    public Project Project { get; set; }
     public bool Read { get; set; }
     public bool Write { get; set; }
 }
