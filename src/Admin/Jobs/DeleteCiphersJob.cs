@@ -1,6 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Jobs;
-using Bit.Core.Repositories;
+using Bit.Core.Vault.Repositories;
 using Microsoft.Extensions.Options;
 using Quartz;
 

@@ -1,4 +1,6 @@
-﻿namespace Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.Vault.Models.Request;
+
+namespace Bit.Api.Models.Request.Organizations;
 
 public class ImportOrganizationCiphersRequestModel
 {
