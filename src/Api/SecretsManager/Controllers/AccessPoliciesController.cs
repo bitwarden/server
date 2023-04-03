@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -30,6 +31,7 @@ public class AccessPoliciesController : Controller
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
     private readonly IUserService _userService;
+    private readonly IAccessPolicyAccessQuery _accessPolicyAccessQuery;
 
     public AccessPoliciesController(
         IUserService userService,
@@ -41,7 +43,8 @@ public class AccessPoliciesController : Controller
         IOrganizationUserRepository organizationUserRepository,
         ICreateAccessPoliciesCommand createAccessPoliciesCommand,
         IDeleteAccessPolicyCommand deleteAccessPolicyCommand,
-        IUpdateAccessPolicyCommand updateAccessPolicyCommand)
+        IUpdateAccessPolicyCommand updateAccessPolicyCommand,
+        IAccessPolicyAccessQuery accessPolicyAccessQuery)
     {
         _userService = userService;
         _currentContext = currentContext;
@@ -53,6 +56,7 @@ public class AccessPoliciesController : Controller
         _createAccessPoliciesCommand = createAccessPoliciesCommand;
         _deleteAccessPolicyCommand = deleteAccessPolicyCommand;
         _updateAccessPolicyCommand = updateAccessPolicyCommand;
+        _accessPolicyAccessQuery = accessPolicyAccessQuery;
     }
 
     [HttpPost("/projects/{id}/access-policies")]
@@ -70,9 +74,14 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var (accessClient, userId) = await GetAccessClientTypeAsync(project.OrganizationId);
+        var userId = _userService.GetProperUserId(User).Value;
         var policies = request.ToBaseAccessPoliciesForProject(id);
-        await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
+        if (!await _accessPolicyAccessQuery.HasAccess(policies, project.OrganizationId, userId))
+        {
+            throw new NotFoundException();
+        }
+
+        await _createAccessPoliciesCommand.CreateManyAsync(policies);
         var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id, userId);
         return new ProjectAccessPoliciesResponseModel(results);
     }
@@ -102,9 +111,14 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
+        var userId = _userService.GetProperUserId(User).Value;
         var policies = request.ToBaseAccessPoliciesForServiceAccount(id);
-        await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
+        if (!await _accessPolicyAccessQuery.HasAccess(policies, serviceAccount.OrganizationId, userId))
+        {
+            throw new NotFoundException();
+        }
+
+        await _createAccessPoliciesCommand.CreateManyAsync(policies);
         var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id, userId);
         return new ServiceAccountAccessPoliciesResponseModel(results);
     }
@@ -152,10 +166,14 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
-        var policies = requests.Select(request => request.ToServiceAccountProjectAccessPolicy(id));
-        var results =
-            await _createAccessPoliciesCommand.CreateManyAsync(new List<BaseAccessPolicy>(policies), userId, accessClient);
+        var userId = _userService.GetProperUserId(User).Value;
+        var policies = new List<BaseAccessPolicy>(requests.Select(request => request.ToServiceAccountProjectAccessPolicy(id)));
+        if (!await _accessPolicyAccessQuery.HasAccess(policies, serviceAccount.OrganizationId, userId))
+        {
+            throw new NotFoundException();
+        }
+
+        var results = await _createAccessPoliciesCommand.CreateManyAsync(policies);
         var responses = results.Select(ap =>
             new ServiceAccountProjectAccessPolicyResponseModel((ServiceAccountProjectAccessPolicy)ap));
         return new ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>(responses);
@@ -165,9 +183,19 @@ public class AccessPoliciesController : Controller
     public async Task<BaseAccessPolicyResponseModel> UpdateAccessPolicyAsync([FromRoute] Guid id,
         [FromBody] AccessPolicyUpdateRequest request)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var result = await _updateAccessPolicyCommand.UpdateAsync(id, request.Read, request.Write, userId);
+        var ap = await _accessPolicyRepository.GetByIdAsync(id);
+        if (ap == null)
+        {
+            throw new NotFoundException();
+        }
 
+        var userId = _userService.GetProperUserId(User).Value;
+        if (!await _accessPolicyAccessQuery.HasAccess(ap, userId))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _updateAccessPolicyCommand.UpdateAsync(ap, request.Read, request.Write);
         return result switch
         {
             UserProjectAccessPolicy accessPolicy => new UserProjectAccessPolicyResponseModel(accessPolicy),
@@ -185,8 +213,19 @@ public class AccessPoliciesController : Controller
     [HttpDelete("{id}")]
     public async Task DeleteAccessPolicyAsync([FromRoute] Guid id)
     {
+        var ap = await _accessPolicyRepository.GetByIdAsync(id);
+        if (ap == null)
+        {
+            throw new NotFoundException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
-        await _deleteAccessPolicyCommand.DeleteAsync(id, userId);
+        if (!await _accessPolicyAccessQuery.HasAccess(ap, userId))
+        {
+            throw new NotFoundException();
+        }
+
+        await _deleteAccessPolicyCommand.DeleteAsync(id);
     }
 
     [HttpGet("/organizations/{id}/access-policies/people/potential-grantees")]

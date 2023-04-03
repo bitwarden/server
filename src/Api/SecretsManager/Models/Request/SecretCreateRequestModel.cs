@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.SecretsManager.Models.Request;
@@ -30,6 +31,17 @@ public class SecretCreateRequestModel
             Note = Note,
             DeletedDate = null,
             Projects = ProjectIds != null && ProjectIds.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
+        };
+    }
+
+    public SecretAccessCheck ToSecretAccessCheck(Guid organizationId, Guid userId)
+    {
+        return new SecretAccessCheck
+        {
+            OperationType = OperationType.CreateSecret,
+            OrganizationId = organizationId,
+            TargetProjectId = ProjectIds?.FirstOrDefault(),
+            UserId = userId,
         };
     }
 }

@@ -1,7 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Exceptions;
-using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
+﻿using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
@@ -10,42 +7,14 @@ namespace Bit.Commercial.Core.SecretsManager.Commands.Projects;
 public class UpdateProjectCommand : IUpdateProjectCommand
 {
     private readonly IProjectRepository _projectRepository;
-    private readonly ICurrentContext _currentContext;
 
-    public UpdateProjectCommand(IProjectRepository projectRepository, ICurrentContext currentContext)
+    public UpdateProjectCommand(IProjectRepository projectRepository)
     {
         _projectRepository = projectRepository;
-        _currentContext = currentContext;
     }
 
-    public async Task<Project> UpdateAsync(Project updatedProject, Guid userId)
+    public async Task<Project> UpdateAsync(Project project, Project updatedProject)
     {
-        var project = await _projectRepository.GetByIdAsync(updatedProject.Id);
-        if (project == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (!_currentContext.AccessSecretsManager(project.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(project.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(updatedProject.Id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
-        {
-            throw new NotFoundException();
-        }
-
         project.Name = updatedProject.Name;
         project.RevisionDate = DateTime.UtcNow;
 

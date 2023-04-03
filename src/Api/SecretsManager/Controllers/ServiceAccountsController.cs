@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +28,7 @@ public class ServiceAccountsController : Controller
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
     private readonly IDeleteServiceAccountsCommand _deleteServiceAccountsCommand;
     private readonly IRevokeAccessTokensCommand _revokeAccessTokensCommand;
+    private readonly IAccessQuery _accessQuery;
 
     public ServiceAccountsController(
         ICurrentContext currentContext,
@@ -37,7 +39,8 @@ public class ServiceAccountsController : Controller
         ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand,
         IDeleteServiceAccountsCommand deleteServiceAccountsCommand,
-        IRevokeAccessTokensCommand revokeAccessTokensCommand)
+        IRevokeAccessTokensCommand revokeAccessTokensCommand,
+        IAccessQuery accessQuery)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -48,6 +51,7 @@ public class ServiceAccountsController : Controller
         _deleteServiceAccountsCommand = deleteServiceAccountsCommand;
         _revokeAccessTokensCommand = revokeAccessTokensCommand;
         _createAccessTokenCommand = createAccessTokenCommand;
+        _accessQuery = accessQuery;
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
@@ -109,11 +113,12 @@ public class ServiceAccountsController : Controller
     public async Task<ServiceAccountResponseModel> CreateAsync([FromRoute] Guid organizationId,
         [FromBody] ServiceAccountCreateRequestModel createRequest)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        var userId = _userService.GetProperUserId(User).Value;
+        if (!await _accessQuery.HasAccess(createRequest.ToAccessCheck(organizationId, userId)))
         {
             throw new NotFoundException();
         }
-        var userId = _userService.GetProperUserId(User).Value;
+
         var result = await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
         return new ServiceAccountResponseModel(result);
     }
@@ -122,9 +127,19 @@ public class ServiceAccountsController : Controller
     public async Task<ServiceAccountResponseModel> UpdateAsync([FromRoute] Guid id,
         [FromBody] ServiceAccountUpdateRequestModel updateRequest)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
 
-        var result = await _updateServiceAccountCommand.UpdateAsync(updateRequest.ToServiceAccount(id), userId);
+        var userId = _userService.GetProperUserId(User).Value;
+        if (!await _accessQuery.HasAccess(updateRequest.ToAccessCheck(id, serviceAccount.OrganizationId, userId)))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _updateServiceAccountCommand.UpdateAsync(serviceAccount, updateRequest.ToServiceAccount(id));
         return new ServiceAccountResponseModel(result);
     }
 
@@ -176,38 +191,33 @@ public class ServiceAccountsController : Controller
     public async Task<AccessTokenCreationResponseModel> CreateAccessTokenAsync([FromRoute] Guid id,
         [FromBody] AccessTokenCreateRequestModel request)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-
-        var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id), userId);
-        return new AccessTokenCreationResponseModel(result);
-    }
-
-    [HttpPost("{id}/access-tokens/revoke")]
-    public async Task RevokeAccessTokensAsync(Guid id, [FromBody] RevokeAccessTokensRequest request)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
         if (serviceAccount == null)
         {
             throw new NotFoundException();
         }
 
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
+        var userId = _userService.GetProperUserId(User).Value;
+        if (!await _accessQuery.HasAccess(request.ToAccessCheck(id, serviceAccount.OrganizationId, userId)))
         {
             throw new NotFoundException();
         }
 
-        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
+        var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id));
+        return new AccessTokenCreationResponseModel(result);
+    }
 
-        var hasAccess = accessClient switch
+    [HttpPost("{id}/access-tokens/revoke")]
+    public async Task RevokeAccessTokensAsync(Guid id, [FromBody] RevokeAccessTokensRequest request)
+    {
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        if (serviceAccount == null)
         {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
-            _ => false,
-        };
+            throw new NotFoundException();
+        }
+        var userId = _userService.GetProperUserId(User).Value;
 
-        if (!hasAccess)
+        if (!await _accessQuery.HasAccess(request.ToAccessCheck(id, serviceAccount.OrganizationId, userId)))
         {
             throw new NotFoundException();
         }

@@ -8,8 +8,10 @@ using Bit.Core.Identity;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using LinqToDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,6 +28,7 @@ public class SecretsController : Controller
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
+    private readonly IAccessQuery _accessQuery;
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IReferenceEventService _referenceEventService;
@@ -38,6 +41,7 @@ public class SecretsController : Controller
         ICreateSecretCommand createSecretCommand,
         IUpdateSecretCommand updateSecretCommand,
         IDeleteSecretCommand deleteSecretCommand,
+        IAccessQuery accessQuery,
         IUserService userService,
         IEventService eventService,
         IReferenceEventService referenceEventService)
@@ -49,6 +53,7 @@ public class SecretsController : Controller
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
+        _accessQuery = accessQuery;
         _userService = userService;
         _eventService = eventService;
         _referenceEventService = referenceEventService;
@@ -75,13 +80,20 @@ public class SecretsController : Controller
     [HttpPost("organizations/{organizationId}/secrets")]
     public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+
+        var projectId = createRequest.ProjectIds?.FirstOrDefault();
+        if (projectId == null)
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
+        if (!await _accessQuery.HasAccess(createRequest.ToSecretAccessCheck(organizationId, userId)))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId));
 
         // Creating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
@@ -140,9 +152,19 @@ public class SecretsController : Controller
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
+        var secret = await _secretRepository.GetByIdAsync(id);
+        if (secret == null)
+        {
+            throw new NotFoundException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
-        var secret = updateRequest.ToSecret(id);
-        var result = await _updateSecretCommand.UpdateAsync(secret, userId);
+        if (!await _accessQuery.HasAccess(updateRequest.ToSecretAccessCheck(secret.OrganizationId, userId, id)))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _updateSecretCommand.UpdateAsync(secret, updateRequest.ToSecret(id));
 
         // Updating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
