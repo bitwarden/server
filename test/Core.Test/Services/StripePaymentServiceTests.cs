@@ -69,7 +69,7 @@ public class StripePaymentServiceTests
             !c.Metadata.Any() &&
             c.InvoiceSettings.DefaultPaymentMethod == null &&
             c.InvoiceSettings.CustomFields != null &&
-            c.InvoiceSettings.CustomFields[0].Name == "Subscriber" &&
+            c.InvoiceSettings.CustomFields[0].Name == "Organization" &&
             c.InvoiceSettings.CustomFields[0].Value == organization.SubscriberName() &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
             c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
@@ -122,7 +122,7 @@ public class StripePaymentServiceTests
             !c.Metadata.Any() &&
             c.InvoiceSettings.DefaultPaymentMethod == paymentToken &&
             c.InvoiceSettings.CustomFields != null &&
-            c.InvoiceSettings.CustomFields[0].Name == "Subscriber" &&
+            c.InvoiceSettings.CustomFields[0].Name == "Organization" &&
             c.InvoiceSettings.CustomFields[0].Value == organization.SubscriberName() &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
             c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
