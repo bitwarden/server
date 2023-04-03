@@ -7,7 +7,7 @@ public class SecretResponseModel : ResponseModel
 {
     private const string _objectName = "secret";
 
-    public SecretResponseModel(Secret secret) : base(_objectName)
+    public SecretResponseModel(Secret secret, bool read, bool write) : base(_objectName)
     {
         if (secret == null)
         {
@@ -22,6 +22,9 @@ public class SecretResponseModel : ResponseModel
         CreationDate = secret.CreationDate;
         RevisionDate = secret.RevisionDate;
         Projects = secret.Projects?.Select(p => new InnerProject(p));
+
+        Read = read;
+        Write = write;
     }
 
     public SecretResponseModel() : base(_objectName)
@@ -43,6 +46,10 @@ public class SecretResponseModel : ResponseModel
     public DateTime RevisionDate { get; set; }
 
     public IEnumerable<InnerProject> Projects { get; set; }
+
+    public bool Read { get; set; }
+
+    public bool Write { get; set; }
 
     public class InnerProject
     {
