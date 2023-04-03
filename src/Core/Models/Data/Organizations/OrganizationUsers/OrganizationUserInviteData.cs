@@ -8,6 +8,7 @@ public class OrganizationUserInviteData
     public OrganizationUserType? Type { get; set; }
     public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public string ExternalId { get; set; }
     public IEnumerable<CollectionAccessSelection> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
     public Permissions Permissions { get; set; }

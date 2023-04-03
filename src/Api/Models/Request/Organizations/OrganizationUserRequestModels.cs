@@ -18,6 +18,7 @@ public class OrganizationUserInviteRequestModel
     public OrganizationUserType? Type { get; set; }
     public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public string ExternalId { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
@@ -30,6 +31,7 @@ public class OrganizationUserInviteRequestModel
             Type = Type,
             AccessAll = AccessAll,
             AccessSecretsManager = AccessSecretsManager,
+            ExternalId = ExternalId,
             Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
             Groups = Groups,
             Permissions = Permissions,
@@ -76,6 +78,7 @@ public class OrganizationUserUpdateRequestModel
     public OrganizationUserType? Type { get; set; }
     public bool AccessAll { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public string ExternalId { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
@@ -89,6 +92,7 @@ public class OrganizationUserUpdateRequestModel
         });
         existingUser.AccessAll = AccessAll;
         existingUser.AccessSecretsManager = AccessSecretsManager;
+        existingUser.ExternalId = ExternalId;
         return existingUser;
     }
 }
