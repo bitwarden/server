@@ -56,4 +56,15 @@ public class ProviderOrganizationRepository :
         var dbContext = GetDatabaseContext(scope);
         return await GetDbSet(dbContext).Where(po => po.OrganizationId == organizationId).FirstOrDefaultAsync();
     }
+
+    public async Task<IEnumerable<ProviderOrganizationProviderDetails>> GetManyByUserAsync(Guid userId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = new ProviderOrganizationReadByUserIdQuery(userId);
+            var data = await query.Run(dbContext).ToListAsync();
+            return data;
+        }
+    }
 }
