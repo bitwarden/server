@@ -5,6 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
+using Stripe;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
@@ -129,11 +130,12 @@ public class StripePaymentService : IPaymentService
                     {
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
-                            Name = "Subscriber",
+                            Name = "Organization",
                             Value = org.SubscriberName(),
                         },
-                    }
+                    },
                 },
+
                 Address = new Stripe.AddressOptions
                 {
                     Country = taxInfo.BillingAddressCountry,
@@ -154,6 +156,8 @@ public class StripePaymentService : IPaymentService
                 },
             });
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
+
+
             subCreateOptions.Customer = customer.Id;
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
@@ -1355,7 +1359,7 @@ public class StripePaymentService : IPaymentService
                         {
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
-                                Name = "Subscriber",
+                                Name = subscriber.IsUser() ?  "Subscriber" : "Organization",
                                 Value = subscriber.SubscriberName(),
                             },
                         }
@@ -1435,7 +1439,7 @@ public class StripePaymentService : IPaymentService
                         {
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
-                                Name = "Subscriber",
+                                Name = subscriber.IsUser() ? "Subscriber" : "Organization",
                                 Value = subscriber.SubscriberName(),
                             },
                         }
