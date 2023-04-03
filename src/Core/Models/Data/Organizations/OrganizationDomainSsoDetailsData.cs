@@ -1,6 +1,4 @@
-﻿using Bit.Core.Enums;
-
-namespace Bit.Core.Models.Data.Organizations;
+﻿namespace Bit.Core.Models.Data.Organizations;
 
 public class OrganizationDomainSsoDetailsData
 {
@@ -9,8 +7,6 @@ public class OrganizationDomainSsoDetailsData
     public string DomainName { get; set; }
     public bool SsoAvailable { get; set; }
     public string OrganizationIdentifier { get; set; }
-    public bool SsoRequired { get; set; }
-    public PolicyType? PolicyType { get; set; }
     public DateTime? VerifiedDate { get; set; }
     public bool OrganizationEnabled { get; set; }
 }
