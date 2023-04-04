@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Models.Data;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models;
+namespace Bit.Api.Vault.Models;
 
 public class CipherFido2KeyModel
 {

@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Vault.Models.Data;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.Vault.Models.Data;
 
 public class CipherFido2KeyData : CipherData
 {
