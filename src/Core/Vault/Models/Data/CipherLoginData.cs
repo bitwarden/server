@@ -19,6 +19,7 @@ public class CipherLoginData : CipherData
     public DateTime? PasswordRevisionDate { get; set; }
     public string Totp { get; set; }
     public bool? AutofillOnPageLoad { get; set; }
+    public CipherLoginFido2KeyData Fido2Key { get; set; }
 
     public class CipherLoginUriData
     {
