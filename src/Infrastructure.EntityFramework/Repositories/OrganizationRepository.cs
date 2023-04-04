@@ -104,13 +104,26 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
 
             if (!string.IsNullOrWhiteSpace(ownerEmail))
             {
-                query = from o in query
-                        join ou in dbContext.OrganizationUsers
-                            on o.Id equals ou.OrganizationId
-                        join u in dbContext.Users
-                            on ou.UserId equals u.Id
-                        where u.Email == ownerEmail && ou.Type == OrganizationUserType.Owner
-                        select o;
+                if (dbContext.Database.IsNpgsql())
+                {
+                    query = from o in query
+                            join ou in dbContext.OrganizationUsers
+                                on o.Id equals ou.OrganizationId
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.Type == OrganizationUserType.Owner && EF.Functions.ILike(EF.Functions.Collate(u.Email, "default"), $"{ownerEmail}%")
+                            select o;
+                }
+                else
+                {
+                    query = from o in query
+                            join ou in dbContext.OrganizationUsers
+                                on o.Id equals ou.OrganizationId
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.Type == OrganizationUserType.Owner && EF.Functions.Like(u.Email, $"{ownerEmail}%")
+                            select o;
+                }
             }
 
             return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
