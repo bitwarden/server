@@ -73,10 +73,11 @@ public class GlobalSettings : IGlobalSettings
     public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
     public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
     public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
-    public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
     public virtual DistributedIpRateLimitingSettings DistributedIpRateLimiting { get; set; } =
         new DistributedIpRateLimitingSettings();
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
+    public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
+    public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -510,11 +511,6 @@ public class GlobalSettings : IGlobalSettings
         public int MaxNetworkRetries { get; set; } = 2;
     }
 
-    public class TwoFactorAuthSettings : ITwoFactorAuthSettings
-    {
-        public bool EmailOnNewDeviceLogin { get; set; } = false;
-    }
-
     public class DistributedIpRateLimitingSettings
     {
         public bool Enabled { get; set; } = true;
@@ -536,5 +532,17 @@ public class GlobalSettings : IGlobalSettings
     public class PasswordlessAuthSettings : IPasswordlessAuthSettings
     {
         public bool KnownDevicesOnly { get; set; } = true;
+    }
+
+    public class DomainVerificationSettings : IDomainVerificationSettings
+    {
+        public int VerificationInterval { get; set; } = 12;
+        public int ExpirationPeriod { get; set; } = 7;
+    }
+
+    public class LaunchDarklySettings : ILaunchDarklySettings
+    {
+        public string SdkKey { get; set; }
+        public string FlagDataFilePath { get; set; } = "flags.json";
     }
 }

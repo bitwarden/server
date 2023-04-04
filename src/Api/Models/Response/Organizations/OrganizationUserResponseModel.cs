@@ -23,6 +23,8 @@ public class OrganizationUserResponseModel : ResponseModel
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
+        ExternalId = organizationUser.ExternalId;
+        AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
     }
@@ -40,6 +42,8 @@ public class OrganizationUserResponseModel : ResponseModel
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
+        ExternalId = organizationUser.ExternalId;
+        AccessSecretsManager = organizationUser.AccessSecretsManager;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
@@ -50,6 +54,8 @@ public class OrganizationUserResponseModel : ResponseModel
     public OrganizationUserType Type { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public bool AccessAll { get; set; }
+    public string ExternalId { get; set; }
+    public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }
@@ -83,6 +89,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
 
         Name = organizationUser.Name;
         Email = organizationUser.Email;
+        AvatarColor = organizationUser.AvatarColor;
         TwoFactorEnabled = twoFactorEnabled;
         SsoBound = !string.IsNullOrWhiteSpace(organizationUser.SsoExternalId);
         Collections = organizationUser.Collections.Select(c => new SelectionReadOnlyResponseModel(c));
@@ -91,8 +98,10 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
     }
 
+
     public string Name { get; set; }
     public string Email { get; set; }
+    public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }

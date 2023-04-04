@@ -24,9 +24,10 @@
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.7.0.150" />
     <PackageReference Include="AWSSDK.SQS" Version="3.7.2.47" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="1.2.1" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.11.0" />
-    <PackageReference Include="Azure.Storage.Queues" Version="12.9.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.12.0" />
     <PackageReference Include="BitPay.Light" Version="1.0.1907" />
+    <PackageReference Include="DnsClient" Version="1.7.0" />
     <PackageReference Include="Fido2.AspNet" Version="3.0.1" />
     <PackageReference Include="Handlebars.Net" Version="2.1.2" />
     <PackageReference Include="IdentityServer4.AccessTokenValidation" Version="3.0.1" />
@@ -55,6 +56,7 @@
     <PackageReference Include="Otp.NET" Version="1.2.2" />
     <PackageReference Include="YubicoDotNetClient" Version="1.2.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.StackExchangeRedis" Version="6.0.6" />
+    <PackageReference Include="LaunchDarkly.ServerSdk" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>

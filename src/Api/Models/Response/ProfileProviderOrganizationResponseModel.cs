@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Response;
 
@@ -23,6 +24,8 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UseResetPassword = organization.UseResetPassword;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
+        UseActivateAutofillPolicy = organization.PlanType == PlanType.EnterpriseAnnually ||
+            organization.PlanType == PlanType.EnterpriseMonthly;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -39,5 +42,6 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UserId = organization.UserId?.ToString();
         ProviderId = organization.ProviderId?.ToString();
         ProviderName = organization.ProviderName;
+        PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
     }
 }

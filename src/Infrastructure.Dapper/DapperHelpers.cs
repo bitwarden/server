@@ -59,7 +59,7 @@ public static class DapperHelpers
     public static DataTable ToTvp(this IEnumerable<OrganizationUser> orgUsers)
     {
         var table = new DataTable();
-        table.SetTypeName("[dbo].[OrganizationUserType]");
+        table.SetTypeName("[dbo].[OrganizationUserType2]");
 
         var columnData = new List<(string name, Type type, Func<OrganizationUser, object> getter)>
         {
@@ -76,6 +76,7 @@ public static class DapperHelpers
             (nameof(OrganizationUser.RevisionDate), typeof(DateTime), ou => ou.RevisionDate),
             (nameof(OrganizationUser.Permissions), typeof(string), ou => ou.Permissions),
             (nameof(OrganizationUser.ResetPasswordKey), typeof(string), ou => ou.ResetPasswordKey),
+            (nameof(OrganizationUser.AccessSecretsManager), typeof(bool), ou => ou.AccessSecretsManager),
         };
 
         return orgUsers.BuildTable(table, columnData);

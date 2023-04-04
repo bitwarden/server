@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Min Server - Self-hosted" type="CompoundRunConfigurationType">
+    <toRun name="Api: Api-SelfHost" type="LaunchSettings" />
+    <toRun name="Identity: Identity-SelfHost" type="LaunchSettings" />
+    <method v="2" />
+  </configuration>
+</component>

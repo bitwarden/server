@@ -4,6 +4,7 @@ using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture.Relays;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
