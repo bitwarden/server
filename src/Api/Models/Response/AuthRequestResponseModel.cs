@@ -20,7 +20,6 @@ public class AuthRequestResponseModel : ResponseModel
         RequestDeviceType = authRequest.RequestDeviceType.GetType().GetMember(authRequest.RequestDeviceType.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
         RequestIpAddress = authRequest.RequestIpAddress;
-        RequestFingerprint = authRequest.RequestFingerprint;
         Key = authRequest.Key;
         MasterPasswordHash = authRequest.MasterPasswordHash;
         CreationDate = authRequest.CreationDate;
@@ -33,7 +32,6 @@ public class AuthRequestResponseModel : ResponseModel
     public string PublicKey { get; set; }
     public string RequestDeviceType { get; set; }
     public string RequestIpAddress { get; set; }
-    public string RequestFingerprint { get; set; }
     public string Key { get; set; }
     public string MasterPasswordHash { get; set; }
     public DateTime CreationDate { get; set; }

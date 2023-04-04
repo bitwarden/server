@@ -9,6 +9,8 @@ using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
+namespace Bit.Infrastructure.EntityFramework;
+
 public static class EntityFrameworkServiceCollectionExtensions
 {
     public static void SetupEntityFramework(this IServiceCollection services, string connectionString, SupportedDatabaseProviders provider)
