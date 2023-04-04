@@ -108,7 +108,7 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     {
         return true;
     }
-    
+
     public string SubscriberType()
     {
         return "Subscriber";
