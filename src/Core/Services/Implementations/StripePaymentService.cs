@@ -155,8 +155,6 @@ public class StripePaymentService : IPaymentService
                 },
             });
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
-
-
             subCreateOptions.Customer = customer.Id;
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
