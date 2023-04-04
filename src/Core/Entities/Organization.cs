@@ -112,6 +112,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     {
         return false;
     }
+    
+    public string SubscriberType()
+    {
+        return "Organization";
+    }
 
     public long StorageBytesRemaining()
     {

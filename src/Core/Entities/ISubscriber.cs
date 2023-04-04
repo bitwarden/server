@@ -15,4 +15,5 @@ public interface ISubscriber
     string BraintreeIdField();
     string GatewayIdField();
     bool IsUser();
+    string SubscriberType();
 }

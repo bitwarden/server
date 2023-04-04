@@ -129,7 +129,7 @@ public class StripePaymentService : IPaymentService
                     {
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
-                            Name = "Organization",
+                            Name = org.SubscriberType(),
                             Value = org.SubscriberName(),
                         },
                     },
@@ -443,7 +443,7 @@ public class StripePaymentService : IPaymentService
                     {
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
-                            Name = "Subscriber",
+                            Name = user.SubscriberType(),
                             Value = user.SubscriberName(),
                         },
                     }
@@ -1358,7 +1358,7 @@ public class StripePaymentService : IPaymentService
                         {
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
-                                Name = subscriber.IsUser() ?  "Subscriber" : "Organization",
+                                Name = subscriber.SubscriberType(),
                                 Value = subscriber.SubscriberName(),
                             },
                         }
@@ -1438,7 +1438,7 @@ public class StripePaymentService : IPaymentService
                         {
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
-                                Name = subscriber.IsUser() ? "Subscriber" : "Organization",
+                                Name = subscriber.SubscriberType(),
                                 Value = subscriber.SubscriberName(),
                             },
                         }
