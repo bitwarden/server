@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -64,59 +65,98 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId)
+    public async void CreateServiceAccount_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId, Guid userId)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToAccessCheck(organizationId, userId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+
+        var resultServiceAccount = data.ToServiceAccount(organizationId);
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
+
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId, Guid userId)
+    {
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToAccessCheck(organizationId, userId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+
         var resultServiceAccount = data.ToServiceAccount(organizationId);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
 
         await sutProvider.Sut.CreateAsync(organizationId, data);
+
         await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
                      .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
     }
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccount_NotOrgUser_Throws(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId)
+    public async void UpdateServiceAccount_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, ServiceAccount existingServiceAccount, Guid userId)
     {
-        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(false);
-        var resultServiceAccount = data.ToServiceAccount(organizationId);
-        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToAccessCheck(existingServiceAccount.Id, existingServiceAccount.OrganizationId, userId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(existingServiceAccount.Id).ReturnsForAnyArgs(existingServiceAccount);
+        var resultServiceAccount = data.ToServiceAccount(existingServiceAccount.Id);
+        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(existingServiceAccount.Id, data));
 
-        await sutProvider.GetDependency<ICreateServiceAccountCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<IUpdateServiceAccountCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ServiceAccount>());
     }
 
     [Theory]
     [BitAutoData]
-    public async void UpdateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, Guid serviceAccountId)
+    public async void UpdateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, ServiceAccount existingServiceAccount, Guid userId)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        var resultServiceAccount = data.ToServiceAccount(serviceAccountId);
-        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToAccessCheck(existingServiceAccount.Id, existingServiceAccount.OrganizationId, userId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(existingServiceAccount.Id).ReturnsForAnyArgs(existingServiceAccount);
+        var resultServiceAccount = data.ToServiceAccount(existingServiceAccount.Id);
+        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
 
-        var result = await sutProvider.Sut.UpdateAsync(serviceAccountId, data);
+        await sutProvider.Sut.UpdateAsync(existingServiceAccount.Id, data);
+
         await sutProvider.GetDependency<IUpdateServiceAccountCommand>().Received(1)
-                     .UpdateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+                     .UpdateAsync(Arg.Any<ServiceAccount>());
     }
 
     [Theory]
     [BitAutoData]
-    public async void CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider, AccessTokenCreateRequestModel data, Guid serviceAccountId)
+    public async void CreateAccessToken_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider, AccessTokenCreateRequestModel data, ServiceAccount existingServiceAccount, Guid userId)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        var resultAccessToken = data.ToApiKey(serviceAccountId);
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToAccessCheck(existingServiceAccount.Id, existingServiceAccount.OrganizationId, userId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(existingServiceAccount.Id).ReturnsForAnyArgs(existingServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        var resultAccessToken = data.ToApiKey(existingServiceAccount.Id);
 
-        sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultAccessToken);
+        sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default).ReturnsForAnyArgs(resultAccessToken);
 
-        var result = await sutProvider.Sut.CreateAccessTokenAsync(serviceAccountId, data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAccessTokenAsync(existingServiceAccount.Id, data));
+        await sutProvider.GetDependency<ICreateAccessTokenCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<ApiKey>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider, AccessTokenCreateRequestModel data, ServiceAccount existingServiceAccount, Guid userId)
+    {
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToAccessCheck(existingServiceAccount.Id, existingServiceAccount.OrganizationId, userId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(existingServiceAccount.Id).ReturnsForAnyArgs(existingServiceAccount);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        var resultAccessToken = data.ToApiKey(existingServiceAccount.Id);
+
+        sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default).ReturnsForAnyArgs(resultAccessToken);
+
+        await sutProvider.Sut.CreateAccessTokenAsync(existingServiceAccount.Id, data);
         await sutProvider.GetDependency<ICreateAccessTokenCommand>().Received(1)
-            .CreateAsync(Arg.Any<ApiKey>(), Arg.Any<Guid>());
+            .CreateAsync(Arg.Any<ApiKey>());
     }
 
     [Theory]

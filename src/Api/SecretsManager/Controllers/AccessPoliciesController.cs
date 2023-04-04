@@ -183,6 +183,7 @@ public class AccessPoliciesController : Controller
     public async Task<BaseAccessPolicyResponseModel> UpdateAccessPolicyAsync([FromRoute] Guid id,
         [FromBody] AccessPolicyUpdateRequest request)
     {
+        // FIXME pass orgID with request?
         var ap = await _accessPolicyRepository.GetByIdAsync(id);
         if (ap == null)
         {
@@ -195,7 +196,7 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _updateAccessPolicyCommand.UpdateAsync(ap, request.Read, request.Write);
+        var result = await _updateAccessPolicyCommand.UpdateAsync(id, request.Read, request.Write);
         return result switch
         {
             UserProjectAccessPolicy accessPolicy => new UserProjectAccessPolicyResponseModel(accessPolicy),

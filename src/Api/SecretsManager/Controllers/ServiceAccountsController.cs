@@ -127,6 +127,7 @@ public class ServiceAccountsController : Controller
     public async Task<ServiceAccountResponseModel> UpdateAsync([FromRoute] Guid id,
         [FromBody] ServiceAccountUpdateRequestModel updateRequest)
     {
+        // FIX ME should we pass orgID in request? 
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
         if (serviceAccount == null)
         {
@@ -139,7 +140,7 @@ public class ServiceAccountsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _updateServiceAccountCommand.UpdateAsync(serviceAccount, updateRequest.ToServiceAccount(id));
+        var result = await _updateServiceAccountCommand.UpdateAsync(updateRequest.ToServiceAccount(id));
         return new ServiceAccountResponseModel(result);
     }
 

@@ -104,103 +104,33 @@ public class DeleteAccessPolicyCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task DeleteAccessPolicy_Throws_NotFoundException(Guid data, Guid userId,
+    public async Task DeleteAccessPolicy_Throws_NotFoundException(Guid data,
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).ReturnsNull();
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAsync(data, userId));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAsync(data));
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task DeleteAccessPolicy_SmNotEnabled_Throws_NotFoundException(Guid data, Guid userId,
-        SutProvider<DeleteAccessPolicyCommand> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(false);
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data).ReturnsNull();
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.DeleteAsync(data, userId));
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData(AccessPolicyType.UserProjectAccessPolicy, PermissionType.RunAsAdmin)]
-    [BitAutoData(AccessPolicyType.UserProjectAccessPolicy, PermissionType.RunAsUserWithPermission)]
-    [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy, PermissionType.RunAsAdmin)]
-    [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy, PermissionType.RunAsUserWithPermission)]
-    [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy, PermissionType.RunAsAdmin)]
-    [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy, PermissionType.RunAsUserWithPermission)]
-    public async Task DeleteAccessPolicy_ProjectGrants_PermissionsCheck_Success(
-        AccessPolicyType accessPolicyType,
-        PermissionType permissionType,
-        Guid data,
-        Guid userId,
-        Project grantedProject,
-        Group mockGroup,
-        ServiceAccount mockServiceAccount,
-        SutProvider<DeleteAccessPolicyCommand> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        var policyToReturn =
-            CreatePolicyToReturn(accessPolicyType, data, grantedProject, mockGroup, mockServiceAccount);
-        SetupPermission(sutProvider, permissionType, grantedProject, userId);
-
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
-            .Returns(policyToReturn);
-
-        await sutProvider.Sut.DeleteAsync(data, userId);
-
-        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1).DeleteAsync(Arg.Is(data));
     }
 
     [Theory]
     [BitAutoData(AccessPolicyType.UserProjectAccessPolicy)]
     [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy)]
     [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy)]
-    public async Task DeleteAccessPolicy_UserProjectAccessPolicy_PermissionsCheck_ThrowsNotAuthorized(
+    public async Task DeleteAccessPolicy_ProjectGrants_Success(
         AccessPolicyType accessPolicyType,
         Guid data,
-        Guid userId,
+        Project grantedProject,
         Group mockGroup,
         ServiceAccount mockServiceAccount,
-        Project grantedProject,
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         var policyToReturn =
             CreatePolicyToReturn(accessPolicyType, data, grantedProject, mockGroup, mockServiceAccount);
 
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
             .Returns(policyToReturn);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.DeleteAsync(data, userId));
-
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
-    }
-
-    [Theory]
-    [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy, PermissionType.RunAsAdmin)]
-    [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy, PermissionType.RunAsUserWithPermission)]
-    [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy, PermissionType.RunAsAdmin)]
-    [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy, PermissionType.RunAsUserWithPermission)]
-    public async Task DeleteAccessPolicy_ServiceAccountGrants_PermissionsCheck_Success(
-        AccessPolicyType accessPolicyType,
-        PermissionType permissionType,
-        Guid data,
-        Guid userId,
-        ServiceAccount grantedServiceAccount,
-        Group mockGroup,
-        SutProvider<DeleteAccessPolicyCommand> sutProvider)
-    {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
-        var policyToReturn = CreatePolicyToReturn(accessPolicyType, data, grantedServiceAccount, mockGroup);
-        SetupPermission(sutProvider, permissionType, grantedServiceAccount, userId);
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
-            .Returns(policyToReturn);
-
-        await sutProvider.Sut.DeleteAsync(data, userId);
+        await sutProvider.Sut.DeleteAsync(data);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1).DeleteAsync(Arg.Is(data));
     }
@@ -208,23 +138,19 @@ public class DeleteAccessPolicyCommandTests
     [Theory]
     [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy)]
     [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy)]
-    public async Task DeleteAccessPolicy_ServiceAccountGrants_PermissionsCheck_Throws(
+    public async Task DeleteAccessPolicy_ServiceAccountGrants_PermissionsCheck_Success(
         AccessPolicyType accessPolicyType,
         Guid data,
-        Guid userId,
         ServiceAccount grantedServiceAccount,
         Group mockGroup,
         SutProvider<DeleteAccessPolicyCommand> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Any<Guid>()).Returns(true);
         var policyToReturn = CreatePolicyToReturn(accessPolicyType, data, grantedServiceAccount, mockGroup);
-
         sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(data)
             .Returns(policyToReturn);
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.DeleteAsync(data, userId));
+        await sutProvider.Sut.DeleteAsync(data);
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().DeleteAsync(default);
+        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1).DeleteAsync(Arg.Is(data));
     }
 }

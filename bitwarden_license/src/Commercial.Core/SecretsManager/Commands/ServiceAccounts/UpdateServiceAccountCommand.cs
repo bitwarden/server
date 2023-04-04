@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -16,8 +17,14 @@ public class UpdateServiceAccountCommand : IUpdateServiceAccountCommand
         _currentContext = currentContext;
     }
 
-    public async Task<ServiceAccount> UpdateAsync(ServiceAccount serviceAccount, ServiceAccount updatedServiceAccount)
+    public async Task<ServiceAccount> UpdateAsync(ServiceAccount updatedServiceAccount)
     {
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(updatedServiceAccount.Id);
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
         serviceAccount.Name = updatedServiceAccount.Name;
         serviceAccount.RevisionDate = DateTime.UtcNow;
 

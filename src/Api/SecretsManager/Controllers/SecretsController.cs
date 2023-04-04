@@ -11,7 +11,6 @@ using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using LinqToDB;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -152,6 +151,7 @@ public class SecretsController : Controller
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
+        // FIXME pass in orgID 
         var secret = await _secretRepository.GetByIdAsync(id);
         if (secret == null)
         {
@@ -164,7 +164,7 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _updateSecretCommand.UpdateAsync(secret, updateRequest.ToSecret(id));
+        var result = await _updateSecretCommand.UpdateAsync(updateRequest.ToSecret(id));
 
         // Updating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);

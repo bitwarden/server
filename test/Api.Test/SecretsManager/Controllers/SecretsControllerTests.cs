@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.SecretsFixture;
@@ -121,56 +122,70 @@ public class SecretsControllerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void CreateSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Project mockProject, Guid userId)
+    [BitAutoData]
+    public async void CreateSecret_NoAccess_Throws(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Secret existingSecret, Guid userId)
     {
-        var resultSecret = data.ToSecret(organizationId);
+
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).ReturnsForAnyArgs(existingSecret);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
-        if (permissionType == PermissionType.RunAsAdmin)
-        {
-            sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
-        }
-        else
-        {
-            resultSecret.Projects = new List<Core.SecretsManager.Entities.Project>() { mockProject };
-            sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
-        }
+        var resultSecret = data.ToSecret(organizationId);
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
-        sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default, userId).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
 
-        var result = await sutProvider.Sut.CreateAsync(organizationId, data);
-        await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
-                     .CreateAsync(Arg.Any<Secret>(), userId);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
+        await sutProvider.GetDependency<ICreateSecretCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<Secret>());
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void UpdateSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId, Guid userId, Project mockProject)
+    [BitAutoData]
+    public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Secret existingSecret, Guid userId)
     {
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).ReturnsForAnyArgs(existingSecret);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
-        if (permissionType == PermissionType.RunAsAdmin)
-        {
-            sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
-        }
-        else
-        {
-            data.ProjectIds = new Guid[] { mockProject.Id };
-            sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
-        }
+        var resultSecret = data.ToSecret(organizationId);
 
-        var resultSecret = data.ToSecret(secretId);
-        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default, userId).ReturnsForAnyArgs(resultSecret);
+        sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
 
-        var result = await sutProvider.Sut.UpdateSecretAsync(secretId, data);
+        var result = await sutProvider.Sut.CreateAsync(organizationId, data);
+        await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
+                     .CreateAsync(Arg.Any<Secret>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void UpdateSecret_NoAccess_Throws(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid organizationId, Guid userId, Secret existingSecret)
+    {
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId, existingSecret.Id)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).ReturnsForAnyArgs(existingSecret);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+
+        var resultSecret = data.ToSecret(existingSecret.Id);
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultSecret);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSecretAsync(existingSecret.Id, data));
+        await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<Secret>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void UpdateSecret_Success(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid organizationId, Guid userId, Secret existingSecret)
+    {
+        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId, existingSecret.Id)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).ReturnsForAnyArgs(existingSecret);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+
+        var resultSecret = data.ToSecret(existingSecret.Id);
+        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultSecret);
+
+        var result = await sutProvider.Sut.UpdateSecretAsync(existingSecret.Id, data);
         await sutProvider.GetDependency<IUpdateSecretCommand>().Received(1)
-                     .UpdateAsync(Arg.Any<Secret>(), userId);
+                     .UpdateAsync(Arg.Any<Secret>());
     }
 
     [Theory]

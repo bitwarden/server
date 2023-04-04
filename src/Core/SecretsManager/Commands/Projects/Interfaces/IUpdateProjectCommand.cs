@@ -4,5 +4,5 @@ namespace Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 
 public interface IUpdateProjectCommand
 {
-    Task<Project> UpdateAsync(Project project, Project updatedProject);
+    Task<Project> UpdateAsync(Project updatedProject);
 }

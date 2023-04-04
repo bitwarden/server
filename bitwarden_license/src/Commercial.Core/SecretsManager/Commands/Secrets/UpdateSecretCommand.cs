@@ -1,4 +1,5 @@
-﻿using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+﻿using Bit.Core.Exceptions;
+using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
@@ -13,8 +14,14 @@ public class UpdateSecretCommand : IUpdateSecretCommand
         _secretRepository = secretRepository;
     }
 
-    public async Task<Secret> UpdateAsync(Secret secret, Secret updatedSecret)
+    public async Task<Secret> UpdateAsync(Secret updatedSecret)
     {
+        var secret = await _secretRepository.GetByIdAsync(updatedSecret.Id);
+        if (secret == null)
+        {
+            throw new NotFoundException();
+        }
+
         secret.Key = updatedSecret.Key;
         secret.Value = updatedSecret.Value;
         secret.Note = updatedSecret.Note;

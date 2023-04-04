@@ -4,5 +4,5 @@ namespace Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 
 public interface IUpdateSecretCommand
 {
-    Task<Secret> UpdateAsync(Secret secret, Secret updatedSecret);
+    Task<Secret> UpdateAsync(Secret updatedSecret);
 }
