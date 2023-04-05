@@ -260,7 +260,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("verify-password")]
-    public async Task<VerifyMasterPasswordResponseModel> PostVerifyPassword([FromBody] SecretVerificationRequestModel model)
+    public async Task<MasterPasswordPolicyResponseModel> PostVerifyPassword([FromBody] SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -272,7 +272,7 @@ public class AccountsController : Controller
         {
             var policyData = await _policyService.GetMasterPasswordPolicyForUserAsync(user);
 
-            return new VerifyMasterPasswordResponseModel(new MasterPasswordPolicyResponseModel(policyData));
+            return new MasterPasswordPolicyResponseModel(policyData);
         }
 
         ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");
