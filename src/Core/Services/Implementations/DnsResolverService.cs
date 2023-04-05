@@ -5,13 +5,15 @@ namespace Bit.Core.Services;
 
 public class DnsResolverService : IDnsResolverService
 {
+    private readonly LookupClient _lookupClient;
+
+    public DnsResolverService(LookupClient lookupClient)
+    {
+        _lookupClient = lookupClient;
+    }
     public async Task<bool> ResolveAsync(string domain, string txtRecord, CancellationToken cancellationToken = default)
     {
-        //increased timeout to 15 seconds to avoid timeouts
-        var options = new LookupClientOptions {Timeout = TimeSpan.FromSeconds(15)};
-        var lookup = new LookupClient(options);
-        
-        var result = await lookup.QueryAsync(new DnsQuestion(domain, QueryType.TXT), cancellationToken);
+        var result = await _lookupClient.QueryAsync(new DnsQuestion(domain, QueryType.TXT), cancellationToken);
         if (!result.HasError)
         {
             return result.Answers.TxtRecords()
