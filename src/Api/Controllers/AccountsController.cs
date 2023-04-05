@@ -66,7 +66,7 @@ public class AccountsController : Controller
         _sendRepository = sendRepository;
         _sendService = sendService;
         _captchaValidationService = captchaValidationService;
-        _policyService = _policyService;
+        _policyService = policyService;
     }
 
     #region DEPRECATED (Moved to Identity Service)
