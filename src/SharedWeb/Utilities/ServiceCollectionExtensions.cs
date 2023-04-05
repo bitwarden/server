@@ -176,7 +176,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
-        services.AddSingleton<IDnsResolverService, DnsResolverService>();
+        services.AddScoped<IDnsResolverService, DnsResolverService>();
         services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
         services.AddTokenizers();
 
