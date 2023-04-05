@@ -151,6 +151,7 @@ public static class RolePermissionMapping
                 Permission.Org_Billing_LaunchGateway,
                 Permission.Provider_Edit,
                 Permission.Provider_View,
+                Permission.Provider_List_View,
                 Permission.Tools_ChargeBrainTreeCustomer,
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
