@@ -648,10 +648,18 @@ public class CipherService : ICipherService
             }
         }
 
-        // Init. ids for folders
+        var userfoldersIds = (await _folderRepository.GetManyByUserIdAsync(userId ?? Guid.Empty)).Select(f => f.Id).ToList();
+
+        //Assign id to the ones that don't exist in DB
+        //Need to keep the list order to create the relationships
+        List<Folder> newFolders = new List<Folder>();
         foreach (var folder in folders)
         {
-            folder.SetNewId();
+            if (!userfoldersIds.Contains(folder.Id))
+            {
+                folder.SetNewId();
+                newFolders.Add(folder);
+            }
         }
 
         // Create the folder associations based on the newly created folder ids
@@ -670,7 +678,7 @@ public class CipherService : ICipherService
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, folders);
+        await _cipherRepository.CreateAsync(ciphers, newFolders);
 
         // push
         if (userId.HasValue)
@@ -705,10 +713,19 @@ public class CipherService : ICipherService
             cipher.SetNewId();
         }
 
-        // Init. ids for collections
+        var userCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
+
+        //Assign id to the ones that don't exist in DB
+        //Need to keep the list order to create the relationships
+        List<Collection> newCollections = new List<Collection>();
+
         foreach (var collection in collections)
         {
-            collection.SetNewId();
+            if (!userCollectionsIds.Contains(collection.Id))
+            {
+                collection.SetNewId();
+                newCollections.Add(collection);
+            }
         }
 
         // Create associations based on the newly assigned ids
@@ -731,7 +748,7 @@ public class CipherService : ICipherService
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, collections, collectionCiphers);
+        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);
