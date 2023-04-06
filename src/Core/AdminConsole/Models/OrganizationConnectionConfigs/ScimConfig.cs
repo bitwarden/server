@@ -1,7 +1,8 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.Enums;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Models.OrganizationConnectionConfigs;
 
-namespace Bit.Core.Models.OrganizationConnectionConfigs;
+namespace Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 
 public class ScimConfig : IConnectionConfig
 {

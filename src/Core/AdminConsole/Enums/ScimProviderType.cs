@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Enums;
+﻿namespace Bit.Core.AdminConsole.Enums;
 
 public enum ScimProviderType : byte
 {

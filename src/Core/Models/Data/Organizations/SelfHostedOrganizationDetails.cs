@@ -1,7 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.OrganizationConnectionConfigs;
 
 namespace Bit.Core.Models.Data.Organizations;
 
