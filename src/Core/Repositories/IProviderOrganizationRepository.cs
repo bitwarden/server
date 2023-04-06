@@ -9,4 +9,5 @@ public interface IProviderOrganizationRepository : IRepository<ProviderOrganizat
     Task<ICollection<ProviderOrganizationOrganizationDetails>> GetManyDetailsByProviderAsync(Guid providerId);
     Task<ProviderOrganization> GetByOrganizationId(Guid organizationId);
     Task<IEnumerable<ProviderOrganizationProviderDetails>> GetManyByUserAsync(Guid userId);
+    Task<IEnumerable<ProviderOrganization>> GetManyByOrganizationIdsAsync(IEnumerable<Guid> organizationIds);
 }

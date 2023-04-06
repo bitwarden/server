@@ -99,6 +99,20 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
         }
     }
 
+    public async Task<IEnumerable<ProviderOrganization>> GetManyByOrganizationIdsAsync(
+        IEnumerable<Guid> organizationIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<ProviderOrganization>(
+                $"[{Schema}].[ProviderOrganization_ReadByOrganizationIds]",
+                new { Ids = organizationIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     private DataTable BuildProviderOrganizationsTable(SqlBulkCopy bulkCopy, IEnumerable<ProviderOrganization> providerOrganizations)
     {
         var po = providerOrganizations.FirstOrDefault();
