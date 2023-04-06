@@ -1,4 +1,4 @@
-CREATE PROCEDURE [dbo].[ProviderOrganization_ReadByOrganizationIds]
+CREATE PROCEDURE [dbo].[ProviderOrganization_ReadCountByOrganizationIds]
     @Ids AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -10,7 +10,7 @@ BEGIN
     END
 
     SELECT
-        *
+        COUNT(1)
     FROM
         [dbo].[ProviderOrganizationView]
     WHERE

@@ -68,15 +68,9 @@ public class ProviderOrganizationRepository :
         }
     }
 
-    public async Task<IEnumerable<ProviderOrganization>> GetManyByOrganizationIdsAsync(IEnumerable<Guid> organizationIds)
+    public async Task<int> GetCountByOrganizationIdsAsync(IEnumerable<Guid> organizationIds)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var query = from po in dbContext.ProviderOrganizations
-                        where organizationIds.Contains(po.OrganizationId)
-                        select po;
-            return await query.ToListAsync();
-        }
+        var query = new ProviderOrganizationCountByOrganizationIdsQuery(organizationIds);
+        return await GetCountFromQuery(query);
     }
 }
