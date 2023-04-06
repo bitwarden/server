@@ -12,7 +12,7 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.AccessPolicies;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.AccessPolicies;
 
 [SutProviderCustomize]
 [ProjectCustomize]
@@ -47,8 +47,8 @@ public class DeleteAccessPolicyCommandTests
                 break;
             case PermissionType.RunAsUserWithPermission:
                 sutProvider.GetDependency<IServiceAccountRepository>()
-                    .UserHasWriteAccessToServiceAccount(grantedServiceAccount.Id, userId)
-                    .Returns(true);
+                    .AccessToServiceAccountAsync(grantedServiceAccount.Id, userId, default)
+                    .Returns((true, true));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);

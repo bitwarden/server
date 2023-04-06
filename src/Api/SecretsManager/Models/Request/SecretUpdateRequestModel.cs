@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Enums;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.Utilities;
 
@@ -39,7 +40,7 @@ public class SecretUpdateRequestModel
         var projectId = ProjectIds?.FirstOrDefault();
         return new SecretAccessCheck()
         {
-            OperationType = OperationType.UpdateSecret,
+            AccessOperationType = AccessOperationType.UpdateSecret,
             OrganizationId = organizationId,
             UserId = userId,
             TargetProjectId = projectId,

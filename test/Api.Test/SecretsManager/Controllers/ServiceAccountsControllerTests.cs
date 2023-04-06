@@ -179,6 +179,8 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccountAsync(default, default, default)
+            .ReturnsForAnyArgs((true, true));
         foreach (var apiKey in resultApiKeys)
         {
             apiKey.Scope = "[\"api.secrets\"]";
@@ -198,7 +200,8 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(false);
-        sutProvider.GetDependency<IServiceAccountRepository>().UserHasReadAccessToServiceAccount(default, default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccountAsync(default, default, default).ReturnsForAnyArgs(
+            (true, true));
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
         foreach (var apiKey in resultApiKeys)
         {
@@ -218,7 +221,8 @@ public class ServiceAccountsControllerTests
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(false);
-        sutProvider.GetDependency<IServiceAccountRepository>().UserHasReadAccessToServiceAccount(default, default).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccountAsync(default, default, default).ReturnsForAnyArgs(
+            (false, false));
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
         foreach (var apiKey in resultApiKeys)
         {

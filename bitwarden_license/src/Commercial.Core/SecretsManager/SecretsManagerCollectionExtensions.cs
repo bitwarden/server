@@ -23,6 +23,7 @@ public static class SecretsManagerCollectionExtensions
     public static void AddSecretsManagerServices(this IServiceCollection services)
     {
         services.AddScoped<IAccessQuery, AccessQuery>();
+        services.AddScoped<ISecretAccessQuery, SecretAccessQuery>();
         services.AddScoped<IAccessPolicyAccessQuery, AccessPolicyAccessQuery>();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();

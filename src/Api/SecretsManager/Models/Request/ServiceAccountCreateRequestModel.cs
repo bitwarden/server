@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Enums;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.Utilities;
 
@@ -24,7 +25,7 @@ public class ServiceAccountCreateRequestModel
     {
         return new AccessCheck
         {
-            OperationType = OperationType.CreateServiceAccount,
+            AccessOperationType = AccessOperationType.CreateServiceAccount,
             OrganizationId = organizationId,
             UserId = userId,
         };

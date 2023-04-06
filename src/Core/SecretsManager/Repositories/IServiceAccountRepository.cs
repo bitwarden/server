@@ -11,7 +11,6 @@ public interface IServiceAccountRepository
     Task<ServiceAccount> CreateAsync(ServiceAccount serviceAccount);
     Task ReplaceAsync(ServiceAccount serviceAccount);
     Task DeleteManyByIdAsync(IEnumerable<Guid> ids);
-    Task<bool> UserHasReadAccessToServiceAccount(Guid id, Guid userId);
-    Task<bool> UserHasWriteAccessToServiceAccount(Guid id, Guid userId);
     Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdWriteAccessAsync(Guid organizationId, Guid userId, AccessClientType accessType);
+    Task<(bool Read, bool Write)> AccessToServiceAccountAsync(Guid id, Guid userId, AccessClientType accessType);
 }

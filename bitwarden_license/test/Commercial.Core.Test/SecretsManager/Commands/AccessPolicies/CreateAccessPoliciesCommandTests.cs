@@ -10,7 +10,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.AccessPolicies;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.AccessPolicies;
 
 [SutProviderCustomize]
 [ProjectCustomize]

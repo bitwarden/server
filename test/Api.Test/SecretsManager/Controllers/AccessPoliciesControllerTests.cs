@@ -211,12 +211,15 @@ public class AccessPoliciesControllerTests
         {
             case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data.OrganizationId);
+                sutProvider.GetDependency<IServiceAccountRepository>()
+                    .AccessToServiceAccountAsync(default, default, default)
+                    .ReturnsForAnyArgs((true, true));
                 break;
             case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data.OrganizationId);
                 sutProvider.GetDependency<IServiceAccountRepository>()
-                    .UserHasWriteAccessToServiceAccount(default, default)
-                    .ReturnsForAnyArgs(true);
+                    .AccessToServiceAccountAsync(default, default, default)
+                    .ReturnsForAnyArgs((true, true));
                 break;
         }
 
@@ -238,8 +241,8 @@ public class AccessPoliciesControllerTests
     {
         SetupUserWithoutPermission(sutProvider, data.OrganizationId);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(default, default)
-            .ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccountAsync(default, default, default)
+            .ReturnsForAnyArgs((false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetServiceAccountAccessPoliciesAsync(id));
 
@@ -262,12 +265,15 @@ public class AccessPoliciesControllerTests
         {
             case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data.OrganizationId);
+                sutProvider.GetDependency<IServiceAccountRepository>()
+                    .AccessToServiceAccountAsync(default, default, default)
+                    .ReturnsForAnyArgs((true, true));
                 break;
             case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data.OrganizationId);
                 sutProvider.GetDependency<IServiceAccountRepository>()
-                    .UserHasWriteAccessToServiceAccount(default, default)
-                    .ReturnsForAnyArgs(true);
+                    .AccessToServiceAccountAsync(default, default, default)
+                    .ReturnsForAnyArgs((true, true));
                 break;
         }
 
@@ -293,8 +299,8 @@ public class AccessPoliciesControllerTests
     {
         SetupUserWithoutPermission(sutProvider, data.OrganizationId);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<IServiceAccountRepository>().UserHasWriteAccessToServiceAccount(default, default)
-            .ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IServiceAccountRepository>().AccessToServiceAccountAsync(default, default, default)
+            .ReturnsForAnyArgs((false, false));
 
         sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByGrantedServiceAccountIdAsync(default, default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
@@ -323,8 +329,8 @@ public class AccessPoliciesControllerTests
             case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data.OrganizationId);
                 sutProvider.GetDependency<IServiceAccountRepository>()
-                    .UserHasWriteAccessToServiceAccount(default, default)
-                    .ReturnsForAnyArgs(true);
+                    .AccessToServiceAccountAsync(default, default, default)
+                    .ReturnsForAnyArgs((true, true));
                 break;
         }
 

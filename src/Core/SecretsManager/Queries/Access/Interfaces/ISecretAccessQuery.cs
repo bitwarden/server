@@ -2,7 +2,7 @@
 
 namespace Bit.Core.SecretsManager.Queries.Access.Interfaces;
 
-public interface IAccessQuery
+public interface ISecretAccessQuery
 {
-    Task<bool> HasAccess(AccessCheck accessCheck);
+    Task<bool> HasAccess(SecretAccessCheck accessCheck);
 }

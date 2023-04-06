@@ -183,7 +183,6 @@ public class AccessPoliciesController : Controller
     public async Task<BaseAccessPolicyResponseModel> UpdateAccessPolicyAsync([FromRoute] Guid id,
         [FromBody] AccessPolicyUpdateRequest request)
     {
-        // FIXME pass orgID with request?
         var ap = await _accessPolicyRepository.GetByIdAsync(id);
         if (ap == null)
         {
@@ -312,18 +311,13 @@ public class AccessPoliciesController : Controller
         }
 
         var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
-                serviceAccount.Id, userId),
-            _ => false,
-        };
 
-        if (!hasAccess)
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(serviceAccount.Id, userId, accessClient);
+        if (!access.Write)
         {
             throw new NotFoundException();
         }
+
         return (accessClient, userId);
     }
 

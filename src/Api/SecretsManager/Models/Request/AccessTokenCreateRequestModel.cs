@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Enums;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.Utilities;
 
@@ -40,7 +41,7 @@ public class AccessTokenCreateRequestModel
     {
         return new AccessCheck
         {
-            OperationType = OperationType.CreateAccessToken,
+            AccessOperationType = AccessOperationType.CreateAccessToken,
             TargetId = id,
             OrganizationId = organizationId,
             UserId = userId,

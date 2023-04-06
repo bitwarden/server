@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Enums;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.Utilities;
 
@@ -38,7 +39,7 @@ public class SecretCreateRequestModel
     {
         return new SecretAccessCheck
         {
-            OperationType = OperationType.CreateSecret,
+            AccessOperationType = AccessOperationType.CreateSecret,
             OrganizationId = organizationId,
             TargetProjectId = ProjectIds?.FirstOrDefault(),
             UserId = userId,

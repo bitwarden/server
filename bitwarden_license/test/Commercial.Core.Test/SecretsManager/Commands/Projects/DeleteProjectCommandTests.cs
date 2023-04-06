@@ -9,7 +9,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.Projects;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.Projects;
 
 [SutProviderCustomize]
 public class DeleteProjectCommandTests

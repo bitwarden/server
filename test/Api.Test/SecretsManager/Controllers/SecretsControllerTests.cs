@@ -126,7 +126,7 @@ public class SecretsControllerTests
     public async void CreateSecret_NoAccess_Throws(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Secret existingSecret, Guid userId)
     {
 
-        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId)).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).ReturnsForAnyArgs(existingSecret);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -143,7 +143,7 @@ public class SecretsControllerTests
     [BitAutoData]
     public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Secret existingSecret, Guid userId)
     {
-        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).ReturnsForAnyArgs(existingSecret);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -160,7 +160,7 @@ public class SecretsControllerTests
     [BitAutoData]
     public async void UpdateSecret_NoAccess_Throws(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid organizationId, Guid userId, Secret existingSecret)
     {
-        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId, existingSecret.Id)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId, existingSecret.Id)).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).ReturnsForAnyArgs(existingSecret);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -176,7 +176,7 @@ public class SecretsControllerTests
     [BitAutoData]
     public async void UpdateSecret_Success(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid organizationId, Guid userId, Secret existingSecret)
     {
-        sutProvider.GetDependency<IAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId, existingSecret.Id)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretAccessQuery>().HasAccess(data.ToSecretAccessCheck(organizationId, userId, existingSecret.Id)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(existingSecret.Id).ReturnsForAnyArgs(existingSecret);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 

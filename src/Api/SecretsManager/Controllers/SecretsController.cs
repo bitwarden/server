@@ -27,7 +27,7 @@ public class SecretsController : Controller
     private readonly ICreateSecretCommand _createSecretCommand;
     private readonly IUpdateSecretCommand _updateSecretCommand;
     private readonly IDeleteSecretCommand _deleteSecretCommand;
-    private readonly IAccessQuery _accessQuery;
+    private readonly ISecretAccessQuery _secretAccessQuery;
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IReferenceEventService _referenceEventService;
@@ -40,7 +40,7 @@ public class SecretsController : Controller
         ICreateSecretCommand createSecretCommand,
         IUpdateSecretCommand updateSecretCommand,
         IDeleteSecretCommand deleteSecretCommand,
-        IAccessQuery accessQuery,
+        ISecretAccessQuery secretAccessQuery,
         IUserService userService,
         IEventService eventService,
         IReferenceEventService referenceEventService)
@@ -52,7 +52,7 @@ public class SecretsController : Controller
         _createSecretCommand = createSecretCommand;
         _updateSecretCommand = updateSecretCommand;
         _deleteSecretCommand = deleteSecretCommand;
-        _accessQuery = accessQuery;
+        _secretAccessQuery = secretAccessQuery;
         _userService = userService;
         _eventService = eventService;
         _referenceEventService = referenceEventService;
@@ -79,15 +79,8 @@ public class SecretsController : Controller
     [HttpPost("organizations/{organizationId}/secrets")]
     public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
     {
-
-        var projectId = createRequest.ProjectIds?.FirstOrDefault();
-        if (projectId == null)
-        {
-            throw new NotFoundException();
-        }
-
         var userId = _userService.GetProperUserId(User).Value;
-        if (!await _accessQuery.HasAccess(createRequest.ToSecretAccessCheck(organizationId, userId)))
+        if (!await _secretAccessQuery.HasAccess(createRequest.ToSecretAccessCheck(organizationId, userId)))
         {
             throw new NotFoundException();
         }
@@ -151,7 +144,6 @@ public class SecretsController : Controller
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
-        // FIXME pass in orgID 
         var secret = await _secretRepository.GetByIdAsync(id);
         if (secret == null)
         {
@@ -159,7 +151,7 @@ public class SecretsController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        if (!await _accessQuery.HasAccess(updateRequest.ToSecretAccessCheck(secret.OrganizationId, userId, id)))
+        if (!await _secretAccessQuery.HasAccess(updateRequest.ToSecretAccessCheck(secret.OrganizationId, userId, id)))
         {
             throw new NotFoundException();
         }

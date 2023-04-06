@@ -54,14 +54,9 @@ public class DeleteServiceAccountsCommand : IDeleteServiceAccountsCommand
 
         foreach (var sa in serviceAccounts)
         {
-            var hasAccess = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(sa.Id, userId),
-                _ => false,
-            };
+            var access = await _serviceAccountRepository.AccessToServiceAccountAsync(sa.Id, userId, accessClient);
 
-            if (!hasAccess)
+            if (!access.Write)
             {
                 results.Add(new Tuple<ServiceAccount, string>(sa, "access denied"));
             }

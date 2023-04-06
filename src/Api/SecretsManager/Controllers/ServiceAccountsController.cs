@@ -94,14 +94,8 @@ public class ServiceAccountsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(id, userId, accessClient);
+        if (!access.Write)
         {
             throw new NotFoundException();
         }
@@ -127,7 +121,6 @@ public class ServiceAccountsController : Controller
     public async Task<ServiceAccountResponseModel> UpdateAsync([FromRoute] Guid id,
         [FromBody] ServiceAccountUpdateRequestModel updateRequest)
     {
-        // FIX ME should we pass orgID in request? 
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
         if (serviceAccount == null)
         {
@@ -172,13 +165,8 @@ public class ServiceAccountsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasReadAccessToServiceAccount(id, userId),
-            _ => false,
-        };
-        if (!hasAccess)
+        var access = await _serviceAccountRepository.AccessToServiceAccountAsync(id, userId, accessClient);
+        if (!access.Read)
         {
             throw new NotFoundException();
         }
@@ -216,8 +204,8 @@ public class ServiceAccountsController : Controller
         {
             throw new NotFoundException();
         }
-        var userId = _userService.GetProperUserId(User).Value;
 
+        var userId = _userService.GetProperUserId(User).Value;
         if (!await _accessQuery.HasAccess(request.ToAccessCheck(id, serviceAccount.OrganizationId, userId)))
         {
             throw new NotFoundException();

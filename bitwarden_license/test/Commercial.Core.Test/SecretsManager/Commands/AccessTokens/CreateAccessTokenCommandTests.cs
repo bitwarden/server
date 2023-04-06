@@ -7,7 +7,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.AccessTokens;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.AccessTokens;
 
 [SutProviderCustomize]
 public class CreateServiceAccountCommandTests

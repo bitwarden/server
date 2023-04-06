@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Enums;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.Utilities;
 
@@ -24,7 +25,7 @@ public class ServiceAccountUpdateRequestModel
     {
         return new AccessCheck
         {
-            OperationType = OperationType.UpdateServiceAccount,
+            AccessOperationType = AccessOperationType.UpdateServiceAccount,
             OrganizationId = organizationId,
             TargetId = id,
             UserId = userId,

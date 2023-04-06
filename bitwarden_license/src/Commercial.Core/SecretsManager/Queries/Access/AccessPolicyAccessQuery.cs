@@ -129,9 +129,8 @@ public class AccessPolicyAccessQuery : IAccessPolicyAccessQuery
                 }
                 else if (serviceAccountIdToCheck.HasValue)
                 {
-                    hasAccess =
-                        await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
-                            serviceAccountIdToCheck.Value, userId);
+                    hasAccess = (await _serviceAccountRepository.AccessToServiceAccountAsync(
+                        serviceAccountIdToCheck.Value, userId, accessClient)).Write;
                 }
                 else
                 {

@@ -9,7 +9,7 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.Projects;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.Projects;
 
 [SutProviderCustomize]
 [ProjectCustomize]

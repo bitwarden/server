@@ -1,5 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.SecretsManager.Enums;
 using Bit.Core.SecretsManager.Models.Data;
+
+namespace Bit.Api.SecretsManager.Models.Request;
 
 public class RevokeAccessTokensRequest
 {
@@ -10,7 +13,7 @@ public class RevokeAccessTokensRequest
     {
         return new AccessCheck
         {
-            OperationType = OperationType.RevokeAccessToken,
+            AccessOperationType = AccessOperationType.RevokeAccessToken,
             TargetId = targetId,
             OrganizationId = organizationId,
             UserId = userId,

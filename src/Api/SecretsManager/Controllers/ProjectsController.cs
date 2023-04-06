@@ -77,7 +77,6 @@ public class ProjectsController : Controller
     [HttpPut("projects/{id}")]
     public async Task<ProjectResponseModel> UpdateAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
     {
-        //FIX me should we pass org id with request?
         var project = await _projectRepository.GetByIdAsync(id);
         if (project == null)
         {
