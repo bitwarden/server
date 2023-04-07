@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
 
-public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private const string _mockEncryptedString =
         "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98sp4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=";
@@ -27,7 +27,7 @@ public class AccessPoliciesControllerTest : IClassFixture<ApiApplicationFactory>
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
 
-    public AccessPoliciesControllerTest(ApiApplicationFactory factory)
+    public AccessPoliciesControllerTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         _client = _factory.CreateClient();

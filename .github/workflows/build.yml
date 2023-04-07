@@ -498,7 +498,7 @@ jobs:
           dotnet restore
 
       - name: Publish project
-        run: dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} --self-contained true
+        run: dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
 
       - name: Upload project artifact Windows
         if: ${{ contains(matrix.target, 'win') == true }}
