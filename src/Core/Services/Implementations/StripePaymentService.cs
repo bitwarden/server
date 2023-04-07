@@ -136,7 +136,6 @@ public class StripePaymentService : IPaymentService
                     },
                 },
                 Coupon = provider ? ProviderDiscountId : null,
-
                 Address = new Stripe.AddressOptions
                 {
                     Country = taxInfo.BillingAddressCountry,
