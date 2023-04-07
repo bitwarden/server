@@ -89,7 +89,7 @@ public class CipherRepositoryTests
 
         await Task.Delay(100);
 
-        await collectionRepository.UpdateUsersAsync(collection.Id, new []
+        await collectionRepository.UpdateUsersAsync(collection.Id, new[]
         {
             new CollectionAccessSelection
             {
