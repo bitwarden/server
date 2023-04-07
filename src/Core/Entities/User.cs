@@ -84,6 +84,11 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
         return Name;
     }
 
+    public string SubscriberName()
+    {
+        return string.IsNullOrWhiteSpace(Name) ? Email : Name;
+    }
+
     public string BraintreeCustomerIdPrefix()
     {
         return "u";
@@ -102,6 +107,11 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     public bool IsUser()
     {
         return true;
+    }
+
+    public string SubscriberType()
+    {
+        return "Subscriber";
     }
 
     public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()

@@ -124,8 +124,17 @@ public class StripePaymentService : IPaymentService
                 Metadata = stripeCustomerMetadata,
                 InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                 {
-                    DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = org.SubscriberType(),
+                            Value = org.SubscriberName(),
+                        },
+                    },
                 },
+
                 Address = new Stripe.AddressOptions
                 {
                     Country = taxInfo.BillingAddressCountry,
@@ -427,7 +436,15 @@ public class StripePaymentService : IPaymentService
                 Source = stipeCustomerSourceToken,
                 InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                 {
-                    DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = user.SubscriberType(),
+                            Value = user.SubscriberName(),
+                        },
+                    }
                 },
                 Address = new Stripe.AddressOptions
                 {
@@ -1334,7 +1351,15 @@ public class StripePaymentService : IPaymentService
                     PaymentMethod = stipeCustomerPaymentMethodId,
                     InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                        DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                        CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                        {
+                            new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                            {
+                                Name = subscriber.SubscriberType(),
+                                Value = subscriber.SubscriberName(),
+                            },
+                        }
                     },
                     Address = taxInfo == null ? null : new Stripe.AddressOptions
                     {
@@ -1406,7 +1431,15 @@ public class StripePaymentService : IPaymentService
                     DefaultSource = defaultSourceId,
                     InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethod = defaultPaymentMethodId
+                        DefaultPaymentMethod = defaultPaymentMethodId,
+                        CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                        {
+                            new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                            {
+                                Name = subscriber.SubscriberType(),
+                                Value = subscriber.SubscriberName(),
+                            },
+                        }
                     },
                     Address = taxInfo == null ? null : new Stripe.AddressOptions
                     {
