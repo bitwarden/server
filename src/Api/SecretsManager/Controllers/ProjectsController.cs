@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
+using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -22,6 +23,7 @@ public class ProjectsController : Controller
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
+    private readonly IProjectAccessQuery _projectAccessQuery;
 
     public ProjectsController(
         ICurrentContext currentContext,
@@ -29,7 +31,8 @@ public class ProjectsController : Controller
         IProjectRepository projectRepository,
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
-        IDeleteProjectCommand deleteProjectCommand)
+        IDeleteProjectCommand deleteProjectCommand,
+        IProjectAccessQuery projectAccessQuery)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -37,6 +40,7 @@ public class ProjectsController : Controller
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
         _deleteProjectCommand = deleteProjectCommand;
+        _projectAccessQuery = projectAccessQuery;
     }
 
     [HttpGet("organizations/{organizationId}/projects")]
@@ -60,7 +64,7 @@ public class ProjectsController : Controller
     [HttpPost("organizations/{organizationId}/projects")]
     public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] ProjectCreateRequestModel createRequest)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _projectAccessQuery.HasAccess(createRequest.ToAccessCheck(organizationId)))
         {
             throw new NotFoundException();
         }
@@ -73,9 +77,19 @@ public class ProjectsController : Controller
     [HttpPut("projects/{id}")]
     public async Task<ProjectResponseModel> UpdateAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null)
+        {
+            throw new NotFoundException();
+        }
 
-        var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id), userId);
+        var userId = _userService.GetProperUserId(User).Value;
+        if (!await _projectAccessQuery.HasAccess(updateRequest.ToAccessCheck(project.OrganizationId, id, userId)))
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id));
         return new ProjectResponseModel(result);
     }
 

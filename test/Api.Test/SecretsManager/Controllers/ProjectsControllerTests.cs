@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
@@ -101,10 +102,16 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Create_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid orgId,
-        ProjectCreateRequestModel data)
+    public async void Create_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
+        Guid orgId, ProjectCreateRequestModel data)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(orgId).Returns(false);
+        sutProvider.GetDependency<IProjectAccessQuery>().HasAccess(data.ToAccessCheck(orgId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+
+        var resultProject = data.ToProject(orgId);
+
+        sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default)
+            .ReturnsForAnyArgs(resultProject);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(orgId, data));
         await sutProvider.GetDependency<ICreateProjectCommand>().DidNotReceiveWithAnyArgs()
@@ -112,22 +119,15 @@ public class ProjectsControllerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void Create_Success(PermissionType permissionType, SutProvider<ProjectsController> sutProvider,
+    [BitAutoData]
+    public async void Create_Success(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
-        switch (permissionType)
-        {
-            case PermissionType.RunAsAdmin:
-                SetupAdmin(sutProvider, orgId);
-                break;
-            case PermissionType.RunAsUserWithPermission:
-                SetupUserWithPermission(sutProvider, orgId);
-                break;
-        }
+        sutProvider.GetDependency<IProjectAccessQuery>().HasAccess(data.ToAccessCheck(orgId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
 
         var resultProject = data.ToProject(orgId);
+
         sutProvider.GetDependency<ICreateProjectCommand>().CreateAsync(default, default)
             .ReturnsForAnyArgs(resultProject);
 
@@ -138,29 +138,40 @@ public class ProjectsControllerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void Update_Success(PermissionType permissionType, SutProvider<ProjectsController> sutProvider,
-        Guid orgId, ProjectUpdateRequestModel data)
+    [BitAutoData]
+    public async void Update_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
+        Guid userId, ProjectUpdateRequestModel data, Project existingProject)
     {
-        switch (permissionType)
-        {
-            case PermissionType.RunAsAdmin:
-                SetupAdmin(sutProvider, orgId);
-                break;
-            case PermissionType.RunAsUserWithPermission:
-                SetupUserWithPermission(sutProvider, orgId);
-                break;
-        }
+        sutProvider.GetDependency<IProjectAccessQuery>().HasAccess(data.ToAccessCheck(existingProject.OrganizationId, existingProject.Id, userId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(existingProject.Id).ReturnsForAnyArgs(existingProject);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
-        var resultProject = data.ToProject(orgId);
-        sutProvider.GetDependency<IUpdateProjectCommand>().UpdateAsync(default, default)
+        var resultProject = data.ToProject(existingProject.Id);
+        sutProvider.GetDependency<IUpdateProjectCommand>().UpdateAsync(default)
             .ReturnsForAnyArgs(resultProject);
 
-        await sutProvider.Sut.UpdateAsync(orgId, data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(existingProject.Id, data));
+        await sutProvider.GetDependency<IUpdateProjectCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<Project>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void Update_Success(SutProvider<ProjectsController> sutProvider,
+        Guid userId, ProjectUpdateRequestModel data, Project existingProject)
+    {
+        sutProvider.GetDependency<IProjectAccessQuery>().HasAccess(data.ToAccessCheck(existingProject.OrganizationId, existingProject.Id, userId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(existingProject.Id).ReturnsForAnyArgs(existingProject);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+
+        var resultProject = data.ToProject(existingProject.Id);
+        sutProvider.GetDependency<IUpdateProjectCommand>().UpdateAsync(default)
+            .ReturnsForAnyArgs(resultProject);
+
+        await sutProvider.Sut.UpdateAsync(existingProject.Id, data);
 
         await sutProvider.GetDependency<IUpdateProjectCommand>().Received(1)
-            .UpdateAsync(Arg.Any<Project>(), Arg.Any<Guid>());
+            .UpdateAsync(Arg.Any<Project>());
     }
 
     [Theory]
