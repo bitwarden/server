@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -26,9 +27,13 @@ public class OrganizationsControllerTests : IDisposable
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoConfigService _ssoConfigService;
     private readonly IUserService _userService;
-    private readonly IGetOrganizationApiKeyCommand _getOrganizationApiKeyCommand;
+    private readonly IGetOrganizationApiKeyQuery _getOrganizationApiKeyQuery;
     private readonly IRotateOrganizationApiKeyCommand _rotateOrganizationApiKeyCommand;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
+    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
+    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     private readonly OrganizationsController _sut;
 
@@ -43,15 +48,19 @@ public class OrganizationsControllerTests : IDisposable
         _policyRepository = Substitute.For<IPolicyRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _ssoConfigService = Substitute.For<ISsoConfigService>();
-        _getOrganizationApiKeyCommand = Substitute.For<IGetOrganizationApiKeyCommand>();
+        _getOrganizationApiKeyQuery = Substitute.For<IGetOrganizationApiKeyQuery>();
         _rotateOrganizationApiKeyCommand = Substitute.For<IRotateOrganizationApiKeyCommand>();
         _organizationApiKeyRepository = Substitute.For<IOrganizationApiKeyRepository>();
         _userService = Substitute.For<IUserService>();
+        _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
+        _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
+        _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
-            _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyCommand, _rotateOrganizationApiKeyCommand,
-            _organizationApiKeyRepository, _globalSettings);
+            _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
+            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
+            _cloudGetOrganizationLicenseQuery, _globalSettings);
     }
 
     public void Dispose()

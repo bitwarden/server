@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
 
@@ -55,7 +56,7 @@ public class NoopPushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task PushLogOutAsync(Guid userId)
+    public Task PushLogOutAsync(Guid userId, bool excludeCurrentContext = false)
     {
         return Task.FromResult(0);
     }

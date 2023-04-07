@@ -39,8 +39,8 @@ public class CollectionService : ICollectionService
         _currentContext = currentContext;
     }
 
-    public async Task SaveAsync(Collection collection, IEnumerable<SelectionReadOnly> groups = null,
-        Guid? assignUserId = null)
+    public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
+        IEnumerable<CollectionAccessSelection> users = null, Guid? assignUserId = null)
     {
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
@@ -60,14 +60,7 @@ public class CollectionService : ICollectionService
                 }
             }
 
-            if (groups == null || !org.UseGroups)
-            {
-                await _collectionRepository.CreateAsync(collection);
-            }
-            else
-            {
-                await _collectionRepository.CreateAsync(collection, groups);
-            }
+            await _collectionRepository.CreateAsync(collection, org.UseGroups ? groups : null, users);
 
             // Assign a user to the newly created collection.
             if (assignUserId.HasValue)
@@ -76,8 +69,8 @@ public class CollectionService : ICollectionService
                 if (orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
                 {
                     await _collectionRepository.UpdateUsersAsync(collection.Id,
-                        new List<SelectionReadOnly> {
-                            new SelectionReadOnly { Id = orgUser.Id, ReadOnly = false } });
+                        new List<CollectionAccessSelection> {
+                            new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = false } });
                 }
             }
 
@@ -86,23 +79,9 @@ public class CollectionService : ICollectionService
         }
         else
         {
-            if (!org.UseGroups)
-            {
-                await _collectionRepository.ReplaceAsync(collection);
-            }
-            else
-            {
-                await _collectionRepository.ReplaceAsync(collection, groups ?? new List<SelectionReadOnly>());
-            }
-
+            await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groups : null, users);
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
         }
-    }
-
-    public async Task DeleteAsync(Collection collection)
-    {
-        await _collectionRepository.DeleteAsync(collection);
-        await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Deleted);
     }
 
     public async Task DeleteUserAsync(Collection collection, Guid organizationUserId)
@@ -118,7 +97,7 @@ public class CollectionService : ICollectionService
 
     public async Task<IEnumerable<Collection>> GetOrganizationCollections(Guid organizationId)
     {
-        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.ManageUsers(organizationId))
+        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.ManageUsers(organizationId) && !await _currentContext.ManageGroups(organizationId))
         {
             throw new NotFoundException();
         }

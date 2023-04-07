@@ -5,9 +5,12 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\..\util\MySqlMigrations\MySqlMigrations.csproj" />
+    <ProjectReference Include="..\..\util\PostgresMigrations\PostgresMigrations.csproj" />
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\..\util\Migrator\Migrator.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\..\util\SqliteMigrations\SqliteMigrations.csproj" />
   </ItemGroup>
 
   <Choose>
@@ -20,7 +23,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Azure.Cosmos" Version="3.26.1" />
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="$(MicrosoftVisualStudioWebCodeGenerationDesignVersion)" />
   </ItemGroup>
 
 </Project>

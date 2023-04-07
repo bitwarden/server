@@ -45,6 +45,7 @@ public class OrganizationLicense : ILicense
         MaxStorageGb = org.MaxStorageGb;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
+        UseCustomPermissions = org.UseCustomPermissions;
         Issued = DateTime.UtcNow;
 
         if (subscriptionInfo?.Subscription == null)
@@ -117,6 +118,7 @@ public class OrganizationLicense : ILicense
     public short? MaxStorageGb { get; set; }
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
+    public bool UseCustomPermissions { get; set; }
     public int Version { get; set; }
     public DateTime Issued { get; set; }
     public DateTime? Refresh { get; set; }
@@ -131,10 +133,10 @@ public class OrganizationLicense : ILicense
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
-    private const int CURRENT_LICENSE_FILE_VERSION = 9;
+    private const int CURRENT_LICENSE_FILE_VERSION = 10;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 10;
+        get => Version is >= 1 and <= 11;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -166,6 +168,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 9 || !p.Name.Equals(nameof(UseKeyConnector))) &&
                     // UseScim was added in Version 10
                     (Version >= 10 || !p.Name.Equals(nameof(UseScim))) &&
+                    // UseCustomPermissions was added in Version 11
+                    (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
                     (
                         !forHash ||
                         (
@@ -195,21 +199,42 @@ public class OrganizationLicense : ILicense
         }
     }
 
-    public bool CanUse(IGlobalSettings globalSettings)
+    public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
         if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
+            exception = "Invalid license. Your organization is disabled or the license has expired.";
             return false;
         }
 
-        if (ValidLicenseVersion)
+        if (!ValidLicenseVersion)
         {
-            return InstallationId == globalSettings.Installation.Id && SelfHost;
+            exception = $"Version {Version} is not supported.";
+            return false;
         }
-        else
+
+        if (InstallationId != globalSettings.Installation.Id || !SelfHost)
         {
-            throw new NotSupportedException($"Version {Version} is not supported.");
+            exception = "Invalid license. Make sure your license allows for on-premise " +
+                "hosting of organizations and that the installation id matches your current installation.";
+            return false;
         }
+
+        if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
+        {
+            exception = "Premium licenses cannot be applied to an organization. "
+                                          + "Upload this license from your personal account settings page.";
+            return false;
+        }
+
+        if (!licensingService.VerifyLicense(this))
+        {
+            exception = "Invalid license.";
+            return false;
+        }
+
+        exception = "";
+        return true;
     }
 
     public bool VerifyData(Organization organization, IGlobalSettings globalSettings)
@@ -277,6 +302,11 @@ public class OrganizationLicense : ILicense
             if (valid && Version >= 10)
             {
                 valid = organization.UseScim == UseScim;
+            }
+
+            if (valid && Version >= 11)
+            {
+                valid = organization.UseCustomPermissions == UseCustomPermissions;
             }
 
             return valid;

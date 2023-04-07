@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using Bit.Events.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -52,6 +53,7 @@ public class CollectController : Controller
                 case EventType.Cipher_ClientCopiedHiddenField:
                 case EventType.Cipher_ClientCopiedPassword:
                 case EventType.Cipher_ClientCopiedCardCode:
+                case EventType.Cipher_ClientToggledCardNumberVisible:
                 case EventType.Cipher_ClientToggledCardCodeVisible:
                 case EventType.Cipher_ClientToggledHiddenFieldVisible:
                 case EventType.Cipher_ClientToggledPasswordVisible:

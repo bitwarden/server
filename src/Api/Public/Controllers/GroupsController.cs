@@ -2,8 +2,8 @@
 using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,17 +14,23 @@ namespace Bit.Api.Public.Controllers;
 public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
-    private readonly IGroupService _groupService;
+    private readonly IOrganizationRepository _organizationRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ICreateGroupCommand _createGroupCommand;
+    private readonly IUpdateGroupCommand _updateGroupCommand;
 
     public GroupsController(
         IGroupRepository groupRepository,
-        IGroupService groupService,
-        ICurrentContext currentContext)
+        IOrganizationRepository organizationRepository,
+        ICurrentContext currentContext,
+        ICreateGroupCommand createGroupCommand,
+        IUpdateGroupCommand updateGroupCommand)
     {
         _groupRepository = groupRepository;
-        _groupService = groupService;
+        _organizationRepository = organizationRepository;
         _currentContext = currentContext;
+        _createGroupCommand = createGroupCommand;
+        _updateGroupCommand = updateGroupCommand;
     }
 
     /// <summary>
@@ -77,15 +83,14 @@ public class GroupsController : Controller
     /// </summary>
     /// <remarks>
     /// Returns a list of your organization's groups.
-    /// Group objects listed in this call do not include information about their associated collections.
+    /// Group objects listed in this call include information about their associated collections.
     /// </remarks>
     [HttpGet]
     [ProducesResponseType(typeof(ListResponseModel<GroupResponseModel>), (int)HttpStatusCode.OK)]
     public async Task<IActionResult> List()
     {
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(_currentContext.OrganizationId.Value);
-        // TODO: Get all CollectionGroup associations for the organization and marry them up here for the response.
-        var groupResponses = groups.Select(g => new GroupResponseModel(g, null));
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(_currentContext.OrganizationId.Value);
+        var groupResponses = groups.Select(g => new GroupResponseModel(g.Item1, g.Item2));
         var response = new ListResponseModel<GroupResponseModel>(groupResponses);
         return new JsonResult(response);
     }
@@ -104,7 +109,8 @@ public class GroupsController : Controller
     {
         var group = model.ToGroup(_currentContext.OrganizationId.Value);
         var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-        await _groupService.SaveAsync(group, associations);
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        await _createGroupCommand.CreateGroupAsync(group, organization, associations);
         var response = new GroupResponseModel(group, associations);
         return new JsonResult(response);
     }
@@ -129,9 +135,11 @@ public class GroupsController : Controller
         {
             return new NotFoundResult();
         }
+
         var updatedGroup = model.ToGroup(existingGroup);
         var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-        await _groupService.SaveAsync(updatedGroup, associations);
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
+        await _updateGroupCommand.UpdateGroupAsync(updatedGroup, organization, associations);
         var response = new GroupResponseModel(updatedGroup, associations);
         return new JsonResult(response);
     }

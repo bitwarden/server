@@ -17,8 +17,10 @@ public class OrganizationUserInviteRequestModel
     [Required]
     public OrganizationUserType? Type { get; set; }
     public bool AccessAll { get; set; }
+    public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 
     public OrganizationUserInviteData ToData()
     {
@@ -27,7 +29,9 @@ public class OrganizationUserInviteRequestModel
             Emails = Emails,
             Type = Type,
             AccessAll = AccessAll,
+            AccessSecretsManager = AccessSecretsManager,
             Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
+            Groups = Groups,
             Permissions = Permissions,
         };
     }
@@ -71,8 +75,10 @@ public class OrganizationUserUpdateRequestModel
     [Required]
     public OrganizationUserType? Type { get; set; }
     public bool AccessAll { get; set; }
+    public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
@@ -82,6 +88,7 @@ public class OrganizationUserUpdateRequestModel
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         });
         existingUser.AccessAll = AccessAll;
+        existingUser.AccessSecretsManager = AccessSecretsManager;
         return existingUser;
     }
 }

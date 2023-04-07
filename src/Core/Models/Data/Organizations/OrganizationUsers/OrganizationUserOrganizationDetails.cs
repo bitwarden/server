@@ -16,8 +16,10 @@ public class OrganizationUserOrganizationDetails
     public bool Use2fa { get; set; }
     public bool UseApi { get; set; }
     public bool UseResetPassword { get; set; }
+    public bool UseSecretsManager { get; set; }
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
+    public bool UseCustomPermissions { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
     public short? MaxStorageGb { get; set; }
@@ -39,4 +41,5 @@ public class OrganizationUserOrganizationDetails
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
+    public bool AccessSecretsManager { get; set; }
 }

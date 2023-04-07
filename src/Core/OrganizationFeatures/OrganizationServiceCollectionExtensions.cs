@@ -1,8 +1,16 @@
 ﻿using Bit.Core.Models.Business.Tokenables;
+using Bit.Core.OrganizationFeatures.Groups;
+using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationCollections;
+using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationDomains;
+using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -22,9 +30,14 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddTokenizers();
+        services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
-        services.AddOrganizationApiKeyCommands();
+        services.AddOrganizationApiKeyCommandsQueries();
+        services.AddOrganizationCollectionCommands();
+        services.AddOrganizationGroupCommands();
+        services.AddOrganizationLicenseCommandsQueries();
+        services.AddOrganizationDomainCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -59,10 +72,39 @@ public static class OrganizationServiceCollectionExtensions
         }
     }
 
-    private static void AddOrganizationApiKeyCommands(this IServiceCollection services)
+    private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
     {
-        services.AddScoped<IGetOrganizationApiKeyCommand, GetOrganizationApiKeyCommand>();
+        services.AddScoped<IGetOrganizationApiKeyQuery, GetOrganizationApiKeyQuery>();
         services.AddScoped<IRotateOrganizationApiKeyCommand, RotateOrganizationApiKeyCommand>();
+        services.AddScoped<ICreateOrganizationApiKeyCommand, CreateOrganizationApiKeyCommand>();
+    }
+
+    public static void AddOrganizationCollectionCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
+    }
+
+    private static void AddOrganizationGroupCommands(this IServiceCollection services)
+    {
+        services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
+        services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
+        services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
+    }
+
+    private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<ICloudGetOrganizationLicenseQuery, CloudGetOrganizationLicenseQuery>();
+        services.AddScoped<ISelfHostedGetOrganizationLicenseQuery, SelfHostedGetOrganizationLicenseQuery>();
+        services.AddScoped<IUpdateOrganizationLicenseCommand, UpdateOrganizationLicenseCommand>();
+    }
+
+    private static void AddOrganizationDomainCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
+        services.AddScoped<IVerifyOrganizationDomainCommand, VerifyOrganizationDomainCommand>();
+        services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
+        services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
+        services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

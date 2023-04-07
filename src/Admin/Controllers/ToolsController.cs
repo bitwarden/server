@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Admin.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -18,7 +19,7 @@ public class ToolsController : Controller
 {
     private readonly GlobalSettings _globalSettings;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IUserService _userService;
     private readonly ITransactionRepository _transactionRepository;
     private readonly IInstallationRepository _installationRepository;
@@ -26,22 +27,24 @@ public class ToolsController : Controller
     private readonly IPaymentService _paymentService;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly IWebHostEnvironment _environment;
 
     public ToolsController(
         GlobalSettings globalSettings,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
+        ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IUserService userService,
         ITransactionRepository transactionRepository,
         IInstallationRepository installationRepository,
         IOrganizationUserRepository organizationUserRepository,
         ITaxRateRepository taxRateRepository,
         IPaymentService paymentService,
-        IStripeAdapter stripeAdapter)
+        IStripeAdapter stripeAdapter,
+        IWebHostEnvironment environment)
     {
         _globalSettings = globalSettings;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
+        _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _userService = userService;
         _transactionRepository = transactionRepository;
         _installationRepository = installationRepository;
@@ -49,6 +52,7 @@ public class ToolsController : Controller
         _taxRateRepository = taxRateRepository;
         _paymentService = paymentService;
         _stripeAdapter = stripeAdapter;
+        _environment = environment;
     }
 
     public IActionResult ChargeBraintree()
@@ -259,7 +263,7 @@ public class ToolsController : Controller
 
         if (organization != null)
         {
-            var license = await _organizationService.GenerateLicenseAsync(organization,
+            var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(organization,
                 model.InstallationId.Value, model.Version);
             var ms = new MemoryStream();
             await JsonSerializer.SerializeAsync(ms, license, JsonHelpers.Indented);
@@ -449,11 +453,12 @@ public class ToolsController : Controller
             subscriptions.FirstOrDefault()?.Id :
             null;
 
+        var isProduction = _environment.IsProduction();
         var model = new StripeSubscriptionsModel()
         {
             Items = subscriptions.Select(s => new StripeSubscriptionRowModel(s)).ToList(),
             Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data,
-            TestClocks = await _stripeAdapter.TestClockListAsync(),
+            TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync(),
             Filter = options
         };
         return View(model);
@@ -464,8 +469,9 @@ public class ToolsController : Controller
     {
         if (!ModelState.IsValid)
         {
+            var isProduction = _environment.IsProduction();
             model.Prices = (await _stripeAdapter.PriceListAsync(new Stripe.PriceListOptions() { Limit = 100 })).Data;
-            model.TestClocks = await _stripeAdapter.TestClockListAsync();
+            model.TestClocks = isProduction ? new List<Stripe.TestHelpers.TestClock>() : await _stripeAdapter.TestClockListAsync();
             return View(model);
         }
 

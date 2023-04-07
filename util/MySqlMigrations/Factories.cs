@@ -3,15 +3,17 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace MySqlMigrations;
+namespace Bit.MySqlMigrations;
 
 public static class GlobalSettingsFactory
 {
     public static GlobalSettings GlobalSettings { get; } = new GlobalSettings();
     static GlobalSettingsFactory()
     {
-        var configBuilder = new ConfigurationBuilder().AddUserSecrets<Bit.Api.Startup>();
+        // UserSecretsId here should match what is in Api.csproj
+        var configBuilder = new ConfigurationBuilder().AddUserSecrets("bitwarden-Api");
         var Configuration = configBuilder.Build();
         ConfigurationBinder.Bind(Configuration.GetSection("GlobalSettings"), GlobalSettings);
     }
@@ -21,6 +23,10 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
 {
     public DatabaseContext CreateDbContext(string[] args)
     {
+        var services = new ServiceCollection();
+        services.AddDataProtection();
+        var serviceProvider = services.BuildServiceProvider();
+
         var globalSettings = GlobalSettingsFactory.GlobalSettings;
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         var connectionString = globalSettings.MySql?.ConnectionString;
@@ -31,7 +37,8 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         optionsBuilder.UseMySql(
             connectionString,
             ServerVersion.AutoDetect(connectionString),
-            b => b.MigrationsAssembly("MySqlMigrations"));
+            b => b.MigrationsAssembly("MySqlMigrations"))
+           .UseApplicationServiceProvider(serviceProvider);
         return new DatabaseContext(optionsBuilder.Options);
     }
 }

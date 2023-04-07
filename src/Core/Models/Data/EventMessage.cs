@@ -31,4 +31,8 @@ public class EventMessage : IEvent
     public DeviceType? DeviceType { get; set; }
     public string IpAddress { get; set; }
     public Guid? IdempotencyId { get; private set; } = Guid.NewGuid();
+    public EventSystemUser? SystemUser { get; set; }
+    public string DomainName { get; set; }
+    public Guid? SecretId { get; set; }
+    public Guid? ServiceAccountId { get; set; }
 }

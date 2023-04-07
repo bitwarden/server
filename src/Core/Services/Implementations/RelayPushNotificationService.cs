@@ -1,10 +1,12 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.IdentityServer;
 using Bit.Core.Models;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -25,7 +27,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             httpFactory,
             globalSettings.PushRelayBaseUri,
             globalSettings.Installation.IdentityUri,
-            "api.push",
+            ApiScopes.ApiPush,
             $"installation.{globalSettings.Installation.Id}",
             globalSettings.Installation.Key,
             logger)
@@ -121,12 +123,12 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
         await PushUserAsync(userId, PushType.SyncSettings);
     }
 
-    public async Task PushLogOutAsync(Guid userId)
+    public async Task PushLogOutAsync(Guid userId, bool excludeCurrentContext = false)
     {
-        await PushUserAsync(userId, PushType.LogOut);
+        await PushUserAsync(userId, PushType.LogOut, excludeCurrentContext);
     }
 
-    private async Task PushUserAsync(Guid userId, PushType type)
+    private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
         var message = new UserPushNotification
         {
@@ -134,7 +136,7 @@ public class RelayPushNotificationService : BaseIdentityClientService, IPushNoti
             Date = DateTime.UtcNow
         };
 
-        await SendPayloadToUserAsync(userId, type, message, false);
+        await SendPayloadToUserAsync(userId, type, message, excludeCurrentContext);
     }
 
     public async Task PushSyncSendCreateAsync(Send send)

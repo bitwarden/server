@@ -52,12 +52,12 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token)
+    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg)
     {
         return Task.FromResult(0);
     }
 
-    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites)
+    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg)
     {
         return Task.FromResult(0);
     }
@@ -70,11 +70,6 @@ public class NoopMailService : IMailService
     public Task SendTwoFactorEmailAsync(string email, string token)
     {
         return Task.FromResult(0);
-    }
-
-    public Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token)
-    {
-        return Task.CompletedTask;
     }
 
     public Task SendWelcomeEmailAsync(User user)
@@ -234,6 +229,11 @@ public class NoopMailService : IMailService
     }
 
     public Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
     {
         return Task.FromResult(0);
     }

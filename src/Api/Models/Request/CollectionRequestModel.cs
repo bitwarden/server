@@ -13,6 +13,7 @@ public class CollectionRequestModel
     [StringLength(300)]
     public string ExternalId { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Groups { get; set; }
+    public IEnumerable<SelectionReadOnlyRequestModel> Users { get; set; }
 
     public Collection ToCollection(Guid orgId)
     {
@@ -22,10 +23,28 @@ public class CollectionRequestModel
         });
     }
 
-    public Collection ToCollection(Collection existingCollection)
+    public virtual Collection ToCollection(Collection existingCollection)
     {
         existingCollection.Name = Name;
         existingCollection.ExternalId = ExternalId;
         return existingCollection;
+    }
+}
+
+public class CollectionBulkDeleteRequestModel
+{
+    [Required]
+    public IEnumerable<string> Ids { get; set; }
+    public string OrganizationId { get; set; }
+}
+
+public class CollectionWithIdRequestModel : CollectionRequestModel
+{
+    public Guid? Id { get; set; }
+
+    public override Collection ToCollection(Collection existingCollection)
+    {
+        existingCollection.Id = Id ?? Guid.Empty;
+        return base.ToCollection(existingCollection);
     }
 }

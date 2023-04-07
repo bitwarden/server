@@ -26,6 +26,10 @@ public class EventTableEntity : TableEntity, IEvent
         DeviceType = e.DeviceType;
         IpAddress = e.IpAddress;
         ActingUserId = e.ActingUserId;
+        SystemUser = e.SystemUser;
+        DomainName = e.DomainName;
+        SecretId = e.SecretId;
+        ServiceAccountId = e.ServiceAccountId;
     }
 
     public DateTime Date { get; set; }
@@ -44,6 +48,10 @@ public class EventTableEntity : TableEntity, IEvent
     public DeviceType? DeviceType { get; set; }
     public string IpAddress { get; set; }
     public Guid? ActingUserId { get; set; }
+    public EventSystemUser? SystemUser { get; set; }
+    public string DomainName { get; set; }
+    public Guid? SecretId { get; set; }
+    public Guid? ServiceAccountId { get; set; }
 
     public override IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
     {
@@ -69,6 +77,16 @@ public class EventTableEntity : TableEntity, IEvent
             result.Add(deviceTypeName, new EntityProperty((int?)DeviceType));
         }
 
+        var systemUserTypeName = nameof(SystemUser);
+        if (result.ContainsKey(systemUserTypeName))
+        {
+            result[systemUserTypeName] = new EntityProperty((int?)SystemUser);
+        }
+        else
+        {
+            result.Add(systemUserTypeName, new EntityProperty((int?)SystemUser));
+        }
+
         return result;
     }
 
@@ -87,6 +105,12 @@ public class EventTableEntity : TableEntity, IEvent
         if (properties.ContainsKey(deviceTypeName) && properties[deviceTypeName].Int32Value.HasValue)
         {
             DeviceType = (DeviceType)properties[deviceTypeName].Int32Value.Value;
+        }
+
+        var systemUserTypeName = nameof(SystemUser);
+        if (properties.ContainsKey(systemUserTypeName) && properties[systemUserTypeName].Int32Value.HasValue)
+        {
+            SystemUser = (EventSystemUser)properties[systemUserTypeName].Int32Value.Value;
         }
     }
 
@@ -131,6 +155,24 @@ public class EventTableEntity : TableEntity, IEvent
             {
                 PartitionKey = pKey,
                 RowKey = $"CipherId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.OrganizationId.HasValue && e.ServiceAccountId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"ServiceAccountId={e.ServiceAccountId}__Date={dateKey}__Uniquifier={uniquifier}"
+            });
+        }
+
+        if (e.SecretId.HasValue)
+        {
+            entities.Add(new EventTableEntity(e)
+            {
+                PartitionKey = pKey,
+                RowKey = $"SecretId={e.CipherId}__Date={dateKey}__Uniquifier={uniquifier}"
             });
         }
 

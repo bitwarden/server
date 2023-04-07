@@ -6,11 +6,11 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.LoginFeatures.PasswordlessLogin.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Bit.Core.Utilities.Duo;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -28,6 +28,7 @@ public class TwoFactorController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
+    private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
 
     public TwoFactorController(
         IUserService userService,
@@ -35,7 +36,8 @@ public class TwoFactorController : Controller
         IOrganizationService organizationService,
         GlobalSettings globalSettings,
         UserManager<User> userManager,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IVerifyAuthRequestCommand verifyAuthRequestCommand)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -43,6 +45,7 @@ public class TwoFactorController : Controller
         _globalSettings = globalSettings;
         _userManager = userManager;
         _currentContext = currentContext;
+        _verifyAuthRequestCommand = verifyAuthRequestCommand;
     }
 
     [HttpGet("")]
@@ -149,7 +152,7 @@ public class TwoFactorController : Controller
         try
         {
             var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
-            duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
+            await duoApi.JSONApiCall("GET", "/auth/v2/check");
         }
         catch (DuoException)
         {
@@ -206,7 +209,7 @@ public class TwoFactorController : Controller
         try
         {
             var duoApi = new DuoApi(model.IntegrationKey, model.SecretKey, model.Host);
-            duoApi.JSONApiCall<object>("GET", "/auth/v2/check");
+            await duoApi.JSONApiCall("GET", "/auth/v2/check");
         }
         catch (DuoException)
         {
@@ -285,18 +288,19 @@ public class TwoFactorController : Controller
         var user = await _userManager.FindByEmailAsync(model.Email.ToLowerInvariant());
         if (user != null)
         {
-            if (await _userService.VerifySecretAsync(user, model.Secret))
+            // check if 2FA email is from passwordless
+            if (!string.IsNullOrEmpty(model.AuthRequestAccessCode))
             {
-                var isBecauseNewDeviceLogin = false;
-                if (user.GetTwoFactorProvider(TwoFactorProviderType.Email) is null
-                    &&
-                    await _userService.Needs2FABecauseNewDeviceAsync(user, model.DeviceIdentifier, null))
+                if (await _verifyAuthRequestCommand
+                        .VerifyAuthRequestAsync(new Guid(model.AuthRequestId), model.AuthRequestAccessCode))
                 {
-                    model.ToUser(user);
-                    isBecauseNewDeviceLogin = true;
+                    await _userService.SendTwoFactorEmailAsync(user);
+                    return;
                 }
-
-                await _userService.SendTwoFactorEmailAsync(user, isBecauseNewDeviceLogin);
+            }
+            else if (await _userService.VerifySecretAsync(user, model.Secret))
+            {
+                await _userService.SendTwoFactorEmailAsync(user);
                 return;
             }
         }
@@ -378,41 +382,18 @@ public class TwoFactorController : Controller
         }
     }
 
+    [Obsolete("Leaving this for backwards compatibilty on clients")]
     [HttpGet("get-device-verification-settings")]
-    public async Task<DeviceVerificationResponseModel> GetDeviceVerificationSettings()
+    public Task<DeviceVerificationResponseModel> GetDeviceVerificationSettings()
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        if (User.Claims.HasSsoIdP())
-        {
-            return new DeviceVerificationResponseModel(false, false);
-        }
-
-        var canUserEditDeviceVerificationSettings = _userService.CanEditDeviceVerificationSettings(user);
-        return new DeviceVerificationResponseModel(canUserEditDeviceVerificationSettings, canUserEditDeviceVerificationSettings && user.UnknownDeviceVerificationEnabled);
+        return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
+    [Obsolete("Leaving this for backwards compatibilty on clients")]
     [HttpPut("device-verification-settings")]
-    public async Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings([FromBody] DeviceVerificationRequestModel model)
+    public Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings([FromBody] DeviceVerificationRequestModel model)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-        if (!_userService.CanEditDeviceVerificationSettings(user)
-            || User.Claims.HasSsoIdP())
-        {
-            throw new InvalidOperationException("Can't update device verification settings");
-        }
-
-        model.ToUser(user);
-        await _userService.SaveUserAsync(user);
-        return new DeviceVerificationResponseModel(true, user.UnknownDeviceVerificationEnabled);
+        return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
     private async Task<User> CheckAsync(SecretVerificationRequestModel model, bool premium)

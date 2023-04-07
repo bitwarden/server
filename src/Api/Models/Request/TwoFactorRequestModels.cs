@@ -3,6 +3,7 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Utilities;
 using Fido2NetLib;
 
 namespace Bit.Api.Models.Request;
@@ -102,9 +103,9 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         return extistingOrg;
     }
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (!Core.Utilities.Duo.DuoApi.ValidHost(Host))
+        if (!DuoApi.ValidHost(Host))
         {
             yield return new ValidationResult("Host is invalid.", new string[] { nameof(Host) });
         }
@@ -160,7 +161,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
         return keyValue.Substring(0, 12);
     }
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrWhiteSpace(Key1) && string.IsNullOrWhiteSpace(Key2) && string.IsNullOrWhiteSpace(Key3) &&
             string.IsNullOrWhiteSpace(Key4) && string.IsNullOrWhiteSpace(Key5))
@@ -202,7 +203,7 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     [StringLength(256)]
     public string Email { get; set; }
 
-    public string DeviceIdentifier { get; set; }
+    public string AuthRequestId { get; set; }
 
     public User ToUser(User extistingUser)
     {

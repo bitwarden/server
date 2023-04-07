@@ -91,4 +91,5 @@ public enum GlobalEquivalentDomainsType : byte
     Ubisoft = 86,
     TransferWise = 87,
     TakeawayEU = 88,
+    Atlassian = 89,
 }

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
 
@@ -15,7 +16,7 @@ public interface IPushNotificationService
     Task PushSyncVaultAsync(Guid userId);
     Task PushSyncOrgKeysAsync(Guid userId);
     Task PushSyncSettingsAsync(Guid userId);
-    Task PushLogOutAsync(Guid userId);
+    Task PushLogOutAsync(Guid userId, bool excludeCurrentContextFromPush = false);
     Task PushSyncSendCreateAsync(Send send);
     Task PushSyncSendUpdateAsync(Send send);
     Task PushSyncSendDeleteAsync(Send send);

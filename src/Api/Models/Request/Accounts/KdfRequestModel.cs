@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Accounts;
 
@@ -9,22 +10,16 @@ public class KdfRequestModel : PasswordRequestModel, IValidatableObject
     public KdfType? Kdf { get; set; }
     [Required]
     public int? KdfIterations { get; set; }
+    public int? KdfMemory { get; set; }
+    public int? KdfParallelism { get; set; }
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (Kdf.HasValue && KdfIterations.HasValue)
         {
-            switch (Kdf.Value)
-            {
-                case KdfType.PBKDF2_SHA256:
-                    if (KdfIterations.Value < 5000 || KdfIterations.Value > 2_000_000)
-                    {
-                        yield return new ValidationResult("KDF iterations must be between 5000 and 2000000.");
-                    }
-                    break;
-                default:
-                    break;
-            }
+            return KdfSettingsValidator.Validate(Kdf.Value, KdfIterations.Value, KdfMemory, KdfParallelism);
         }
+
+        return Enumerable.Empty<ValidationResult>();
     }
 }

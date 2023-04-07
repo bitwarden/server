@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.IdentityServer;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;
 using Bit.Core.Models.Api.Response.OrganizationSponsorships;
 using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
@@ -30,7 +31,7 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
         httpFactory,
         globalSettings.Installation.ApiUri,
         globalSettings.Installation.IdentityUri,
-        "api.installation",
+        ApiScopes.ApiInstallation,
         $"installation.{globalSettings.Installation.Id}",
         globalSettings.Installation.Key,
         logger)
@@ -47,20 +48,13 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
         {
             throw new BadRequestException("Failed to sync instance with cloud - Cloud communication is disabled in global settings");
         }
-        if (!billingSyncConnection.Enabled)
+
+        if (!billingSyncConnection.Validate<BillingSyncConfig>(out var exception))
         {
-            throw new BadRequestException($"Billing Sync Key disabled for organization {organizationId}");
-        }
-        if (string.IsNullOrWhiteSpace(billingSyncConnection.Config))
-        {
-            throw new BadRequestException($"No Billing Sync Key known for organization {organizationId}");
-        }
-        var billingSyncConfig = billingSyncConnection.GetConfig<BillingSyncConfig>();
-        if (billingSyncConfig == null || string.IsNullOrWhiteSpace(billingSyncConfig.BillingSyncKey))
-        {
-            throw new BadRequestException($"Failed to get Billing Sync Key for organization {organizationId}");
+            throw new BadRequestException(exception);
         }
 
+        var billingSyncConfig = billingSyncConnection.GetConfig<BillingSyncConfig>();
         var organizationSponsorshipsDict = (await _organizationSponsorshipRepository.GetManyBySponsoringOrganizationAsync(organizationId))
             .ToDictionary(i => i.SponsoringOrganizationUserId);
         if (!organizationSponsorshipsDict.Any())
@@ -72,12 +66,13 @@ public class SelfHostedSyncSponsorshipsCommand : BaseIdentityClientService, ISel
 
         foreach (var orgSponsorshipsBatch in organizationSponsorshipsDict.Values.Chunk(1000))
         {
-            var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(HttpMethod.Post, "organization/sponsorship/sync", new OrganizationSponsorshipSyncRequestModel
-            {
-                BillingSyncKey = billingSyncConfig.BillingSyncKey,
-                SponsoringOrganizationCloudId = cloudOrganizationId,
-                SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel(s))
-            });
+            var response = await SendAsync<OrganizationSponsorshipSyncRequestModel, OrganizationSponsorshipSyncResponseModel>(
+                HttpMethod.Post, "organization/sponsorship/sync", new OrganizationSponsorshipSyncRequestModel
+                {
+                    BillingSyncKey = billingSyncConfig.BillingSyncKey,
+                    SponsoringOrganizationCloudId = cloudOrganizationId,
+                    SponsorshipsBatch = orgSponsorshipsBatch.Select(s => new OrganizationSponsorshipRequestModel(s))
+                }, true);
 
             if (response == null)
             {

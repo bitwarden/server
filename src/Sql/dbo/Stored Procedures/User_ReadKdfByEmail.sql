@@ -6,7 +6,9 @@ BEGIN
 
     SELECT
         [Kdf],
-        [KdfIterations]
+        [KdfIterations],
+        [KdfMemory],
+        [KdfParallelism]
     FROM
         [dbo].[User]
     WHERE

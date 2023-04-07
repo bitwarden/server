@@ -5,7 +5,6 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Bitwarden</title>
 </head>
-
 <body style="-webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none; height: 100%; line-height: 25px; width: 100% !important; margin: 0;" bgcolor="#f6f6f6">
     <style type="text/css">
         ﻿ body {
@@ -47,7 +46,18 @@
             background-color: #f6f6f6;
         }
 
-        @media only screen and (max-width: 600px) {
+        .white-title {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            box-sizing: border-box;
+            font-size: 24px;
+            line-height: 32px;
+            font-weight: 700;
+            -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: none;
+            color: #ffffff;
+        }
+
+        @media only screen and (max-width: 350px) {
             body {
                 padding: 0 !important;
             }
@@ -91,64 +101,129 @@
             .indented {
                 padding-left: 10px;
             }
+
+            .title-header-text {
+                width: 100%;
+                display: block;
+                padding-top: 75px;
+                padding-bottom: 0px;
+                padding-left: 35px;
+                padding-right: 20px;
+            }
+
+            .title-header-image {
+                width: 100%;
+                display: block;
+            }
+
+            .footer-image {
+                display: none;
+            }
+
+            .footer-text {
+                width: 100%;
+            }
         }
 
-        @media only screen and (min-width: 600px) {
+        @media only screen and (min-width: 350px) {
+            .title-header-text {
+                width: 65%;
+                display: inline-block;
+                padding-top: 75px;
+                padding-bottom: 75px;
+                padding-left: 35px;
+                padding-right: 20px;
+            }
+
+            .title-header-image {
+                display: inline-block;
+            }
+
             {{! Fix for Apple Mail }}
             .content-table {
                 width: 600px !important;
             }
+
+            .footer-image {
+                display: block;
+            }
+
+            .footer-text {
+                width: 65%;
+            }
         }
+
+        /* Component styling - these are explicitly applied via classes so that they can be
+        gradually introduced as we update templates.*/
+        a.inline-link {
+            font-weight: bold;
+            color: #175DDC;
+            text-decoration: none;
+        }
+
+        br.line-break {
+            margin: 0;
+            box-sizing: border-box;
+            color: #333;
+            line-height: 25px;
+            -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: none;
+        }
+
     </style>
     {{! Yahoo center fix }}
-    <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6"><tr><td class="container" width="100%" align="center">
-        {{! 600px container }}
-        <table cellpadding="0" cellspacing="0" width="100%" class="content-table">
-            <tr>
-                <td></td> {{! Left column (center fix) }}
-                <td class="content" align="center" valign="top" width="600" style="padding-bottom: 20px;">
-                    <table class="header" cellpadding="0" cellspacing="0" width="100%">
-                        <tr>
-                            <td valign="middle" class="aligncenter middle logo" style="padding: 20px 0 10px;" align="center">
-                                <img src="https://bitwarden.com/images/logo-horizontal-blue.png" alt="" width="250" height="39" />
-                            </td>
-                        </tr>
-                    </table>
-                    <table class="main" cellpadding="0" cellspacing="0" style="border: 1px solid #e9e9e9; border-radius: 3px;" bgcolor="white">
-                        <tr>
-                            <td class="content-wrap" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 20px; -webkit-text-size-adjust: none;" valign="top">
+    <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6">
+        <tr>
+            <td class="container" width="100%" align="center">
+                {{! 600px container }}
+                <table cellpadding="0" cellspacing="0" width="100%" class="content-table">
+                    <tr>
+                        <td></td> {{! Left column (center fix) }}
+                        <td class="content" align="center" valign="top" width="600" style="padding-bottom: 20px;">
+                            <table class="header" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td valign="middle" class="aligncenter middle logo" style="padding: 20px 0 10px;" align="center">
+                                        <img src="https://bitwarden.com/images/logo-horizontal-blue.png" alt="" width="250" height="39" />
+                                    </td>
+                                </tr>
+                            </table>
+                            <table class="main" cellpadding="0" cellspacing="0" style="border: 1px solid #e9e9e9; border-radius: 3px;" bgcolor="white">
+                                <tr>
+                                    <td class="content-wrap" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 20px; -webkit-text-size-adjust: none;" valign="top">
 
-                                {{>@partial-block}}
+                                        {{>@partial-block}}
 
-                            </td>
-                        </tr>
-                    </table>
-                    <table class="footer" cellpadding="0" cellspacing="0" width="100%" style="margin: 0; width: 100%;">
-                        <tr>
-                            <td class="aligncenter social-icons" align="center" style="margin: 0; padding: 15px 0 0 0;" valign="top">
-                                <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
-                                    <tr>
-                                        <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://twitter.com/bitwarden" target="_blank"><img src="https://bitwarden.com/images/mail-twitter.png" alt="Twitter" width="30" height="30" /></a></td>
-                                        <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://www.reddit.com/r/Bitwarden/" target="_blank"><img src="https://bitwarden.com/images/mail-reddit.png" alt="Reddit" width="30" height="30" /></a></td>
-                                        <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://community.bitwarden.com/" target="_blank"><img src="https://bitwarden.com/images/mail-discourse.png" alt="CommunityForums" width="30" height="30" /></a></td>
-                                        <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://github.com/bitwarden" target="_blank"><img src="https://bitwarden.com/images/mail-github.png" alt="GitHub" width="30" height="30" /></a></td>
-                                        <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://www.youtube.com/channel/UCId9a_jQqvJre0_dE2lE_Rw" target="_blank"><img src="https://bitwarden.com/images/mail-youtube.png" alt="Youtube" width="30" height="30" /></a></td>
-                                        <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://www.linkedin.com/company/bitwarden1/" target="_blank"><img src="https://bitwarden.com/images/mail-linkedin.png" alt="LinkedIn" width="30" height="30" /></a></td>
-                                        <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://www.facebook.com/bitwarden/" target="_blank"><img src="https://bitwarden.com/images/mail-facebook.png" alt="Facebook" width="30" height="30" /></a></td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 14px; color: #666666; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 15px 0 0 0; -webkit-text-size-adjust: none; text-align: center;" valign="top">
-                                &copy; {{CurrentYear}} Bitwarden Inc.
-                            </td>
-                        </tr>
-                    </table>
-                </td>
-                <td></td> {{! Right column (center fix) }}
-            </tr>
-        </table>
-    </td></tr></table>
+                                    </td>
+                                </tr>
+                            </table>
+                            <table class="footer" cellpadding="0" cellspacing="0" width="100%" style="margin: 0; width: 100%;">
+                                <tr>
+                                    <td class="aligncenter social-icons" align="center" style="margin: 0; padding: 15px 0 0 0;" valign="top">
+                                        <table cellpadding="0" cellspacing="0" style="margin: 0 auto;">
+                                            <tr>
+                                                <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://twitter.com/bitwarden" target="_blank"><img src="https://bitwarden.com/images/mail-twitter.png" alt="Twitter" width="30" height="30" /></a></td>
+                                                <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://www.reddit.com/r/Bitwarden/" target="_blank"><img src="https://bitwarden.com/images/mail-reddit.png" alt="Reddit" width="30" height="30" /></a></td>
+                                                <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://community.bitwarden.com/" target="_blank"><img src="https://bitwarden.com/images/mail-discourse.png" alt="CommunityForums" width="30" height="30" /></a></td>
+                                                <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://github.com/bitwarden" target="_blank"><img src="https://bitwarden.com/images/mail-github.png" alt="GitHub" width="30" height="30" /></a></td>
+                                                <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://www.youtube.com/channel/UCId9a_jQqvJre0_dE2lE_Rw" target="_blank"><img src="https://bitwarden.com/images/mail-youtube.png" alt="Youtube" width="30" height="30" /></a></td>
+                                                <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://www.linkedin.com/company/bitwarden1/" target="_blank"><img src="https://bitwarden.com/images/mail-linkedin.png" alt="LinkedIn" width="30" height="30" /></a></td>
+                                                <td style="margin: 0; padding: 0 10px;" valign="top"><a href="https://www.facebook.com/bitwarden/" target="_blank"><img src="https://bitwarden.com/images/mail-facebook.png" alt="Facebook" width="30" height="30" /></a></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 14px; color: #666666; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 15px 0 0 0; -webkit-text-size-adjust: none; text-align: center;" valign="top">
+                                        &copy; {{CurrentYear}} Bitwarden Inc.
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td></td> {{! Right column (center fix) }}
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

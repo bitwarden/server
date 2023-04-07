@@ -42,7 +42,24 @@ public class Startup
         StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
         // Repositories
-        services.AddSqlServerRepositories(globalSettings);
+        var databaseProvider = services.AddDatabaseRepositories(globalSettings);
+        switch (databaseProvider)
+        {
+            case Core.Enums.SupportedDatabaseProviders.SqlServer:
+                services.AddSingleton<IDbMigrator, Migrator.SqlServerDbMigrator>();
+                break;
+            case Core.Enums.SupportedDatabaseProviders.MySql:
+                services.AddSingleton<IDbMigrator, MySqlMigrations.MySqlDbMigrator>();
+                break;
+            case Core.Enums.SupportedDatabaseProviders.Postgres:
+                services.AddSingleton<IDbMigrator, PostgresMigrations.PostgresDbMigrator>();
+                break;
+            case Core.Enums.SupportedDatabaseProviders.Sqlite:
+                services.AddSingleton<IDbMigrator, SqliteMigrations.SqliteDbMigrator>();
+                break;
+            default:
+                break;
+        }
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
@@ -66,9 +83,9 @@ public class Startup
         services.AddDefaultServices(globalSettings);
 
 #if OSS
-            services.AddOosServices();
+        services.AddOosServices();
 #else
-        services.AddCommCoreServices();
+        services.AddCommercialCoreServices();
 #endif
 
         // Mvc

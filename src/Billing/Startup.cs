@@ -33,8 +33,11 @@ public class Startup
         StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;
         StripeConfiguration.MaxNetworkRetries = globalSettings.Stripe.MaxNetworkRetries;
 
+        // Data Protection
+        services.AddCustomDataProtectionServices(Environment, globalSettings);
+
         // Repositories
-        services.AddSqlServerRepositories(globalSettings);
+        services.AddDatabaseRepositories(globalSettings);
 
         // PayPal Client
         services.AddSingleton<Utilities.PayPalIpnClient>();

@@ -20,4 +20,8 @@ public interface IEvent
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }
     DateTime Date { get; set; }
+    EventSystemUser? SystemUser { get; set; }
+    string DomainName { get; set; }
+    Guid? SecretId { get; set; }
+    Guid? ServiceAccountId { get; set; }
 }

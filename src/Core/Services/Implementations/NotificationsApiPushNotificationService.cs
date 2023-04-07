@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -121,12 +122,12 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
         await PushUserAsync(userId, PushType.SyncSettings);
     }
 
-    public async Task PushLogOutAsync(Guid userId)
+    public async Task PushLogOutAsync(Guid userId, bool excludeCurrentContext)
     {
-        await PushUserAsync(userId, PushType.LogOut);
+        await PushUserAsync(userId, PushType.LogOut, excludeCurrentContext);
     }
 
-    private async Task PushUserAsync(Guid userId, PushType type)
+    private async Task PushUserAsync(Guid userId, PushType type, bool excludeCurrentContext = false)
     {
         var message = new UserPushNotification
         {
@@ -134,7 +135,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
             Date = DateTime.UtcNow
         };
 
-        await SendMessageAsync(type, message, false);
+        await SendMessageAsync(type, message, excludeCurrentContext);
     }
 
     public async Task PushAuthRequestAsync(AuthRequest authRequest)

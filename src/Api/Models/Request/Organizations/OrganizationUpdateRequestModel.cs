@@ -12,8 +12,6 @@ public class OrganizationUpdateRequestModel
     public string Name { get; set; }
     [StringLength(50)]
     public string BusinessName { get; set; }
-    [StringLength(50)]
-    public string Identifier { get; set; }
     [EmailAddress]
     [Required]
     [StringLength(256)]
@@ -30,7 +28,6 @@ public class OrganizationUpdateRequestModel
             existingOrganization.BusinessName = BusinessName;
             existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
         }
-        existingOrganization.Identifier = Identifier;
         Keys?.ToOrganization(existingOrganization);
         return existingOrganization;
     }

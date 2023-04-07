@@ -1,8 +1,10 @@
-﻿namespace Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.Vault.Models.Request;
+
+namespace Bit.Api.Models.Request.Organizations;
 
 public class ImportOrganizationCiphersRequestModel
 {
-    public CollectionRequestModel[] Collections { get; set; }
+    public CollectionWithIdRequestModel[] Collections { get; set; }
     public CipherRequestModel[] Ciphers { get; set; }
     public KeyValuePair<int, int>[] CollectionRelationships { get; set; }
 }

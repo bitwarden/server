@@ -11,7 +11,8 @@
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
-    @ResetPasswordKey VARCHAR(MAX)
+    @ResetPasswordKey VARCHAR(MAX),
+    @AccessSecretsManager BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -30,7 +31,8 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [Permissions] = @Permissions,
-        [ResetPasswordKey] = @ResetPasswordKey
+        [ResetPasswordKey] = @ResetPasswordKey,
+        [AccessSecretsManager] = @AccessSecretsManager
     WHERE
         [Id] = @Id
 

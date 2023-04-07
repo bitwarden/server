@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
@@ -44,7 +45,7 @@ public class MultiServicePushNotificationService : IPushNotificationService
             if (CoreHelpers.SettingHasValue(globalSettings.NotificationHub.ConnectionString))
             {
                 _services.Add(new NotificationHubPushNotificationService(installationDeviceRepository,
-                    globalSettings, httpContextAccessor));
+                    globalSettings, httpContextAccessor, hubLogger));
             }
             if (CoreHelpers.SettingHasValue(globalSettings.Notifications?.ConnectionString))
             {
@@ -115,9 +116,9 @@ public class MultiServicePushNotificationService : IPushNotificationService
         return Task.FromResult(0);
     }
 
-    public Task PushLogOutAsync(Guid userId)
+    public Task PushLogOutAsync(Guid userId, bool excludeCurrentContext = false)
     {
-        PushToServices((s) => s.PushLogOutAsync(userId));
+        PushToServices((s) => s.PushLogOutAsync(userId, excludeCurrentContext));
         return Task.FromResult(0);
     }
 

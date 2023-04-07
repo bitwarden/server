@@ -13,13 +13,13 @@ public class AuthRequest : ITableObject<Guid>
     public Enums.DeviceType RequestDeviceType { get; set; }
     [MaxLength(50)]
     public string RequestIpAddress { get; set; }
-    public string RequestFingerprint { get; set; }
     public Guid? ResponseDeviceId { get; set; }
     [MaxLength(25)]
     public string AccessCode { get; set; }
     public string PublicKey { get; set; }
     public string Key { get; set; }
     public string MasterPasswordHash { get; set; }
+    public bool? Approved { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
     public DateTime? ResponseDate { get; set; }
     public DateTime? AuthenticationDate { get; set; }

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <UserSecretsId>9f1cd3e0-70f2-4921-8068-b2538fd7c3f7</UserSecretsId>
@@ -6,7 +6,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
-    <ProjectReference Include="..\..\src\Api\Api.csproj" />
+    <ProjectReference Include="..\..\src\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,12 +21,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Scripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
-    <None Remove="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
+    <None Remove="HelperScripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
+    <None Remove="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Scripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
-    <EmbeddedResource Include="Scripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
+    <EmbeddedResource Include="HelperScripts\2021-09-21_01_SplitManageCollectionsPermission.sql" />
+    <EmbeddedResource Include="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.sql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.sql" />
   </ItemGroup>
