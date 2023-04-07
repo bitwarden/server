@@ -10,7 +10,10 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Braintree;
 using NSubstitute;
 using Xunit;
+using Customer = Braintree.Customer;
+using PaymentMethod = Braintree.PaymentMethod;
 using PaymentMethodType = Bit.Core.Enums.PaymentMethodType;
+using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Core.Test.Services;
 
@@ -65,6 +68,9 @@ public class StripePaymentServiceTests
             c.PaymentMethod == null &&
             !c.Metadata.Any() &&
             c.InvoiceSettings.DefaultPaymentMethod == null &&
+            c.InvoiceSettings.CustomFields != null &&
+            c.InvoiceSettings.CustomFields[0].Name == "Organization" &&
+            c.InvoiceSettings.CustomFields[0].Value == organization.SubscriberName() &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
             c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
             c.Address.Line1 == taxInfo.BillingAddressLine1 &&
@@ -115,6 +121,9 @@ public class StripePaymentServiceTests
             c.PaymentMethod == paymentToken &&
             !c.Metadata.Any() &&
             c.InvoiceSettings.DefaultPaymentMethod == paymentToken &&
+            c.InvoiceSettings.CustomFields != null &&
+            c.InvoiceSettings.CustomFields[0].Name == "Organization" &&
+            c.InvoiceSettings.CustomFields[0].Value == organization.SubscriberName() &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
             c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
             c.Address.Line1 == taxInfo.BillingAddressLine1 &&
