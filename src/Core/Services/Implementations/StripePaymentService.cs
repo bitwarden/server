@@ -127,6 +127,7 @@ public class StripePaymentService : IPaymentService
                 {
                     DefaultPaymentMethod = stipeCustomerPaymentMethodId
                 },
+                Coupon = provider ? ProviderDiscountId : null,
                 Address = new Stripe.AddressOptions
                 {
                     Country = taxInfo.BillingAddressCountry,
@@ -148,10 +149,6 @@ public class StripePaymentService : IPaymentService
             });
             subCreateOptions.AddExpand("latest_invoice.payment_intent");
             subCreateOptions.Customer = customer.Id;
-            if (provider)
-            {
-                subCreateOptions.Coupon = ProviderDiscountId;
-            }
             subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
             if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
             {
