@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Auth.Models;
+namespace Bit.Infrastructure.EntityFramework.Models;
 
 public class Grant : Core.Auth.Entities.Grant
 {
