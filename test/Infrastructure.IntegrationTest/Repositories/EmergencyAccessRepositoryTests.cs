@@ -15,7 +15,7 @@ public class EmergencyAccessRepositoriesTests
         var grantorUser = await userRepository.CreateAsync(new User
         {
             Name = "Test Grantor User",
-            Email = "test+grantor@email.com",
+            Email = $"test+grantor{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -23,7 +23,7 @@ public class EmergencyAccessRepositoriesTests
         var granteeUser = await userRepository.CreateAsync(new User
         {
             Name = "Test Grantee User",
-            Email = "test+grantee@email.com",
+            Email = $"test+grantee{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });

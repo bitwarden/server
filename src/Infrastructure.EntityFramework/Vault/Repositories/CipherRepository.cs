@@ -112,6 +112,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             var entity = Mapper.Map<Cipher>((Core.Vault.Entities.Cipher)cipher);
             await dbContext.AddAsync(entity);
 
+            await dbContext.SaveChangesAsync();
+
             if (cipher.OrganizationId.HasValue)
             {
                 await dbContext.UserBumpAccountRevisionDateByCipherIdAsync(cipher.Id, cipher.OrganizationId.Value);

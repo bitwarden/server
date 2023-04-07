@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
@@ -61,6 +62,10 @@ public class CipherRepositoryTests
             SecurityStamp = "stamp",
         });
 
+        helper.ClearTracker();
+
+        user = await userRepository.GetByIdAsync(user.Id);
+
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Organization",
@@ -68,7 +73,7 @@ public class CipherRepositoryTests
             Plan = "Test" // TODO: EF does not enforce this as NOT NULL
         });
 
-        await organizationUserRepository.CreateAsync(new OrganizationUser
+        var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             UserId = user.Id,
             OrganizationId = organization.Id,
@@ -80,6 +85,18 @@ public class CipherRepositoryTests
         {
             Name = "Test Collection",
             OrganizationId = organization.Id
+        });
+
+        await Task.Delay(100);
+
+        await collectionRepository.UpdateUsersAsync(collection.Id, new []
+        {
+            new CollectionAccessSelection
+            {
+                Id = orgUser.Id,
+                HidePasswords = true,
+                ReadOnly = true,
+            },
         });
 
         helper.ClearTracker();
