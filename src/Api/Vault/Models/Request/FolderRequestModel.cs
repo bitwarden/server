@@ -19,7 +19,7 @@ public class FolderRequestModel
         });
     }
 
-    public Folder ToFolder(Folder existingFolder)
+    public virtual Folder ToFolder(Folder existingFolder)
     {
         existingFolder.Name = Name;
         return existingFolder;
@@ -28,5 +28,11 @@ public class FolderRequestModel
 
 public class FolderWithIdRequestModel : FolderRequestModel
 {
-    public Guid Id { get; set; }
+    public Guid? Id { get; set; }
+
+    public override Folder ToFolder(Folder existingFolder)
+    {
+        existingFolder.Id = Id ?? Guid.Empty;
+        return base.ToFolder(existingFolder);
+    }
 }
