@@ -19,6 +19,7 @@ internal static class HealthCheckServices
         }
 
         //smtp mail server
+        //TODO: Add mail check for production
         if (environment.IsDevelopment())
         {
             builder.AddSmtpHealthCheck(setup =>
@@ -31,6 +32,8 @@ internal static class HealthCheckServices
 
         builder.AddUrlGroup(identityUri, "identity_server")
             .AddRedis(globalSettings.Redis.ConnectionString);
+        
+        //TODO: Add Azure queue health check
     }
     private static string GetConnectionString(GlobalSettings globalSettings)
     {
