@@ -33,7 +33,6 @@ internal static class HealthCheckServices
 
         builder.AddUrlGroup(identityUri, "identity_server");
     }
-
     private static string GetConnectionString(GlobalSettings globalSettings)
     {
         var selectedDatabaseProvider = globalSettings.DatabaseProvider.ToLowerInvariant();
@@ -57,7 +56,8 @@ internal static class HealthCheckServices
         {
             "postgres" or "postgresql" => healthChecksBuilder.AddNpgSql(connectionString),
             "mysql" or "mariadb" => healthChecksBuilder.AddMySql(connectionString),
-            "sqlserver" => healthChecksBuilder.AddSqlServer(connectionString)
+            "sqlserver" => healthChecksBuilder.AddSqlServer(connectionString),
+            _ => throw new ArgumentOutOfRangeException()
         };
     }
 }
