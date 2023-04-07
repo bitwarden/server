@@ -9,9 +9,8 @@ internal static class HealthCheckServices
     public static void ConfigureHealthCheckServices(this IServiceCollection services,
         GlobalSettings globalSettings, IHostEnvironment environment)
     {
-        var identityUri = new Uri(globalSettings.BaseServiceUri.Identity + "/.well-known/openid-configuration");
-
         var builder = services.AddHealthChecks();
+        var identityUri = new Uri(globalSettings.BaseServiceUri.Identity + "/.well-known/openid-configuration");
 
         if (!string.IsNullOrEmpty(GetConnectionString(globalSettings)))
         {
@@ -30,7 +29,8 @@ internal static class HealthCheckServices
             }, "mail_server");
         }
 
-        builder.AddUrlGroup(identityUri, "identity_server");
+        builder.AddUrlGroup(identityUri, "identity_server")
+            .AddRedis(globalSettings.Redis.ConnectionString);
     }
     private static string GetConnectionString(GlobalSettings globalSettings)
     {

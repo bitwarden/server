@@ -40,6 +40,15 @@
           "Npgsql": "6.0.0"
         }
       },
+      "AspNetCore.HealthChecks.Redis": {
+        "type": "Transitive",
+        "resolved": "6.0.4",
+        "contentHash": "adNNWF6kV8v1HLTmF3b9F5K6ubvgx+S7VqhzA8T/5YuIpRWsCDk8+q3RIDDV8Twvl9pRahLfzCbFrPYxvzmk7g==",
+        "dependencies": {
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.4",
+          "StackExchange.Redis": "2.5.61"
+        }
+      },
       "AspNetCore.HealthChecks.SqlServer": {
         "type": "Transitive",
         "resolved": "6.0.2",
@@ -1558,8 +1567,8 @@
       },
       "StackExchange.Redis": {
         "type": "Transitive",
-        "resolved": "2.5.43",
-        "contentHash": "YQ38jVbX1b5mBi6lizESou+NpV6QZpeo6ofRR6qeuqJ8ePOmhcwhje3nDTNIGEkfPSK0sLuF6pR5rtFyq2F46g==",
+        "resolved": "2.5.61",
+        "contentHash": "h1Gz4itrHL/PQ0GBLTEiPK8bBkOp5SFO6iaRFSSn/x1qltBWENsz/NUxPid6WHX9yf2Tiyzn9D3R7mtnksODxg==",
         "dependencies": {
           "Pipelines.Sockets.Unofficial": "2.2.2",
           "System.Diagnostics.PerformanceCounter": "5.0.0"
@@ -2945,6 +2954,7 @@
           "AspNetCore.HealthChecks.MySql": "[6.0.2, )",
           "AspNetCore.HealthChecks.Network": "[6.0.4, )",
           "AspNetCore.HealthChecks.NpgSql": "[6.0.2, )",
+          "AspNetCore.HealthChecks.Redis": "[6.0.4, )",
           "AspNetCore.HealthChecks.SqlServer": "[6.0.2, )",
           "AspNetCore.HealthChecks.UI.Client": "[6.0.5, )",
           "AspNetCore.HealthChecks.Uris": "[6.0.3, )",
