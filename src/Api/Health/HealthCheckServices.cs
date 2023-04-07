@@ -4,7 +4,6 @@ using HealthChecks.Network.Core;
 
 namespace Bit.Api.Health;
 
-[ExcludeFromCodeCoverage]
 internal static class HealthCheckServices
 {
     public static void ConfigureHealthCheckServices(this IServiceCollection services,
