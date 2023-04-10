@@ -6,13 +6,6 @@ namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
 class OrganizationAuthHandler : AuthorizationHandler<OrganizationOperationRequirement, CurrentContentOrganization>
 {
-    private readonly ICurrentContext _currentContext;
-
-    public OrganizationAuthHandler(ICurrentContext currentContext)
-    {
-        _currentContext = currentContext;
-    }
-
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         OrganizationOperationRequirement requirement,
         CurrentContentOrganization resource)
