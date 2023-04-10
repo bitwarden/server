@@ -69,4 +69,6 @@ public interface ICurrentContext
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);
+    public CurrentContentOrganization? GetOrganization(string orgId);
+    public CurrentContentOrganization? GetOrganization(Guid orgId);
 }

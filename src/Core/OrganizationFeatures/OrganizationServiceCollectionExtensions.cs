@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Models.Business.Tokenables;
+using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
@@ -18,6 +19,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -30,6 +32,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddTokenizers();
+        services.AddAuthorizationHandlers();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
@@ -116,5 +119,11 @@ public static class OrganizationServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>>())
         );
+    }
+
+    private static void AddAuthorizationHandlers(this IServiceCollection services)
+    {
+        services.AddScoped<IAuthorizationHandler, OrganizationAuthHandler>();
+        services.AddScoped<IAuthorizationHandler, GroupsAuthHandler>();
     }
 }

@@ -2,6 +2,7 @@
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,6 +22,7 @@ public class GroupsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
+    private readonly IAuthorizationService _authorizationService;
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -29,7 +31,8 @@ public class GroupsController : Controller
         ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand,
-        IDeleteGroupCommand deleteGroupCommand)
+        IDeleteGroupCommand deleteGroupCommand,
+        IAuthorizationService authorizationService)
     {
         _groupRepository = groupRepository;
         _groupService = groupService;
@@ -38,13 +41,20 @@ public class GroupsController : Controller
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
         _deleteGroupCommand = deleteGroupCommand;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet("{id}")]
     public async Task<GroupResponseModel> Get(string orgId, string id)
     {
         var group = await _groupRepository.GetByIdAsync(new Guid(id));
-        if (group == null || !await _currentContext.ManageGroups(group.OrganizationId))
+        if (group == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, group, GroupsOperations.ReadGroupRequirement);
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
@@ -67,17 +77,16 @@ public class GroupsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(string orgId)
     {
-        var orgIdGuid = new Guid(orgId);
-        var canAccess = await _currentContext.ManageGroups(orgIdGuid) ||
-            await _currentContext.ViewAssignedCollections(orgIdGuid) ||
-            await _currentContext.ViewAllCollections(orgIdGuid) ||
-            await _currentContext.ManageUsers(orgIdGuid);
+        var org = _currentContext.GetOrganization(orgId);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, org, OrganizationOperations.ReadAllGroupsRequirement);
 
-        if (!canAccess)
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
+        var orgIdGuid = new Guid(orgId);
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgIdGuid);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
