@@ -67,10 +67,4 @@ public class ProviderOrganizationRepository :
             return data;
         }
     }
-
-    public async Task<int> GetCountByOrganizationIdsAsync(IEnumerable<Guid> organizationIds)
-    {
-        var query = new ProviderOrganizationCountByOrganizationIdsQuery(organizationIds);
-        return await GetCountFromQuery(query);
-    }
 }

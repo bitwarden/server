@@ -264,7 +264,6 @@
     <Build Include="dbo\Stored Procedures\Policy_Update.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganizationOrganizationDetails_ReadByProviderId.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganizationProviderDetails_ReadByUserId.sql" />
-    <Build Include="dbo\Stored Procedures\ProviderOrganization_ReadCountByOrganizationIds.sql" />
     <Build Include="dbo\Stored Procedures\Provider_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\Organization_UnassignedToProviderSearch.sql" />
     <Build Include="dbo\Stored Procedures\ProviderOrganization_Create.sql" />
