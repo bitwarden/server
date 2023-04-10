@@ -1,4 +1,6 @@
 ﻿using Bit.Core.Settings;
+using Bit.Core.Utilities;
+using HealthChecks.Network.Core;
 
 namespace Bit.Api.Health;
 
@@ -15,17 +17,6 @@ internal static class HealthCheckServices
             //add custom db health check
             builder.AddDatabaseCheck(globalSettings);
         }
-
-        //TODO: Add mail check for production
-        // if (environment.IsDevelopment())
-        // {
-        //     builder.AddSmtpHealthCheck(setup =>
-        //     {
-        //         setup.Host = globalSettings.Mail.Smtp.Host;
-        //         setup.Port = globalSettings.Mail.Smtp.Port;
-        //         setup.ConnectionType = SmtpConnectionType.PLAIN;
-        //     }, "mail_server");
-        // }
 
         builder.AddUrlGroup(identityUri, "identity_server")
             .AddRedis(globalSettings.Redis.ConnectionString)
@@ -61,5 +52,30 @@ internal static class HealthCheckServices
             "sqlserver" => healthChecksBuilder.AddSqlServer(connectionString),
             _ => throw new ArgumentOutOfRangeException()
         };
+    }
+
+    private static IHealthChecksBuilder AddMailCheck(this IHealthChecksBuilder healthChecksBuilder,
+        GlobalSettings globalSettings)
+    {
+        var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
+        if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
+        {
+            //TODO: Add send grid check
+            return healthChecksBuilder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
+        }
+
+        if (awsConfigured)
+        {
+            //TODO: Add AWS SES check
+            return healthChecksBuilder.AddCheck<AmazonSesHealthCheck>(nameof(AmazonSesHealthCheck));
+        }
+
+        //TODO: dev check
+        return healthChecksBuilder.AddSmtpHealthCheck(setup =>
+        {
+            setup.Host = globalSettings.Mail.Smtp.Host;
+            setup.Port = globalSettings.Mail.Smtp.Port;
+            setup.ConnectionType = SmtpConnectionType.PLAIN;
+        }, "dev_mail_server");
     }
 }

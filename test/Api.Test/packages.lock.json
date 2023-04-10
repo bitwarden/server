@@ -112,6 +112,16 @@
           "StackExchange.Redis": "2.5.61"
         }
       },
+      "AspNetCore.HealthChecks.SendGrid": {
+        "type": "Transitive",
+        "resolved": "6.0.2",
+        "contentHash": "VgskjkCUmSpAxil20rZlrj14bMi9aFNdiGLDtDTKjkUU0GYkoyi4HRVEy9Gp0FIgu9ce7quN+dNCpydKvMxjqA==",
+        "dependencies": {
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.2",
+          "Microsoft.Extensions.Http": "6.0.0",
+          "SendGrid": "9.24.4"
+        }
+      },
       "AspNetCore.HealthChecks.SqlServer": {
         "type": "Transitive",
         "resolved": "6.0.2",
@@ -3222,6 +3232,7 @@
           "AspNetCore.HealthChecks.Network": "[6.0.4, )",
           "AspNetCore.HealthChecks.NpgSql": "[6.0.2, )",
           "AspNetCore.HealthChecks.Redis": "[6.0.4, )",
+          "AspNetCore.HealthChecks.SendGrid": "[6.0.2, )",
           "AspNetCore.HealthChecks.SqlServer": "[6.0.2, )",
           "AspNetCore.HealthChecks.UI.Client": "[6.0.5, )",
           "AspNetCore.HealthChecks.Uris": "[6.0.3, )",
