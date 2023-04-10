@@ -19,6 +19,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using DnsClient;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
@@ -176,6 +177,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
+        services.AddSingleton<ILookupClient>(_ =>
+        {
+            var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15) };
+            return new LookupClient(options);
+        });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
         services.AddTokenizers();
