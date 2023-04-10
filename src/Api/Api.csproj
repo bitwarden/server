@@ -30,6 +30,8 @@
   </Choose>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.AzureServiceBus" Version="6.1.0" />
+    <PackageReference Include="AspNetCore.HealthChecks.AzureStorage" Version="6.1.2" />
     <PackageReference Include="AspNetCore.HealthChecks.MySql" Version="6.0.2" />
     <PackageReference Include="AspNetCore.HealthChecks.Network" Version="6.0.4" />
     <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="6.0.2" />

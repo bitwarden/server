@@ -1,6 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Bit.Core.Settings;
-using HealthChecks.Network.Core;
+﻿using Bit.Core.Settings;
 
 namespace Bit.Api.Health;
 
@@ -18,22 +16,24 @@ internal static class HealthCheckServices
             builder.AddDatabaseCheck(globalSettings);
         }
 
-        //smtp mail server
         //TODO: Add mail check for production
-        if (environment.IsDevelopment())
-        {
-            builder.AddSmtpHealthCheck(setup =>
-            {
-                setup.Host = globalSettings.Mail.Smtp.Host;
-                setup.Port = globalSettings.Mail.Smtp.Port;
-                setup.ConnectionType = SmtpConnectionType.PLAIN;
-            }, "mail_server");
-        }
+        // if (environment.IsDevelopment())
+        // {
+        //     builder.AddSmtpHealthCheck(setup =>
+        //     {
+        //         setup.Host = globalSettings.Mail.Smtp.Host;
+        //         setup.Port = globalSettings.Mail.Smtp.Port;
+        //         setup.ConnectionType = SmtpConnectionType.PLAIN;
+        //     }, "mail_server");
+        // }
 
         builder.AddUrlGroup(identityUri, "identity_server")
-            .AddRedis(globalSettings.Redis.ConnectionString);
-        
-        //TODO: Add Azure queue health check
+            .AddRedis(globalSettings.Redis.ConnectionString)
+            .AddAzureQueueStorage(globalSettings.Storage.ConnectionString, name: "storage_queue")
+            .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue")
+            .AddAzureQueueStorage(globalSettings.Notifications.ConnectionString, name: "notifications_queue")
+            .AddAzureServiceBusTopic(s => globalSettings.ServiceBus.ConnectionString,
+                s => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "serviceBus");
     }
     private static string GetConnectionString(GlobalSettings globalSettings)
     {
