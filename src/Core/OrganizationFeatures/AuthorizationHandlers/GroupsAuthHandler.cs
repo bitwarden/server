@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
-class GroupsAuthHandler : AuthorizationHandler<GroupOperationRequirement, Group>
+class GroupsAuthHandler : AuthorizationHandler<CrudOperationRequirement, Group>
 {
     private readonly ICurrentContext _currentContext;
 
@@ -15,10 +15,10 @@ class GroupsAuthHandler : AuthorizationHandler<GroupOperationRequirement, Group>
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        GroupOperationRequirement requirement,
+        CrudOperationRequirement requirement,
         Group resource)
     {
-        if (requirement == GroupsOperations.ReadGroupRequirement)
+        if (requirement == CrudOperations.Read)
         {
             await ReadGroupAsync(context, requirement, resource);
             return;
@@ -26,7 +26,7 @@ class GroupsAuthHandler : AuthorizationHandler<GroupOperationRequirement, Group>
     }
 
     private async Task ReadGroupAsync(AuthorizationHandlerContext context,
-        GroupOperationRequirement requirement,
+        CrudOperationRequirement requirement,
         Group resource)
     {
         var org = _currentContext.GetOrganization(resource.OrganizationId);

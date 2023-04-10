@@ -53,7 +53,7 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, group, GroupsOperations.ReadGroupRequirement);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, group, CrudOperations.Read);
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
