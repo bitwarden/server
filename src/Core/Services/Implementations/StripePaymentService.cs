@@ -16,6 +16,7 @@ public class StripePaymentService : IPaymentService
     private const string PremiumPlanAppleIapId = "premium-annually-appleiap";
     private const decimal PremiumPlanAppleIapPrice = 14.99M;
     private const string StoragePlanId = "storage-gb-annually";
+    private const string ProviderDiscountId = "msp-discount-35";
 
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
@@ -45,7 +46,7 @@ public class StripePaymentService : IPaymentService
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
+        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -124,8 +125,17 @@ public class StripePaymentService : IPaymentService
                 Metadata = stripeCustomerMetadata,
                 InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                 {
-                    DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = org.SubscriberType(),
+                            Value = org.SubscriberName(),
+                        },
+                    },
                 },
+                Coupon = provider ? ProviderDiscountId : null,
                 Address = new Stripe.AddressOptions
                 {
                     Country = taxInfo.BillingAddressCountry,
@@ -427,7 +437,15 @@ public class StripePaymentService : IPaymentService
                 Source = stipeCustomerSourceToken,
                 InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                 {
-                    DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = user.SubscriberType(),
+                            Value = user.SubscriberName(),
+                        },
+                    }
                 },
                 Address = new Stripe.AddressOptions
                 {
@@ -1334,7 +1352,15 @@ public class StripePaymentService : IPaymentService
                     PaymentMethod = stipeCustomerPaymentMethodId,
                     InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                        DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                        CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                        {
+                            new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                            {
+                                Name = subscriber.SubscriberType(),
+                                Value = subscriber.SubscriberName(),
+                            },
+                        }
                     },
                     Address = taxInfo == null ? null : new Stripe.AddressOptions
                     {
@@ -1406,7 +1432,15 @@ public class StripePaymentService : IPaymentService
                     DefaultSource = defaultSourceId,
                     InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethod = defaultPaymentMethodId
+                        DefaultPaymentMethod = defaultPaymentMethodId,
+                        CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                        {
+                            new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                            {
+                                Name = subscriber.SubscriberType(),
+                                Value = subscriber.SubscriberName(),
+                            },
+                        }
                     },
                     Address = taxInfo == null ? null : new Stripe.AddressOptions
                     {
