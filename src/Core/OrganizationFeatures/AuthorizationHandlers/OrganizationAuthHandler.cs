@@ -10,9 +10,15 @@ class OrganizationAuthHandler : AuthorizationHandler<OrganizationOperationRequir
         OrganizationOperationRequirement requirement,
         CurrentContentOrganization resource)
     {
-        if (requirement == OrganizationOperations.ReadAllGroupsRequirement)
+        if (requirement == OrganizationOperations.ReadAllGroups)
         {
             await ReadAllGroupsAsync(context, requirement, resource);
+            return;
+        }
+
+        if (requirement == OrganizationOperations.CreateGroup)
+        {
+            await CreateGroupAsync(context, requirement, resource);
             return;
         }
     }
@@ -32,6 +38,21 @@ class OrganizationAuthHandler : AuthorizationHandler<OrganizationOperationRequir
             (resource.Permissions?.CreateNewCollections ?? false) ||
             (resource.Permissions?.EditAnyCollection ?? false) ||
             (resource.Permissions?.DeleteAnyCollection ?? false);
+
+        if (canAccess)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+
+    private async Task CreateGroupAsync(AuthorizationHandlerContext context,
+        OrganizationOperationRequirement requirement,
+        CurrentContentOrganization resource)
+    {
+        var canAccess = resource.Type == OrganizationUserType.Owner ||
+                        resource.Type == OrganizationUserType.Admin ||
+                        (resource.Permissions?.ManageGroups ?? false);
 
         if (canAccess)
         {

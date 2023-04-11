@@ -5,30 +5,20 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
-class GroupsAuthHandler : AuthorizationHandler<CrudOperationRequirement, Group>
+class GroupAuthHandler : AuthorizationHandler<GroupOperationRequirement, Group>
 {
     private readonly ICurrentContext _currentContext;
 
-    public GroupsAuthHandler(ICurrentContext currentContext)
+    public GroupAuthHandler(ICurrentContext currentContext)
     {
         _currentContext = currentContext;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        CrudOperationRequirement requirement,
+        GroupOperationRequirement requirement,
         Group resource)
     {
-        if (requirement == CrudOperations.Read)
-        {
-            await ReadGroupAsync(context, requirement, resource);
-            return;
-        }
-    }
-
-    private async Task ReadGroupAsync(AuthorizationHandlerContext context,
-        CrudOperationRequirement requirement,
-        Group resource)
-    {
+        // Currently all GroupOperationRequirements have the same permission requirements
         var org = _currentContext.GetOrganization(resource.OrganizationId);
         var canAccess = org.Type == OrganizationUserType.Owner ||
                         org.Type == OrganizationUserType.Admin ||
