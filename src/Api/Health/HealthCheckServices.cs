@@ -1,6 +1,4 @@
 ﻿using Bit.Core.Settings;
-using Bit.Core.Utilities;
-using HealthChecks.Network.Core;
 
 namespace Bit.Api.Health;
 
@@ -24,7 +22,17 @@ internal static class HealthCheckServices
             .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue")
             .AddAzureQueueStorage(globalSettings.Notifications.ConnectionString, name: "notifications_queue")
             .AddAzureServiceBusTopic(s => globalSettings.ServiceBus.ConnectionString,
-                s => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "serviceBus");
+                s => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "serviceBus")
+            .AddSendGrid(globalSettings.Mail.SendGridApiKey)
+            .AddCheck<AmazonSesHealthCheck>(nameof(AmazonSesHealthCheck));
+
+        //TODO: Decide if this is needed
+        //     .AddSmtpHealthCheck(setup =>
+        // {
+        //     setup.Host = globalSettings.Mail.Smtp.Host;
+        //     setup.Port = globalSettings.Mail.Smtp.Port;
+        //     setup.ConnectionType = SmtpConnectionType.PLAIN;
+        // }, "dev_mail_server");
     }
     private static string GetConnectionString(GlobalSettings globalSettings)
     {
@@ -52,30 +60,5 @@ internal static class HealthCheckServices
             "sqlserver" => healthChecksBuilder.AddSqlServer(connectionString),
             _ => throw new ArgumentOutOfRangeException()
         };
-    }
-
-    private static IHealthChecksBuilder AddMailCheck(this IHealthChecksBuilder healthChecksBuilder,
-        GlobalSettings globalSettings)
-    {
-        var awsConfigured = CoreHelpers.SettingHasValue(globalSettings.Amazon?.AccessKeySecret);
-        if (awsConfigured && CoreHelpers.SettingHasValue(globalSettings.Mail?.SendGridApiKey))
-        {
-            //TODO: Add send grid check
-            return healthChecksBuilder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
-        }
-
-        if (awsConfigured)
-        {
-            //TODO: Add AWS SES check
-            return healthChecksBuilder.AddCheck<AmazonSesHealthCheck>(nameof(AmazonSesHealthCheck));
-        }
-
-        //TODO: dev check
-        return healthChecksBuilder.AddSmtpHealthCheck(setup =>
-        {
-            setup.Host = globalSettings.Mail.Smtp.Host;
-            setup.Port = globalSettings.Mail.Smtp.Port;
-            setup.ConnectionType = SmtpConnectionType.PLAIN;
-        }, "dev_mail_server");
     }
 }
