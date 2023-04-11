@@ -123,17 +123,17 @@ public class GroupsController : Controller
     [HttpPost("")]
     public async Task<GroupResponseModel> Post(string orgId, [FromBody] GroupRequestModel model)
     {
-        var org = _currentContext.GetOrganization(orgId);
+        var orgIdGuid = new Guid(orgId);
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        var group = model.ToGroup(orgIdGuid);
+
         var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, org, OrganizationOperations.CreateGroup);
+            await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Create);
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        var orgIdGuid = new Guid(orgId);
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        var group = model.ToGroup(orgIdGuid);
         await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
 
         return new GroupResponseModel(group);

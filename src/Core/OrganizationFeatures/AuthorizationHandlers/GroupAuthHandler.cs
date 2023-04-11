@@ -19,6 +19,7 @@ class GroupAuthHandler : AuthorizationHandler<GroupOperationRequirement, Group>
         Group resource)
     {
         // Currently all GroupOperationRequirements have the same permission requirements
+        // TODO: providers need to be included in the claims
         var org = _currentContext.GetOrganization(resource.OrganizationId);
         var canAccess = org.Type == OrganizationUserType.Owner ||
                         org.Type == OrganizationUserType.Admin ||
