@@ -28,13 +28,13 @@ public class UpdateSecretCommand : IUpdateSecretCommand
             throw new NotFoundException();
         }
 
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        if (orgAdmin && updatedSecret.Projects != null && updatedSecret.Projects.Any() && !(await _projectRepository.ProjectsAreInOrganization(updatedSecret.Projects.Select(p => p.Id).ToList(), secret.OrganizationId)))
+        if (updatedSecret.Projects != null && updatedSecret.Projects.Any() && !(await _projectRepository.ProjectsAreInOrganization(updatedSecret.Projects.Select(p => p.Id).ToList(), secret.OrganizationId)))
         {
             throw new NotFoundException();
         }
+
+        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
+        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
         if (!await HasAccessToOriginalAndUpdatedProject(accessClient, secret, updatedSecret, userId))
         {
