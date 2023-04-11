@@ -4,5 +4,6 @@ namespace Bit.Core.SecretsManager.Queries.Access.Interfaces;
 
 public interface IProjectAccessQuery
 {
-    Task<bool> HasAccess(AccessCheck accessCheck);
+    Task<bool> HasAccessToCreateAsync(AccessCheck accessCheck);
+    Task<bool> HasAccessToUpdateAsync(AccessCheck accessCheck);
 }

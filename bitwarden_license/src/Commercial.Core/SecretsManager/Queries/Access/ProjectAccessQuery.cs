@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.SecretsManager.Enums;
 using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
@@ -18,26 +17,14 @@ public class ProjectAccessQuery : IProjectAccessQuery
         _projectRepository = projectRepository;
     }
 
-    public async Task<bool> HasAccess(AccessCheck accessCheck)
+    public async Task<bool> HasAccessToCreateAsync(AccessCheck accessCheck)
     {
         if (!_currentContext.AccessSecretsManager(accessCheck.OrganizationId))
         {
             return false;
         }
 
-        var orgAdmin = await _currentContext.OrganizationAdmin(accessCheck.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        return accessCheck.AccessOperationType switch
-        {
-            AccessOperationType.CreateProject => HasAccessToCreateProject(accessClient),
-            AccessOperationType.UpdateProject => await HasAccessToUpdateProjectAsync(accessCheck, accessClient),
-            _ => false,
-        };
-    }
-
-    private bool HasAccessToCreateProject(AccessClientType accessClient)
-    {
+        var accessClient = await GetAccessClientAsync(accessCheck);
         return accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
@@ -47,8 +34,14 @@ public class ProjectAccessQuery : IProjectAccessQuery
         };
     }
 
-    private async Task<bool> HasAccessToUpdateProjectAsync(AccessCheck accessCheck, AccessClientType accessClient)
+    public async Task<bool> HasAccessToUpdateAsync(AccessCheck accessCheck)
     {
+        if (!_currentContext.AccessSecretsManager(accessCheck.OrganizationId))
+        {
+            return false;
+        }
+
+        var accessClient = await GetAccessClientAsync(accessCheck);
         if (accessClient == AccessClientType.ServiceAccount)
         {
             return false;
@@ -58,5 +51,11 @@ public class ProjectAccessQuery : IProjectAccessQuery
             await _projectRepository.AccessToProjectAsync(accessCheck.TargetId, accessCheck.UserId,
                 accessClient);
         return access.Write;
+    }
+
+    private async Task<AccessClientType> GetAccessClientAsync(AccessCheck accessCheck)
+    {
+        var orgAdmin = await _currentContext.OrganizationAdmin(accessCheck.OrganizationId);
+        return AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
     }
 }

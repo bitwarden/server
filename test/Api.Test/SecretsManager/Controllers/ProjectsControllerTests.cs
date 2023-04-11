@@ -105,7 +105,7 @@ public class ProjectsControllerTests
     public async void Create_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
-        sutProvider.GetDependency<IProjectAccessQuery>().HasAccess(data.ToAccessCheck(orgId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IProjectAccessQuery>().HasAccessToCreateAsync(default).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
 
         var resultProject = data.ToProject(orgId);
@@ -123,7 +123,7 @@ public class ProjectsControllerTests
     public async void Create_Success(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
-        sutProvider.GetDependency<IProjectAccessQuery>().HasAccess(data.ToAccessCheck(orgId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IProjectAccessQuery>().HasAccessToCreateAsync(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
 
         var resultProject = data.ToProject(orgId);
@@ -142,7 +142,7 @@ public class ProjectsControllerTests
     public async void Update_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
         Guid userId, ProjectUpdateRequestModel data, Project existingProject)
     {
-        sutProvider.GetDependency<IProjectAccessQuery>().HasAccess(data.ToAccessCheck(existingProject.OrganizationId, existingProject.Id, userId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IProjectAccessQuery>().HasAccessToUpdateAsync(default).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(existingProject.Id).ReturnsForAnyArgs(existingProject);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -160,7 +160,7 @@ public class ProjectsControllerTests
     public async void Update_Success(SutProvider<ProjectsController> sutProvider,
         Guid userId, ProjectUpdateRequestModel data, Project existingProject)
     {
-        sutProvider.GetDependency<IProjectAccessQuery>().HasAccess(data.ToAccessCheck(existingProject.OrganizationId, existingProject.Id, userId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IProjectAccessQuery>().HasAccessToUpdateAsync(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(existingProject.Id).ReturnsForAnyArgs(existingProject);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 

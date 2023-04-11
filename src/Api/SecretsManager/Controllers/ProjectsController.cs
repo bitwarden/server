@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -64,12 +65,13 @@ public class ProjectsController : Controller
     [HttpPost("organizations/{organizationId}/projects")]
     public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] ProjectCreateRequestModel createRequest)
     {
-        if (!await _projectAccessQuery.HasAccess(createRequest.ToAccessCheck(organizationId)))
+        var userId = _userService.GetProperUserId(User).Value;
+        var accessCheck = new AccessCheck { OrganizationId = organizationId, UserId = userId };
+        if (!await _projectAccessQuery.HasAccessToCreateAsync(accessCheck))
         {
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
         var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId), userId);
         return new ProjectResponseModel(result);
     }
@@ -83,8 +85,13 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
-        if (!await _projectAccessQuery.HasAccess(updateRequest.ToAccessCheck(project.OrganizationId, id, userId)))
+        var accessCheck = new AccessCheck
+        {
+            OrganizationId = project.OrganizationId,
+            TargetId = id,
+            UserId = _userService.GetProperUserId(User).Value,
+        };
+        if (!await _projectAccessQuery.HasAccessToUpdateAsync(accessCheck))
         {
             throw new NotFoundException();
         }
