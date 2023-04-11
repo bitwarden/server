@@ -981,7 +981,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser: null);
 
         await _eventService.LogOrganizationUserEventsAsync(events);
 
@@ -991,7 +991,7 @@ public class OrganizationService : IOrganizationService
     public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
     {
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser);
 
         await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser, e.Item3)));
 
@@ -999,7 +999,7 @@ public class OrganizationService : IOrganizationService
     }
 
     private async Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)> SaveUsersSendInvitesAsync(Guid organizationId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser)
     {
         var organization = await GetOrgById(organizationId);
         var initialSeatCount = organization.Seats;
@@ -1028,7 +1028,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
-        if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }))
+        if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, true, systemUser))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -1681,14 +1681,14 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true)
+    public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true, EventSystemUser? systemUser = null)
     {
         var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
         var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
         bool hasOtherOwner = confirmedOwnersIds.Except(organizationUsersId).Any();
         if (!hasOtherOwner && includeProvider)
         {
-            return (await _currentContext.ProviderIdForOrg(organizationId)).HasValue;
+            return systemUser == EventSystemUser.SCIM ? await _providerOrganizationRepository.GetByOrganizationId(organizationId) != null : (await _currentContext.ProviderIdForOrg(organizationId)).HasValue;
         }
         return hasOtherOwner;
     }
