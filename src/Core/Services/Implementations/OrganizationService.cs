@@ -1028,7 +1028,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
-        if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, true, systemUser))
+        if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, includeProvider: true, systemUser))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -1561,11 +1561,11 @@ public class OrganizationService : IOrganizationService
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId,
         EventSystemUser systemUser)
     {
-        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null);
+        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null, systemUser);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, systemUser);
     }
 
-    private async Task<OrganizationUser> RepositoryDeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
+    private async Task<OrganizationUser> RepositoryDeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, EventSystemUser? systemUser = null)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -1584,7 +1584,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Only owners can delete other owners.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }))
+        if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true, systemUser))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -2174,14 +2174,14 @@ public class OrganizationService : IOrganizationService
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
     }
 
-    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser)
+    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser, EventSystemUser? systemUser = null)
     {
         if (organizationUser.Status == OrganizationUserStatusType.Revoked)
         {
             throw new BadRequestException("Already revoked.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }))
+        if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }, includeProvider: true, systemUser))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
