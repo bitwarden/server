@@ -12,72 +12,6 @@
           "Microsoft.EntityFrameworkCore.Relational": "6.0.4"
         }
       },
-      "AspNetCore.HealthChecks.MySql": {
-        "type": "Transitive",
-        "resolved": "6.0.2",
-        "contentHash": "v69xPJQEvrOdR/7/eglhVf7kQV/R7Wgef3mEBXHdf1tqQYG/e6PcuVIi7QwVf1+MBnnNejxKcDvTvOKV6Ravqg==",
-        "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.2",
-          "MySqlConnector": "2.0.0"
-        }
-      },
-      "AspNetCore.HealthChecks.Network": {
-        "type": "Transitive",
-        "resolved": "6.0.4",
-        "contentHash": "rvoPkqlvhX1HW6dpqjE1rbvmmMo9v7+Uf9dJffEcd3mA/DyyEitlZFc6cwYtmZVFdgy2gbIU4ubs3654nVfvjA==",
-        "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.7",
-          "SSH.NET": "2020.0.2",
-          "System.Buffers": "4.5.1"
-        }
-      },
-      "AspNetCore.HealthChecks.NpgSql": {
-        "type": "Transitive",
-        "resolved": "6.0.2",
-        "contentHash": "TFCpst67meE/GcOVf1f55PuKtvYKNyvqTZonLO6taEwsONNup0WKbpKf8BaAAa4Oe5epgne+iTd+K3ljL4lYnw==",
-        "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.2",
-          "Npgsql": "6.0.0"
-        }
-      },
-      "AspNetCore.HealthChecks.SqlServer": {
-        "type": "Transitive",
-        "resolved": "6.0.2",
-        "contentHash": "Af7ws27DnZZ4bKCiEREm7emSAKEtIiYirEAkI0ixFgK1fwJ99jmMnPC+kU01zfqn3FyCO/gZOUO7WbyVvTPpFg==",
-        "dependencies": {
-          "Microsoft.Data.SqlClient": "3.0.1",
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.0"
-        }
-      },
-      "AspNetCore.HealthChecks.UI.Client": {
-        "type": "Transitive",
-        "resolved": "6.0.5",
-        "contentHash": "Ko4CM9lI3ZklTDW3LRtHoiDU/Soo/r3yYRM28jbvOGaN5MjkWYGtVFwkwuNcjLFkJoFxfjqjITf+TWEqNENBzA==",
-        "dependencies": {
-          "AspNetCore.HealthChecks.UI.Core": "6.0.5",
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.7"
-        }
-      },
-      "AspNetCore.HealthChecks.UI.Core": {
-        "type": "Transitive",
-        "resolved": "6.0.5",
-        "contentHash": "CofYy5BJzODAKcZvpAODUhm11M/mtPhIcnGlqMip3H3adzfjpXHDJlbgZNBmua7ds85D+atEBsPvlcR4mQY92g==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "6.0.7",
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "6.0.0",
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.7",
-          "System.Text.Json": "6.0.5"
-        }
-      },
-      "AspNetCore.HealthChecks.Uris": {
-        "type": "Transitive",
-        "resolved": "6.0.3",
-        "contentHash": "EY0Vh8s2UrbnyvM/QhbyYuCnbrBw36BKkdh5LqdINxqAGnlPFQXf+/UoNlH/76MTEyg+nvdp2wjr5MqWDkVFaQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.0",
-          "Microsoft.Extensions.Http": "6.0.0"
-        }
-      },
       "AspNetCoreRateLimit": {
         "type": "Transitive",
         "resolved": "4.0.2",
@@ -769,22 +703,6 @@
           "System.Text.Encodings.Web": "6.0.0",
           "System.Text.Json": "6.0.0"
         }
-      },
-      "Microsoft.Extensions.Diagnostics.HealthChecks": {
-        "type": "Transitive",
-        "resolved": "6.0.7",
-        "contentHash": "oXviAVnSD9Q50+vxXJjfbGqVQUu4CLzYcKIiyemkc+kJFWXhmIOqW/KW3WPsv0/PzIc1jIJSj9SPvtpX69byYg==",
-        "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": "6.0.7",
-          "Microsoft.Extensions.Hosting.Abstractions": "6.0.0",
-          "Microsoft.Extensions.Logging.Abstractions": "6.0.1",
-          "Microsoft.Extensions.Options": "6.0.0"
-        }
-      },
-      "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": {
-        "type": "Transitive",
-        "resolved": "6.0.7",
-        "contentHash": "w50Sp/qi69rCipgnv03UP7GcpJf0mMPTQvi3wgKP3VV3/DqLdzLX+ZSb2kkLbwVqm1RLBMHAtiMW25hsbF8iOQ=="
       },
       "Microsoft.Extensions.FileProviders.Abstractions": {
         "type": "Transitive",
