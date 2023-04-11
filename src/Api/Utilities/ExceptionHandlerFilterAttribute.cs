@@ -77,6 +77,11 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         {
             context.HttpContext.Response.StatusCode = 402;
         }
+        else if (exception is ResourceAuthorizationFailedException)
+        {
+            errorMessage = exception.Message;
+            context.HttpContext.Response.StatusCode = 403;
+        }
         else if (exception is NotFoundException)
         {
             errorMessage = "Resource not found.";
