@@ -6,6 +6,8 @@
 
   <ItemGroup>
     <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.9.0" />
+    <!-- This is a peer dependency of Sustainsys.Saml2.AspNetCore2 so that we use a higher version -->
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.1.22" />
   </ItemGroup>
 
   <ItemGroup>
