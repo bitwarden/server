@@ -51,7 +51,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
-    public async Task<Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<(Bit.Core.Entities.Group group, ICollection<CollectionAccessSelection> accessSelection)> GetByIdWithCollectionsAsync(Guid id)
     {
         var grp = await base.GetByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -67,8 +67,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                 ReadOnly = c.ReadOnly,
                 HidePasswords = c.HidePasswords,
             }).ToList();
-            return new Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>(
-                grp, collections);
+            return (grp, collections);
         }
     }
 
