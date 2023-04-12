@@ -19,7 +19,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<Tuple<Group, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<(Group group, ICollection<CollectionAccessSelection> accessSelection)> GetByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -29,9 +29,9 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
                 commandType: CommandType.StoredProcedure);
 
             var group = await results.ReadFirstOrDefaultAsync<Group>();
-            var colletions = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
+            var collections = (await results.ReadAsync<CollectionAccessSelection>()).ToList();
 
-            return new Tuple<Group, ICollection<CollectionAccessSelection>>(group, colletions);
+            return (group, collections);
         }
     }
 

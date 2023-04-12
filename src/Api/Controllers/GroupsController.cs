@@ -66,13 +66,13 @@ public class GroupsController : Controller
     public async Task<GroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
     {
         var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
-        if (groupDetails?.Item1 == null)
+        if (groupDetails.group == null)
         {
             throw new NotFoundException();
         }
 
         var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, groupDetails.Item1, GroupOperations.Read);
+            await _authorizationService.AuthorizeAsync(User, groupDetails.group, GroupOperations.Read);
         if (!authorizationResult.Succeeded)
         {
             throw new ResourceAuthorizationFailedException();

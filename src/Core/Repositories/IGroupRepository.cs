@@ -5,7 +5,7 @@ namespace Bit.Core.Repositories;
 
 public interface IGroupRepository : IRepository<Group, Guid>
 {
-    Task<Tuple<Group, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id);
+    Task<(Group group, ICollection<CollectionAccessSelection> accessSelection)> GetByIdWithCollectionsAsync(Guid id);
     Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task<ICollection<Tuple<Group, ICollection<CollectionAccessSelection>>>> GetManyWithCollectionsByOrganizationIdAsync(
         Guid organizationId);
