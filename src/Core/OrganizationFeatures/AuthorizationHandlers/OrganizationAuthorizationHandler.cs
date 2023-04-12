@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
-class OrganizationAuthHandler : AuthorizationHandler<OrganizationOperationRequirement, CurrentContentOrganization>
+class OrganizationAuthorizationHandler : AuthorizationHandler<OrganizationOperationRequirement, CurrentContentOrganization>
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         OrganizationOperationRequirement requirement,

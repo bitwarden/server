@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
-class GroupAuthHandler : AuthorizationHandler<GroupOperationRequirement, Group>
+class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement, Group>
 {
     private readonly ICurrentContext _currentContext;
 
-    public GroupAuthHandler(ICurrentContext currentContext)
+    public GroupAuthorizationHandler(ICurrentContext currentContext)
     {
         _currentContext = currentContext;
     }
