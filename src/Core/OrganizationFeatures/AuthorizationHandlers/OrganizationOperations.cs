@@ -6,5 +6,5 @@ public class OrganizationOperationRequirement : OperationAuthorizationRequiremen
 
 public static class OrganizationOperations
 {
-    public static readonly OrganizationOperationRequirement ReadAllGroups = new() { Name = "ReadAllGroups" };
+    public static readonly OrganizationOperationRequirement ReadAllGroups = new() { Name = nameof(ReadAllGroups) };
 }
