@@ -99,6 +99,20 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
         }
     }
 
+    public async Task<int> GetCountByOrganizationIdsAsync(
+        IEnumerable<Guid> organizationIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteScalarAsync<int>(
+                $"[{Schema}].[ProviderOrganization_ReadCountByOrganizationIds]",
+                new { Ids = organizationIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results;
+        }
+    }
+
     private DataTable BuildProviderOrganizationsTable(SqlBulkCopy bulkCopy, IEnumerable<ProviderOrganization> providerOrganizations)
     {
         var po = providerOrganizations.FirstOrDefault();

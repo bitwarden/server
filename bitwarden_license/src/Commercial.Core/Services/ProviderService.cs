@@ -373,13 +373,10 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Provider must be of type Reseller in order to assign Organizations to it.");
         }
 
-        foreach (var orgId in organizationIds)
+        var existingProviderOrganizationsCount = await _providerOrganizationRepository.GetCountByOrganizationIdsAsync(organizationIds);
+        if (existingProviderOrganizationsCount > 0)
         {
-            var providerOrganization = await _providerOrganizationRepository.GetByOrganizationId(orgId);
-            if (providerOrganization != null)
-            {
-                throw new BadRequestException("Organizations must not be assigned to any Provider.");
-            }
+            throw new BadRequestException("Organizations must not be assigned to any Provider.");
         }
 
         var providerOrganizationsToInsert = organizationIds.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
