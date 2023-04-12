@@ -23,7 +23,7 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
         var org = _currentContext.GetOrganization(resource.OrganizationId);
         var canAccess = org.Type == OrganizationUserType.Owner ||
                         org.Type == OrganizationUserType.Admin ||
-                        (org.Permissions?.ManageGroups ?? false);
+                        org.Permissions.ManageGroups;
 
         if (canAccess)
         {

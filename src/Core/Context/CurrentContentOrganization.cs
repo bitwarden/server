@@ -19,6 +19,6 @@ public class CurrentContentOrganization
 
     public Guid Id { get; set; }
     public OrganizationUserType Type { get; set; }
-    public Permissions Permissions { get; set; }
+    public Permissions Permissions { get; set; } = new Permissions();
     public bool AccessSecretsManager { get; set; }
 }

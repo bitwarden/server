@@ -24,14 +24,14 @@ class OrganizationAuthorizationHandler : AuthorizationHandler<OrganizationOperat
         // TODO: providers need to be included in the claims
 
         var canAccess = resource.Type == OrganizationUserType.Owner ||
-            resource.Type == OrganizationUserType.Admin ||
-            resource.Type == OrganizationUserType.Manager ||
-            (resource.Permissions?.ManageGroups ?? false) ||
-            (resource.Permissions?.EditAssignedCollections ?? false) ||
-            (resource.Permissions?.DeleteAssignedCollections ?? false) ||
-            (resource.Permissions?.CreateNewCollections ?? false) ||
-            (resource.Permissions?.EditAnyCollection ?? false) ||
-            (resource.Permissions?.DeleteAnyCollection ?? false);
+                        resource.Type == OrganizationUserType.Admin ||
+                        resource.Type == OrganizationUserType.Manager ||
+                        resource.Permissions.ManageGroups ||
+                        resource.Permissions.EditAssignedCollections ||
+                        resource.Permissions.DeleteAssignedCollections ||
+                        resource.Permissions.CreateNewCollections ||
+                        resource.Permissions.EditAnyCollection ||
+                        resource.Permissions.DeleteAnyCollection;
 
         if (canAccess)
         {
