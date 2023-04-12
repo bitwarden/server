@@ -115,41 +115,57 @@ public class StripeController : Controller
         {
             var subscription = await GetSubscriptionAsync(parsedEvent, true);
             var ids = GetIdsFromMetaData(subscription.Metadata);
-
+            var organizationId = ids.Item1 ?? Guid.Empty;
+            var userId = ids.Item2 ?? Guid.Empty;
             var subCanceled = subDeleted && subscription.Status == "canceled";
             var subUnpaid = subUpdated && subscription.Status == "unpaid";
+            var subActive = subUpdated && subscription.Status == "active";
             var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
 
             if (subCanceled || subUnpaid || subIncompleteExpired)
             {
                 // org
-                if (ids.Item1.HasValue)
+                if (organizationId != null && organizationId != Guid.Empty)
                 {
-                    await _organizationService.DisableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                    await _organizationService.DisableAsync(organizationId, subscription.CurrentPeriodEnd);
                 }
                 // user
-                else if (ids.Item2.HasValue)
+                else if (userId != null && userId != Guid.Empty)
                 {
-                    await _userService.DisablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+                    await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+                }
+            }
+
+            if (subActive)
+            {
+
+                if (organizationId != null && organizationId != Guid.Empty)
+                {
+                    await _organizationService.EnableAsync(organizationId);
+                }
+                else if (userId != null && userId != Guid.Empty)
+                {
+                    await _userService.EnablePremiumAsync(userId,
+                        subscription.CurrentPeriodEnd);
                 }
             }
 
             if (subUpdated)
             {
                 // org
-                if (ids.Item1.HasValue)
+                if (organizationId != null && organizationId != Guid.Empty)
                 {
-                    await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
+                    await _organizationService.UpdateExpirationDateAsync(organizationId,
                         subscription.CurrentPeriodEnd);
                     if (IsSponsoredSubscription(subscription))
                     {
-                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId, subscription.CurrentPeriodEnd);
                     }
                 }
                 // user
-                else if (ids.Item2.HasValue)
+                else if (userId != null && userId != Guid.Empty)
                 {
-                    await _userService.UpdatePremiumExpirationAsync(ids.Item2.Value,
+                    await _userService.UpdatePremiumExpirationAsync(userId,
                         subscription.CurrentPeriodEnd);
                 }
             }
