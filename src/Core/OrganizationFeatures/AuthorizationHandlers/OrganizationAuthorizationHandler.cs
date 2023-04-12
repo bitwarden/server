@@ -12,17 +12,17 @@ class OrganizationAuthorizationHandler : AuthorizationHandler<OrganizationOperat
     {
         if (requirement == OrganizationOperations.ReadAllGroups)
         {
-            await ReadAllGroupsAsync(context, requirement, resource);
-            return;
+            ReadAllGroups(context, requirement, resource);
         }
+
+        await Task.CompletedTask;
     }
 
-    private async Task ReadAllGroupsAsync(AuthorizationHandlerContext context,
+    private void ReadAllGroups(AuthorizationHandlerContext context,
         OrganizationOperationRequirement requirement,
         CurrentContentOrganization resource)
     {
         // TODO: providers need to be included in the claims
-
         var canAccess = resource.Type == OrganizationUserType.Owner ||
                         resource.Type == OrganizationUserType.Admin ||
                         resource.Type == OrganizationUserType.Manager ||
