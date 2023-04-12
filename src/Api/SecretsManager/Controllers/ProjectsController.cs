@@ -1,12 +1,11 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
-using Bit.Core.SecretsManager.Models.Data;
-using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -24,7 +23,7 @@ public class ProjectsController : Controller
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
-    private readonly IProjectAccessQuery _projectAccessQuery;
+    private readonly IAuthorizationService _authorizationService;
 
     public ProjectsController(
         ICurrentContext currentContext,
@@ -33,7 +32,7 @@ public class ProjectsController : Controller
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
         IDeleteProjectCommand deleteProjectCommand,
-        IProjectAccessQuery projectAccessQuery)
+        IAuthorizationService authorizationService)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -41,7 +40,7 @@ public class ProjectsController : Controller
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
         _deleteProjectCommand = deleteProjectCommand;
-        _projectAccessQuery = projectAccessQuery;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet("organizations/{organizationId}/projects")]
@@ -63,35 +62,30 @@ public class ProjectsController : Controller
     }
 
     [HttpPost("organizations/{organizationId}/projects")]
-    public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] ProjectCreateRequestModel createRequest)
+    public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId,
+        [FromBody] ProjectCreateRequestModel createRequest)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var accessCheck = new AccessCheck { OrganizationId = organizationId, UserId = userId };
-        if (!await _projectAccessQuery.HasAccessToCreateAsync(accessCheck))
+        var project = createRequest.ToProject(organizationId);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, project, ProjectOperations.Create);
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId), userId);
+        var userId = _userService.GetProperUserId(User).Value;
+        var result = await _createProjectCommand.CreateAsync(project, userId);
         return new ProjectResponseModel(result);
     }
 
     [HttpPut("projects/{id}")]
-    public async Task<ProjectResponseModel> UpdateAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
+    public async Task<ProjectResponseModel> UpdateAsync([FromRoute] Guid id,
+        [FromBody] ProjectUpdateRequestModel updateRequest)
     {
         var project = await _projectRepository.GetByIdAsync(id);
-        if (project == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var accessCheck = new AccessCheck
-        {
-            OrganizationId = project.OrganizationId,
-            TargetId = id,
-            UserId = _userService.GetProperUserId(User).Value,
-        };
-        if (!await _projectAccessQuery.HasAccessToUpdateAsync(accessCheck))
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, project, ProjectOperations.Update);
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }

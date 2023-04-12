@@ -1,4 +1,5 @@
-﻿using Bit.Api.SecretsManager.Controllers;
+﻿using System.Security.Claims;
+using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.Test.SecretsManager.Enums;
 using Bit.Core.Context;
@@ -6,13 +7,13 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
-using Bit.Core.SecretsManager.Queries.Access.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
 
@@ -105,7 +106,9 @@ public class ProjectsControllerTests
     public async void Create_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
-        sutProvider.GetDependency<IProjectAccessQuery>().HasAccessToCreateAsync(default).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToProject(orgId),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
 
         var resultProject = data.ToProject(orgId);
@@ -123,7 +126,9 @@ public class ProjectsControllerTests
     public async void Create_Success(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
-        sutProvider.GetDependency<IProjectAccessQuery>().HasAccessToCreateAsync(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToProject(orgId),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
 
         var resultProject = data.ToProject(orgId);
@@ -142,7 +147,9 @@ public class ProjectsControllerTests
     public async void Update_NoAccess_Throws(SutProvider<ProjectsController> sutProvider,
         Guid userId, ProjectUpdateRequestModel data, Project existingProject)
     {
-        sutProvider.GetDependency<IProjectAccessQuery>().HasAccessToUpdateAsync(default).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToProject(existingProject.Id),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(existingProject.Id).ReturnsForAnyArgs(existingProject);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -160,7 +167,9 @@ public class ProjectsControllerTests
     public async void Update_Success(SutProvider<ProjectsController> sutProvider,
         Guid userId, ProjectUpdateRequestModel data, Project existingProject)
     {
-        sutProvider.GetDependency<IProjectAccessQuery>().HasAccessToUpdateAsync(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToProject(existingProject.Id),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(existingProject.Id).ReturnsForAnyArgs(existingProject);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
