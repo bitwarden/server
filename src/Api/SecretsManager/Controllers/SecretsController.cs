@@ -80,6 +80,11 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
+        if (createRequest.ProjectIds != null && createRequest.ProjectIds.Length > 1)
+        {
+            throw new BadRequestException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
 
@@ -140,6 +145,11 @@ public class SecretsController : Controller
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
+        if (updateRequest.ProjectIds != null && updateRequest.ProjectIds.Length > 1)
+        {
+            throw new BadRequestException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
         var secret = updateRequest.ToSecret(id);
         var result = await _updateSecretCommand.UpdateAsync(secret, userId);

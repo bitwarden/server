@@ -31,7 +31,7 @@ public class CreateSecretCommand : ICreateSecretCommand
             throw new NotFoundException();
         }
 
-        if (orgAdmin && secret.Projects != null && secret.Projects.Any() && !(await _projectRepository.ProjectsAreInOrganization(secret.Projects.Select(p => p.Id).ToList(), secret.OrganizationId)))
+        if (secret.Projects != null && secret.Projects.Any() && !(await _projectRepository.ProjectsAreInOrganization(secret.Projects.Select(p => p.Id).ToList(), secret.OrganizationId)))
         {
             throw new NotFoundException();
         }
