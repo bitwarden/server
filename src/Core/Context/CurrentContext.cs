@@ -532,12 +532,6 @@ public class CurrentContext : ICurrentContext
         return _providerUserOrganizations;
     }
 
-    public CurrentContentOrganization? GetOrganization(string orgId)
-    {
-        var guid = new Guid(orgId);
-        return GetOrganization(guid);
-    }
-
     public CurrentContentOrganization? GetOrganization(Guid orgId)
     {
         return Organizations.Find(o => o.Id == orgId);

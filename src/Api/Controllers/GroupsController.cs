@@ -45,9 +45,9 @@ public class GroupsController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<GroupResponseModel> Get(string orgId, string id)
+    public async Task<GroupResponseModel> Get(Guid orgId, Guid id)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
+        var group = await _groupRepository.GetByIdAsync(id);
         if (group == null)
         {
             throw new NotFoundException();
@@ -63,9 +63,9 @@ public class GroupsController : Controller
     }
 
     [HttpGet("{id}/details")]
-    public async Task<GroupDetailsResponseModel> GetDetails(string orgId, string id)
+    public async Task<GroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
     {
-        var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(new Guid(id));
+        var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
         if (groupDetails?.Item1 == null)
         {
             throw new NotFoundException();
@@ -82,7 +82,7 @@ public class GroupsController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
         var org = _currentContext.GetOrganization(orgId);
 
@@ -93,17 +93,15 @@ public class GroupsController : Controller
             throw new ResourceAuthorizationFailedException();
         }
 
-        var orgIdGuid = new Guid(orgId);
-        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgIdGuid);
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 
     [HttpGet("{id}/users")]
-    public async Task<IEnumerable<Guid>> GetUsers(string orgId, string id)
+    public async Task<IEnumerable<Guid>> GetUsers(Guid orgId, Guid id)
     {
-        var idGuid = new Guid(id);
-        var group = await _groupRepository.GetByIdAsync(idGuid);
+        var group = await _groupRepository.GetByIdAsync(id);
         if (group == null)
         {
             throw new NotFoundException();
@@ -116,16 +114,15 @@ public class GroupsController : Controller
             throw new ResourceAuthorizationFailedException();
         }
 
-        var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(idGuid);
+        var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
         return groupIds;
     }
 
     [HttpPost("")]
-    public async Task<GroupResponseModel> Post(string orgId, [FromBody] GroupRequestModel model)
+    public async Task<GroupResponseModel> Post(Guid orgId, [FromBody] GroupRequestModel model)
     {
-        var orgIdGuid = new Guid(orgId);
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
-        var group = model.ToGroup(orgIdGuid);
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
+        var group = model.ToGroup(orgId);
 
         var authorizationResult =
             await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Create);
@@ -141,9 +138,9 @@ public class GroupsController : Controller
 
     [HttpPut("{id}")]
     [HttpPost("{id}")]
-    public async Task<GroupResponseModel> Put(string orgId, string id, [FromBody] GroupRequestModel model)
+    public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
+        var group = await _groupRepository.GetByIdAsync(id);
         if (group == null)
         {
             throw new NotFoundException();
@@ -156,17 +153,16 @@ public class GroupsController : Controller
             throw new ResourceAuthorizationFailedException();
         }
 
-        var orgIdGuid = new Guid(orgId);
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
 
         await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
         return new GroupResponseModel(group);
     }
 
     [HttpPut("{id}/users")]
-    public async Task PutUsers(string orgId, string id, [FromBody] IEnumerable<Guid> model)
+    public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<Guid> model)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
+        var group = await _groupRepository.GetByIdAsync(id);
         if (group == null)
         {
             throw new NotFoundException();
@@ -184,9 +180,9 @@ public class GroupsController : Controller
 
     [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
-    public async Task Delete(string orgId, string id)
+    public async Task Delete(Guid orgId, Guid id)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
+        var group = await _groupRepository.GetByIdAsync(id);
         if (group == null)
         {
             throw new NotFoundException();
@@ -222,9 +218,9 @@ public class GroupsController : Controller
 
     [HttpDelete("{id}/user/{orgUserId}")]
     [HttpPost("{id}/delete-user/{orgUserId}")]
-    public async Task Delete(string orgId, string id, string orgUserId)
+    public async Task Delete(Guid orgId, Guid id, Guid orgUserId)
     {
-        var group = await _groupRepository.GetByIdAsync(new Guid(id));
+        var group = await _groupRepository.GetByIdAsync(id);
         if (group == null)
         {
             throw new NotFoundException();
@@ -236,6 +232,6 @@ public class GroupsController : Controller
             throw new ResourceAuthorizationFailedException();
         }
 
-        await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
+        await _groupService.DeleteUserAsync(group, orgUserId);
     }
 }
