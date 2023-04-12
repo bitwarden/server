@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿#nullable enable
+
+using System.Security.Claims;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
