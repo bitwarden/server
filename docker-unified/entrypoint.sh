@@ -31,6 +31,12 @@ export globalSettings__postgreSql__connectionString=${globalSettings__postgreSql
 export globalSettings__sqlServer__connectionString=${globalSettings__sqlServer__connectionString:-$SQLSERVER_CONNECTION_STRING}
 export globalSettings__sqlite__connectionString=${globalSettings__sqlite__connectionString:-$SQLITE_CONNECTION_STRING}
 
+if [ "$BW_ENABLE_SSL" = "true" ]; then
+  export globalSettings__baseServiceUri__internalVault=https://localhost:${BW_PORT_HTTPS}
+else
+  export globalSettings__baseServiceUri__internalVault=http://localhost:${BW_PORT_HTTP}
+fi
+
 # Generate Identity certificate
 if [ ! -f /etc/bitwarden/identity.pfx ]; then
   openssl req \
