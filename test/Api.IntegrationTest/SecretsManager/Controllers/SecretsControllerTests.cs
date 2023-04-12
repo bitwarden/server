@@ -180,6 +180,47 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     }
 
     [Fact]
+    public async Task CreateWithDifferentProjectOrgId_RunAsAdmin_NotFound()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project { Name = "123" });
+
+        var request = new SecretCreateRequestModel
+        {
+            ProjectIds = new Guid[] { project.Id },
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString,
+        };
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateWithMultipleProjects_RunAsAdmin_BadRequest()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var projectA = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123A" });
+        var projectB = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123B" });
+
+        var request = new SecretCreateRequestModel
+        {
+            ProjectIds = new Guid[] { projectA.Id, projectB.Id },
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString,
+        };
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task CreateWithoutProject_RunAsUser_NotFound()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
@@ -529,6 +570,63 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Null(updatedSecret.DeletedDate);
         Assert.NotEqual(secret.Value, updatedSecret.Value);
         Assert.NotEqual(secret.RevisionDate, updatedSecret.RevisionDate);
+    }
+
+    [Fact]
+    public async Task UpdateWithDifferentProjectOrgId_RunAsAdmin_NotFound()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project { Name = "123" });
+
+        var secret = await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = org.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString
+        });
+
+        var request = new SecretUpdateRequestModel
+        {
+            Key = _mockEncryptedString,
+            Value = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
+            Note = _mockEncryptedString,
+            ProjectIds = new Guid[] { project.Id },
+        };
+
+        var response = await _client.PutAsJsonAsync($"/secrets/{secret.Id}", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateWithMultipleProjects_BadRequest()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var projectA = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123A" });
+        var projectB = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123B" });
+
+        var secret = await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = org.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString
+        });
+
+        var request = new SecretUpdateRequestModel
+        {
+            Key = _mockEncryptedString,
+            Value = "2.3Uk+WNBIoU5xzmVFNcoWzz==|1MsPIYuRfdOHfu/0uY6H2Q==|/98xy4wb6pHP1VTZ9JcNCYgQjEUMFPlqJgCwRk1YXKg=",
+            Note = _mockEncryptedString,
+            ProjectIds = new Guid[] { projectA.Id, projectB.Id },
+        };
+
+        var response = await _client.PutAsJsonAsync($"/secrets/{secret.Id}", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Theory]
