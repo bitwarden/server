@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 
-namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
+namespace Bit.Core.SecretsManager.AuthorizationRequirements;
 
 public class ProjectOperationRequirement : OperationAuthorizationRequirement
 {

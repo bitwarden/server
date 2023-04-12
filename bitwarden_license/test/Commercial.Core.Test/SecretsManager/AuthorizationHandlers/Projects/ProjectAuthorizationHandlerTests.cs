@@ -4,6 +4,7 @@ using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
+using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
