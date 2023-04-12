@@ -100,8 +100,8 @@ public static class LoggerFactoryExtensions
                 }
                 else if (syslogAddress.Scheme.Equals("tls"))
                 {
-                    // TLS v1.1, v1.2 and v1.3 are explicitly selected (leaving out TLS v1.0)
-                    const SslProtocols protocols = SslProtocols.Tls11 | SslProtocols.Tls12 | SslProtocols.Tls13;
+                    // TLS v1.2 and v1.3 are explicitly selected (leaving out TLS v1.0, v1.1)
+                    const SslProtocols protocols = SslProtocols.Tls12 | SslProtocols.Tls13;
 
                     if (CoreHelpers.SettingHasValue(globalSettings.Syslog.CertificateThumbprint))
                     {
