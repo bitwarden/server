@@ -4,7 +4,7 @@ using Amazon.SimpleEmail;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Bit.Api.Health;
+namespace Bit.SharedWeb.Health;
 
 public class AmazonSesHealthCheck : IHealthCheck
 {
@@ -37,11 +37,11 @@ public class AmazonSesHealthCheck : IHealthCheck
     }
 
     public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context,
-        CancellationToken cancellationToken = new CancellationToken())
+        CancellationToken cancellationToken = default)
     {
         try
         {
-            var response = await _client.ListVerifiedEmailAddressesAsync(cancellationToken);
+            var response = await _client.GetSendQuotaAsync(cancellationToken);
             return response.HttpStatusCode == HttpStatusCode.OK ? HealthCheckResult.Healthy()
                 : HealthCheckResult.Unhealthy($"Amazon SES health check failed with status code: {response.HttpStatusCode}.");
         }
