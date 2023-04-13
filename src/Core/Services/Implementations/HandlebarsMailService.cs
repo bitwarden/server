@@ -484,6 +484,10 @@ public class HandlebarsMailService : IMailService
         Handlebars.RegisterTemplate("FullHtmlLayout", fullHtmlLayoutSource);
         var fullTextLayoutSource = await ReadSourceAsync("Layouts.Full.text");
         Handlebars.RegisterTemplate("FullTextLayout", fullTextLayoutSource);
+        var fullUpdatedHtmlLayoutSource = await ReadSourceAsync("Layouts.FullUpdated.html");
+        Handlebars.RegisterTemplate("FullUpdatedHtmlLayout", fullUpdatedHtmlLayoutSource);
+        var fullUpdatedTextLayoutSource = await ReadSourceAsync("Layouts.FullUpdated.text");
+        Handlebars.RegisterTemplate("FullUpdatedTextLayout", fullUpdatedTextLayoutSource);
         var titleContactUsHtmlLayoutSource = await ReadSourceAsync("Layouts.TitleContactUs.html");
         Handlebars.RegisterTemplate("TitleContactUsHtmlLayout", titleContactUsHtmlLayoutSource);
         var titleContactUsTextLayoutSource = await ReadSourceAsync("Layouts.TitleContactUs.text");
