@@ -9,11 +9,10 @@ using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
 using Bit.Core.IdentityServer;
-using Bit.Api.Health;
+using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
-using HealthChecks.UI.Client;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -137,7 +136,21 @@ public class Startup
         services.AddCoreLocalizationServices();
 
         //health check
-        services.ConfigureHealthCheckServices(globalSettings, Environment);
+        services.AddHealthCheckServices(globalSettings, builder =>
+        {
+            var identityUri = new Uri(globalSettings.BaseServiceUri.Identity
+                                      + "/.well-known/openid-configuration");
+
+            builder.AddUrlGroup(identityUri, "identity")
+                .AddRedis(globalSettings.Redis.ConnectionString)
+                .AddAzureQueueStorage(globalSettings.Storage.ConnectionString, name: "storage_queue")
+                .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue")
+                .AddAzureQueueStorage(globalSettings.Notifications.ConnectionString, name: "notifications_queue")
+                .AddAzureServiceBusTopic(_ => globalSettings.ServiceBus.ConnectionString,
+                    _ => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "service_bus")
+                .AddSendGrid(globalSettings.Mail.SendGridApiKey)
+                .AddCheck<AmazonSesHealthCheck>("amazon_ses");
+        });
 
 #if OSS
         services.AddOosServices();
@@ -216,15 +229,12 @@ public class Startup
         {
             endpoints.MapDefaultControllerRoute();
 
-            endpoints.MapHealthChecks("/health/simple");
-            // .RequireAuthorization();
-            endpoints.MapHealthChecks("/health/extended",
-                new HealthCheckOptions
-                {
-                    Predicate = _ => true,
-                    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
-                });
-            // .RequireAuthorization();
+            endpoints.MapHealthChecks("/healthz");
+
+            endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
+            {
+                ResponseWriter = HealthCheckServiceExtensions.WriteResponse
+            });
         });
 
         // Add Swagger
