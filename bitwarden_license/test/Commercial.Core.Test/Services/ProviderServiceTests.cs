@@ -487,7 +487,7 @@ public class ProviderServiceTests
         var organizationIds = organizations.Select(o => o.Id).ToArray();
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds));
-        Assert.Contains("Organization must be of type Reseller in order to assign Organizations to it.", exception.Message);
+        Assert.Contains("Provider must be of type Reseller in order to assign Organizations to it.", exception.Message);
 
         await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateManyAsync(default);
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);
