@@ -32,7 +32,7 @@ export globalSettings__sqlServer__connectionString=${globalSettings__sqlServer__
 export globalSettings__sqlite__connectionString=${globalSettings__sqlite__connectionString:-$SQLITE_CONNECTION_STRING}
 
 if [ "$BW_ENABLE_SSL" = "true" ]; then
-  export globalSettings__baseServiceUri__internalVault=https://localhost:${BW_PORT_HTTPS}
+  export globalSettings__baseServiceUri__internalVault=https://localhost:${BW_PORT_HTTPS:-8443}
 else
   export globalSettings__baseServiceUri__internalVault=http://localhost:${BW_PORT_HTTP}
 fi
