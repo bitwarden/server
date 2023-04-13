@@ -26,7 +26,7 @@ public class CreateSecretCommand : ICreateSecretCommand
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         var project = secret.Projects?.FirstOrDefault();
 
-        if (project == null)
+        if (project == null && !orgAdmin)
         {
             throw new NotFoundException();
         }

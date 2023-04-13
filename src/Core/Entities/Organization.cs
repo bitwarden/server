@@ -89,6 +89,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return BusinessName;
     }
 
+    public string SubscriberName()
+    {
+        return Name;
+    }
+
     public string BraintreeCustomerIdPrefix()
     {
         return "o";
@@ -107,6 +112,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public bool IsUser()
     {
         return false;
+    }
+
+    public string SubscriberType()
+    {
+        return "Organization";
     }
 
     public long StorageBytesRemaining()
