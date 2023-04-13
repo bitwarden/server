@@ -34,7 +34,7 @@ export globalSettings__sqlite__connectionString=${globalSettings__sqlite__connec
 if [ "$BW_ENABLE_SSL" = "true" ]; then
   export globalSettings__baseServiceUri__internalVault=https://localhost:${BW_PORT_HTTPS:-8443}
 else
-  export globalSettings__baseServiceUri__internalVault=http://localhost:${BW_PORT_HTTP}
+  export globalSettings__baseServiceUri__internalVault=http://localhost:${BW_PORT_HTTP:-8080}
 fi
 
 # Generate Identity certificate
