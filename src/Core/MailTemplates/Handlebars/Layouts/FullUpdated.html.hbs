@@ -4,9 +4,6 @@
     <meta name="viewport" content="width=device-width" />
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Bitwarden</title>
-</head>
-
-<body style="-webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none; height: 100%; line-height: 25px; width: 100% !important; margin: 0;" bgcolor="#f6f6f6">
     <style type="text/css">
         ﻿ body {
             margin: 0;
@@ -47,6 +44,17 @@
             background-color: #f6f6f6;
         }
 
+        .white-title {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            box-sizing: border-box;
+            font-size: 24px;
+            line-height: 32px;
+            font-weight: 700;
+            -webkit-font-smoothing: antialiased;
+            -webkit-text-size-adjust: none;
+            color: #ffffff;
+        }
+
         @media only screen and (max-width: 600px) {
             body {
                 padding: 0 !important;
@@ -67,7 +75,7 @@
             }
 
             .content-wrap {
-                padding: 10px !important;
+                padding: 0px !important;
             }
 
             .invoice {
@@ -91,6 +99,23 @@
             .indented {
                 padding-left: 10px;
             }
+
+            .footer-image {
+                display: none !important;
+				mso-hide:all !important;
+            }
+
+            .footer-text {
+                width: 100% !important;
+            }
+
+            .templateColumnContainer{
+                display:block !important;
+                width:100% !important;
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+                padding-bottom: 0px !important;
+            }
         }
 
         @media only screen and (min-width: 600px) {
@@ -101,7 +126,7 @@
         }
 
         /* Component styling - these are explicitly applied via classes so that they can be
-            gradually introduced as we update templates.*/
+        gradually introduced as we update templates.*/
         a.inline-link {
             font-weight: bold;
             color: #175DDC;
@@ -118,14 +143,14 @@
         }
 
     </style>
-    {{! Yahoo center fix }}
+</head>
+<body style="-webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none; height: 100%; line-height: 25px; width: 100% !important; margin: 0;" bgcolor="#f6f6f6">
     <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#f6f6f6">
         <tr>
             <td class="container" width="100%" align="center">
-                {{! 600px container }}
                 <table cellpadding="0" cellspacing="0" width="100%" class="content-table">
                     <tr>
-                        <td></td> {{! Left column (center fix) }}
+                        <td></td>
                         <td class="content" align="center" valign="top" width="600" style="padding-bottom: 20px;">
                             <table class="header" cellpadding="0" cellspacing="0" width="100%">
                                 <tr>
@@ -136,7 +161,7 @@
                             </table>
                             <table class="main" cellpadding="0" cellspacing="0" style="border: 1px solid #e9e9e9; border-radius: 3px;" bgcolor="white">
                                 <tr>
-                                    <td class="content-wrap" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 20px; -webkit-text-size-adjust: none;" valign="top">
+                                    <td class="content-wrap" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0px; -webkit-text-size-adjust: none;" valign="top">
 
                                         {{>@partial-block}}
 
@@ -166,7 +191,7 @@
                                 </tr>
                             </table>
                         </td>
-                        <td></td> {{! Right column (center fix) }}
+                        <td></td>
                     </tr>
                 </table>
             </td>

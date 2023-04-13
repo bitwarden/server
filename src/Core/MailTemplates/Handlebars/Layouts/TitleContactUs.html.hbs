@@ -1,26 +1,46 @@
-﻿{{#>FullHtmlLayout}}
-<div width="auto" cellpadding="0" cellspacing="0" style="padding:0; margin:-20px">
-    <div style="display: block; min-height: 204px; background-color: #175DDC; margin: 0;">
-        <div class="title-header-text" >
-            <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 24px; color: #ffffff; line-height: 32px; font-weight: 400; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
-                {{TitleFirst}}<b class="white-title">{{TitleSecondBold}}</b>{{TitleThird}}
-            </div>
-        </div>
-        <div class="title-header-image" style="margin-left: auto; margin-right: 0px; vertical-align: bottom;">
-            <img style="margin-left: auto; margin-right: 0px; display: block;" alt='' src='https://assets.bitwarden.com/email/v1/business.png' />
-        </div>
-    </div>
+﻿{{#>FullUpdatedHtmlLayout}}
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #175DDC;padding-top:45px; ">
+    <tr>
+        <td align="center" valign="top" width="70%" class="templateColumnContainer">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding-left:30px; padding-right: 5px; padding-bottom: 35px;">
+                <tr>
+                    <td style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 24px; color: #ffffff; line-height: 32px; font-weight: 400; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
+                        Join Stark Industries on Bitwarden and start securing your passwords!
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td align="right" valign="bottom" class="templateColumnContainer" style="padding-right: 10px;">
+            <img width="140" height="140" align="right" valign="bottom" style="width: 140px; height:140px; font-size: 0; vertical-align: bottom; text-align: right;" alt='' src='https://assets.bitwarden.com/email/v1/business.png' />
+        </td>
+    </tr>
+</table>
 
     {{>@partial-block}}
 
-    <div style="display:block;background-color: #FBFBFB;">
-        <div class="footer-text" style="display: inline-block; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style: normal; font-weight: 400; font-size: 16px; line-height: 24px; padding-left: 35px; padding-right: 35px; margin-top: 15px; margin-bottom: 20px; margin-left: auto; margin-right: auto; vertical-align: middle; ">
-            <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style: normal; font-weight: 600; font-size: 20px; line-height: 28px;">We’re here for you!</p>
-            If you have any questions, search the Bitwarden <a style="text-decoration: none; color: #175DDC; font-weight: 600;" href="https://bitwarden.com/help/">Help</a> site or <a style="text-decoration: none; color: #175DDC; font-weight: 600;" href="https://bitwarden.com/contact/">contact us</a>.
-        </div>
-        <div style="display: inline-block; width:33%; margin-left: auto; margin-right: auto; vertical-align: middle; ">
-            <img class="footer-image" src="https://assets.bitwarden.com/email/v1/chat.png" style="width: 94.73px; height: 77.25px; margin-left: auto; margin-right: 30px;" alt="" />
-        </div>
-    </div>
-</div>
-{{/FullHtmlLayout}}
+<table width="100%" style="display:table; background-color: #FBFBFB; vertical-align: middle;" border="0" cellpadding="0" cellspacing="0" valign="middle">
+    <tr>
+        <td width="60%" class="footer-text" style="width:60%;">
+            <table align="left" border="0" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="display: inline-block; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style: normal; font-weight: 400; font-size: 16px; line-height: 24px; padding-left: 35px; padding-right: 10px; margin-top: 15px; margin-bottom: 20px; margin-left: auto; margin-right: auto;">
+                        <p style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; font-style: normal; font-weight: 600; font-size: 20px; line-height: 28px;">We’re here for you!</p>
+                        If you have any questions, search the Bitwarden <a style="text-decoration: none; color: #175DDC; font-weight: 600;" href="https://bitwarden.com/help/">Help</a> site or <a style="text-decoration: none; color: #175DDC; font-weight: 600;" href="https://bitwarden.com/contact/">contact us</a>.
+
+                    </td>
+                </tr>
+            </table>
+        </td>
+        <td>
+            <table class="footer-image" width="100%" valign="middle" align="right" border="0" cellpadding="0" cellspacing="0" style="display:table; margin: 0; text-align:right; padding-right: 30px;">
+                <tr>
+                    <td style="display:table-cell">
+                        <img width="94" height="77" src="https://assets.bitwarden.com/email/v1/chat.png" style="width: 94px; height: 77px;" alt="" />
+                    </td>
+                </tr>
+                <tr></tr>
+            </table>
+        </td>
+    </tr>
+</table>
+{{/FullUpdatedHtmlLayout}}
