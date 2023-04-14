@@ -1,0 +1,30 @@
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Enums;
+using Newtonsoft.Json;
+
+namespace Bit.Api.Auth.Models.Request;
+
+public class AuthRequestCreateRequestModel
+{
+    [Required]
+    public string Email { get; set; }
+    [Required]
+    public string PublicKey { get; set; }
+    [Required]
+    public string DeviceIdentifier { get; set; }
+    [Required]
+    [StringLength(25)]
+    public string AccessCode { get; set; }
+    [Required]
+    public AuthRequestType? Type { get; set; }
+}
+
+public class AuthRequestUpdateRequestModel
+{
+    public string Key { get; set; }
+    public string MasterPasswordHash { get; set; }
+    [Required]
+    public string DeviceIdentifier { get; set; }
+    [Required]
+    public bool RequestApproved { get; set; }
+}

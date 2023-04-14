@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Identity;
 using Bit.Core.Settings;
 using AspNetCoreRateLimit;
 using Stripe;
@@ -13,6 +12,7 @@ using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bit.Core.Auth.Identity;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;

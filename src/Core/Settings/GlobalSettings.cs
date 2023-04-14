@@ -1,4 +1,5 @@
-﻿using Bit.Core.Settings.LoggingSettings;
+﻿using Bit.Core.Auth.Settings;
+using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
 
