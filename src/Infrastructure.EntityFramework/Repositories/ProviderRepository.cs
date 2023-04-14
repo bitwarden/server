@@ -25,6 +25,20 @@ public class ProviderRepository : Repository<Provider, Models.Provider, Guid>, I
         await base.DeleteAsync(provider);
     }
 
+    public async Task<Provider> GetByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from p in dbContext.Providers
+                        join po in dbContext.ProviderOrganizations
+                            on p.Id equals po.ProviderId
+                        where po.OrganizationId == organizationId
+                        select p;
+            return await query.FirstOrDefaultAsync();
+        }
+    }
+
     public async Task<ICollection<Provider>> SearchAsync(string name, string userEmail, int skip, int take)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

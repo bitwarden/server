@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Models.Data;
+﻿using Bit.Core.Enums;
+
+namespace Bit.Core.Models.Data;
 
 public class ProviderOrganizationOrganizationDetails
 {
@@ -13,4 +15,5 @@ public class ProviderOrganizationOrganizationDetails
     public int UserCount { get; set; }
     public int? Seats { get; set; }
     public string Plan { get; set; }
+    public OrganizationStatusType Status { get; set; }
 }

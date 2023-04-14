@@ -40,6 +40,8 @@ public enum ReferenceEventType
     CollectionCreated,
     [EnumMember(Value = "organization-edited-by-admin")]
     OrganizationEditedByAdmin,
+    [EnumMember(Value = "organization-created-by-admin")]
+    OrganizationCreatedByAdmin,
     [EnumMember(Value = "sm-service-account-accessed-secret")]
     SmServiceAccountAccessedSecret,
 }

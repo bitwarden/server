@@ -1,6 +1,16 @@
-﻿@model CreateProviderModel
+﻿@using Bit.SharedWeb.Utilities
+@model CreateProviderModel
 @{
     ViewData["Title"] = "Create Provider";
+}
+
+@section Scripts {
+    <script>
+        function toggleProviderTypeInfo(value) {
+            document.querySelectorAll('[id^="info-"]').forEach(el => { el.classList.add('d-none'); });
+            document.getElementById('info-' + value).classList.remove('d-none');
+        }
+    </script>
 }
 
 <h1>Create Provider</h1>
@@ -9,8 +19,37 @@
     <div asp-validation-summary="All" class="alert alert-danger"></div>
     
     <div class="form-group">
-        <label asp-for="OwnerEmail"></label>
-        <input type="text" class="form-control" asp-for="OwnerEmail">
+        <label asp-for="Type" class="h2"></label>
+        @foreach(ProviderType providerType in Enum.GetValues(typeof(ProviderType)))
+        {
+            var providerTypeValue = (int)providerType;
+            <div class="form-check">
+                @Html.RadioButtonFor(m => m.Type, providerType, new { id = $"providerType-{providerTypeValue}", @class = "form-check-input", onclick=$"toggleProviderTypeInfo({providerTypeValue})" })
+                @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetName(), new { @class = "form-check-label align-middle", @for = $"providerType-{providerTypeValue}" })
+                <br/>
+                @Html.LabelFor(m => m.Type, providerType.GetDisplayAttribute()?.GetDescription(), new { @class = "form-check-label small text-muted ml-3 align-top", @for = $"providerType-{providerTypeValue}" })
+            </div>
+        }
+    </div>
+    
+    <div id="@($"info-{(int)ProviderType.Msp}")" class="form-group @(Model.Type != ProviderType.Msp ? "d-none" : string.Empty)">
+        <h2>MSP Info</h2>
+        <div class="form-group">
+            <label asp-for="OwnerEmail"></label>
+            <input type="text" class="form-control" asp-for="OwnerEmail">
+        </div>
+    </div>
+    
+    <div id="@($"info-{(int)ProviderType.Reseller}")" class="form-group @(Model.Type != ProviderType.Reseller ? "d-none" : string.Empty)">
+        <h2>Reseller Info</h2>
+        <div class="form-group">
+            <label asp-for="BusinessName"></label>
+            <input type="text" class="form-control" asp-for="BusinessName">
+        </div>
+        <div class="form-group">
+            <label asp-for="BillingEmail"></label>
+            <input type="text" class="form-control" asp-for="BillingEmail">
+        </div>
     </div>
     
     <button type="submit" class="btn btn-primary mb-2">Create Provider</button>

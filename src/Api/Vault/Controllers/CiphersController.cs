@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;

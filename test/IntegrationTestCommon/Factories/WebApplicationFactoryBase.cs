@@ -1,4 +1,5 @@
 ﻿using AspNetCoreRateLimit;
+using Bit.Core.Auth.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;

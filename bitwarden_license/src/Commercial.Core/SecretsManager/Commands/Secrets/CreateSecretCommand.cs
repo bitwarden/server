@@ -31,6 +31,11 @@ public class CreateSecretCommand : ICreateSecretCommand
             throw new NotFoundException();
         }
 
+        if (secret.Projects != null && secret.Projects.Any() && !(await _projectRepository.ProjectsAreInOrganization(secret.Projects.Select(p => p.Id).ToList(), secret.OrganizationId)))
+        {
+            throw new NotFoundException();
+        }
+
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
