@@ -1,11 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
+using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.Models;
 
@@ -13,18 +16,26 @@ public class OrganizationEditModel : OrganizationViewModel
 {
     public OrganizationEditModel() { }
 
-    public OrganizationEditModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers,
+    public OrganizationEditModel(Provider provider)
+    {
+        Provider = provider;
+        BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
+        PlanType = Core.Enums.PlanType.TeamsMonthly;
+        Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+    }
+
+    public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
         IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
         GlobalSettings globalSettings)
-        : base(org, connections, orgUsers, ciphers, collections, groups, policies)
+        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies)
     {
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
         Name = org.Name;
         BusinessName = org.BusinessName;
-        BillingEmail = org.BillingEmail;
+        BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
         Seats = org.Seats;
@@ -60,7 +71,7 @@ public class OrganizationEditModel : OrganizationViewModel
     public string BraintreeMerchantId { get; set; }
 
     [Required]
-    [Display(Name = "Name")]
+    [Display(Name = "Organization Name")]
     public string Name { get; set; }
     [Display(Name = "Business Name")]
     public string BusinessName { get; set; }
@@ -123,4 +134,46 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "Expiration Date")]
     public DateTime? ExpirationDate { get; set; }
     public bool SalesAssistedTrialStarted { get; set; }
+
+    public Organization CreateOrganization(Provider provider)
+    {
+        BillingEmail = provider.BillingEmail;
+
+        return ToOrganization(new Organization());
+    }
+
+    public Organization ToOrganization(Organization existingOrganization)
+    {
+        existingOrganization.Name = Name;
+        existingOrganization.BusinessName = BusinessName;
+        existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
+        existingOrganization.PlanType = PlanType.Value;
+        existingOrganization.Plan = Plan;
+        existingOrganization.Seats = Seats;
+        existingOrganization.MaxCollections = MaxCollections;
+        existingOrganization.UsePolicies = UsePolicies;
+        existingOrganization.UseSso = UseSso;
+        existingOrganization.UseKeyConnector = UseKeyConnector;
+        existingOrganization.UseScim = UseScim;
+        existingOrganization.UseGroups = UseGroups;
+        existingOrganization.UseDirectory = UseDirectory;
+        existingOrganization.UseEvents = UseEvents;
+        existingOrganization.UseTotp = UseTotp;
+        existingOrganization.Use2fa = Use2fa;
+        existingOrganization.UseApi = UseApi;
+        existingOrganization.UseSecretsManager = UseSecretsManager;
+        existingOrganization.UseResetPassword = UseResetPassword;
+        existingOrganization.SelfHost = SelfHost;
+        existingOrganization.UsersGetPremium = UsersGetPremium;
+        existingOrganization.UseCustomPermissions = UseCustomPermissions;
+        existingOrganization.MaxStorageGb = MaxStorageGb;
+        existingOrganization.Gateway = Gateway;
+        existingOrganization.GatewayCustomerId = GatewayCustomerId;
+        existingOrganization.GatewaySubscriptionId = GatewaySubscriptionId;
+        existingOrganization.Enabled = Enabled;
+        existingOrganization.LicenseKey = LicenseKey;
+        existingOrganization.ExpirationDate = ExpirationDate;
+        existingOrganization.MaxAutoscaleSeats = MaxAutoscaleSeats;
+        return existingOrganization;
+    }
 }

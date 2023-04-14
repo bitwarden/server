@@ -2,7 +2,7 @@
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model OrganizationEditModel
 @{
-    ViewData["Title"] = "Organization: " + Model.Organization.Name;
+    ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Organization.Name;
 
     var canViewOrganizationInformation = AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View);
     var canViewBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_View);
@@ -24,18 +24,17 @@
 }
 
 @section Scripts {
+    @await Html.PartialAsync("_OrganizationFormScripts")
+    
     <script>
         (() => {
             document.getElementById('teams-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !==
-                    '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
                     alert('Organization is not on a free plan.');
                     return;
                 }
-
                 // Plan
-                document.getElementById('@(nameof(Model.PlanType))').value =
-                    '@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)';
+                document.getElementById('@(nameof(Model.PlanType))').value = '@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)';
                 document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
                 document.getElementById('@(nameof(Model.Seats))').value = '10';
                 document.getElementById('@(nameof(Model.MaxCollections))').value = '';
@@ -58,19 +57,14 @@
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
                 document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
-
             });
-
             document.getElementById('enterprise-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !==
-                    '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
                     alert('Organization is not on a free plan.');
                     return;
                 }
-
                 // Plan
-                document.getElementById('@(nameof(Model.PlanType))').value =
-                    '@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)';
+                document.getElementById('@(nameof(Model.PlanType))').value = '@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)';
                 document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
                 document.getElementById('@(nameof(Model.Seats))').value = '10';
                 document.getElementById('@(nameof(Model.MaxCollections))').value = '';
@@ -93,284 +87,24 @@
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
                 document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
-
-            });
-
-            document.getElementById('@(nameof(Model.PlanType))').addEventListener('change', () => {
-                const selectEl = document.getElementById('@(nameof(Model.PlanType))');
-                const selectText = selectEl.options[selectEl.selectedIndex].text;
-                document.getElementById('@(nameof(Model.Plan))').value = selectText;
-            });
-
-            document.getElementById('gateway-customer-link').addEventListener('click', () => {
-                const gateway = document.getElementById('@(nameof(Model.Gateway))');
-                const customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
-                if (!gateway || gateway.value === '' || !customerId || customerId.value === '') {
-                    return;
-                }
-
-                if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
-                    window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
-                } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
-                    window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/'
-                        + customerId.value, '_blank');
-                }
-            });
-
-            document.getElementById('gateway-subscription-link').addEventListener('click', () => {
-                const gateway = document.getElementById('@(nameof(Model.Gateway))');
-                const subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
-                if (!gateway || gateway.value === '' || !subId || subId.value === '') {
-                    return;
-                }
-
-                if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
-                    window.open('https://dashboard.stripe.com/subscriptions/' + subId.value, '_blank');
-                } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
-                    window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
-                        'subscriptions/' + subId.value, '_blank');
-                }
             });
         })();
     </script>
 }
 
-<h1>Organization <small>@Model.Organization.Name</small></h1>
+<h1>@(Model.Provider != null ? "Client " : string.Empty)Organization <small>@Model.Organization.Name</small></h1>
 
-@if (canViewOrganizationInformation)
+@if (Model.Provider != null)
 {
-    <h2>Organization Information</h2>
-    @await Html.PartialAsync("_ViewInformation", Model)
+    <h2>Provider Relationship</h2>
+    @await Html.PartialAsync("_ProviderInformation", Model.Provider)
 }
-
-@if (canViewBillingInformation)
-{
-    <h2>Billing Information</h2>
-    @await Html.PartialAsync("_BillingInformation",
-        new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
-}
-
-<form method="post" id="edit-form">
-    <input asp-for="SalesAssistedTrialStarted" type="hidden">
-    @if (canViewGeneralDetails)
-    {
-        <h2>General</h2>
-        <dl class="row">
-            <dt class="col-sm-4 col-lg-3">Name</dt>
-            <dd class="col-sm-8 col-lg-9">@Model.Name</dd>
-        </dl>
-        <div class="form-check mb-3">
-            <input type="checkbox" class="form-check-input" asp-for="Enabled" disabled='@(canCheckEnabled ? null : "disabled")'>
-            <label class="form-check-label" asp-for="Enabled"></label>
-        </div>
-    }
-
-    @if (canViewBusinessInformation)
-    {
-        <h2>Business Information</h2>
-        <dl class="row">
-            <dt class="col-sm-4 col-lg-3">Business Name</dt>
-            <dd class="col-sm-8 col-lg-9">@Model.BusinessName</dd>
-        </dl>
-    }
-    
-    @if (canViewPlan)
-    {
-        <h2>Plan</h2>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="PlanType"></label>
-                    <select class="form-control" asp-for="PlanType" disabled='@(canEditPlan ? null : "disabled")'
-                            asp-items="Html.GetEnumSelectList<Bit.Core.Enums.PlanType>()"></select>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="Plan"></label>
-                    <input type="text" class="form-control" asp-for="Plan" readonly='@(!canEditPlan)' required>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="Seats"></label>
-                    <input type="number" class="form-control" asp-for="Seats" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxCollections"></label>
-                    <input type="number" class="form-control" asp-for="MaxCollections" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxStorageGb"></label>
-                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-4">
-                <div class="form-group">
-                    <label asp-for="MaxAutoscaleSeats"></label>
-                    <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-        </div>
-        <h2>Features</h2>
-        <div class="row mb-3">
-            <div class="col-4">
-                <h3>General</h3>
-                <div class="form-check mb-2">
-                    <input type="checkbox" class="form-check-input" asp-for="SelfHost" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="SelfHost"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="Use2fa" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="Use2fa"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseApi" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseApi"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseGroups" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseGroups"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UsePolicies" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UsePolicies"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseSso" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseSso"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseKeyConnector" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseKeyConnector"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseScim" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseScim"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseDirectory" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseDirectory"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseEvents" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseEvents"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseResetPassword" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseResetPassword"></label>
-                </div>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseCustomPermissions" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseCustomPermissions"></label>
-                </div>
-            </div>
-            <div class="col-4">
-                <h3>Password Manager</h3>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseTotp" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseTotp"></label>
-                </div>
-            <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UsersGetPremium" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UsersGetPremium"></label>
-                </div>
-            </div>
-            <div class="col-4">
-                <h3>Secrets Manager</h3>
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="UseSecretsManager" disabled='@(canEditPlan ? null : "disabled")'>
-                    <label class="form-check-label" asp-for="UseSecretsManager"></label>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (canViewLicensing)
-    {
-        <h2>Licensing</h2>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="LicenseKey"></label>
-                    <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="ExpirationDate"></label>
-                    <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)'>
-                </div>
-            </div>
-        </div>
-    }
-
-    @if (canViewBilling)
-    {
-        <h2>Billing</h2>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="BillingEmail"></label>
-                    <input type="email" class="form-control" asp-for="BillingEmail" readonly='@(!canEditBilling)'>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <div class="form-group">
-                        <label asp-for="Gateway"></label>
-                        <select class="form-control" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
-                                asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
-                            <option value="">--</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="GatewayCustomerId"></label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
-                        @if (canLaunchGateway)
-                        {
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" id="gateway-customer-link">
-                                    <i class="fa fa-external-link"></i>
-                                </button>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="GatewaySubscriptionId"></label>
-                    <div class="input-group">
-                        <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
-                        @if (canLaunchGateway) 
-                        {
-                            <div class="input-group-append">
-                                <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
-                                    <i class="fa fa-external-link"></i>
-                                </button>
-                            </div>
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-</form>
+<h2>Organization Information</h2>
+@await Html.PartialAsync("_ViewInformation", Model)
+<h2>Billing Information</h2>
+@await Html.PartialAsync("_BillingInformation",
+    new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id })
+@await Html.PartialAsync("_OrganizationForm", Model)
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
     <div class="ml-auto d-flex">
