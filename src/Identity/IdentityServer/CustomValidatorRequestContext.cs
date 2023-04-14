@@ -1,5 +1,5 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Auth.Models.Business;
+using Bit.Core.Entities;
 
 namespace Bit.Identity.IdentityServer;
 

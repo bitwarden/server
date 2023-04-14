@@ -1,0 +1,20 @@
+<script>
+    function resendOwnerInvite(orgId, orgName) {
+        if (confirm('Resend invite to "' + orgName + '"?')) {
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("ResendOwnerInvite", "Organizations")' + '?id=' + orgId,
+                dataType: 'json',
+                contentType: false,
+                processData: false,               
+                success: function (response) {
+                    alert('Invitation has been resent!');                        
+                },
+                error: function (response) {
+                    alert("Error!");
+                }
+            });
+        }
+        return false;
+    }
+</script>

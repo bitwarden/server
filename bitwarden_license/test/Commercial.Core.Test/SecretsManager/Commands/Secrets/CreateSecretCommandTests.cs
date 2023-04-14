@@ -22,6 +22,9 @@ public class CreateSecretCommandTests
     public async Task CreateAsync_Success(PermissionType permissionType, Secret data,
       SutProvider<CreateSecretCommand> sutProvider, Guid userId, Project mockProject)
     {
+        sutProvider.GetDependency<IProjectRepository>().ProjectsAreInOrganization(default, default).ReturnsForAnyArgs(true);
+
+        mockProject.OrganizationId = data.OrganizationId;
         data.Projects = new List<Project>() { mockProject };
 
         if (permissionType == PermissionType.RunAsAdmin)
