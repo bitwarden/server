@@ -203,10 +203,10 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg) =>
-        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) }, isFreeOrg);
+    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg, bool initOrganization = false) =>
+        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) }, isFreeOrg, initOrganization);
 
-    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg)
+    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg, bool initOrganization = false)
     {
         MailQueueMessage CreateMessage(string email, object model)
         {
@@ -229,6 +229,7 @@ public class HandlebarsMailService : IMailService
                 OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
+                InitOrganization = initOrganization
             }
         ));
 

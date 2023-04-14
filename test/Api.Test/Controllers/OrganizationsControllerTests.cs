@@ -24,6 +24,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IProviderRepository _providerRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoConfigService _ssoConfigService;
     private readonly IUserService _userService;
@@ -46,6 +47,7 @@ public class OrganizationsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _paymentService = Substitute.For<IPaymentService>();
         _policyRepository = Substitute.For<IPolicyRepository>();
+        _providerRepository = Substitute.For<IProviderRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _ssoConfigService = Substitute.For<ISsoConfigService>();
         _getOrganizationApiKeyQuery = Substitute.For<IGetOrganizationApiKeyQuery>();
@@ -57,7 +59,7 @@ public class OrganizationsControllerTests : IDisposable
         _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-            _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
+            _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
             _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
             _cloudGetOrganizationLicenseQuery, _globalSettings);

@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -46,6 +47,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UserId = organization.UserId?.ToString();
         ProviderId = organization.ProviderId?.ToString();
         ProviderName = organization.ProviderName;
+        ProviderType = organization.ProviderType;
         FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
         FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
@@ -97,6 +99,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool HasPublicAndPrivateKeys { get; set; }
     public string ProviderId { get; set; }
     public string ProviderName { get; set; }
+    public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
     public bool FamilySponsorshipAvailable { get; set; }
     public ProductType PlanProductType { get; set; }

@@ -214,4 +214,40 @@ public class EventServiceTests
 
         await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
     }
+
+    [Theory, BitAutoData]
+    public async Task LogProviderOrganizationEventsAsync_LogsRequiredInfo(Provider provider, ICollection<ProviderOrganization> providerOrganizations, EventType eventType, DateTime date,
+        Guid actingUserId, Guid providerId, string ipAddress, DeviceType deviceType, SutProvider<EventService> sutProvider)
+    {
+        foreach (var providerOrganization in providerOrganizations)
+        {
+            providerOrganization.ProviderId = provider.Id;
+        }
+
+        var providerAbilities = new Dictionary<Guid, ProviderAbility>()
+        {
+            { provider.Id, new ProviderAbility() { UseEvents = true, Enabled = true } }
+        };
+        sutProvider.GetDependency<IApplicationCacheService>().GetProviderAbilitiesAsync().Returns(providerAbilities);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(ipAddress);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+        sutProvider.GetDependency<ICurrentContext>().ProviderIdForOrg(Arg.Any<Guid>()).Returns(providerId);
+
+        await sutProvider.Sut.LogProviderOrganizationEventsAsync(providerOrganizations.Select(po => (po, eventType, (DateTime?)date)));
+
+        var expected = providerOrganizations.Select(po =>
+            new EventMessage()
+            {
+                DeviceType = deviceType,
+                IpAddress = ipAddress,
+                ProviderId = provider.Id,
+                ProviderOrganizationId = po.Id,
+                Type = eventType,
+                ActingUserId = actingUserId,
+                Date = date
+            }).ToList();
+
+        await sutProvider.GetDependency<IEventWriteService>().Received(1).CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual<IEvent>(expected, new[] { "IdempotencyId" })));
+    }
 }

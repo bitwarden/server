@@ -7,7 +7,6 @@ namespace Bit.Core.Services;
 
 public interface IProviderService
 {
-    Task CreateAsync(string ownerEmail);
     Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key);
     Task UpdateAsync(Provider provider, bool updateBilling = false);
 
@@ -20,11 +19,13 @@ public interface IProviderService
     Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds,
         Guid deletingUserId);
 
-    Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key);
+    Task AddOrganization(Guid providerId, Guid organizationId, string key);
+    Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds);
     Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup,
         string clientOwnerEmail, User user);
     Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId);
     Task LogProviderAccessToOrganizationAsync(Guid organizationId);
     Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId);
+    Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail);
 }
 
