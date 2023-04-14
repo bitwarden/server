@@ -43,6 +43,12 @@ jobs:
         run: dotnet build src/Sql --configuration Release --verbosity minimal --output .
         shell: pwsh
 
+      - name: Upload DACPAC
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        with:
+          name: sql.dacpac
+          path: src/Sql/bin/Release/Sql.dacpac
+
       - name: Docker Compose up
         working-directory: "dev"
         run: |
