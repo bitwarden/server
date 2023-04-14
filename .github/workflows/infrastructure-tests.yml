@@ -95,7 +95,6 @@ jobs:
           # Default Dapper SqlServer
           BW_TEST_DATABASES__2__TYPE: "SqlServer"
           BW_TEST_DATABASES__2__CONNECTIONSTRING: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
-          BW_TEST_DATABASES__2__USEEF: "false" # Defaults to false so this isn't needed but this is how it is possible to also run the EF version of SqlServer by setting this to false
           # Default Sqlite
           BW_TEST_DATABASES__3__TYPE: "Sqlite"
           BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
