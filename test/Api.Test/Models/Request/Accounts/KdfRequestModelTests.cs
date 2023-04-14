@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Api.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Enums;
 using Xunit;
 
