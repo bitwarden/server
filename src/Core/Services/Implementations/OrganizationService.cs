@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;

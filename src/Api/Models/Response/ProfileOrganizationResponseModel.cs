@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Models.Data;
+﻿using Bit.Core.Auth.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Api;

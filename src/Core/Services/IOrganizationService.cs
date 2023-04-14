@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
