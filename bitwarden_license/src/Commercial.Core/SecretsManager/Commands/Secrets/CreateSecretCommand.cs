@@ -26,7 +26,12 @@ public class CreateSecretCommand : ICreateSecretCommand
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
         var project = secret.Projects?.FirstOrDefault();
 
-        if (project == null)
+        if (project == null && !orgAdmin)
+        {
+            throw new NotFoundException();
+        }
+
+        if (secret.Projects != null && secret.Projects.Any() && !(await _projectRepository.ProjectsAreInOrganization(secret.Projects.Select(p => p.Id).ToList(), secret.OrganizationId)))
         {
             throw new NotFoundException();
         }

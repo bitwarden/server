@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
+﻿using Bit.Core.Enums.Provider;
+
+namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 public class OrganizationUserOrganizationDetails
 {
@@ -36,6 +38,7 @@ public class OrganizationUserOrganizationDetails
     public string PrivateKey { get; set; }
     public Guid? ProviderId { get; set; }
     public string ProviderName { get; set; }
+    public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
     public string SsoConfig { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }

@@ -6,11 +6,13 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [SecretsManager]
+[Authorize("secrets")]
 public class SecretsManagerPortingController : Controller
 {
     private readonly ISecretRepository _secretRepository;
@@ -31,7 +33,7 @@ public class SecretsManagerPortingController : Controller
     [HttpGet("sm/{organizationId}/export")]
     public async Task<SMExportResponseModel> Export([FromRoute] Guid organizationId, [FromRoute] string format = "json")
     {
-        if (!await _currentContext.OrganizationAdmin(organizationId))
+        if (!await _currentContext.OrganizationAdmin(organizationId) || !_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }
@@ -45,13 +47,13 @@ public class SecretsManagerPortingController : Controller
             throw new NotFoundException();
         }
 
-        return new SMExportResponseModel(projects, secrets);
+        return new SMExportResponseModel(projects, secrets.Select(s => s.Secret));
     }
 
     [HttpPost("sm/{organizationId}/import")]
     public async Task Import([FromRoute] Guid organizationId, [FromBody] SMImportRequestModel importRequest)
     {
-        if (!await _currentContext.OrganizationAdmin(organizationId))
+        if (!await _currentContext.OrganizationAdmin(organizationId) || !_currentContext.AccessSecretsManager(organizationId))
         {
             throw new NotFoundException();
         }

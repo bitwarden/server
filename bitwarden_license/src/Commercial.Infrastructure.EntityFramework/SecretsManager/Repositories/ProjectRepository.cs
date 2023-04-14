@@ -91,12 +91,13 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByIds(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var projects = await dbContext.Project
+                                    .Include(p => p.Secrets)
                                     .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
                                     .ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
@@ -188,5 +189,14 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         var policy = await query.FirstOrDefaultAsync();
 
         return (policy.Read, policy.Write);
+    }
+
+    public async Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var results = await dbContext.Project.Where(p => p.OrganizationId == organizationId && projectIds.Contains(p.Id)).ToListAsync();
+
+        return projectIds.Count == results.Count;
     }
 }

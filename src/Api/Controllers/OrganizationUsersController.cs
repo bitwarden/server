@@ -177,6 +177,20 @@ public class OrganizationUsersController : Controller
         await _organizationService.ResendInviteAsync(orgGuidId, userId.Value, new Guid(id));
     }
 
+    [HttpPost("{organizationUserId}/accept-init")]
+    public async Task AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _organizationService.InitPendingOrganization(user.Id, orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
+        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+        await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
+    }
+
     [HttpPost("{organizationUserId}/accept")]
     public async Task Accept(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptRequestModel model)
     {
@@ -188,11 +202,9 @@ public class OrganizationUsersController : Controller
 
         var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
         var useMasterPasswordPolicy = masterPasswordPolicy != null &&
-            masterPasswordPolicy.Enabled &&
-            masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
-
-        if (useMasterPasswordPolicy &&
-            string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+                                          masterPasswordPolicy.Enabled &&
+                                          masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+        if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
         {
             throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
         }

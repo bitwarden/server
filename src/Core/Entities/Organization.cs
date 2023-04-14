@@ -69,6 +69,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public int? MaxAutoscaleSeats { get; set; } = null;
     public DateTime? OwnersNotifiedOfAutoscaling { get; set; } = null;
+    public OrganizationStatusType Status { get; set; }
 
     public void SetNewId()
     {
@@ -86,6 +87,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public string BillingName()
     {
         return BusinessName;
+    }
+
+    public string SubscriberName()
+    {
+        return Name;
     }
 
     public string BraintreeCustomerIdPrefix()
@@ -106,6 +112,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public bool IsUser()
     {
         return false;
+    }
+
+    public string SubscriberType()
+    {
+        return "Organization";
     }
 
     public long StorageBytesRemaining()

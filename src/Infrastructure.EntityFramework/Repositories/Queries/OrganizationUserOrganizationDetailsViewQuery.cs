@@ -55,6 +55,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         Permissions = ou.Permissions,
                         ProviderId = p.Id,
                         ProviderName = p.Name,
+                        ProviderType = p.Type,
                         SsoConfig = ss.Data,
                         FamilySponsorshipFriendlyName = os.FriendlyName,
                         FamilySponsorshipLastSyncDate = os.LastSyncDate,

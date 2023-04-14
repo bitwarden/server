@@ -1,0 +1,35 @@
+<script>
+    (() => {
+        document.getElementById('@(nameof(Model.PlanType))').addEventListener('change', () => {
+            const selectEl = document.getElementById('@(nameof(Model.PlanType))');
+            const selectText = selectEl.options[selectEl.selectedIndex].text;
+            document.getElementById('@(nameof(Model.Plan))').value = selectText;
+        });
+        document.getElementById('gateway-customer-link').addEventListener('click', () => {
+            const gateway = document.getElementById('@(nameof(Model.Gateway))');
+            const customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
+            if (!gateway || gateway.value === '' || !customerId || customerId.value === '') {
+                return;
+            }
+            if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
+                window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
+            } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
+                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/'
+                    + customerId.value, '_blank');
+            }
+        });
+        document.getElementById('gateway-subscription-link').addEventListener('click', () => {
+            const gateway = document.getElementById('@(nameof(Model.Gateway))');
+            const subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
+            if (!gateway || gateway.value === '' || !subId || subId.value === '') {
+                return;
+            }
+            if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
+                window.open('https://dashboard.stripe.com/subscriptions/' + subId.value, '_blank');
+            } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
+                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
+                    'subscriptions/' + subId.value, '_blank');
+            }
+        });
+    })();
+</script>
