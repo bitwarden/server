@@ -38,7 +38,8 @@ BEGIN
         [Data] = @Data,
         [Attachments] = @Attachments,
         [RevisionDate] = @RevisionDate,
-        [DeletedDate] = @DeletedDate
+        [DeletedDate] = @DeletedDate,
+        [Key] = @Key
         -- No need to update CreationDate, Favorites, Folders, or Type since that data will not change
     WHERE
         [Id] = @Id

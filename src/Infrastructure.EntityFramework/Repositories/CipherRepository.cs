@@ -571,6 +571,7 @@ public class CipherRepository : Repository<Core.Entities.Cipher, Cipher, Guid>, 
             trackedCipher.Attachments = cipher.Attachments;
             trackedCipher.RevisionDate = cipher.RevisionDate;
             trackedCipher.DeletedDate = cipher.DeletedDate;
+            trackedCipher.Key = cipher.Key;
 
             await transaction.CommitAsync();
 
