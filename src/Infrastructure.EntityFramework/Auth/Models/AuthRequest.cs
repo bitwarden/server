@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
+namespace Bit.Infrastructure.EntityFramework.Auth.Models;
 
 public class AuthRequest : Core.Auth.Entities.AuthRequest
 {
