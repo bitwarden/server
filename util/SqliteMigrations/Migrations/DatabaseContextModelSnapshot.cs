@@ -533,6 +533,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("INTEGER");
 
+                    b.Property<byte>("Status")
+                        .HasColumnType("INTEGER");
+
                     b.Property<long?>("Storage")
                         .HasColumnType("INTEGER");
 

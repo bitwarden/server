@@ -18,6 +18,19 @@ public class ProviderRepository : Repository<Provider, Guid>, IProviderRepositor
         : base(connectionString, readOnlyConnectionString)
     { }
 
+    public async Task<Provider> GetByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Provider>(
+                "[dbo].[Provider_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
     public async Task<ICollection<Provider>> SearchAsync(string name, string userEmail, int skip, int take)
     {
         using (var connection = new SqlConnection(ReadOnlyConnectionString))

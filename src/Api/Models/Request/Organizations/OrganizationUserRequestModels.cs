@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Api.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -35,6 +35,19 @@ public class OrganizationUserInviteRequestModel
             Permissions = Permissions,
         };
     }
+}
+
+public class OrganizationUserAcceptInitRequestModel
+{
+    [Required]
+    public string Token { get; set; }
+    [Required]
+    public string Key { get; set; }
+    [Required]
+    public OrganizationKeysRequestModel Keys { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string CollectionName { get; set; }
 }
 
 public class OrganizationUserAcceptRequestModel

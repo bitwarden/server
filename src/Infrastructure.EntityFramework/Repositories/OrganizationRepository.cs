@@ -91,6 +91,45 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         }
     }
 
+    public async Task<ICollection<Core.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from o in dbContext.Organizations
+                        where o.PlanType >= PlanType.TeamsMonthly && o.PlanType <= PlanType.EnterpriseAnnually &&
+                              !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                              (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
+                        select o;
+
+            if (!string.IsNullOrWhiteSpace(ownerEmail))
+            {
+                if (dbContext.Database.IsNpgsql())
+                {
+                    query = from o in query
+                            join ou in dbContext.OrganizationUsers
+                                on o.Id equals ou.OrganizationId
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.Type == OrganizationUserType.Owner && EF.Functions.ILike(EF.Functions.Collate(u.Email, "default"), $"{ownerEmail}%")
+                            select o;
+                }
+                else
+                {
+                    query = from o in query
+                            join ou in dbContext.OrganizationUsers
+                                on o.Id equals ou.OrganizationId
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.Type == OrganizationUserType.Owner && EF.Functions.Like(u.Email, $"{ownerEmail}%")
+                            select o;
+                }
+            }
+
+            return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
+        }
+    }
+
     public async Task UpdateStorageAsync(Guid id)
     {
         await OrganizationUpdateStorage(id);

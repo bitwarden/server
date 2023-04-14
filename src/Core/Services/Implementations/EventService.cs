@@ -333,25 +333,37 @@ public class EventService : IEventService
     public async Task LogProviderOrganizationEventAsync(ProviderOrganization providerOrganization, EventType type,
         DateTime? date = null)
     {
+        await LogProviderOrganizationEventsAsync(new[] { (providerOrganization, type, date) });
+    }
+
+    public async Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
+    {
         var providerAbilities = await _applicationCacheService.GetProviderAbilitiesAsync();
-        if (!CanUseProviderEvents(providerAbilities, providerOrganization.ProviderId))
+        var eventMessages = new List<IEvent>();
+        foreach (var (providerOrganization, type, date) in events)
         {
-            return;
+            if (!CanUseProviderEvents(providerAbilities, providerOrganization.ProviderId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                ProviderId = providerOrganization.ProviderId,
+                ProviderOrganizationId = providerOrganization.Id,
+                Type = type,
+                ActingUserId = _currentContext?.UserId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+
+            eventMessages.Add(e);
         }
 
-        var e = new EventMessage(_currentContext)
-        {
-            ProviderId = providerOrganization.ProviderId,
-            ProviderOrganizationId = providerOrganization.Id,
-            Type = type,
-            ActingUserId = _currentContext?.UserId,
-            Date = date.GetValueOrDefault(DateTime.UtcNow)
-        };
-        await _eventWriteService.CreateAsync(e);
+        await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
     public async Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
-        DateTime? date = null)
+            DateTime? date = null)
     {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         if (!CanUseEvents(orgAbilities, organizationDomain.OrganizationId))
