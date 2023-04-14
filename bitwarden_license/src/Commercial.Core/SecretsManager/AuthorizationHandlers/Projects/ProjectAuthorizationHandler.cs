@@ -39,6 +39,8 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
             case not null when requirement == ProjectOperations.Update:
                 await CanUpdateProjectAsync(context, requirement, resource);
                 break;
+            default:
+                throw new ArgumentException("Unsupported project operation requirement type provided.", nameof(requirement));
         }
     }
 

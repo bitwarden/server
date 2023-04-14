@@ -45,6 +45,41 @@ public class ProjectAuthorizationHandlerTests
 
     [Theory]
     [BitAutoData]
+    public async Task Handler_UnsupportedProjectOperationRequirement_Throws(
+        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+            .Returns(true);
+        var requirement = new ProjectOperationRequirement();
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, project);
+
+
+        await Assert.ThrowsAsync<ArgumentException>(() => sutProvider.Sut.HandleAsync(authzContext));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Handler_SupportedProjectOperationRequirement_DoesNotThrow(
+        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
+
+        var requirements = new[] { ProjectOperations.Create, ProjectOperations.Update };
+
+        foreach (var req in requirements)
+        {
+            var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { req },
+                claimsPrincipal, project);
+
+            await sutProvider.Sut.HandleAsync(authzContext);
+        }
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task CanCreateProject_AccessToSecretsManagerFalse_DoesNotSucceed(
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
