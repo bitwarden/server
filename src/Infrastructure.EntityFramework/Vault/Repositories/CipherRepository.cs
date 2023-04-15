@@ -428,7 +428,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 {
                     if (cipher.Favorites == null)
                     {
-                        var jsonObject = new JsonObject(new []
+                        var jsonObject = new JsonObject(new[]
                         {
                             new KeyValuePair<string, JsonNode>(cipher.UserId.Value.ToString(), true),
                         });
@@ -454,7 +454,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                 {
                     if (cipher.Folders == null)
                     {
-                        var jsonObject = new JsonObject(new []
+                        var jsonObject = new JsonObject(new[]
                         {
                             new KeyValuePair<string, JsonNode>(cipher.UserId.Value.ToString(), cipher.FolderId),
                         });
