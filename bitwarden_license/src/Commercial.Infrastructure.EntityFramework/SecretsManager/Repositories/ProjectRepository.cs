@@ -91,12 +91,13 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByIds(IEnumerable<Guid> ids)
+    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var projects = await dbContext.Project
+                                    .Include(p => p.Secrets)
                                     .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
                                     .ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
@@ -155,5 +156,47 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         await GetDbSet(dbContext).AddRangeAsync(entities);
         await dbContext.SaveChangesAsync();
         return projects;
+    }
+
+    public async Task<(bool Read, bool Write)> AccessToProjectAsync(Guid id, Guid userId, AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var projectQuery = dbContext.Project
+            .Where(s => s.Id == id);
+
+        var query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => projectQuery.Select(_ => new { Read = true, Write = true }),
+            AccessClientType.User => projectQuery.Select(p => new
+            {
+                Read = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read)
+                       || p.GroupAccessPolicies.Any(ap =>
+                           ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read)),
+                Write = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                        p.GroupAccessPolicies.Any(ap =>
+                            ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
+            }),
+            AccessClientType.ServiceAccount => projectQuery.Select(p => new
+            {
+                Read = p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Read),
+                Write = p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write),
+            }),
+            _ => projectQuery.Select(_ => new { Read = false, Write = false }),
+        };
+
+        var policy = await query.FirstOrDefaultAsync();
+
+        return (policy.Read, policy.Write);
+    }
+
+    public async Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var results = await dbContext.Project.Where(p => p.OrganizationId == organizationId && projectIds.Contains(p.Id)).ToListAsync();
+
+        return projectIds.Count == results.Count;
     }
 }

@@ -8,6 +8,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +17,7 @@ namespace Bit.Admin.Controllers;
 [Authorize]
 public class OrganizationsController : Controller
 {
+    private readonly IOrganizationService _organizationService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
@@ -30,9 +32,11 @@ public class OrganizationsController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IUserService _userService;
+    private readonly IProviderRepository _providerRepository;
     private readonly ILogger<OrganizationsController> _logger;
 
     public OrganizationsController(
+        IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
@@ -47,8 +51,10 @@ public class OrganizationsController : Controller
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
         IUserService userService,
+        IProviderRepository providerRepository,
         ILogger<OrganizationsController> logger)
     {
+        _organizationService = organizationService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationConnectionRepository = organizationConnectionRepository;
@@ -63,6 +69,7 @@ public class OrganizationsController : Controller
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;
         _userService = userService;
+        _providerRepository = providerRepository;
         _logger = logger;
     }
 
@@ -102,6 +109,7 @@ public class OrganizationsController : Controller
             return RedirectToAction("Index");
         }
 
+        var provider = await _providerRepository.GetByOrganizationIdAsync(id);
         var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(id);
         var collections = await _collectionRepository.GetManyByOrganizationIdAsync(id);
         IEnumerable<Group> groups = null;
@@ -116,7 +124,7 @@ public class OrganizationsController : Controller
         }
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
-        return View(new OrganizationViewModel(organization, billingSyncConnection, users, ciphers, collections, groups, policies));
+        return View(new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -128,6 +136,7 @@ public class OrganizationsController : Controller
             return RedirectToAction("Index");
         }
 
+        var provider = await _providerRepository.GetByOrganizationIdAsync(id);
         var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(id);
         var collections = await _collectionRepository.GetManyByOrganizationIdAsync(id);
         IEnumerable<Group> groups = null;
@@ -143,7 +152,7 @@ public class OrganizationsController : Controller
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(organization);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
-        return View(new OrganizationEditModel(organization, users, ciphers, collections, groups, policies,
+        return View(new OrganizationEditModel(organization, provider, users, ciphers, collections, groups, policies,
             billingInfo, billingSyncConnection, _globalSettings));
     }
 
@@ -213,4 +222,21 @@ public class OrganizationsController : Controller
         return RedirectToAction("Index");
     }
 
+    [HttpPost]
+    public async Task<IActionResult> ResendOwnerInvite(Guid id)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            return RedirectToAction("Index");
+        }
+
+        var organizationUsers = await _organizationUserRepository.GetManyByOrganizationAsync(id, OrganizationUserType.Owner);
+        foreach (var organizationUser in organizationUsers)
+        {
+            await _organizationService.ResendInviteAsync(id, null, organizationUser.Id, true);
+        }
+
+        return Json(null);
+    }
 }

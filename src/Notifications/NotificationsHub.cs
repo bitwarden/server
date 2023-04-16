@@ -18,7 +18,7 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
 
     public override async Task OnConnectedAsync()
     {
-        var currentContext = new CurrentContext(null);
+        var currentContext = new CurrentContext(null, null);
         await currentContext.BuildAsync(Context.User, _globalSettings);
         if (currentContext.Organizations != null)
         {
@@ -33,7 +33,7 @@ public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
 
     public override async Task OnDisconnectedAsync(Exception exception)
     {
-        var currentContext = new CurrentContext(null);
+        var currentContext = new CurrentContext(null, null);
         await currentContext.BuildAsync(Context.User, _globalSettings);
         if (currentContext.Organizations != null)
         {

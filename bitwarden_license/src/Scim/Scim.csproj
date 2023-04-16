@@ -6,10 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="5.0.2" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\..\..\src\SharedWeb\SharedWeb.csproj" />
   </ItemGroup>

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Settings.LoggingSettings;
+﻿using Bit.Core.Auth.Settings;
+using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
 
@@ -77,6 +78,7 @@ public class GlobalSettings : IGlobalSettings
         new DistributedIpRateLimitingSettings();
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
+    public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -537,5 +539,11 @@ public class GlobalSettings : IGlobalSettings
     {
         public int VerificationInterval { get; set; } = 12;
         public int ExpirationPeriod { get; set; } = 7;
+    }
+
+    public class LaunchDarklySettings : ILaunchDarklySettings
+    {
+        public string SdkKey { get; set; }
+        public string FlagDataFilePath { get; set; } = "flags.json";
     }
 }

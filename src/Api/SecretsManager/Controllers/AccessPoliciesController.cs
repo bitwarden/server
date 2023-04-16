@@ -72,8 +72,7 @@ public class AccessPoliciesController : Controller
 
         var (accessClient, userId) = await GetAccessClientTypeAsync(project.OrganizationId);
         var policies = request.ToBaseAccessPoliciesForProject(id);
-        await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
-        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
+        var results = await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
@@ -81,9 +80,8 @@ public class AccessPoliciesController : Controller
     public async Task<ProjectAccessPoliciesResponseModel> GetProjectAccessPoliciesAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToProjectAsync(project);
-
-        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id);
+        var (_, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
+        var results = await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(id, userId);
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
@@ -105,8 +103,7 @@ public class AccessPoliciesController : Controller
 
         var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
         var policies = request.ToBaseAccessPoliciesForServiceAccount(id);
-        await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
-        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id);
+        var results = await _createAccessPoliciesCommand.CreateManyAsync(policies, userId, accessClient);
         return new ServiceAccountAccessPoliciesResponseModel(results);
     }
 
@@ -115,27 +112,9 @@ public class AccessPoliciesController : Controller
         [FromRoute] Guid id)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
-
-        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id);
+        var (_, userId) = await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
+        var results = await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(id, userId);
         return new ServiceAccountAccessPoliciesResponseModel(results);
-    }
-
-    [HttpGet("/service-accounts/{id}/granted-policies")]
-    public async Task<ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>>
-        GetServiceAccountGrantedPoliciesAsync([FromRoute] Guid id)
-    {
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
-
-        var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
-        var results = await _accessPolicyRepository.GetManyByServiceAccountIdAsync(id, userId, accessClient);
-        var responses = results.Select(ap =>
-            new ServiceAccountProjectAccessPolicyResponseModel((ServiceAccountProjectAccessPolicy)ap));
-        return new ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>(responses);
     }
 
     [HttpPost("/service-accounts/{id}/granted-policies")]
@@ -157,7 +136,25 @@ public class AccessPoliciesController : Controller
         var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
         var policies = requests.Select(request => request.ToServiceAccountProjectAccessPolicy(id));
         var results =
-            await _createAccessPoliciesCommand.CreateManyAsync(new List<BaseAccessPolicy>(policies), userId, accessClient);
+            await _createAccessPoliciesCommand.CreateManyAsync(new List<BaseAccessPolicy>(policies), userId,
+                accessClient);
+        var responses = results.Select(ap =>
+            new ServiceAccountProjectAccessPolicyResponseModel((ServiceAccountProjectAccessPolicy)ap));
+        return new ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>(responses);
+    }
+
+    [HttpGet("/service-accounts/{id}/granted-policies")]
+    public async Task<ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>>
+        GetServiceAccountGrantedPoliciesAsync([FromRoute] Guid id)
+    {
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        if (serviceAccount == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var (accessClient, userId) = await GetAccessClientTypeAsync(serviceAccount.OrganizationId);
+        var results = await _accessPolicyRepository.GetManyByServiceAccountIdAsync(id, userId, accessClient);
         var responses = results.Select(ap =>
             new ServiceAccountProjectAccessPolicyResponseModel((ServiceAccountProjectAccessPolicy)ap));
         return new ListResponseModel<ServiceAccountProjectAccessPolicyResponseModel>(responses);
@@ -206,7 +203,7 @@ public class AccessPoliciesController : Controller
         var organizationUsers =
             await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var userResponses = organizationUsers
-            .Where(user => user.AccessSecretsManager)
+            .Where(user => user.AccessSecretsManager && user.Status == OrganizationUserStatusType.Confirmed)
             .Select(userDetails => new PotentialGranteeResponseModel(userDetails));
 
         return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses));
@@ -244,7 +241,7 @@ public class AccessPoliciesController : Controller
         return new ListResponseModel<PotentialGranteeResponseModel>(projectResponses);
     }
 
-    private async Task CheckUserHasWriteAccessToProjectAsync(Project project)
+    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)
     {
         if (project == null)
         {
@@ -263,9 +260,10 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
+        return (accessClient, userId);
     }
 
-    private async Task CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
+    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
     {
         if (serviceAccount == null)
         {
@@ -285,6 +283,7 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
+        return (accessClient, userId);
     }
 
     private async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientTypeAsync(Guid organizationId)

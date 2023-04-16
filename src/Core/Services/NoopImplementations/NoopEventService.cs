@@ -2,6 +2,7 @@
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.Vault.Entities;
 
 namespace Bit.Core.Services;
 
@@ -69,8 +70,13 @@ public class NoopEventService : IEventService
         return Task.FromResult(0);
     }
 
+    public Task LogProviderOrganizationEventsAsync(IEnumerable<(ProviderOrganization, EventType, DateTime?)> events)
+    {
+        return Task.FromResult(0);
+    }
+
     public Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type,
-        DateTime? date = null)
+            DateTime? date = null)
     {
         return Task.FromResult(0);
     }
