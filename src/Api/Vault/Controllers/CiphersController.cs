@@ -1,8 +1,6 @@
 ﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.Models.Request.Accounts;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
@@ -233,45 +231,6 @@ public class CiphersController : Controller
         }
 
         return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
-    }
-
-    [HttpPost("import")]
-    public async Task PostImport([FromBody] ImportCiphersRequestModel model)
-    {
-        if (!_globalSettings.SelfHosted &&
-            (model.Ciphers.Count() > 6000 || model.FolderRelationships.Count() > 6000 ||
-                model.Folders.Count() > 1000))
-        {
-            throw new BadRequestException("You cannot import this much data at once.");
-        }
-
-        var userId = _userService.GetProperUserId(User).Value;
-        var folders = model.Folders.Select(f => f.ToFolder(userId)).ToList();
-        var ciphers = model.Ciphers.Select(c => c.ToCipherDetails(userId, false)).ToList();
-        await _cipherService.ImportCiphersAsync(folders, ciphers, model.FolderRelationships);
-    }
-
-    [HttpPost("import-organization")]
-    public async Task PostImport([FromQuery] string organizationId,
-        [FromBody] ImportOrganizationCiphersRequestModel model)
-    {
-        if (!_globalSettings.SelfHosted &&
-            (model.Ciphers.Count() > 6000 || model.CollectionRelationships.Count() > 12000 ||
-                model.Collections.Count() > 1000))
-        {
-            throw new BadRequestException("You cannot import this much data at once.");
-        }
-
-        var orgId = new Guid(organizationId);
-        if (!await _currentContext.AccessImportExport(orgId))
-        {
-            throw new NotFoundException();
-        }
-
-        var userId = _userService.GetProperUserId(User).Value;
-        var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
-        var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
-        await _cipherService.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
     }
 
     [HttpPut("{id}/partial")]

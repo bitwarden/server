@@ -1,6 +1,7 @@
-﻿using Bit.Api.Vault.Models.Request;
+﻿using Bit.Api.Models.Request;
+using Bit.Api.Vault.Models.Request;
 
-namespace Bit.Api.Models.Request.Organizations;
+namespace Bit.Api.Tools.Models.Request.Organizations;
 
 public class ImportOrganizationCiphersRequestModel
 {
