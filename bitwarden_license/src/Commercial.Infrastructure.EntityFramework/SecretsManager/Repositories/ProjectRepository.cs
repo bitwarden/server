@@ -127,7 +127,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
         return (policy.Read, policy.Write);
     }
-    
+
     public async Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
