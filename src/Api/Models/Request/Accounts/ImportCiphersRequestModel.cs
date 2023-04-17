@@ -1,8 +1,10 @@
-﻿namespace Bit.Api.Models.Request.Accounts;
+﻿using Bit.Api.Vault.Models.Request;
+
+namespace Bit.Api.Models.Request.Accounts;
 
 public class ImportCiphersRequestModel
 {
-    public FolderRequestModel[] Folders { get; set; }
+    public FolderWithIdRequestModel[] Folders { get; set; }
     public CipherRequestModel[] Ciphers { get; set; }
     public KeyValuePair<int, int>[] FolderRelationships { get; set; }
 }

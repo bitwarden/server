@@ -36,6 +36,14 @@
             </div>
         </div>
     </div>
+    <div class="row">
+        <div class="col-sm">
+            <div class="form-group">
+                <label asp-for="BillingPhone"></label>
+                <input type="tel" class="form-control" asp-for="BillingPhone">
+            </div>
+        </div>
+    </div>
 </form>
 @await Html.PartialAsync("Organizations", Model)
 <div class="d-flex mt-4">

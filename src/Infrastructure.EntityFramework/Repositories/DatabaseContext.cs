@@ -2,6 +2,7 @@
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -56,6 +57,7 @@ public class DatabaseContext : DbContext
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
+    public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -95,6 +97,7 @@ public class DatabaseContext : DbContext
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eAuthRequest = builder.Entity<AuthRequest>();
+        var eOrganizationDomain = builder.Entity<OrganizationDomain>();
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -116,6 +119,7 @@ public class DatabaseContext : DbContext
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eAuthRequest.Property(ar => ar.Id).ValueGeneratedNever();
+        eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -167,6 +171,7 @@ public class DatabaseContext : DbContext
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eAuthRequest.ToTable(nameof(AuthRequest));
+        eOrganizationDomain.ToTable(nameof(OrganizationDomain));
 
         ConfigureDateTimeUtcQueries(builder);
     }

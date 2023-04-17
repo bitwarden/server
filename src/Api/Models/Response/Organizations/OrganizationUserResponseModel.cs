@@ -89,6 +89,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
 
         Name = organizationUser.Name;
         Email = organizationUser.Email;
+        AvatarColor = organizationUser.AvatarColor;
         TwoFactorEnabled = twoFactorEnabled;
         SsoBound = !string.IsNullOrWhiteSpace(organizationUser.SsoExternalId);
         Collections = organizationUser.Collections.Select(c => new SelectionReadOnlyResponseModel(c));
@@ -97,8 +98,10 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
     }
 
+
     public string Name { get; set; }
     public string Email { get; set; }
+    public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }

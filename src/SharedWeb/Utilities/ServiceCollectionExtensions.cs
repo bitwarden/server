@@ -2,13 +2,17 @@
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Auth.LoginFeatures;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
-using Bit.Core.LoginFeatures;
-using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
@@ -16,7 +20,10 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
+using Bit.Infrastructure.EntityFramework;
+using DnsClient;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
@@ -124,6 +131,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISsoConfigService, SsoConfigService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
+        services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
     }
 
     public static void AddTokenizers(this IServiceCollection services)
@@ -173,6 +181,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
+        services.AddSingleton<ILookupClient>(_ =>
+        {
+            var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15) };
+            return new LookupClient(options);
+        });
+        services.AddSingleton<IDnsResolverService, DnsResolverService>();
+        services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
         services.AddTokenizers();
 
         if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString) &&
@@ -339,7 +354,7 @@ public static class ServiceCollectionExtensions
             {
                 RequireDigit = false,
                 RequireLowercase = false,
-                RequiredLength = 10,
+                RequiredLength = 12,
                 RequireNonAlphanumeric = false,
                 RequireUppercase = false
             };
@@ -459,7 +474,7 @@ public static class ServiceCollectionExtensions
     }
 
     public static GlobalSettings AddGlobalSettingsServices(this IServiceCollection services,
-        IConfiguration configuration, IWebHostEnvironment environment)
+        IConfiguration configuration, IHostEnvironment environment)
     {
         var globalSettings = new GlobalSettings();
         ConfigurationBinder.Bind(configuration.GetSection("GlobalSettings"), globalSettings);

@@ -1,7 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
-using Bit.Core.Models;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Identity;
 
@@ -62,7 +63,6 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     public bool UsesKeyConnector { get; set; }
     public int FailedLoginCount { get; set; }
     public DateTime? LastFailedLoginDate { get; set; }
-    public bool UnknownDeviceVerificationEnabled { get; set; }
     [MaxLength(7)]
     public string AvatarColor { get; set; }
     public DateTime? LastPasswordChangeDate { get; set; }
@@ -85,6 +85,11 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
         return Name;
     }
 
+    public string SubscriberName()
+    {
+        return string.IsNullOrWhiteSpace(Name) ? Email : Name;
+    }
+
     public string BraintreeCustomerIdPrefix()
     {
         return "u";
@@ -103,6 +108,11 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
     public bool IsUser()
     {
         return true;
+    }
+
+    public string SubscriberType()
+    {
+        return "Subscriber";
     }
 
     public Dictionary<TwoFactorProviderType, TwoFactorProvider> GetTwoFactorProviders()

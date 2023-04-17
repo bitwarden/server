@@ -79,7 +79,7 @@ public class CollectionsController : Controller
     [HttpGet("details")]
     public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
     {
-        if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId))
+        if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId) && !await _currentContext.ManageGroups(orgId))
         {
             throw new NotFoundException();
         }
@@ -204,12 +204,12 @@ public class CollectionsController : Controller
     {
         var orgId = new Guid(model.OrganizationId);
         var collectionIds = model.Ids.Select(i => new Guid(i));
-        if (!await _currentContext.DeleteAssignedCollections(orgId))
+        if (!await _currentContext.DeleteAssignedCollections(orgId) && !await _currentContext.DeleteAnyCollection(orgId))
         {
             throw new NotFoundException();
         }
 
-        var userCollections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+        var userCollections = await _collectionService.GetOrganizationCollections(orgId);
         var filteredCollections = userCollections.Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == orgId);
 
         if (!filteredCollections.Any())

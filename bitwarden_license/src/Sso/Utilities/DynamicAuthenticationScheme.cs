@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Auth.Enums;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Sustainsys.Saml2.AspNetCore2;

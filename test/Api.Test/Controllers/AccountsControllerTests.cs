@@ -1,14 +1,16 @@
 ﻿using System.Security.Claims;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Controllers;
-using Bit.Api.Models.Request.Accounts;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
@@ -31,6 +33,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ISendService _sendService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICaptchaValidationService _captchaValidationService;
+    private readonly IPolicyService _policyService;
 
     public AccountsControllerTests()
     {
@@ -46,6 +49,7 @@ public class AccountsControllerTests : IDisposable
         _sendRepository = Substitute.For<ISendRepository>();
         _sendService = Substitute.For<ISendService>();
         _captchaValidationService = Substitute.For<ICaptchaValidationService>();
+        _policyService = Substitute.For<IPolicyService>();
         _sut = new AccountsController(
             _globalSettings,
             _cipherRepository,
@@ -58,7 +62,8 @@ public class AccountsControllerTests : IDisposable
             _userService,
             _sendRepository,
             _sendService,
-            _captchaValidationService
+            _captchaValidationService,
+            _policyService
         );
     }
 

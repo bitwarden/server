@@ -5,7 +5,6 @@ on:
   workflow_dispatch:
     inputs: {}
 
-
 jobs:
   stop-slots:
     name: Stop Slots
@@ -29,15 +28,15 @@ jobs:
           echo "NAME_LOWER: $NAME_LOWER"
           echo "name_lower=$NAME_LOWER" >> $GITHUB_OUTPUT
 
-      - name: Login to Azure
+      - name: Login to Azure - CI Subscription
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_KV_CI_SERRVICE_PRINCIPAL }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
         env:
-          VAULT_NAME: "bitwarden-prod-kv"
+          VAULT_NAME: "bitwarden-ci"
         run: |
           webapp_name=$(
             az keyvault secret show --vault-name $VAULT_NAME \
@@ -46,6 +45,11 @@ jobs:
           )
           echo "::add-mask::$webapp_name"
           echo "webapp-name=$webapp_name" >> $GITHUB_OUTPUT
+
+      - name: Login to Azure
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Stop staging slot
         env:

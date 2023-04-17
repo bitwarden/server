@@ -42,4 +42,13 @@ public class ApiKeyRepository : Repository<ApiKey, Guid>, IApiKeyRepository
 
         return results.ToList();
     }
+
+    public async Task DeleteManyAsync(IEnumerable<ApiKey> objs)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        await connection.QueryAsync<ApiKey>(
+            $"[{Schema}].[ApiKey_DeleteByIds]",
+            new { Ids = objs.Select(obj => obj.Id).ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+    }
 }

@@ -1,6 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Business;
+using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services;
@@ -13,11 +14,10 @@ public interface IMailService
     Task SendChangeEmailAlreadyExistsEmailAsync(string fromEmail, string toEmail);
     Task SendChangeEmailEmailAsync(string newEmailAddress, string token);
     Task SendTwoFactorEmailAsync(string email, string token);
-    Task SendNewDeviceLoginTwoFactorEmailAsync(string email, string token);
     Task SendNoMasterPasswordHintEmailAsync(string email);
     Task SendMasterPasswordHintEmailAsync(string email, string hint);
-    Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token);
-    Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites);
+    Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg, bool initOrganization = false);
+    Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg, bool initOrganization = false);
     Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);
@@ -54,4 +54,5 @@ public interface IMailService
     Task SendOTPEmailAsync(string email, string token);
     Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);
     Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip);
+    Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName);
 }

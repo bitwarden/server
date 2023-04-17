@@ -31,6 +31,9 @@ public class EventResponseModel : ResponseModel
         IpAddress = ev.IpAddress;
         InstallationId = ev.InstallationId;
         SystemUser = ev.SystemUser;
+        DomainName = ev.DomainName;
+        SecretId = ev.SecretId;
+        ServiceAccountId = ev.ServiceAccountId;
     }
 
     public EventType Type { get; set; }
@@ -50,4 +53,7 @@ public class EventResponseModel : ResponseModel
     public DeviceType? DeviceType { get; set; }
     public string IpAddress { get; set; }
     public EventSystemUser? SystemUser { get; set; }
+    public string DomainName { get; set; }
+    public Guid? SecretId { get; set; }
+    public Guid? ServiceAccountId { get; set; }
 }

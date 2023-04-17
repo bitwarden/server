@@ -32,7 +32,7 @@ public class CloudGetOrganizationLicenseQuery : ICloudGetOrganizationLicenseQuer
             throw new BadRequestException("Invalid installation id");
         }
 
-        var subInfo = await _paymentService.GetSubscriptionAsync(organization);
-        return new OrganizationLicense(organization, subInfo, installationId, _licensingService, version);
+        var subscriptionInfo = await _paymentService.GetSubscriptionAsync(organization);
+        return new OrganizationLicense(organization, subscriptionInfo, installationId, _licensingService, version);
     }
 }

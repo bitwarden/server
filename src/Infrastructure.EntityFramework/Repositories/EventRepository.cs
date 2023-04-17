@@ -6,7 +6,7 @@ using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Cipher = Bit.Core.Entities.Cipher;
+using Cipher = Bit.Core.Vault.Entities.Cipher;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 

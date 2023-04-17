@@ -108,10 +108,15 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
+      - name: Login to Azure - CI subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
       - name: Retrieve secrets
         id: retrieve-secrets
         env:
-          VAULT_NAME: "bitwarden-prod-kv"
+          VAULT_NAME: "bitwarden-ci"
         run: |
           webapp_name=$(
             az keyvault secret show --vault-name $VAULT_NAME \
@@ -188,7 +193,7 @@ jobs:
             origin_docker_repo: bitwarden
           - project_name: EventsProcessor
             prod_acr: true
-            origin_docker_repo: bitwardenqa.azurecr.io
+            origin_docker_repo: bitwardenprod.azurecr.io
           - project_name: Icons
             origin_docker_repo: bitwarden
             prod_acr: true
@@ -209,7 +214,7 @@ jobs:
           - project_name: Scim
             origin_docker_repo: bitwarden
           - project_name: Billing
-            origin_docker_repo: bitwardenqa.azurecr.io
+            origin_docker_repo: bitwardenprod.azurecr.io
     steps:
       - name: Print environment
         env:
@@ -238,8 +243,8 @@ jobs:
         if: matrix.origin_docker_repo == 'bitwarden'
         uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
         with:
-          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-          azure-keyvault-name: "bitwarden-prod-kv"
+          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          azure-keyvault-name: "bitwarden-ci"
 
       - name: Pull latest project image
         if: matrix.origin_docker_repo == 'bitwarden'
@@ -277,31 +282,19 @@ jobs:
           docker logout
           echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
-      ########## ACR QA ##########
-      - name: Login to Azure - QA Subscription
+      ########## ACR PROD ##########
+      - name: Login to Azure - PROD Subscription
         uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
         with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to Azure ACR
-        run: az acr login -n bitwardenqa
-
-      - name: Pull latest project image
-        if: matrix.origin_docker_repo == 'bitwardenqa.azurecr.io'
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          REGISTRY: bitwardenqa.azurecr.io
-        run: |
-          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker pull $REGISTRY/$PROJECT_NAME:latest
-          else
-            docker pull $REGISTRY/$PROJECT_NAME:$_BRANCH_NAME
-          fi
+        run: az acr login -n bitwardenprod
 
       - name: Tag version and latest
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          REGISTRY: bitwardenqa.azurecr.io
+          REGISTRY: bitwardenprod.azurecr.io
           ORIGIN_REGISTRY: ${{ matrix.origin_docker_repo }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
@@ -315,50 +308,12 @@ jobs:
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          REGISTRY: bitwardenqa.azurecr.io
-        run: |
-          docker push $REGISTRY/$PROJECT_NAME:latest
-          docker push $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
-
-      - name: Log out of Docker
-        run: docker logout
-
-      ########## ACR PROD ##########
-      - name: Login to Azure - PROD Subscription
-        if: matrix.prod_acr == true
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      - name: Login to Azure ACR
-        if: matrix.prod_acr == true
-        run: az acr login -n bitwardenprod
-
-      - name: Tag version and latest
-        if: matrix.prod_acr == true
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-          REGISTRY: bitwardenprod.azurecr.io
-          ORIGIN_REGISTRY: ${{ matrix.origin_docker_repo }}
-        run: |
-          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:latest $REGISTRY/$PROJECT_NAME:dryrun
-          else
-            docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
-            docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:latest
-          fi
-
-      - name: Push version and latest image
-        if: ${{ github.event.inputs.release_type != 'Dry Run' && matrix.prod_acr == true }}
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
         run: |
           docker push $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
           docker push $REGISTRY/$PROJECT_NAME:latest
 
       - name: Log out of Docker
-        if: matrix.prod_acr == true
         run: docker logout
 
   release:
