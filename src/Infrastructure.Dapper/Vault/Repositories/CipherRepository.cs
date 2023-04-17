@@ -616,15 +616,15 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                             var dataTable = BuildCollectionsTable(bulkCopy, collections);
                             bulkCopy.WriteToServer(dataTable);
                         }
+                    }
 
-                        if (collectionCiphers.Any())
+                    if (collectionCiphers.Any())
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
-                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                            {
-                                bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
-                                var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
-                                bulkCopy.WriteToServer(dataTable);
-                            }
+                            bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
+                            var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
+                            bulkCopy.WriteToServer(dataTable);
                         }
                     }
 

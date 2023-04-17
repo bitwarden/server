@@ -85,18 +85,34 @@ public class OrganizationResponseModel : ResponseModel
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 {
-    public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription = null, OrganizationLicense license = null)
-        : base(organization, "organizationSubscription")
+    public OrganizationSubscriptionResponseModel(Organization organization) : base(organization, "organizationSubscription")
     {
-        if (subscription != null)
+        Expiration = organization.ExpirationDate;
+        StorageName = organization.Storage.HasValue ?
+            CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
+        StorageGb = organization.Storage.HasValue ?
+            Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+    }
+
+    public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
+        : this(organization)
+    {
+        Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
+        UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
+        Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
+
+        if (hideSensitiveData)
         {
-            Subscription = subscription.Subscription != null ?
-                new BillingSubscription(subscription.Subscription) : null;
-            UpcomingInvoice = subscription.UpcomingInvoice != null ?
-                new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
-            Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
+            BillingEmail = null;
+            Subscription.Items = null;
+            UpcomingInvoice.Amount = null;
         }
-        else if (license != null)
+    }
+
+    public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
+        this(organization)
+    {
+        if (license != null)
         {
             // License expiration should always include grace period - See OrganizationLicense.cs
             Expiration = license.Expires;
@@ -105,17 +121,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
                                              license.Expires?.AddDays(-Constants
                                                  .OrganizationSelfHostSubscriptionGracePeriodDays);
         }
-        else
-        {
-            // No subscription or license, assume organization expiration date is end of grace period
-            Expiration = organization.ExpirationDate;
-            // No way to know the SelfHostSubscriptionExpiration, so leave it empty
-        }
-
-        StorageName = organization.Storage.HasValue ?
-            CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
-        StorageGb = organization.Storage.HasValue ?
-            Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
     }
 
     public string StorageName { get; set; }

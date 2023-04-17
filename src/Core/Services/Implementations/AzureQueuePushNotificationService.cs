@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Azure.Storage.Queues;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

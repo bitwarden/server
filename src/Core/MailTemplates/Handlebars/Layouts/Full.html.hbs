@@ -5,6 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Bitwarden</title>
 </head>
+
 <body style="-webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none; height: 100%; line-height: 25px; width: 100% !important; margin: 0;" bgcolor="#f6f6f6">
     <style type="text/css">
         ﻿ body {
@@ -46,18 +47,7 @@
             background-color: #f6f6f6;
         }
 
-        .white-title {
-            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-            box-sizing: border-box;
-            font-size: 24px;
-            line-height: 32px;
-            font-weight: 700;
-            -webkit-font-smoothing: antialiased;
-            -webkit-text-size-adjust: none;
-            color: #ffffff;
-        }
-
-        @media only screen and (max-width: 350px) {
+        @media only screen and (max-width: 600px) {
             body {
                 padding: 0 !important;
             }
@@ -101,60 +91,17 @@
             .indented {
                 padding-left: 10px;
             }
-
-            .title-header-text {
-                width: 100%;
-                display: block;
-                padding-top: 75px;
-                padding-bottom: 0px;
-                padding-left: 35px;
-                padding-right: 20px;
-            }
-
-            .title-header-image {
-                width: 100%;
-                display: block;
-            }
-
-            .footer-image {
-                display: none;
-            }
-
-            .footer-text {
-                width: 100%;
-            }
         }
 
-        @media only screen and (min-width: 350px) {
-            .title-header-text {
-                width: 65%;
-                display: inline-block;
-                padding-top: 75px;
-                padding-bottom: 75px;
-                padding-left: 35px;
-                padding-right: 20px;
-            }
-
-            .title-header-image {
-                display: inline-block;
-            }
-
+        @media only screen and (min-width: 600px) {
             {{! Fix for Apple Mail }}
             .content-table {
                 width: 600px !important;
             }
-
-            .footer-image {
-                display: block;
-            }
-
-            .footer-text {
-                width: 65%;
-            }
         }
 
         /* Component styling - these are explicitly applied via classes so that they can be
-        gradually introduced as we update templates.*/
+            gradually introduced as we update templates.*/
         a.inline-link {
             font-weight: bold;
             color: #175DDC;
