@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Settings;
+﻿using Bit.Core.Auth.Settings;
+
+namespace Bit.Core.Settings;
 
 public interface IGlobalSettings
 {

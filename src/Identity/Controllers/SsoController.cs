@@ -1,7 +1,8 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Repositories;
 using Bit.Identity.Models;
 using IdentityModel;

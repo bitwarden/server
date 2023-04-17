@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api.Request.Accounts;
 using Bit.Core.Repositories;
 using Bit.Identity.IdentityServer;
 using Bit.IntegrationTestCommon.Factories;

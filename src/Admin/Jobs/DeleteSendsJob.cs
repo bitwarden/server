@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using Bit.Admin.Auth.Jobs;
+using Bit.Core;
 using Bit.Core.Jobs;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
