@@ -61,6 +61,11 @@ jobs:
       - name: Login to Azure ACR
         run: az acr login -n bitwardenprod
 
+      - name: Login to Azure - CI Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets. AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
       - name: Retrieve github PAT secrets
         id: retrieve-secret-pat
         uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
