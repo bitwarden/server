@@ -1,14 +1,18 @@
-﻿using Bit.Api.Models.Request;
+﻿using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Auth.Models.Api.Response.Accounts;
+using Bit.Core.Auth.Services;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api.Request.Accounts;
-using Bit.Core.Models.Api.Response.Accounts;
+using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -38,6 +42,7 @@ public class AccountsController : Controller
     private readonly ISendRepository _sendRepository;
     private readonly ISendService _sendService;
     private readonly ICaptchaValidationService _captchaValidationService;
+    private readonly IPolicyService _policyService;
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -51,7 +56,8 @@ public class AccountsController : Controller
         IUserService userService,
         ISendRepository sendRepository,
         ISendService sendService,
-        ICaptchaValidationService captchaValidationService)
+        ICaptchaValidationService captchaValidationService,
+        IPolicyService policyService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -65,6 +71,7 @@ public class AccountsController : Controller
         _sendRepository = sendRepository;
         _sendService = sendService;
         _captchaValidationService = captchaValidationService;
+        _policyService = policyService;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -258,7 +265,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("verify-password")]
-    public async Task PostVerifyPassword([FromBody] SecretVerificationRequestModel model)
+    public async Task<MasterPasswordPolicyResponseModel> PostVerifyPassword([FromBody] SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -268,7 +275,9 @@ public class AccountsController : Controller
 
         if (await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            return;
+            var policyData = await _policyService.GetMasterPasswordPolicyForUserAsync(user);
+
+            return new MasterPasswordPolicyResponseModel(policyData);
         }
 
         ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");

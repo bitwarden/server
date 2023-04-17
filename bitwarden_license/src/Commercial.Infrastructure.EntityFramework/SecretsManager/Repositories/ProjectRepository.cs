@@ -127,6 +127,15 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
         return (policy.Read, policy.Write);
     }
+    
+    public async Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var results = await dbContext.Project.Where(p => p.OrganizationId == organizationId && projectIds.Contains(p.Id)).ToListAsync();
+
+        return projectIds.Count == results.Count;
+    }
 
     private IQueryable<ProjectPermissionDetails> ProjectToPermissionDetails(IQueryable<Project> query, Guid userId, AccessClientType accessType)
     {
@@ -176,4 +185,5 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
     private static Expression<Func<Project, bool>> ServiceAccountHasWriteAccessToProject(Guid serviceAccountId) => p =>
         p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Write);
+
 }

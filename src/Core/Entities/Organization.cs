@@ -1,7 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
 using Bit.Core.Enums;
-using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
 
@@ -69,6 +70,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public int? MaxAutoscaleSeats { get; set; } = null;
     public DateTime? OwnersNotifiedOfAutoscaling { get; set; } = null;
+    public OrganizationStatusType Status { get; set; }
 
     public void SetNewId()
     {

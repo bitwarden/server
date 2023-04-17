@@ -5,7 +5,6 @@ on:
   workflow_dispatch:
     inputs: {}
 
-
 jobs:
   stop-slots:
     name: Stop Slots
@@ -37,7 +36,7 @@ jobs:
       - name: Retrieve secrets
         id: retrieve-secrets
         env:
-          VAULT_NAME: "bitwarden-prod-kv"
+          VAULT_NAME: "bitwarden-ci"
         run: |
           webapp_name=$(
             az keyvault secret show --vault-name $VAULT_NAME \

@@ -111,7 +111,7 @@ jobs:
       - name: Retrieve secrets
         id: retrieve-secrets
         env:
-          VAULT_NAME: "bitwarden-prod-kv"
+          VAULT_NAME: "bitwarden-ci"
         run: |
           webapp_name=$(
             az keyvault secret show --vault-name $VAULT_NAME \
@@ -239,7 +239,7 @@ jobs:
         uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
         with:
           azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-          azure-keyvault-name: "bitwarden-prod-kv"
+          azure-keyvault-name: "bitwarden-ci"
 
       - name: Pull latest project image
         if: matrix.origin_docker_repo == 'bitwarden'
