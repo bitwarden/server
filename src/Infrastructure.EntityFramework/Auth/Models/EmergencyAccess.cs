@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Infrastructure.EntityFramework.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Auth.Models;
 
