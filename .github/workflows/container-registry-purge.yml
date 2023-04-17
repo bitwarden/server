@@ -65,7 +65,6 @@ jobs:
 
           done
 
-
   check-failures:
     name: Check for failures
     if: always()
@@ -96,7 +95,7 @@ jobs:
         uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
         if: failure()
         with:
-          keyvault: "bitwarden-prod-kv"
+          keyvault: "bitwarden-ci"
           secrets: "devops-alerts-slack-webhook-url"
 
       - name: Notify Slack on failure

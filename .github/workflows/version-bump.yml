@@ -25,7 +25,7 @@ jobs:
         id: retrieve-secrets
         uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
         with:
-          keyvault: "bitwarden-prod-kv"
+          keyvault: "bitwarden-ci"
           secrets: "github-gpg-private-key, github-gpg-private-key-passphrase"
 
       - name: Import GPG key
