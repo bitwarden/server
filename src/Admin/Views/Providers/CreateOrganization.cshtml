@@ -1,0 +1,21 @@
+@model OrganizationEditModel
+@{
+    ViewData["Title"] = "Create Client Organization";
+}
+
+@section Scripts {
+    @await Html.PartialAsync("_OrganizationFormScripts")
+}
+
+<h1>New Client Organization</h1>
+
+@await Html.PartialAsync("_OrganizationForm", Model)
+<div class="d-flex mt-4">
+    <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
+    <div class="ml-auto d-flex">
+        <form asp-controller="Providers" asp-action="Edit" asp-route-id="@Model.Provider.Id"
+              onsubmit="return confirm('Are you sure you want to cancel?')">
+            <button class="btn btn-outline-secondary" type="submit">Cancel</button>
+        </form>
+    </div>
+</div>

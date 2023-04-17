@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Auth.Models.Data;
+using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -28,6 +30,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UseSecretsManager = organization.UseSecretsManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
+        UseActivateAutofillPolicy = organization.PlanType == PlanType.EnterpriseAnnually ||
+            organization.PlanType == PlanType.EnterpriseMonthly;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
@@ -44,6 +48,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UserId = organization.UserId?.ToString();
         ProviderId = organization.ProviderId?.ToString();
         ProviderName = organization.ProviderName;
+        ProviderType = organization.ProviderType;
         FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
         FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
@@ -78,6 +83,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool UseSecretsManager { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool UseCustomPermissions { get; set; }
+    public bool UseActivateAutofillPolicy { get; set; }
     public bool SelfHost { get; set; }
     public int? Seats { get; set; }
     public short? MaxCollections { get; set; }
@@ -94,6 +100,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool HasPublicAndPrivateKeys { get; set; }
     public string ProviderId { get; set; }
     public string ProviderName { get; set; }
+    public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
     public bool FamilySponsorshipAvailable { get; set; }
     public ProductType PlanProductType { get; set; }

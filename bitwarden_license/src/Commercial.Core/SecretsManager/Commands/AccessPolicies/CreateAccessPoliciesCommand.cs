@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -10,54 +9,33 @@ namespace Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
 public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
 {
     private readonly IAccessPolicyRepository _accessPolicyRepository;
-    private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public CreateAccessPoliciesCommand(
         IAccessPolicyRepository accessPolicyRepository,
-        ICurrentContext currentContext,
         IProjectRepository projectRepository,
         IServiceAccountRepository serviceAccountRepository)
     {
         _accessPolicyRepository = accessPolicyRepository;
-        _currentContext = currentContext;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    public async Task<IEnumerable<BaseAccessPolicy>> CreateForProjectAsync(Guid projectId,
-        List<BaseAccessPolicy> accessPolicies, Guid userId)
+    private static IEnumerable<Guid?> GetDistinctGrantedProjectIds(List<BaseAccessPolicy> accessPolicies)
     {
-        var project = await _projectRepository.GetByIdAsync(projectId);
-        if (project == null || !_currentContext.AccessSecretsManager(project.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        await CheckPermissionAsync(project.OrganizationId, userId, projectId);
-        CheckForDistinctAccessPolicies(accessPolicies);
-        await CheckAccessPoliciesDoNotExistAsync(accessPolicies);
-
-        await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-        return await _accessPolicyRepository.GetManyByGrantedProjectIdAsync(projectId);
+        var userGrantedIds = accessPolicies.OfType<UserProjectAccessPolicy>().Select(ap => ap.GrantedProjectId);
+        var groupGrantedIds = accessPolicies.OfType<GroupProjectAccessPolicy>().Select(ap => ap.GrantedProjectId);
+        var saGrantedIds = accessPolicies.OfType<ServiceAccountProjectAccessPolicy>().Select(ap => ap.GrantedProjectId);
+        return userGrantedIds.Concat(groupGrantedIds).Concat(saGrantedIds).Distinct();
     }
 
-    public async Task<IEnumerable<BaseAccessPolicy>> CreateForServiceAccountAsync(Guid serviceAccountId,
-        List<BaseAccessPolicy> accessPolicies, Guid userId)
+    private static IEnumerable<Guid?> GetDistinctGrantedServiceAccountIds(List<BaseAccessPolicy> accessPolicies)
     {
-        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
-        if (serviceAccount == null || !_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        await CheckPermissionAsync(serviceAccount.OrganizationId, userId, serviceAccountIdToCheck: serviceAccountId);
-        CheckForDistinctAccessPolicies(accessPolicies);
-        await CheckAccessPoliciesDoNotExistAsync(accessPolicies);
-
-        await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-        return await _accessPolicyRepository.GetManyByGrantedServiceAccountIdAsync(serviceAccountId);
+        var userGrantedIds = accessPolicies.OfType<UserServiceAccountAccessPolicy>().Select(ap => ap.GrantedServiceAccountId);
+        var groupGrantedIds = accessPolicies.OfType<GroupServiceAccountAccessPolicy>()
+            .Select(ap => ap.GrantedServiceAccountId);
+        return userGrantedIds.Concat(groupGrantedIds).Distinct();
     }
 
     private static void CheckForDistinctAccessPolicies(IReadOnlyCollection<BaseAccessPolicy> accessPolicies)
@@ -83,6 +61,40 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
         }
     }
 
+    public async Task<IEnumerable<BaseAccessPolicy>> CreateManyAsync(List<BaseAccessPolicy> accessPolicies, Guid userId, AccessClientType accessType)
+    {
+        CheckForDistinctAccessPolicies(accessPolicies);
+        await CheckAccessPoliciesDoNotExistAsync(accessPolicies);
+        await CheckCanCreateAsync(accessPolicies, userId, accessType);
+        return await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+    }
+
+    private async Task CheckCanCreateAsync(List<BaseAccessPolicy> accessPolicies, Guid userId, AccessClientType accessType)
+    {
+        var projectIds = GetDistinctGrantedProjectIds(accessPolicies).ToList();
+        var serviceAccountIds = GetDistinctGrantedServiceAccountIds(accessPolicies).ToList();
+
+        if (projectIds.Any())
+        {
+            foreach (var projectId in projectIds)
+            {
+                await CheckPermissionAsync(accessType, userId, projectId);
+            }
+        }
+        if (serviceAccountIds.Any())
+        {
+            foreach (var serviceAccountId in serviceAccountIds)
+            {
+                await CheckPermissionAsync(accessType, userId, serviceAccountIdToCheck: serviceAccountId);
+            }
+        }
+
+        if (!projectIds.Any() && !serviceAccountIds.Any())
+        {
+            throw new BadRequestException("No granted IDs specified");
+        }
+    }
+
     private async Task CheckAccessPoliciesDoNotExistAsync(List<BaseAccessPolicy> accessPolicies)
     {
         foreach (var accessPolicy in accessPolicies)
@@ -94,14 +106,9 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
         }
     }
 
-    private async Task CheckPermissionAsync(Guid organizationId,
-        Guid userId,
-        Guid? projectIdToCheck = null,
+    private async Task CheckPermissionAsync(AccessClientType accessClient, Guid userId, Guid? projectIdToCheck = null,
         Guid? serviceAccountIdToCheck = null)
     {
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
         bool hasAccess;
         switch (accessClient)
         {
@@ -109,20 +116,21 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
                 hasAccess = true;
                 break;
             case AccessClientType.User:
-                if (projectIdToCheck != null)
+                if (projectIdToCheck.HasValue)
                 {
                     hasAccess = await _projectRepository.UserHasWriteAccessToProject(projectIdToCheck.Value, userId);
                 }
-                else if (serviceAccountIdToCheck != null)
+                else if (serviceAccountIdToCheck.HasValue)
                 {
-                    hasAccess = await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
-                        serviceAccountIdToCheck.Value,
-                        userId);
+                    hasAccess =
+                        await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(
+                            serviceAccountIdToCheck.Value, userId);
                 }
                 else
                 {
-                    hasAccess = false;
+                    throw new ArgumentException("No ID to check provided.");
                 }
+
                 break;
             default:
                 hasAccess = false;

@@ -1,10 +1,13 @@
 ﻿using System.Security.Claims;
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
@@ -24,6 +27,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IProviderRepository _providerRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoConfigService _ssoConfigService;
     private readonly IUserService _userService;
@@ -32,6 +36,8 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
+    private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     private readonly OrganizationsController _sut;
 
@@ -44,6 +50,7 @@ public class OrganizationsControllerTests : IDisposable
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
         _paymentService = Substitute.For<IPaymentService>();
         _policyRepository = Substitute.For<IPolicyRepository>();
+        _providerRepository = Substitute.For<IProviderRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
         _ssoConfigService = Substitute.For<ISsoConfigService>();
         _getOrganizationApiKeyQuery = Substitute.For<IGetOrganizationApiKeyQuery>();
@@ -52,11 +59,13 @@ public class OrganizationsControllerTests : IDisposable
         _userService = Substitute.For<IUserService>();
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
+        _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
-            _policyRepository, _organizationService, _userService, _paymentService, _currentContext,
+            _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
-            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _cloudGetOrganizationLicenseQuery, _globalSettings);
+            _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
+            _cloudGetOrganizationLicenseQuery, _globalSettings);
     }
 
     public void Dispose()

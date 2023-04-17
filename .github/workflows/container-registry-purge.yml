@@ -11,28 +11,15 @@ jobs:
   purge:
     name: Purge old images
     runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: bitwardenqa
-          - name: bitwardenprod
     steps:
       - name: Login to Azure
-        if: matrix.name == 'bitwardenprod'
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to Azure
-        if: matrix.name == 'bitwardenqa'
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
-        with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
-
       - name: Purge images
         env:
-          REGISTRY: ${{ matrix.name }}
+          REGISTRY: bitwardenprod
           AGO_DUR_VER: "180d"
           AGO_DUR: "30d"
         run: |
@@ -78,7 +65,6 @@ jobs:
 
           done
 
-
   check-failures:
     name: Check for failures
     if: always()
@@ -98,18 +84,18 @@ jobs:
               exit 1
           fi
 
-      - name: Login to Azure - Prod Subscription
+      - name: Login to Azure - CI subscription
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         if: failure()
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
         uses: Azure/get-keyvault-secrets@b5c723b9ac7870c022b8c35befe620b7009b336f
         if: failure()
         with:
-          keyvault: "bitwarden-prod-kv"
+          keyvault: "bitwarden-ci"
           secrets: "devops-alerts-slack-webhook-url"
 
       - name: Notify Slack on failure

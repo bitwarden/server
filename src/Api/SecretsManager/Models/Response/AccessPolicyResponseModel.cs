@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Entities;
 
@@ -20,6 +21,11 @@ public abstract class BaseAccessPolicyResponseModel : ResponseModel
     public bool Write { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
+
+    public string? GetUserDisplayName(User? user)
+    {
+        return string.IsNullOrWhiteSpace(user?.Name) ? user?.Email : user?.Name;
+    }
 }
 
 public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel
@@ -30,7 +36,8 @@ public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMode
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
-        OrganizationUserName = accessPolicy.User?.Name;
+        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
+        UserId = accessPolicy.User?.Id;
     }
 
     public UserProjectAccessPolicyResponseModel() : base(new UserProjectAccessPolicy(), _objectName)
@@ -39,6 +46,7 @@ public class UserProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMode
 
     public Guid? OrganizationUserId { get; set; }
     public string? OrganizationUserName { get; set; }
+    public Guid? UserId { get; set; }
     public Guid? GrantedProjectId { get; set; }
 }
 
@@ -51,7 +59,8 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
     {
         OrganizationUserId = accessPolicy.OrganizationUserId;
         GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
-        OrganizationUserName = accessPolicy.User?.Name;
+        OrganizationUserName = GetUserDisplayName(accessPolicy.User);
+        UserId = accessPolicy.User?.Id;
     }
 
     public UserServiceAccountAccessPolicyResponseModel() : base(new UserServiceAccountAccessPolicy(), _objectName)
@@ -60,6 +69,7 @@ public class UserServiceAccountAccessPolicyResponseModel : BaseAccessPolicyRespo
 
     public Guid? OrganizationUserId { get; set; }
     public string? OrganizationUserName { get; set; }
+    public Guid? UserId { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
 }
 
@@ -73,6 +83,7 @@ public class GroupProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMod
         GroupId = accessPolicy.GroupId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
         GroupName = accessPolicy.Group?.Name;
+        CurrentUserInGroup = accessPolicy.CurrentUserInGroup;
     }
 
     public GroupProjectAccessPolicyResponseModel() : base(new GroupProjectAccessPolicy(), _objectName)
@@ -81,6 +92,7 @@ public class GroupProjectAccessPolicyResponseModel : BaseAccessPolicyResponseMod
 
     public Guid? GroupId { get; set; }
     public string? GroupName { get; set; }
+    public bool? CurrentUserInGroup { get; set; }
     public Guid? GrantedProjectId { get; set; }
 }
 
@@ -94,6 +106,7 @@ public class GroupServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResp
         GroupId = accessPolicy.GroupId;
         GroupName = accessPolicy.Group?.Name;
         GrantedServiceAccountId = accessPolicy.GrantedServiceAccountId;
+        CurrentUserInGroup = accessPolicy.CurrentUserInGroup;
     }
 
     public GroupServiceAccountAccessPolicyResponseModel() : base(new GroupServiceAccountAccessPolicy(), _objectName)
@@ -103,6 +116,7 @@ public class GroupServiceAccountAccessPolicyResponseModel : BaseAccessPolicyResp
     public Guid? GroupId { get; set; }
     public string? GroupName { get; set; }
     public Guid? GrantedServiceAccountId { get; set; }
+    public bool? CurrentUserInGroup { get; set; }
 }
 
 public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyResponseModel
@@ -115,6 +129,7 @@ public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyRe
         ServiceAccountId = accessPolicy.ServiceAccountId;
         GrantedProjectId = accessPolicy.GrantedProjectId;
         ServiceAccountName = accessPolicy.ServiceAccount?.Name;
+        GrantedProjectName = accessPolicy.GrantedProject?.Name;
     }
 
     public ServiceAccountProjectAccessPolicyResponseModel()
@@ -125,4 +140,5 @@ public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyRe
     public Guid? ServiceAccountId { get; set; }
     public string? ServiceAccountName { get; set; }
     public Guid? GrantedProjectId { get; set; }
+    public string? GrantedProjectName { get; set; }
 }

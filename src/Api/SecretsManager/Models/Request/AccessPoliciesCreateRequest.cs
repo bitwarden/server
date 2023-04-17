@@ -72,6 +72,26 @@ public class AccessPoliciesCreateRequest
         }
         return policies;
     }
+
+    public int Count()
+    {
+        var total = 0;
+
+        if (UserAccessPolicyRequests != null)
+        {
+            total += UserAccessPolicyRequests.Count();
+        }
+        if (GroupAccessPolicyRequests != null)
+        {
+            total += GroupAccessPolicyRequests.Count();
+        }
+        if (ServiceAccountAccessPolicyRequests != null)
+        {
+            total += ServiceAccountAccessPolicyRequests.Count();
+        }
+
+        return total;
+    }
 }
 
 public class AccessPolicyRequest

@@ -16,7 +16,10 @@
     @DeviceType SMALLINT,
     @IpAddress VARCHAR(50),
     @Date DATETIME2(7),
-    @SystemUser TINYINT = null
+    @SystemUser TINYINT = null,
+    @DomainName VARCHAR(256),
+    @SecretId UNIQUEIDENTIFIER = null,
+    @ServiceAccountId UNIQUEIDENTIFIER = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -40,7 +43,10 @@ BEGIN
         [DeviceType],
         [IpAddress],
         [Date],
-        [SystemUser]
+        [SystemUser],
+        [DomainName],
+        [SecretId],
+        [ServiceAccountId]
     )
     VALUES
     (
@@ -61,6 +67,9 @@ BEGIN
         @DeviceType,
         @IpAddress,
         @Date,
-        @SystemUser
+        @SystemUser,
+        @DomainName,
+        @SecretId,
+        @ServiceAccountId
     )
 END

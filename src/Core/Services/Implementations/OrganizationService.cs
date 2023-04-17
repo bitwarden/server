@@ -1,4 +1,8 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Business;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -39,7 +43,6 @@ public class OrganizationService : IOrganizationService
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
-    private readonly ITaxRateRepository _taxRateRepository;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
@@ -68,7 +71,6 @@ public class OrganizationService : IOrganizationService
         ISsoUserRepository ssoUserRepository,
         IReferenceEventService referenceEventService,
         IGlobalSettings globalSettings,
-        ITaxRateRepository taxRateRepository,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IOrganizationConnectionRepository organizationConnectionRepository,
         ICurrentContext currentContext,
@@ -96,7 +98,6 @@ public class OrganizationService : IOrganizationService
         _ssoUserRepository = ssoUserRepository;
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
-        _taxRateRepository = taxRateRepository;
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _organizationConnectionRepository = organizationConnectionRepository;
         _currentContext = currentContext;
@@ -119,7 +120,7 @@ public class OrganizationService : IOrganizationService
             paymentMethodType, paymentToken);
         if (updated)
         {
-            await ReplaceAndUpdateCache(organization);
+            await ReplaceAndUpdateCacheAsync(organization);
         }
     }
 
@@ -205,7 +206,7 @@ public class OrganizationService : IOrganizationService
             (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
         if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             if (occupiedSeats > newPlanSeats)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
@@ -346,7 +347,7 @@ public class OrganizationService : IOrganizationService
         organization.Enabled = success;
         organization.PublicKey = upgrade.PublicKey;
         organization.PrivateKey = upgrade.PrivateKey;
-        await ReplaceAndUpdateCache(organization);
+        await ReplaceAndUpdateCacheAsync(organization);
         if (success)
         {
             await _referenceEventService.RaiseEventAsync(
@@ -392,7 +393,7 @@ public class OrganizationService : IOrganizationService
                 PlanType = plan.Type,
                 Storage = storageAdjustmentGb,
             });
-        await ReplaceAndUpdateCache(organization);
+        await ReplaceAndUpdateCacheAsync(organization);
         return secret;
     }
 
@@ -451,7 +452,7 @@ public class OrganizationService : IOrganizationService
 
         organization.MaxAutoscaleSeats = maxAutoscaleSeats;
 
-        await ReplaceAndUpdateCache(organization);
+        await ReplaceAndUpdateCacheAsync(organization);
     }
 
     public async Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null)
@@ -513,7 +514,7 @@ public class OrganizationService : IOrganizationService
 
         if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             if (occupiedSeats > newSeatTotal)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
@@ -531,7 +532,7 @@ public class OrganizationService : IOrganizationService
                 PreviousSeats = organization.Seats
             });
         organization.Seats = (short?)newSeatTotal;
-        await ReplaceAndUpdateCache(organization);
+        await ReplaceAndUpdateCacheAsync(organization);
 
         if (organization.Seats.HasValue && organization.MaxAutoscaleSeats.HasValue && organization.Seats == organization.MaxAutoscaleSeats)
         {
@@ -601,7 +602,7 @@ public class OrganizationService : IOrganizationService
         bool provider = false)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
-        if (!(plan is { LegacyYear: null }))
+        if (plan is not { LegacyYear: null })
         {
             throw new BadRequestException("Invalid plan selected.");
         }
@@ -652,6 +653,7 @@ public class OrganizationService : IOrganizationService
             PrivateKey = signup.PrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created
         };
 
         if (plan.Type == PlanType.Free && !provider)
@@ -667,7 +669,7 @@ public class OrganizationService : IOrganizationService
         {
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                 signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                signup.PremiumAccessAddon, signup.TaxInfo);
+                signup.PremiumAccessAddon, signup.TaxInfo, provider);
         }
 
         var ownerId = provider ? default : signup.Owner.Id;
@@ -697,21 +699,10 @@ public class OrganizationService : IOrganizationService
         OrganizationLicense license, User owner, string ownerKey, string collectionName, string publicKey,
         string privateKey)
     {
-        if (license?.LicenseType != null && license.LicenseType != LicenseType.Organization)
+        var canUse = license.CanUse(_globalSettings, _licensingService, out var exception);
+        if (!canUse)
         {
-            throw new BadRequestException("Premium licenses cannot be applied to an organization. "
-                                          + "Upload this license from your personal account settings page.");
-        }
-
-        if (license == null || !_licensingService.VerifyLicense(license))
-        {
-            throw new BadRequestException("Invalid license.");
-        }
-
-        if (!license.CanUse(_globalSettings))
-        {
-            throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
-                "hosting of organizations and that the installation id matches your current installation.");
+            throw new BadRequestException(exception);
         }
 
         if (license.PlanType != PlanType.Custom &&
@@ -762,7 +753,8 @@ public class OrganizationService : IOrganizationService
             PublicKey = publicKey,
             PrivateKey = privateKey,
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -843,172 +835,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task UpdateLicenseAsync(Guid organizationId, OrganizationLicense license)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (!_globalSettings.SelfHosted)
-        {
-            throw new InvalidOperationException("Licenses require self hosting.");
-        }
-
-        if (license?.LicenseType != null && license.LicenseType != LicenseType.Organization)
-        {
-            throw new BadRequestException("Premium licenses cannot be applied to an organization. "
-                                          + "Upload this license from your personal account settings page.");
-        }
-
-        if (license == null || !_licensingService.VerifyLicense(license))
-        {
-            throw new BadRequestException("Invalid license.");
-        }
-
-        if (!license.CanUse(_globalSettings))
-        {
-            throw new BadRequestException("Invalid license. Make sure your license allows for on-premise " +
-                "hosting of organizations and that the installation id matches your current installation.");
-        }
-
-        var enabledOrgs = await _organizationRepository.GetManyByEnabledAsync();
-        if (enabledOrgs.Any(o => string.Equals(o.LicenseKey, license.LicenseKey) && o.Id != organizationId))
-        {
-            throw new BadRequestException("License is already in use by another organization.");
-        }
-
-        if (license.Seats.HasValue &&
-            (!organization.Seats.HasValue || organization.Seats.Value > license.Seats.Value))
-        {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
-            if (occupiedSeats > license.Seats.Value)
-            {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                    $"Your new license only has ({license.Seats.Value}) seats. Remove some users.");
-            }
-        }
-
-        if (license.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
-            organization.MaxCollections.Value > license.MaxCollections.Value))
-        {
-            var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
-            if (collectionCount > license.MaxCollections.Value)
-            {
-                throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
-                    $"Your new license allows for a maximum of ({license.MaxCollections.Value}) collections. " +
-                    "Remove some collections.");
-            }
-        }
-
-        if (!license.UseGroups && organization.UseGroups)
-        {
-            var groups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
-            if (groups.Count > 0)
-            {
-                throw new BadRequestException($"Your organization currently has {groups.Count} groups. " +
-                    $"Your new license does not allow for the use of groups. Remove all groups.");
-            }
-        }
-
-        if (!license.UsePolicies && organization.UsePolicies)
-        {
-            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organization.Id);
-            if (policies.Any(p => p.Enabled))
-            {
-                throw new BadRequestException($"Your organization currently has {policies.Count} enabled " +
-                    $"policies. Your new license does not allow for the use of policies. Disable all policies.");
-            }
-        }
-
-        if (!license.UseSso && organization.UseSso)
-        {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig != null && ssoConfig.Enabled)
-            {
-                throw new BadRequestException($"Your organization currently has a SSO configuration. " +
-                    $"Your new license does not allow for the use of SSO. Disable your SSO configuration.");
-            }
-        }
-
-        if (!license.UseKeyConnector && organization.UseKeyConnector)
-        {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
-            {
-                throw new BadRequestException($"Your organization currently has Key Connector enabled. " +
-                    $"Your new license does not allow for the use of Key Connector. Disable your Key Connector.");
-            }
-        }
-
-        if (!license.UseScim && organization.UseScim)
-        {
-            var scimConnections = await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organization.Id,
-                OrganizationConnectionType.Scim);
-            if (scimConnections != null && scimConnections.Any(c => c.GetConfig<ScimConfig>()?.Enabled == true))
-            {
-                throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
-                    "Disable your SCIM configuration.");
-            }
-        }
-
-        if (!license.UseCustomPermissions && organization.UseCustomPermissions)
-        {
-            var organizationCustomUsers =
-                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
-                    OrganizationUserType.Custom);
-            if (organizationCustomUsers.Any())
-            {
-                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
-                                              "Disable your Custom Permissions configuration.");
-            }
-        }
-
-        if (!license.UseResetPassword && organization.UseResetPassword)
-        {
-            var resetPasswordPolicy =
-                await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
-            if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
-            {
-                throw new BadRequestException("Your new license does not allow the Password Reset feature. "
-                    + "Disable your Password Reset policy.");
-            }
-        }
-
-        var dir = $"{_globalSettings.LicenseDirectory}/organization";
-        Directory.CreateDirectory(dir);
-        await using var fs = new FileStream(Path.Combine(dir, $"{organization.Id}.json"), FileMode.Create);
-        await JsonSerializer.SerializeAsync(fs, license, JsonHelpers.Indented);
-
-        organization.Name = license.Name;
-        organization.BusinessName = license.BusinessName;
-        organization.BillingEmail = license.BillingEmail;
-        organization.PlanType = license.PlanType;
-        organization.Seats = license.Seats;
-        organization.MaxCollections = license.MaxCollections;
-        organization.UseGroups = license.UseGroups;
-        organization.UseDirectory = license.UseDirectory;
-        organization.UseEvents = license.UseEvents;
-        organization.UseTotp = license.UseTotp;
-        organization.Use2fa = license.Use2fa;
-        organization.UseApi = license.UseApi;
-        organization.UsePolicies = license.UsePolicies;
-        organization.UseSso = license.UseSso;
-        organization.UseKeyConnector = license.UseKeyConnector;
-        organization.UseScim = license.UseScim;
-        organization.UseResetPassword = license.UseResetPassword;
-        organization.SelfHost = license.SelfHost;
-        organization.UsersGetPremium = license.UsersGetPremium;
-        organization.UseCustomPermissions = license.UseCustomPermissions;
-        organization.Plan = license.Plan;
-        organization.Enabled = license.Enabled;
-        organization.ExpirationDate = license.Expires;
-        organization.LicenseKey = license.LicenseKey;
-        organization.RevisionDate = DateTime.UtcNow;
-        await ReplaceAndUpdateCache(organization);
-    }
-
     public async Task DeleteAsync(Organization organization)
     {
         await ValidateDeleteOrganizationAsync(organization);
@@ -1038,7 +864,7 @@ public class OrganizationService : IOrganizationService
             org.Enabled = true;
             org.ExpirationDate = expirationDate;
             org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCache(org);
+            await ReplaceAndUpdateCacheAsync(org);
         }
     }
 
@@ -1050,7 +876,7 @@ public class OrganizationService : IOrganizationService
             org.Enabled = false;
             org.ExpirationDate = expirationDate;
             org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCache(org);
+            await ReplaceAndUpdateCacheAsync(org);
 
             // TODO: send email to owners?
         }
@@ -1063,7 +889,7 @@ public class OrganizationService : IOrganizationService
         {
             org.ExpirationDate = expirationDate;
             org.RevisionDate = DateTime.UtcNow;
-            await ReplaceAndUpdateCache(org);
+            await ReplaceAndUpdateCacheAsync(org);
         }
     }
 
@@ -1073,7 +899,7 @@ public class OrganizationService : IOrganizationService
         if (org != null && !org.Enabled)
         {
             org.Enabled = true;
-            await ReplaceAndUpdateCache(org);
+            await ReplaceAndUpdateCacheAsync(org);
         }
     }
 
@@ -1093,7 +919,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        await ReplaceAndUpdateCache(organization, EventType.Organization_Updated);
+        await ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
@@ -1193,7 +1019,7 @@ public class OrganizationService : IOrganizationService
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
         if (organization.Seats.HasValue)
         {
-            var occupiedSeats = await GetOccupiedSeatCount(organization);
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var availableSeats = organization.Seats.Value - occupiedSeats;
             newSeatsRequired = invites.Sum(i => i.invite.Emails.Count()) - existingEmails.Count() - availableSeats;
         }
@@ -1347,14 +1173,14 @@ public class OrganizationService : IOrganizationService
                 continue;
             }
 
-            await SendInviteAsync(orgUser, org);
+            await SendInviteAsync(orgUser, org, false);
             result.Add(Tuple.Create(orgUser, ""));
         }
 
         return result;
     }
 
-    public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
+    public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId ||
@@ -1364,7 +1190,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var org = await GetOrgById(orgUser.OrganizationId);
-        await SendInviteAsync(orgUser, org);
+        await SendInviteAsync(orgUser, org, initOrganization);
     }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
@@ -1373,17 +1199,16 @@ public class OrganizationService : IOrganizationService
             _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
 
         await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
-            orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))));
+            orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))), organization.PlanType == PlanType.Free);
     }
 
-    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization)
+    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
     {
         var now = DateTime.UtcNow;
         var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
         var token = _dataProtector.Protect(
             $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-
-        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)));
+        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)), organization.PlanType == PlanType.Free, initOrganization);
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
@@ -2044,7 +1869,7 @@ public class OrganizationService : IOrganizationService
             var enoughSeatsAvailable = true;
             if (organization.Seats.HasValue)
             {
-                var occupiedSeats = await GetOccupiedSeatCount(organization);
+                var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
                 seatsAvailable = organization.Seats.Value - occupiedSeats;
                 enoughSeatsAvailable = seatsAvailable >= usersToAdd.Count;
             }
@@ -2213,7 +2038,7 @@ public class OrganizationService : IOrganizationService
         return devices.Where(d => !string.IsNullOrWhiteSpace(d.PushToken)).Select(d => d.Id.ToString());
     }
 
-    private async Task ReplaceAndUpdateCache(Organization org, EventType? orgEvent = null)
+    public async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
     {
         await _organizationRepository.ReplaceAsync(org);
         await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
@@ -2463,7 +2288,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationUser.OrganizationId);
-        var occupiedSeats = await GetOccupiedSeatCount(organization);
+        var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         if (availableSeats < 1)
         {
@@ -2491,7 +2316,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        var occupiedSeats = await GetOccupiedSeatCount(organization);
+        var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
         var availableSeats = organization.Seats.GetValueOrDefault(0) - occupiedSeats;
         var newSeatsRequired = organizationUserIds.Count() - availableSeats;
         await AutoAddSeatsAsync(organization, newSeatsRequired, DateTime.UtcNow);
@@ -2607,9 +2432,88 @@ public class OrganizationService : IOrganizationService
         return status;
     }
 
-    public async Task<int> GetOccupiedSeatCount(Organization organization)
+    public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
     {
-        var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(organization.Id);
-        return orgUsers.Count(ou => ou.OccupiesOrganizationSeat);
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+        if (plan is not { LegacyYear: null })
+        {
+            throw new BadRequestException("Invalid plan selected.");
+        }
+
+        if (plan.Disabled)
+        {
+            throw new BadRequestException("Plan not found.");
+        }
+
+        organization.Id = CoreHelpers.GenerateComb();
+        organization.Enabled = false;
+        organization.Status = OrganizationStatusType.Pending;
+
+        await SignUpAsync(organization, default, null, null, true);
+
+        var ownerOrganizationUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = null,
+            Email = ownerEmail,
+            Key = null,
+            Type = OrganizationUserType.Owner,
+            Status = OrganizationUserStatusType.Invited,
+            AccessAll = true
+        };
+        await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
+
+        await SendInviteAsync(ownerOrganizationUser, organization, true);
+        await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
+        {
+            EventRaisedByUser = userService.GetUserName(user),
+            SalesAssistedTrialStarted = salesAssistedTrialStarted,
+        });
+    }
+
+    public async Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName)
+    {
+        await ValidateSignUpPoliciesAsync(userId);
+
+        var org = await GetOrgById(organizationId);
+
+        if (org.Enabled)
+        {
+            throw new BadRequestException("Organization is already enabled.");
+        }
+
+        if (org.Status != OrganizationStatusType.Pending)
+        {
+            throw new BadRequestException("Organization is not on a Pending status.");
+        }
+
+        if (!string.IsNullOrEmpty(org.PublicKey))
+        {
+            throw new BadRequestException("Organization already has a Public Key.");
+        }
+
+        if (!string.IsNullOrEmpty(org.PrivateKey))
+        {
+            throw new BadRequestException("Organization already has a Private Key.");
+        }
+
+        org.Enabled = true;
+        org.Status = OrganizationStatusType.Created;
+        org.PublicKey = publicKey;
+        org.PrivateKey = privateKey;
+
+        await UpdateAsync(org);
+
+        if (!string.IsNullOrWhiteSpace(collectionName))
+        {
+            var defaultCollection = new Collection
+            {
+                Name = collectionName,
+                OrganizationId = org.Id
+            };
+            await _collectionRepository.CreateAsync(defaultCollection);
+        }
     }
 }

@@ -1,9 +1,10 @@
 ﻿using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Organization = Bit.Infrastructure.EntityFramework.Models.Organization;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
@@ -90,6 +91,45 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         }
     }
 
+    public async Task<ICollection<Core.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from o in dbContext.Organizations
+                        where o.PlanType >= PlanType.TeamsMonthly && o.PlanType <= PlanType.EnterpriseAnnually &&
+                              !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                              (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
+                        select o;
+
+            if (!string.IsNullOrWhiteSpace(ownerEmail))
+            {
+                if (dbContext.Database.IsNpgsql())
+                {
+                    query = from o in query
+                            join ou in dbContext.OrganizationUsers
+                                on o.Id equals ou.OrganizationId
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.Type == OrganizationUserType.Owner && EF.Functions.ILike(EF.Functions.Collate(u.Email, "default"), $"{ownerEmail}%")
+                            select o;
+                }
+                else
+                {
+                    query = from o in query
+                            join ou in dbContext.OrganizationUsers
+                                on o.Id equals ou.OrganizationId
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.Type == OrganizationUserType.Owner && EF.Functions.Like(u.Email, $"{ownerEmail}%")
+                            select o;
+                }
+            }
+
+            return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
+        }
+    }
+
     public async Task UpdateStorageAsync(Guid id)
     {
         await OrganizationUpdateStorage(id);
@@ -137,6 +177,42 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
 
             await organizationDeleteTransaction.CommitAsync();
             await dbContext.SaveChangesAsync();
+        }
+    }
+
+    public async Task<Core.Entities.Organization> GetByLicenseKeyAsync(string licenseKey)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext)
+                .FirstOrDefaultAsync(o => o.LicenseKey == licenseKey);
+
+            return organization;
+        }
+    }
+
+    public async Task<SelfHostedOrganizationDetails> GetSelfHostedOrganizationDetailsById(Guid id)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var organization = await GetDbSet(dbContext).FindAsync(id);
+            if (organization == null)
+            {
+                return null;
+            }
+
+            var selfHostOrganization = Mapper.Map<SelfHostedOrganizationDetails>(organization);
+
+            selfHostOrganization.OccupiedSeatCount =
+                organization.OrganizationUsers.Count(ou => ou.Status >= OrganizationUserStatusType.Invited);
+            selfHostOrganization.CollectionCount = organization.Collections?.Count ?? 0;
+            selfHostOrganization.GroupCount = organization?.Groups.Count ?? 0;
+            selfHostOrganization.SsoConfig = organization.SsoConfigs.SingleOrDefault();
+            selfHostOrganization.ScimConnections = organization.Connections.Where(c => c.Type == OrganizationConnectionType.Scim);
+
+            return selfHostOrganization;
         }
     }
 }

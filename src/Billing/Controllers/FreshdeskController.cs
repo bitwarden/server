@@ -147,7 +147,7 @@ public class FreshdeskController : Controller
         {
             var freshdeskAuthkey = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
             var httpClient = _httpClientFactory.CreateClient("FreshdeskApi");
-            request.Headers.Add("Authorization", freshdeskAuthkey);
+            request.Headers.Add("Authorization", $"Basic {freshdeskAuthkey}");
             var response = await httpClient.SendAsync(request);
             if (response.StatusCode != System.Net.HttpStatusCode.TooManyRequests || retriedCount > 3)
             {
