@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Serialization;
 
-namespace Bit.Core.Enums;
+namespace Bit.Core.Tools.Enums;
 
 public enum ReferenceEventSource
 {

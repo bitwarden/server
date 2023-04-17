@@ -1,9 +1,9 @@
 ﻿using System.Text.Json.Serialization;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.Tools.Models.Business;
 
 public class ReferenceEvent
 {

@@ -1,11 +1,11 @@
 ﻿using System.Text;
 using System.Text.Json;
 using Azure.Storage.Queues;
-using Bit.Core.Models.Business;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Models.Business;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Tools.Services;
 
 public class AzureQueueReferenceEventService : IReferenceEventService
 {

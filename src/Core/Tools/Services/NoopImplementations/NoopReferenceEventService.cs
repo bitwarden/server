@@ -1,6 +1,6 @@
-﻿using Bit.Core.Models.Business;
+﻿using Bit.Core.Tools.Models.Business;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.Tools.Services;
 
 public class NoopReferenceEventService : IReferenceEventService
 {
