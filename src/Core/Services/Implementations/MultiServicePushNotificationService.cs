@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Auth.Entities;
-
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
