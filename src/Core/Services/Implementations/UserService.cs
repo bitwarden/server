@@ -9,6 +9,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;

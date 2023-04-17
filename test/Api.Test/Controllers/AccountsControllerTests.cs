@@ -10,6 +10,8 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Repositories;
+using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;

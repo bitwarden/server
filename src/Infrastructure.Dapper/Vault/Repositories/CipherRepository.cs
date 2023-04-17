@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
