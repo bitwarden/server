@@ -1,9 +1,8 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response;
+namespace Bit.Core.Models.Api.Response;
 
 public class PolicyResponseModel : ResponseModel
 {
