@@ -16,10 +16,10 @@ jobs:
       - name: Checkout Branch
         uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
 
-      - name: Login to Azure - Prod Subscription
+      - name: Login to Azure - CI Subscription
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
-         creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+         creds: ${{ secrets.AZURE_CI_KV_SERVICE_PRINCIPAL }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
