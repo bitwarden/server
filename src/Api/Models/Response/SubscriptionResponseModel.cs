@@ -100,6 +100,6 @@ public class BillingSubscriptionUpcomingInvoice
         Date = inv.Date;
     }
 
-    public decimal Amount { get; set; }
+    public decimal? Amount { get; set; }
     public DateTime? Date { get; set; }
 }

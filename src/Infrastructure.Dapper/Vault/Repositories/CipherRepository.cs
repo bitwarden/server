@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -616,15 +617,15 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                             var dataTable = BuildCollectionsTable(bulkCopy, collections);
                             bulkCopy.WriteToServer(dataTable);
                         }
+                    }
 
-                        if (collectionCiphers.Any())
+                    if (collectionCiphers.Any())
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
                         {
-                            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
-                            {
-                                bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
-                                var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
-                                bulkCopy.WriteToServer(dataTable);
-                            }
+                            bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
+                            var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
+                            bulkCopy.WriteToServer(dataTable);
                         }
                     }
 

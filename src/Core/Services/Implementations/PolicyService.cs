@@ -1,7 +1,9 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 
@@ -78,6 +80,14 @@ public class PolicyService : IPolicyService
                     await DependsOnSingleOrgAsync(org);
                 }
                 break;
+
+            // Activate Autofill is only available to Enterprise 2020-current plans
+            case PolicyType.ActivateAutofill:
+                if (policy.Enabled)
+                {
+                    LockedTo2020Plan(org);
+                }
+                break;
         }
 
         var now = DateTime.UtcNow;
@@ -135,6 +145,27 @@ public class PolicyService : IPolicyService
         policy.RevisionDate = now;
         await _policyRepository.UpsertAsync(policy);
         await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+    }
+
+    public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
+    {
+        var policies = (await _policyRepository.GetManyByUserIdAsync(user.Id))
+            .Where(p => p.Type == PolicyType.MasterPassword && p.Enabled)
+            .ToList();
+
+        if (!policies.Any())
+        {
+            return null;
+        }
+
+        var enforcedOptions = new MasterPasswordPolicyData();
+
+        foreach (var policy in policies)
+        {
+            enforcedOptions.CombineWith(policy.GetDataModel<MasterPasswordPolicyData>());
+        }
+
+        return enforcedOptions;
     }
 
     public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
@@ -212,6 +243,14 @@ public class PolicyService : IPolicyService
         if (vaultTimeout?.Enabled == true)
         {
             throw new BadRequestException("Maximum Vault Timeout policy is enabled.");
+        }
+    }
+
+    private void LockedTo2020Plan(Organization org)
+    {
+        if (org.PlanType != PlanType.EnterpriseAnnually && org.PlanType != PlanType.EnterpriseMonthly)
+        {
+            throw new BadRequestException("This policy is only available to 2020 Enterprise plans.");
         }
     }
 }

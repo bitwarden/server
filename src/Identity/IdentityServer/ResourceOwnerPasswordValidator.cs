@@ -1,7 +1,8 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -34,14 +35,15 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyService policyService,
+        IPolicyRepository policyRepository,
         ICaptchaValidationService captchaValidationService,
         IAuthRequestRepository authRequestRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IPolicyService policyService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyService,
-              userRepository)
+              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+              userRepository, policyService)
     {
         _userManager = userManager;
         _userService = userService;

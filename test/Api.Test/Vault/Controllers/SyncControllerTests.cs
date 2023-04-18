@@ -11,6 +11,8 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;

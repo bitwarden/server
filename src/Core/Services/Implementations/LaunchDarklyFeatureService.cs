@@ -8,6 +8,7 @@ namespace Bit.Core.Services;
 public class LaunchDarklyFeatureService : IFeatureService, IDisposable
 {
     private readonly LdClient _client;
+    private const string _anonymousUser = "25a15cac-58cf-4ac0-ad0f-b17c4bd92294";
 
     public LaunchDarklyFeatureService(
         IGlobalSettings globalSettings)
@@ -63,6 +64,38 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         return _client.StringVariation(key, BuildContext(currentContext), defaultValue);
     }
 
+    public Dictionary<string, object> GetAll(ICurrentContext currentContext)
+    {
+        var results = new Dictionary<string, object>();
+
+        var keys = FeatureFlagKeys.GetAllKeys();
+
+        var values = _client.AllFlagsState(BuildContext(currentContext));
+        if (values.Valid)
+        {
+            foreach (var key in keys)
+            {
+                var value = values.GetFlagValueJson(key);
+                switch (value.Type)
+                {
+                    case LaunchDarkly.Sdk.LdValueType.Bool:
+                        results.Add(key, value.AsBool);
+                        break;
+
+                    case LaunchDarkly.Sdk.LdValueType.Number:
+                        results.Add(key, value.AsInt);
+                        break;
+
+                    case LaunchDarkly.Sdk.LdValueType.String:
+                        results.Add(key, value.AsString);
+                        break;
+                }
+            }
+        }
+
+        return results;
+    }
+
     public void Dispose()
     {
         _client?.Dispose();
@@ -72,18 +105,62 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
     {
         var builder = LaunchDarkly.Sdk.Context.MultiBuilder();
 
-        if (currentContext.UserId.HasValue)
+        switch (currentContext.ClientType)
         {
-            var user = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
-            user.Kind(LaunchDarkly.Sdk.ContextKind.Default);
-            builder.Add(user.Build());
-        }
+            case Identity.ClientType.User:
+                {
+                    LaunchDarkly.Sdk.ContextBuilder ldUser;
+                    if (currentContext.UserId.HasValue)
+                    {
+                        ldUser = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                    }
+                    else
+                    {
+                        // group all unauthenticated activity under one anonymous user key and mark as such
+                        ldUser = LaunchDarkly.Sdk.Context.Builder(_anonymousUser);
+                        ldUser.Anonymous(true);
+                    }
 
-        if (currentContext.OrganizationId.HasValue)
-        {
-            var org = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
-            org.Kind("org");
-            builder.Add(org.Build());
+                    ldUser.Kind(LaunchDarkly.Sdk.ContextKind.Default);
+
+                    if (currentContext.Organizations?.Any() ?? false)
+                    {
+                        var ldOrgs = currentContext.Organizations.Select(o => LaunchDarkly.Sdk.LdValue.Of(o.Id.ToString()));
+                        ldUser.Set("organizations", LaunchDarkly.Sdk.LdValue.ArrayFrom(ldOrgs));
+                    }
+
+                    builder.Add(ldUser.Build());
+                }
+                break;
+
+            case Identity.ClientType.Organization:
+                {
+                    if (currentContext.OrganizationId.HasValue)
+                    {
+                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+                        ldOrg.Kind("organization");
+                        builder.Add(ldOrg.Build());
+                    }
+                }
+                break;
+
+            case Identity.ClientType.ServiceAccount:
+                {
+                    if (currentContext.UserId.HasValue)
+                    {
+                        var ldServiceAccount = LaunchDarkly.Sdk.Context.Builder(currentContext.UserId.Value.ToString());
+                        ldServiceAccount.Kind("service-account");
+                        builder.Add(ldServiceAccount.Build());
+                    }
+
+                    if (currentContext.OrganizationId.HasValue)
+                    {
+                        var ldOrg = LaunchDarkly.Sdk.Context.Builder(currentContext.OrganizationId.Value.ToString());
+                        ldOrg.Kind("organization");
+                        builder.Add(ldOrg.Build());
+                    }
+                }
+                break;
         }
 
         return builder.Build();
