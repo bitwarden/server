@@ -1,6 +1,4 @@
-﻿using System.Linq.Expressions;
-using AutoMapper;
-using Bit.Core.Enums;
+﻿using AutoMapper;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
