@@ -1,5 +1,9 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Business;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -598,7 +602,7 @@ public class OrganizationService : IOrganizationService
         bool provider = false)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
-        if (!(plan is { LegacyYear: null }))
+        if (plan is not { LegacyYear: null })
         {
             throw new BadRequestException("Invalid plan selected.");
         }
@@ -649,6 +653,7 @@ public class OrganizationService : IOrganizationService
             PrivateKey = signup.PrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created
         };
 
         if (plan.Type == PlanType.Free && !provider)
@@ -664,7 +669,7 @@ public class OrganizationService : IOrganizationService
         {
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                 signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                signup.PremiumAccessAddon, signup.TaxInfo);
+                signup.PremiumAccessAddon, signup.TaxInfo, provider);
         }
 
         var ownerId = provider ? default : signup.Owner.Id;
@@ -748,7 +753,8 @@ public class OrganizationService : IOrganizationService
             PublicKey = publicKey,
             PrivateKey = privateKey,
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow
+            RevisionDate = DateTime.UtcNow,
+            Status = OrganizationStatusType.Created
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
@@ -1167,14 +1173,14 @@ public class OrganizationService : IOrganizationService
                 continue;
             }
 
-            await SendInviteAsync(orgUser, org);
+            await SendInviteAsync(orgUser, org, false);
             result.Add(Tuple.Create(orgUser, ""));
         }
 
         return result;
     }
 
-    public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId)
+    public async Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId ||
@@ -1184,7 +1190,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var org = await GetOrgById(orgUser.OrganizationId);
-        await SendInviteAsync(orgUser, org);
+        await SendInviteAsync(orgUser, org, initOrganization);
     }
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
@@ -1196,13 +1202,13 @@ public class OrganizationService : IOrganizationService
             orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))), organization.PlanType == PlanType.Free);
     }
 
-    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization)
+    private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
     {
         var now = DateTime.UtcNow;
         var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
         var token = _dataProtector.Protect(
             $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)), organization.PlanType == PlanType.Free);
+        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)), organization.PlanType == PlanType.Free, initOrganization);
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
@@ -2424,5 +2430,90 @@ public class OrganizationService : IOrganizationService
         }
 
         return status;
+    }
+
+    public async Task CreatePendingOrganization(Organization organization, string ownerEmail, ClaimsPrincipal user, IUserService userService, bool salesAssistedTrialStarted)
+    {
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+        if (plan is not { LegacyYear: null })
+        {
+            throw new BadRequestException("Invalid plan selected.");
+        }
+
+        if (plan.Disabled)
+        {
+            throw new BadRequestException("Plan not found.");
+        }
+
+        organization.Id = CoreHelpers.GenerateComb();
+        organization.Enabled = false;
+        organization.Status = OrganizationStatusType.Pending;
+
+        await SignUpAsync(organization, default, null, null, true);
+
+        var ownerOrganizationUser = new OrganizationUser
+        {
+            OrganizationId = organization.Id,
+            UserId = null,
+            Email = ownerEmail,
+            Key = null,
+            Type = OrganizationUserType.Owner,
+            Status = OrganizationUserStatusType.Invited,
+            AccessAll = true
+        };
+        await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
+
+        await SendInviteAsync(ownerOrganizationUser, organization, true);
+        await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
+
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
+        {
+            EventRaisedByUser = userService.GetUserName(user),
+            SalesAssistedTrialStarted = salesAssistedTrialStarted,
+        });
+    }
+
+    public async Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName)
+    {
+        await ValidateSignUpPoliciesAsync(userId);
+
+        var org = await GetOrgById(organizationId);
+
+        if (org.Enabled)
+        {
+            throw new BadRequestException("Organization is already enabled.");
+        }
+
+        if (org.Status != OrganizationStatusType.Pending)
+        {
+            throw new BadRequestException("Organization is not on a Pending status.");
+        }
+
+        if (!string.IsNullOrEmpty(org.PublicKey))
+        {
+            throw new BadRequestException("Organization already has a Public Key.");
+        }
+
+        if (!string.IsNullOrEmpty(org.PrivateKey))
+        {
+            throw new BadRequestException("Organization already has a Private Key.");
+        }
+
+        org.Enabled = true;
+        org.Status = OrganizationStatusType.Created;
+        org.PublicKey = publicKey;
+        org.PrivateKey = privateKey;
+
+        await UpdateAsync(org);
+
+        if (!string.IsNullOrWhiteSpace(collectionName))
+        {
+            var defaultCollection = new Collection
+            {
+                Name = collectionName,
+                OrganizationId = org.Id
+            };
+            await _collectionRepository.CreateAsync(defaultCollection);
+        }
     }
 }
