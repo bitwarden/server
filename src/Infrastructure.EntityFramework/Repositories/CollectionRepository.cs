@@ -299,8 +299,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    record CollectionGroupKey(Guid Id, Guid OrganizationId, string Name, DateTime CreationDate, DateTime RevisionDate, string ExternalId);
-
     public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
