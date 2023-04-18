@@ -1,4 +1,6 @@
-﻿using AutoMapper;
+﻿using System.Linq.Expressions;
+using AutoMapper;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -299,13 +301,52 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    record CollectionGroupKey(Guid Id, Guid OrganizationId, string Name, DateTime CreationDate, DateTime RevisionDate, string ExternalId);
+
     public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            return await (from c in new UserCollectionDetailsQuery(userId).Run(dbContext)
-                          group c by new { c.Id, c.OrganizationId, c.Name, c.CreationDate, c.RevisionDate, c.ExternalId } into collectionGroup
+
+            var baseCollectionQuery = new UserCollectionDetailsQuery(userId).Run(dbContext);
+
+            if (dbContext.Database.IsSqlite())
+            {
+                return (await baseCollectionQuery.ToListAsync())
+                    .GroupBy(c => new
+                    {
+                        c.Id,
+                        c.OrganizationId,
+                        c.Name,
+                        c.CreationDate,
+                        c.RevisionDate,
+                        c.ExternalId
+                    })
+                    .Select(collectionGroup => new CollectionDetails
+                    {
+                        Id = collectionGroup.Key.Id,
+                        OrganizationId = collectionGroup.Key.OrganizationId,
+                        Name = collectionGroup.Key.Name,
+                        CreationDate = collectionGroup.Key.CreationDate,
+                        RevisionDate = collectionGroup.Key.RevisionDate,
+                        ExternalId = collectionGroup.Key.ExternalId,
+                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                        HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                    })
+                    .ToList();
+            }
+
+            return await (from c in baseCollectionQuery
+                          group c by new
+                          {
+                              c.Id,
+                              c.OrganizationId,
+                              c.Name,
+                              c.CreationDate,
+                              c.RevisionDate,
+                              c.ExternalId
+                          } into collectionGroup
                           select new CollectionDetails
                           {
                               Id = collectionGroup.Key.Id,
