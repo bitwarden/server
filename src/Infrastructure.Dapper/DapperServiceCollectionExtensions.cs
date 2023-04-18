@@ -1,10 +1,12 @@
 ﻿using Bit.Core.Auth.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.Dapper.Auth.Repositories;
 using Bit.Infrastructure.Dapper.Repositories;
 using Bit.Infrastructure.Dapper.SecretsManager.Repositories;
+using Bit.Infrastructure.Dapper.Tools.Repositories;
 using Bit.Infrastructure.Dapper.Vault.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 

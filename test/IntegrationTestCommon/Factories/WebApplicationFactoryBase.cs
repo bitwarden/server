@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
