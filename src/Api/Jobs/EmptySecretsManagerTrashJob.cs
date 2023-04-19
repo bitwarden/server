@@ -9,7 +9,7 @@ public class EmptySecretsManagerTrashJob : BaseJob
     private ISecretRepository _secretRepository;
     private const uint DeleteAfterThisNumberOfDays = 30;
 
-    public EmptySecretsManagerTrashJob(ISecretRepository secretRepository, ILogger<AliveJob> logger) : base(logger)
+    public EmptySecretsManagerTrashJob(ISecretRepository secretRepository, ILogger<EmptySecretsManagerTrashJob> logger) : base(logger)
     {
         _secretRepository = secretRepository;
     }
