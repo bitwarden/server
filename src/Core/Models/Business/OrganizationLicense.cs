@@ -79,7 +79,7 @@ public class OrganizationLicense : ILicense
             {
                 Refresh = DateTime.UtcNow.AddDays(30);
                 Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
-                SubscriptionExpiration = subscriptionInfo.Subscription.PeriodEndDate;
+                ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
             }
             else
             {
@@ -124,7 +124,7 @@ public class OrganizationLicense : ILicense
     public DateTime Issued { get; set; }
     public DateTime? Refresh { get; set; }
     public DateTime? Expires { get; set; }
-    public DateTime? SubscriptionExpiration { get; set; }
+    public DateTime? ExpirationWithoutGracePeriod { get; set; }
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
@@ -174,8 +174,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 10 || !p.Name.Equals(nameof(UseScim))) &&
                     // UseCustomPermissions was added in Version 11
                     (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
-                    // SubscriptionExpiration was added in Version 12
-                    (Version >= 12 || !p.Name.Equals(nameof(SubscriptionExpiration))) &&
+                    // ExpirationWithoutGracePeriod was added in Version 12
+                    (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod))) &&
                     (
                         !forHash ||
                         (

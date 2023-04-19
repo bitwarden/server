@@ -116,8 +116,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
         {
             // License expiration should always include grace period - See OrganizationLicense.cs
             Expiration = license.Expires;
-            // Use license subscription expiration if available, otherwise assume license expiration minus grace period
-            SelfHostSubscriptionExpiration = license.SubscriptionExpiration ??
+            // Use license.ExpirationWithoutGracePeriod if available, otherwise assume license expiration minus grace period
+            ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ??
                                              license.Expires?.AddDays(-Constants
                                                  .OrganizationSelfHostSubscriptionGracePeriodDays);
         }
@@ -129,9 +129,9 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
 
     /// <summary>
-    /// Date when a self-hosted organization's subscription expires (does not include grace period).
+    /// Date when a self-hosted organization's subscription expires, without any grace period.
     /// </summary>
-    public DateTime? SelfHostSubscriptionExpiration { get; set; }
+    public DateTime? ExpirationWithoutGracePeriod { get; set; }
 
     /// <summary>
     /// Date when a self-hosted organization expires (includes grace period).
