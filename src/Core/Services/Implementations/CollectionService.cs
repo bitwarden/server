@@ -1,10 +1,11 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 
 namespace Bit.Core.Services;
 
