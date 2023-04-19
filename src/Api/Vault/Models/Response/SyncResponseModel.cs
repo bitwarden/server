@@ -1,9 +1,12 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Tools.Models.Response;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 
