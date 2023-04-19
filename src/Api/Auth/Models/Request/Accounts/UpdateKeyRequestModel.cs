@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Api.Models.Request;
+using Bit.Api.Tools.Models.Request;
 using Bit.Api.Vault.Models.Request;
 
 namespace Bit.Api.Auth.Models.Request.Accounts;
