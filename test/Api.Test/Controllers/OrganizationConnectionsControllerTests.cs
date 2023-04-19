@@ -2,6 +2,7 @@
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
+using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
