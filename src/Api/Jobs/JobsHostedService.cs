@@ -41,6 +41,11 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 30 */12 * * ?")
             .Build();
+        var everyTopOfTheDayTrigger = TriggerBuilder.Create()
+            .WithIdentity("EveryTopOfTheDayTrigger")
+            .StartNow()
+            .WithCronSchedule("0 0 * * * ?")
+            .Build();
         var randomDailySponsorshipSyncTrigger = TriggerBuilder.Create()
             .WithIdentity("RandomDailySponsorshipSyncTrigger")
             .StartAt(DateBuilder.FutureDate(new Random().Next(24), IntervalUnit.Hour))
@@ -63,6 +68,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), validateOrganizationDomainTrigger),
+            new Tuple<Type, ITrigger>(typeof(EmptySecretsManagerTrashJob), everyTopOfTheDayTrigger),
         };
 
         if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
@@ -87,5 +93,6 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<ValidateUsersJob>();
         services.AddTransient<ValidateOrganizationsJob>();
         services.AddTransient<ValidateOrganizationDomainJob>();
+        services.AddTransient<EmptySecretsManagerTrashJob>();
     }
 }

@@ -293,6 +293,21 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return (policy.Read, policy.Write);
     }
 
+    public async Task EmptyTrash(DateTime nowTime, uint DeleteAfterThisNumberOfDays)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var secrets = dbContext.Secret.Where(s => s.DeletedDate != null && (s.DeletedDate - nowTime) > TimeSpan.FromDays(DeleteAfterThisNumberOfDays));
+            await secrets.ForEachAsync(secret =>
+            {
+                dbContext.Attach(secret);
+                dbContext.Remove(secret);
+            });
+            await dbContext.SaveChangesAsync();
+        }
+    }
+
     private IQueryable<SecretPermissionDetails> SecretToPermissionDetails(IQueryable<Secret> query, Guid userId, AccessClientType accessType)
     {
         var secrets = accessType switch
