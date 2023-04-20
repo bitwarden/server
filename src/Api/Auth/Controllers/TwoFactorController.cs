@@ -300,12 +300,14 @@ public class TwoFactorController : Controller
                     return;
                 }
             }
-            else if (await _userService.VerifySecretAsync(user, model.Secret))
+            else if (await _userService.VerifySecretAsync(user, model.Secret, !string.IsNullOrEmpty(model.OTP)))
             {
                 await _userService.SendTwoFactorEmailAsync(user);
                 return;
             }
         }
+        
+        // TODO: update error messaging to recommend re-logging in and fix translation
 
         await Task.Delay(2000);
         throw new BadRequestException("Cannot send two-factor email.");

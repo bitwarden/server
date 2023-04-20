@@ -106,6 +106,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
+        // TODO: build 2FA token and return as part of the TwoFactorResult
         var (isTwoFactorRequired, twoFactorOrganization) = await RequiresTwoFactorAsync(user, request);
         if (isTwoFactorRequired)
         {
@@ -239,13 +240,19 @@ public abstract class BaseRequestValidator<T> where T : class
             var infoDict = await BuildTwoFactorParams(organization, user, provider.Key, provider.Value);
             providers.Add(((byte)provider.Key).ToString(), infoDict);
         }
-
+        
+        // TODO: replace OTP with expiring token 
+        // TODO: consider adding a check for if any enabled providers have key == TwoFactorProviderType.Email otherwise
+        // dont sent SsoEmail2faOtpVerifier && email
         SetTwoFactorResult(context,
             new Dictionary<string, object>
             {
                 { "TwoFactorProviders", providers.Keys },
                 { "TwoFactorProviders2", providers },
-                { "MasterPasswordPolicy", await GetMasterPasswordPolicy(user) }
+                { "MasterPasswordPolicy", await GetMasterPasswordPolicy(user) },
+                { "SsoEmail2faOtpVerifier", await _userService.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+                    "otp:" + user.Email) },
+                { "Email", user.Email },  // user account email -- not 2FA configured email
             });
 
         if (enabledProviders.Count() == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)
