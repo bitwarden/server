@@ -76,7 +76,7 @@ public class ServiceAccountsController : Controller
 
     [HttpGet("{id}")]
     public async Task<ServiceAccountResponseModel> GetByServiceAccountIdAsync(
-     [FromRoute] Guid id)
+        [FromRoute] Guid id)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
         var authorizationResult =
@@ -104,7 +104,8 @@ public class ServiceAccountsController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
+        var result =
+            await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
         return new ServiceAccountResponseModel(result);
     }
 

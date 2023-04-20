@@ -95,7 +95,7 @@ public class
         }
     }
 
-    private async Task<(AccessClientType, Guid)> GetAccessClientAsync(AuthorizationHandlerContext context, Guid organizationId)
+    private async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientAsync(AuthorizationHandlerContext context, Guid organizationId)
     {
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);

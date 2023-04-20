@@ -140,6 +140,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Fact]
+    public async Task GetByServiceAccountId_ServiceAccountDoesNotExist_NotFound()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var response = await _client.GetAsync($"/service-accounts/{new Guid()}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task GetByServiceAccountId_UserWithoutPermission_NotFound()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
