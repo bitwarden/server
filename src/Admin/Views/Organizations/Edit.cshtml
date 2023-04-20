@@ -5,19 +5,7 @@
     ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Organization.Name;
 
     var canViewOrganizationInformation = AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View);
-    var canViewBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_View);
-    var canViewBusinessInformation = AccessControlService.UserHasPermission(Permission.Org_BusinessInformation_View);
-    var canViewGeneralDetails = AccessControlService.UserHasPermission(Permission.Org_GeneralDetails_View);
-    var canViewPlan = AccessControlService.UserHasPermission(Permission.Org_Plan_View);
-    var canViewLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_View);
     var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_View);
-
-    var canCheckEnabled = AccessControlService.UserHasPermission(Permission.Org_CheckEnabledBox);
-    var canEditPlan = AccessControlService.UserHasPermission(Permission.Org_Plan_Edit);
-    var canEditLicensing = AccessControlService.UserHasPermission(Permission.Org_Licensing_Edit);
-    var canEditBilling = AccessControlService.UserHasPermission(Permission.Org_Billing_Edit);
-    var canLaunchGateway = AccessControlService.UserHasPermission(Permission.Org_Billing_LaunchGateway);
-    var canManangeTransaction = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_CreateEditTransaction);
     var canDownloadInvoice = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_DownloadInvoice);
     var canInitiateTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateTrial);
     var canDelete = AccessControlService.UserHasPermission(Permission.Org_Delete);
@@ -99,12 +87,22 @@
     <h2>Provider Relationship</h2>
     @await Html.PartialAsync("_ProviderInformation", Model.Provider)
 }
-<h2>Organization Information</h2>
-@await Html.PartialAsync("_ViewInformation", Model)
-<h2>Billing Information</h2>
-@await Html.PartialAsync("_BillingInformation",
-    new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id })
+
+@if (canViewOrganizationInformation)
+{
+    <h2>Organization Information</h2>
+    @await Html.PartialAsync("_ViewInformation", Model)
+}
+
+@if (canViewBillingInformation)
+{
+    <h2>Billing Information</h2>
+    @await Html.PartialAsync("_BillingInformation",
+        new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
+}
+
 @await Html.PartialAsync("_OrganizationForm", Model)
+
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
     <div class="ml-auto d-flex">
