@@ -31,7 +31,8 @@ public class ProviderOrganizationOrganizationDetailsReadByProviderIdQuery : IQue
             RevisionDate = x.po.RevisionDate,
             UserCount = x.o.OrganizationUsers.Count(ou => ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed),
             Seats = x.o.Seats,
-            Plan = x.o.Plan
+            Plan = x.o.Plan,
+            Status = x.o.Status
         });
     }
 }
