@@ -53,6 +53,14 @@ BEGIN
     WHERE
         [OU].[OrganizationId] = @Id
 
+    DELETE GU
+    FROM
+        [dbo].[GroupUser] GU
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [GU].[OrganizationUserId] = [OU].[Id]
+    WHERE
+        [OU].[OrganizationId] = @Id
+
     DELETE
     FROM 
         [dbo].[OrganizationUser]
