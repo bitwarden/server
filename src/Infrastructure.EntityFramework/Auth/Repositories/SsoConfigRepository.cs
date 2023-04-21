@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.Repositories;
-using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

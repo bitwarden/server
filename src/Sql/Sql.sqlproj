@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+<Project DefaultTargets="Build"
+  xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -79,6 +80,11 @@
     <Folder Include="SecretsManager\dbo\Stored Procedures\ApiKey\" />
     <Folder Include="SecretsManager\dbo\Tables\" />
     <Folder Include="SecretsManager\dbo\Views\" />
+    <Folder Include="Tools\" />
+    <Folder Include="Tools\dbo" />
+    <Folder Include="Tools\dbo\Tables" />
+    <Folder Include="Tools\dbo\Stored Procedures\" />
+    <Folder Include="Vault\" />
     <Folder Include="Vault\dbo\" />
     <Folder Include="Vault\dbo\Functions\" />
     <Folder Include="Vault\dbo\Stored Procedures\" />
@@ -86,6 +92,7 @@
     <Folder Include="Vault\dbo\Stored Procedures\Folder\" />
     <Folder Include="Vault\dbo\Tables\" />
     <Folder Include="Vault\dbo\Views\" />
+    <Folder Include="Tools\dbo\Views\" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Auth\dbo\Stored Procedures\AuthRequest_Create.sql" />
@@ -322,12 +329,6 @@
     <Build Include="dbo\Stored Procedures\Provider_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\Provider_Search.sql" />
     <Build Include="dbo\Stored Procedures\Provider_Update.sql" />
-    <Build Include="dbo\Stored Procedures\Send_Create.sql" />
-    <Build Include="dbo\Stored Procedures\Send_DeleteById.sql" />
-    <Build Include="dbo\Stored Procedures\Send_ReadByDeletionDateBefore.sql" />
-    <Build Include="dbo\Stored Procedures\Send_ReadById.sql" />
-    <Build Include="dbo\Stored Procedures\Send_ReadByUserId.sql" />
-    <Build Include="dbo\Stored Procedures\Send_Update.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_Archive.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_Create.sql" />
     <Build Include="dbo\Stored Procedures\TaxRate_ReadAllActive.sql" />
@@ -387,7 +388,6 @@
     <Build Include="dbo\Tables\Provider.sql" />
     <Build Include="dbo\Tables\ProviderOrganization.sql" />
     <Build Include="dbo\Tables\ProviderUser.sql" />
-    <Build Include="dbo\Tables\Send.sql" />
     <Build Include="dbo\Tables\TaxRate.sql" />
     <Build Include="dbo\Tables\Transaction.sql" />
     <Build Include="dbo\Tables\User.sql" />
@@ -418,7 +418,6 @@
     <Build Include="dbo\Views\ProviderUserUserDetailsView.sql" />
     <Build Include="dbo\Views\ProviderUserView.sql" />
     <Build Include="dbo\Views\ProviderView.sql" />
-    <Build Include="dbo\Views\SendView.sql" />
     <Build Include="dbo\Views\TransactionView.sql" />
     <Build Include="dbo\Views\UserView.sql" />
     <Build Include="SecretsManager\dbo\Stored Procedures\ApiKey\ApiKeyDetails_ReadById.sql" />
@@ -433,6 +432,14 @@
     <Build Include="SecretsManager\dbo\Tables\ServiceAccount.sql" />
     <Build Include="SecretsManager\dbo\Views\ApiKeyDetailsView.sql" />
     <Build Include="SecretsManager\dbo\Views\ApiKeyView.sql" />
+    <Build Include="Tools\dbo\Stored Procedures\Send_Create.sql" />
+    <Build Include="Tools\dbo\Stored Procedures\Send_DeleteById.sql" />
+    <Build Include="Tools\dbo\Stored Procedures\Send_ReadByDeletionDateBefore.sql" />
+    <Build Include="Tools\dbo\Stored Procedures\Send_ReadById.sql" />
+    <Build Include="Tools\dbo\Stored Procedures\Send_ReadByUserId.sql" />
+    <Build Include="Tools\dbo\Stored Procedures\Send_Update.sql" />
+    <Build Include="Tools\dbo\Tables\Send.sql" />
+    <Build Include="Tools\dbo\Views\SendView.sql" />
     <Build Include="Vault\dbo\Functions\CipherDetails.sql" />
     <Build Include="Vault\dbo\Functions\UserCipherDetails.sql" />
     <Build Include="Vault\dbo\Stored Procedures\Cipher\CipherDetails_Create.sql" />
