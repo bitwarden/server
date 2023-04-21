@@ -12,13 +12,8 @@ public static class HealthCheckServiceExtensions
     public static void AddHealthCheckServices(this IServiceCollection services, GlobalSettings globalSettings,
         Action<IHealthChecksBuilder> addBuilder = null)
     {
-        var builder = services.AddHealthChecks();
-
-        if (!string.IsNullOrEmpty(GetConnectionString(globalSettings)))
-        {
-            //add custom db health check
-            builder.AddDatabaseCheck(globalSettings);
-        }
+        var builder = services.AddHealthChecks()
+            .AddSqlServer(globalSettings.SqlServer.ConnectionString);
 
         addBuilder?.Invoke(builder);
     }
@@ -63,35 +58,5 @@ public static class HealthCheckServiceExtensions
 
         return context.Response.WriteAsync(
             Encoding.UTF8.GetString(memoryStream.ToArray()));
-    }
-
-    private static string GetConnectionString(GlobalSettings globalSettings)
-    {
-        //allow only healthcheck for sqlserver for now
-        var selectedDatabaseProvider = "sqlserver";
-
-        return selectedDatabaseProvider switch
-        {
-            "postgres" or "postgresql" => globalSettings.PostgreSql.ConnectionString,
-            "mysql" or "mariadb" => globalSettings.MySql.ConnectionString,
-            "sqlserver" => globalSettings.SqlServer.ConnectionString,
-            _ => ""
-        };
-    }
-
-    private static IHealthChecksBuilder AddDatabaseCheck(this IHealthChecksBuilder healthChecksBuilder,
-        GlobalSettings globalSettings)
-    {
-        var connectionString = GetConnectionString(globalSettings);
-        //allow only healthcheck for sqlserver for now
-        var selectedDatabaseProvider = "sqlserver";
-
-        return selectedDatabaseProvider switch
-        {
-            "postgres" or "postgresql" => healthChecksBuilder.AddNpgSql(connectionString),
-            "mysql" or "mariadb" => healthChecksBuilder.AddMySql(connectionString),
-            "sqlserver" => healthChecksBuilder.AddSqlServer(connectionString),
-            _ => throw new ArgumentOutOfRangeException()
-        };
     }
 }
