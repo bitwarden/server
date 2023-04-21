@@ -608,6 +608,31 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         return await ToggleCipherStates(ids, userId, CipherStateAction.Restore);
     }
 
+    public async Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var utcNow = DateTime.UtcNow;
+            var ciphers = from c in dbContext.Ciphers
+                          where c.OrganizationId == organizationId &&
+                                ids.Contains(c.Id)
+                          select c;
+
+            await ciphers.ForEachAsync(cipher =>
+            {
+                dbContext.Attach(cipher);
+                cipher.DeletedDate = null;
+                cipher.RevisionDate = utcNow;
+            });
+
+            await OrganizationUpdateStorage(organizationId);
+            await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organizationId);
+            await dbContext.SaveChangesAsync();
+            return utcNow;
+        }
+    }
+
     public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
         await ToggleCipherStates(ids, userId, CipherStateAction.SoftDelete);
