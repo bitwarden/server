@@ -2,5 +2,17 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
+## Auth team files ##
+**/Auth @bitwarden/team-auth-dev
+bitwarden_license/src/Sso @bitwarden/team-auth-dev
+src/Identity @bitwarden/team-auth-dev
+
 **/SecretsManager @bitwarden/team-secrets-manager-dev
+**/Tools @bitwarden/team-tools-dev
 **/Vault @bitwarden/team-vault-dev
+
+# Admin-Console Team
+bitwarden_license/src/Scim @bitwarden/team-admin-console-dev
+bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-dev
+bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
+**/AdminConsole @bitwarden/team-admin-console-dev

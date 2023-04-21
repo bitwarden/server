@@ -1,10 +1,12 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -249,7 +251,7 @@ public class UserRepositoryTests
     public async void GetBySsoUserAsync_Works_DataMatches(User user, Organization org,
         SsoUser ssoUser, UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
         List<EfRepo.SsoUserRepository> ssoUserRepos, List<EfRepo.OrganizationRepository> orgRepos,
-        SqlRepo.UserRepository sqlUserRepo, SqlRepo.SsoUserRepository sqlSsoUserRepo,
+        SqlRepo.UserRepository sqlUserRepo, SqlAuthRepo.SsoUserRepository sqlSsoUserRepo,
         SqlRepo.OrganizationRepository sqlOrgRepo)
     {
         var returnedList = new List<User>();

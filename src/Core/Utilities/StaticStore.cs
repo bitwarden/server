@@ -466,7 +466,7 @@ public class StaticStore
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
 
-                StripeSeatPlanId = "2020-enterprise-org-seat-monthly",
+                StripeSeatPlanId = "2020-enterprise-seat-monthly",
                 StripeStoragePlanId = "storage-gb-monthly",
                 BasePrice = 0,
                 SeatPrice = 6,
