@@ -78,5 +78,5 @@ public interface IUserService
     string GetUserName(ClaimsPrincipal principal);
     Task SendOTPAsync(User user);
     Task<bool> VerifyOTPAsync(User user, string token);
-    Task<bool> VerifySecretAsync(User user, string secret, bool otp = false);
+    Task<bool> VerifySecretAsync(User user, string secret);
 }

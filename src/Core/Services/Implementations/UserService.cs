@@ -1469,9 +1469,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             "otp:" + user.Email, token);
     }
 
-    public async Task<bool> VerifySecretAsync(User user, string secret, bool otp = false)
+    public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        return user.UsesKeyConnector || otp
+        return user.UsesKeyConnector 
             ? await VerifyOTPAsync(user, secret)
             : await CheckPasswordAsync(user, secret);
     }

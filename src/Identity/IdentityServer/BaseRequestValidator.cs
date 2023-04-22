@@ -6,6 +6,7 @@ using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -16,6 +17,7 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -40,6 +42,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserRepository _userRepository;
     private readonly IPolicyService _policyService;
+    private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -57,7 +60,8 @@ public abstract class BaseRequestValidator<T> where T : class
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         IUserRepository userRepository,
-        IPolicyService policyService)
+        IPolicyService policyService,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -75,6 +79,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _policyRepository = policyRepository;
         _userRepository = userRepository;
         _policyService = policyService;
+        _tokenDataFactory = tokenDataFactory;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -105,8 +110,7 @@ public abstract class BaseRequestValidator<T> where T : class
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
             return;
         }
-
-        // TODO: build 2FA token and return as part of the TwoFactorResult
+        
         var (isTwoFactorRequired, twoFactorOrganization) = await RequiresTwoFactorAsync(user, request);
         if (isTwoFactorRequired)
         {
@@ -244,15 +248,16 @@ public abstract class BaseRequestValidator<T> where T : class
         // TODO: replace OTP with expiring token 
         // TODO: consider adding a check for if any enabled providers have key == TwoFactorProviderType.Email otherwise
         // dont sent SsoEmail2faOtpVerifier && email
+        // TODO: check if email is user account email or SSO email (need to be sure which one we are sending down)
+        // we don't know if there can be a mismatch 
         SetTwoFactorResult(context,
             new Dictionary<string, object>
             {
                 { "TwoFactorProviders", providers.Keys },
                 { "TwoFactorProviders2", providers },
                 { "MasterPasswordPolicy", await GetMasterPasswordPolicy(user) },
-                { "SsoEmail2faOtpVerifier", await _userService.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
-                    "otp:" + user.Email) },
-                { "Email", user.Email },  // user account email -- not 2FA configured email
+                // Note: email stored in encrypted form in session token
+                { "SsoEmail2faSessionToken", _tokenDataFactory.Protect(new SsoEmail2faSessionTokenable(user)) },
             });
 
         if (enabledProviders.Count() == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)

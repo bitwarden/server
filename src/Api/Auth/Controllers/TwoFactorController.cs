@@ -5,6 +5,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.LoginFeatures.PasswordlessLogin.Interfaces;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -12,6 +13,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Authorization;
@@ -31,6 +33,7 @@ public class TwoFactorController : Controller
     private readonly UserManager<User> _userManager;
     private readonly ICurrentContext _currentContext;
     private readonly IVerifyAuthRequestCommand _verifyAuthRequestCommand;
+    private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
 
     public TwoFactorController(
         IUserService userService,
@@ -39,7 +42,8 @@ public class TwoFactorController : Controller
         GlobalSettings globalSettings,
         UserManager<User> userManager,
         ICurrentContext currentContext,
-        IVerifyAuthRequestCommand verifyAuthRequestCommand)
+        IVerifyAuthRequestCommand verifyAuthRequestCommand,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
     {
         _userService = userService;
         _organizationRepository = organizationRepository;
@@ -48,6 +52,7 @@ public class TwoFactorController : Controller
         _userManager = userManager;
         _currentContext = currentContext;
         _verifyAuthRequestCommand = verifyAuthRequestCommand;
+        _tokenDataFactory = tokenDataFactory;
     }
 
     [HttpGet("")]
@@ -85,7 +90,8 @@ public class TwoFactorController : Controller
     }
 
     [HttpPost("get-authenticator")]
-    public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator([FromBody] SecretVerificationRequestModel model)
+    public async Task<TwoFactorAuthenticatorResponseModel> GetAuthenticator(
+        [FromBody] SecretVerificationRequestModel model)
     {
         var user = await CheckAsync(model, false);
         var response = new TwoFactorAuthenticatorResponseModel(user);
@@ -101,7 +107,7 @@ public class TwoFactorController : Controller
         model.ToUser(user);
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Authenticator), model.Token))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token.");
@@ -158,7 +164,8 @@ public class TwoFactorController : Controller
         }
         catch (DuoException)
         {
-            throw new BadRequestException("Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
+            throw new BadRequestException(
+                "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
         }
 
         model.ToUser(user);
@@ -215,7 +222,8 @@ public class TwoFactorController : Controller
         }
         catch (DuoException)
         {
-            throw new BadRequestException("Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
+            throw new BadRequestException(
+                "Duo configuration settings are not valid. Please re-check the Duo Admin panel.");
         }
 
         model.ToOrganization(organization);
@@ -254,12 +262,14 @@ public class TwoFactorController : Controller
         {
             throw new BadRequestException("Unable to complete WebAuthn registration.");
         }
+
         var response = new TwoFactorWebAuthnResponseModel(user);
         return response;
     }
 
     [HttpDelete("webauthn")]
-    public async Task<TwoFactorWebAuthnResponseModel> DeleteWebAuthn([FromBody] TwoFactorWebAuthnDeleteRequestModel model)
+    public async Task<TwoFactorWebAuthnResponseModel> DeleteWebAuthn(
+        [FromBody] TwoFactorWebAuthnDeleteRequestModel model)
     {
         var user = await CheckAsync(model, true);
         await _userService.DeleteWebAuthnKeyAsync(user, model.Id.Value);
@@ -278,6 +288,11 @@ public class TwoFactorController : Controller
     [HttpPost("send-email")]
     public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
     {
+        if (string.IsNullOrEmpty(model.Email))
+        {
+            throw new BadRequestException("Email required to setup email 2FA.");
+        }
+
         var user = await CheckAsync(model, false);
         model.ToUser(user);
         await _userService.SendTwoFactorEmailAsync(user);
@@ -285,32 +300,64 @@ public class TwoFactorController : Controller
 
     [AllowAnonymous]
     [HttpPost("send-email-login")]
-    public async Task SendEmailLogin([FromBody] TwoFactorEmailRequestModel model)
+    public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailRequestModel requestModel)
     {
-        var user = await _userManager.FindByEmailAsync(model.Email.ToLowerInvariant());
-        if (user != null)
+        
+        // TODO: check if email is user account email or SSO email (need to be sure which one we are sending down)
+        // we don't know if there can be a mismatch 
+        
+        // TODO: revisit the idea of sending down email alongside token just to make this more streamlined. 
+
+        User user = null;
+
+        // Get user email from email field or token
+        var lowerCaseEmail = requestModel.Email?.ToLowerInvariant();
+
+        if (!string.IsNullOrEmpty(lowerCaseEmail))
         {
-            // check if 2FA email is from passwordless
-            if (!string.IsNullOrEmpty(model.AuthRequestAccessCode))
-            {
-                if (await _verifyAuthRequestCommand
-                        .VerifyAuthRequestAsync(new Guid(model.AuthRequestId), model.AuthRequestAccessCode))
-                {
-                    await _userService.SendTwoFactorEmailAsync(user);
-                    return;
-                }
-            }
-            else if (await _userService.VerifySecretAsync(user, model.Secret, !string.IsNullOrEmpty(model.OTP)))
+            user = await _userManager.FindByEmailAsync(lowerCaseEmail);
+        }
+        else if (!string.IsNullOrEmpty(requestModel.SsoEmail2FaSessionToken))
+        {
+
+            user = await this.ValidateAndGetUserFromSsoEmail2FaTokenAsync(requestModel.SsoEmail2FaSessionToken);
+
+            if (user != null)
             {
                 await _userService.SendTwoFactorEmailAsync(user);
                 return;
             }
         }
+        else
+        {
+            // No email or valid token w/ email provided 
+            this.ThrowDelayedBadRequestExceptionAsync(
+                "Cannot send two-factor email as no email was provided.", 2000);
+        }
         
-        // TODO: update error messaging to recommend re-logging in and fix translation
 
-        await Task.Delay(2000);
-        throw new BadRequestException("Cannot send two-factor email.");
+        if (user != null)
+        {
+            // check if 2FA email is from passwordless
+            if (!string.IsNullOrEmpty(requestModel.AuthRequestAccessCode))
+            {
+                if (await _verifyAuthRequestCommand
+                        .VerifyAuthRequestAsync(new Guid(requestModel.AuthRequestId),
+                            requestModel.AuthRequestAccessCode))
+                {
+                    await _userService.SendTwoFactorEmailAsync(user);
+                    return;
+                }
+            }
+            else if (await _userService.VerifySecretAsync(user, requestModel.Secret))
+            {
+                await _userService.SendTwoFactorEmailAsync(user);
+                return;
+            }
+        }
+
+        this.ThrowDelayedBadRequestExceptionAsync(
+            "Cannot send two-factor email.", 2000);
     }
 
     [HttpPut("email")]
@@ -321,7 +368,7 @@ public class TwoFactorController : Controller
         model.ToUser(user);
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token.");
@@ -379,7 +426,7 @@ public class TwoFactorController : Controller
     public async Task PostRecover([FromBody] TwoFactorRecoveryRequestModel model)
     {
         if (!await _userService.RecoverTwoFactorAsync(model.Email, model.MasterPasswordHash, model.RecoveryCode,
-            _organizationService))
+                _organizationService))
         {
             await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "Invalid information. Try again.");
@@ -395,7 +442,8 @@ public class TwoFactorController : Controller
 
     [Obsolete("Leaving this for backwards compatibilty on clients")]
     [HttpPut("device-verification-settings")]
-    public Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings([FromBody] DeviceVerificationRequestModel model)
+    public Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings(
+        [FromBody] DeviceVerificationRequestModel model)
     {
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
@@ -430,7 +478,7 @@ public class TwoFactorController : Controller
         }
 
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
-            CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey), value))
+                CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey), value))
         {
             await Task.Delay(2000);
             throw new BadRequestException(name, $"{name} is invalid.");
@@ -439,5 +487,34 @@ public class TwoFactorController : Controller
         {
             await Task.Delay(500);
         }
+    }
+    
+    private async Task<User> ValidateAndGetUserFromSsoEmail2FaTokenAsync(string ssoEmail2FaSessionToken)
+    {
+        if (!string.IsNullOrEmpty(ssoEmail2FaSessionToken) &&
+            _tokenDataFactory.TryUnprotect(ssoEmail2FaSessionToken, out var decryptedToken) &&
+            decryptedToken.Valid)
+        {
+            var user = await _userManager.FindByEmailAsync(decryptedToken.Email.ToLowerInvariant());
+
+            if (user != null && decryptedToken.TokenIsValid(user))
+            {
+                return user;
+            }
+
+            ThrowDelayedBadRequestExceptionAsync("Cannot send two-factor email: no user or invalid token for user.");
+            return null;
+        }
+        
+        // Token is undefined, expired, or missing data
+        this.ThrowDelayedBadRequestExceptionAsync(
+            "Cannot send two-factor email: a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.", 2000);
+        return null;
+    }
+
+    private async void ThrowDelayedBadRequestExceptionAsync(string message, int delayTime = 2000)
+    {
+        await Task.Delay(delayTime);
+        throw new BadRequestException(message);
     }
 }
