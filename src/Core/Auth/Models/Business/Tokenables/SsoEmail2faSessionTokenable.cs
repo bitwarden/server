@@ -1,6 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Tokens;
-using System.Text.Json.Serialization;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
