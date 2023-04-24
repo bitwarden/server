@@ -859,7 +859,7 @@ public class CipherService : ICipherService
 
         if (orgAdmin && organizationId.HasValue)
         {
-            var ciphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId.Value); //await _cipherRepository.GetManyByOrganizationIdAsync(organizationId.Value);
+            var ciphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId.Value);
             restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id)).ToList();
             revisionDate = await _cipherRepository.RestoreByIdsOrganizationIdAsync(restoringCiphers.Select(c => c.Id), organizationId.Value);
         }
