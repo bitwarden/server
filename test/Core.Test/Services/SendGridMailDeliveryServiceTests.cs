@@ -73,7 +73,7 @@ public class SendGridMailDeliveryServiceTests : IDisposable
                 Assert.Equal(mailMessage.HtmlContent, msg.HtmlContent);
                 Assert.Equal(mailMessage.TextContent, msg.PlainTextContent);
 
-                Assert.Contains("type:Cateogry", msg.Categories);
+                Assert.Contains("type:Category", msg.Categories);
                 Assert.Contains(msg.Categories, x => x.StartsWith("env:"));
                 Assert.Contains(msg.Categories, x => x.StartsWith("sender:"));
 
