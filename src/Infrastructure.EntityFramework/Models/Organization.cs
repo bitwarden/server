@@ -1,4 +1,6 @@
 ﻿using AutoMapper;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 
@@ -24,5 +26,12 @@ public class OrganizationMapperProfile : Profile
     public OrganizationMapperProfile()
     {
         CreateMap<Core.Entities.Organization, Organization>().ReverseMap();
+        CreateProjection<Organization, SelfHostedOrganizationDetails>()
+            .ForMember(sd => sd.CollectionCount, opt => opt.MapFrom(o => o.Collections.Count))
+            .ForMember(sd => sd.GroupCount, opt => opt.MapFrom(o => o.Groups.Count))
+            .ForMember(sd => sd.OccupiedSeatCount, opt => opt.MapFrom(o => o.OrganizationUsers.Count(ou => ou.Status >= OrganizationUserStatusType.Invited)))
+            .ForMember(sd => sd.OrganizationUsers, opt => opt.MapFrom(o => o.OrganizationUsers))
+            .ForMember(sd => sd.ScimConnections, opt => opt.MapFrom(o => o.Connections.Where(c => c.Type == OrganizationConnectionType.Scim)))
+            .ForMember(sd => sd.SsoConfig, opt => opt.MapFrom(o => o.SsoConfigs.SingleOrDefault()));
     }
 }
