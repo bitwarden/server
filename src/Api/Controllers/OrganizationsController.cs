@@ -1,10 +1,15 @@
 ﻿using System.Text.Json;
+using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.Organizations;
+using Bit.Api.Auth.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Api.SecretsManager;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -28,6 +33,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IProviderRepository _providerRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly IPaymentService _paymentService;
@@ -46,6 +52,7 @@ public class OrganizationsController : Controller
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
+        IProviderRepository providerRepository,
         IOrganizationService organizationService,
         IUserService userService,
         IPaymentService paymentService,
@@ -63,6 +70,7 @@ public class OrganizationsController : Controller
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _policyRepository = policyRepository;
+        _providerRepository = providerRepository;
         _organizationService = organizationService;
         _userService = userService;
         _paymentService = paymentService;
@@ -101,7 +109,7 @@ public class OrganizationsController : Controller
     public async Task<BillingResponseModel> GetBilling(string id)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.ViewBillingHistory(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -120,7 +128,7 @@ public class OrganizationsController : Controller
     public async Task<OrganizationSubscriptionResponseModel> GetSubscription(string id)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.ViewSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -139,7 +147,9 @@ public class OrganizationsController : Controller
                 throw new NotFoundException();
             }
 
-            return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo);
+            var hideSensitiveData = !await _currentContext.EditSubscription(orgIdGuid);
+
+            return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, hideSensitiveData);
         }
         else
         {
@@ -240,7 +250,7 @@ public class OrganizationsController : Controller
                                                             model.BillingEmail != organization.BillingEmail);
 
         var hasRequiredPermissions = updateBilling
-            ? await _currentContext.ManageBilling(orgIdGuid)
+            ? await _currentContext.EditSubscription(orgIdGuid)
             : await _currentContext.OrganizationOwner(orgIdGuid);
 
         if (!hasRequiredPermissions)
@@ -257,7 +267,7 @@ public class OrganizationsController : Controller
     public async Task PostPayment(string id, [FromBody] PaymentRequestModel model)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.EditPaymentMethods(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -280,7 +290,7 @@ public class OrganizationsController : Controller
     public async Task<PaymentResponseModel> PostUpgrade(string id, [FromBody] OrganizationUpgradeRequestModel model)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -294,7 +304,7 @@ public class OrganizationsController : Controller
     public async Task PostSubscription(string id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -307,7 +317,7 @@ public class OrganizationsController : Controller
     public async Task<PaymentResponseModel> PostSeat(string id, [FromBody] OrganizationSeatRequestModel model)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -321,7 +331,7 @@ public class OrganizationsController : Controller
     public async Task<PaymentResponseModel> PostStorage(string id, [FromBody] StorageRequestModel model)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -335,7 +345,7 @@ public class OrganizationsController : Controller
     public async Task PostVerifyBank(string id, [FromBody] OrganizationVerifyBankRequestModel model)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -348,7 +358,7 @@ public class OrganizationsController : Controller
     public async Task PostCancel(string id)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
@@ -361,7 +371,7 @@ public class OrganizationsController : Controller
     public async Task PostReinstate(string id)
     {
         var orgIdGuid = new Guid(id);
-        if (!await _currentContext.ManageBilling(orgIdGuid))
+        if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }

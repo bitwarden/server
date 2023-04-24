@@ -1,7 +1,8 @@
 ﻿using System.Reflection;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
-using Bit.Core.Models.Business;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
