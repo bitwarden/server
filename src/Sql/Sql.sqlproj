@@ -240,7 +240,7 @@
     <Build Include="dbo\Stored Procedures\OrganizationSponsorship_ReadById.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationSponsorship_ReadByOfferedToEmail.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationSponsorship_ReadBySponsoredOrganizationId.sql" />
-    <Build Include="dbo\Stored Procedures\OrganizationSponsorship_ReadBySponsoringOrganiationUserId.sql" />
+    <Build Include="dbo\Stored Procedures\OrganizationSponsorship_ReadBySponsoringOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationSponsorship_ReadBySponsoringOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationSponsorship_ReadLatestBySponsoringOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\OrganizationSponsorship_Update.sql" />
