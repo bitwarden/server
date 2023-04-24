@@ -508,7 +508,7 @@ public class ToolsController : Controller
     }
 
     // This requires a redundant API call to Stripe because of the way they handle pagination.
-    // The StartingBefore value has to be infered from the list we get, and isn't supplied by Stripe.
+    // The StartingBefore value has to be inferred from the list we get, and isn't supplied by Stripe.
     private async Task<bool> StripeSubscriptionsGetHasPreviousPage(List<Stripe.Subscription> subscriptions, StripeSubscriptionListOptions options)
     {
         var hasPreviousPage = false;
