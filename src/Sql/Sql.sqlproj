@@ -87,6 +87,7 @@
     <Folder Include="Vault\dbo\" />
     <Folder Include="Vault\dbo\Functions\" />
     <Folder Include="Vault\dbo\Stored Procedures\" />
+    <Folder Include="Vault\dbo\Stored Procedures\Cipher\" />
     <Folder Include="Vault\dbo\Stored Procedures\Folder\" />
     <Folder Include="Vault\dbo\Tables\" />
     <Folder Include="Vault\dbo\Views\" />
