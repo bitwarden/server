@@ -167,21 +167,23 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task RestoreManyAsync_UpdatesCiphers(IEnumerable<CipherDetails> ciphers,
+    public async Task RestoreManyAsync_UpdatesCiphers(ICollection<CipherDetails> ciphers,
         SutProvider<CipherService> sutProvider)
     {
+        var cipherIds = ciphers.Select(c => c.Id).ToArray();
         var restoringUserId = ciphers.First().UserId.Value;
         var previousRevisionDate = DateTime.UtcNow;
         foreach (var cipher in ciphers)
         {
+            cipher.Edit = true;
             cipher.RevisionDate = previousRevisionDate;
         }
 
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId).Returns(ciphers);
         var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
-        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId)
-            .Returns(revisionDate);
+        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId).Returns(revisionDate);
 
-        await sutProvider.Sut.RestoreManyAsync(ciphers, restoringUserId);
+        await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
 
         foreach (var cipher in ciphers)
         {
