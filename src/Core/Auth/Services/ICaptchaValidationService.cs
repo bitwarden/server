@@ -9,7 +9,7 @@ public interface ICaptchaValidationService
     string SiteKey { get; }
     string SiteKeyResponseKeyName { get; }
     bool RequireCaptchaValidation(ICurrentContext currentContext, User user = null);
-    Task<CaptchaResponse> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress,
+    Task<CaptchaResponse> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress,
         User user = null);
     string GenerateCaptchaBypassToken(User user);
 }
