@@ -1471,7 +1471,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        return user.UsesKeyConnector 
+        return user.UsesKeyConnector
             ? await VerifyOTPAsync(user, secret)
             : await CheckPasswordAsync(user, secret);
     }

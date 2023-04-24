@@ -8,7 +8,6 @@ public class SecretVerificationRequestModel : IValidatableObject
     public string MasterPasswordHash { get; set; }
     public string OTP { get; set; }
     public string AuthRequestAccessCode { get; set; }
-    
     public string Secret => !string.IsNullOrEmpty(MasterPasswordHash) ? MasterPasswordHash : OTP;
 
     public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

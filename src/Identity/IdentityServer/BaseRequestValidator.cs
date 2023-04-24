@@ -247,7 +247,7 @@ public abstract class BaseRequestValidator<T> where T : class
             var infoDict = await BuildTwoFactorParams(organization, user, provider.Key, provider.Value);
             providers.Add(((byte)provider.Key).ToString(), infoDict);
         }
-        
+
         var twoFactorResultDict = new Dictionary<string, object>
         {
             { "TwoFactorProviders", providers.Keys },
@@ -459,7 +459,8 @@ public abstract class BaseRequestValidator<T> where T : class
                 {
                     return new Dictionary<string, object>
                     {
-                        ["Host"] = provider.MetaData["Host"], ["Signature"] = token
+                        ["Host"] = provider.MetaData["Host"],
+                        ["Signature"] = token
                     };
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)
