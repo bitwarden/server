@@ -302,39 +302,7 @@ public class TwoFactorController : Controller
     [HttpPost("send-email-login")]
     public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailRequestModel requestModel)
     {
-        
-        // TODO: check if email is user account email or SSO email (need to be sure which one we are sending down)
-        // we don't know if there can be a mismatch 
-        
-        // TODO: revisit the idea of sending down email alongside token just to make this more streamlined. 
-
-        User user = null;
-
-        // Get user email from email field or token
-        var lowerCaseEmail = requestModel.Email?.ToLowerInvariant();
-
-        if (!string.IsNullOrEmpty(lowerCaseEmail))
-        {
-            user = await _userManager.FindByEmailAsync(lowerCaseEmail);
-        }
-        else if (!string.IsNullOrEmpty(requestModel.SsoEmail2FaSessionToken))
-        {
-
-            user = await this.ValidateAndGetUserFromSsoEmail2FaTokenAsync(requestModel.SsoEmail2FaSessionToken);
-
-            if (user != null)
-            {
-                await _userService.SendTwoFactorEmailAsync(user);
-                return;
-            }
-        }
-        else
-        {
-            // No email or valid token w/ email provided 
-            this.ThrowDelayedBadRequestExceptionAsync(
-                "Cannot send two-factor email as no email was provided.", 2000);
-        }
-        
+        var user = await _userManager.FindByEmailAsync(requestModel.Email.ToLowerInvariant());
 
         if (user != null)
         {
@@ -347,6 +315,20 @@ public class TwoFactorController : Controller
                 {
                     await _userService.SendTwoFactorEmailAsync(user);
                     return;
+                }
+            }
+            else if (!string.IsNullOrEmpty(requestModel.SsoEmail2FaSessionToken))
+            {
+                if (this.ValidateSsoEmail2FaToken(requestModel.SsoEmail2FaSessionToken, user))
+                {
+                    await _userService.SendTwoFactorEmailAsync(user);
+                    return;
+                }
+                else
+                {
+                    this.ThrowDelayedBadRequestExceptionAsync(
+                        "Cannot send two-factor email: a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.",
+                        2000);
                 }
             }
             else if (await _userService.VerifySecretAsync(user, requestModel.Secret))
@@ -488,28 +470,11 @@ public class TwoFactorController : Controller
             await Task.Delay(500);
         }
     }
-    
-    private async Task<User> ValidateAndGetUserFromSsoEmail2FaTokenAsync(string ssoEmail2FaSessionToken)
+
+    private bool ValidateSsoEmail2FaToken(string ssoEmail2FaSessionToken, User user)
     {
-        if (!string.IsNullOrEmpty(ssoEmail2FaSessionToken) &&
-            _tokenDataFactory.TryUnprotect(ssoEmail2FaSessionToken, out var decryptedToken) &&
-            decryptedToken.Valid)
-        {
-            var user = await _userManager.FindByEmailAsync(decryptedToken.Email.ToLowerInvariant());
-
-            if (user != null && decryptedToken.TokenIsValid(user))
-            {
-                return user;
-            }
-
-            ThrowDelayedBadRequestExceptionAsync("Cannot send two-factor email: no user or invalid token for user.");
-            return null;
-        }
-        
-        // Token is undefined, expired, or missing data
-        this.ThrowDelayedBadRequestExceptionAsync(
-            "Cannot send two-factor email: a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.", 2000);
-        return null;
+        return _tokenDataFactory.TryUnprotect(ssoEmail2FaSessionToken, out var decryptedToken) &&
+               decryptedToken.Valid && decryptedToken.TokenIsValid(user);
     }
 
     private async void ThrowDelayedBadRequestExceptionAsync(string message, int delayTime = 2000)

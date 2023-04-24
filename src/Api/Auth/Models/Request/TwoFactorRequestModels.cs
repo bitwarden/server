@@ -198,6 +198,7 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
 
 public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
 {
+    [Required]
     [EmailAddress]
     [StringLength(256)]
     public string Email { get; set; }
