@@ -17,9 +17,9 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
     [StringLength(50)]
     public string Key { get; set; }
 
-    public User ToUser(User extistingUser)
+    public User ToUser(User existingUser)
     {
-        var providers = extistingUser.GetTwoFactorProviders();
+        var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -34,8 +34,8 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
             MetaData = new Dictionary<string, object> { ["Key"] = Key },
             Enabled = true
         });
-        extistingUser.SetTwoFactorProviders(providers);
-        return extistingUser;
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
     }
 }
 
@@ -51,9 +51,9 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
     [StringLength(50)]
     public string Host { get; set; }
 
-    public User ToUser(User extistingUser)
+    public User ToUser(User existingUser)
     {
-        var providers = extistingUser.GetTwoFactorProviders();
+        var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -73,8 +73,8 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
             },
             Enabled = true
         });
-        extistingUser.SetTwoFactorProviders(providers);
-        return extistingUser;
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
     }
 
     public Organization ToOrganization(Organization extistingOrg)
@@ -122,9 +122,9 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
     [Required]
     public bool? Nfc { get; set; }
 
-    public User ToUser(User extistingUser)
+    public User ToUser(User existingUser)
     {
-        var providers = extistingUser.GetTwoFactorProviders();
+        var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -147,8 +147,8 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
             },
             Enabled = true
         });
-        extistingUser.SetTwoFactorProviders(providers);
-        return extistingUser;
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
     }
 
     private string FormatKey(string keyValue)
@@ -205,9 +205,9 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
 
     public string AuthRequestId { get; set; }
 
-    public User ToUser(User extistingUser)
+    public User ToUser(User existingUser)
     {
-        var providers = extistingUser.GetTwoFactorProviders();
+        var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -222,8 +222,8 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
             MetaData = new Dictionary<string, object> { ["Email"] = Email.ToLowerInvariant() },
             Enabled = true
         });
-        extistingUser.SetTwoFactorProviders(providers);
-        return extistingUser;
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
     }
 }
 
