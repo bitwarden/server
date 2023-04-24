@@ -1,4 +1,6 @@
 ﻿using System.Runtime.InteropServices;
+using Bit.Admin.Auth.Jobs;
+using Bit.Admin.Tools.Jobs;
 using Bit.Core.Jobs;
 using Bit.Core.Settings;
 using Quartz;

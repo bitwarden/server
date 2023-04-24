@@ -10,6 +10,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues.Models;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -29,7 +30,6 @@ public static class CoreHelpers
     private static readonly DateTime _max = new DateTime(9999, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly Random _random = new Random();
     private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
-    private static readonly string RealIp = "X-Real-IP";
 
     /// <summary>
     /// Generate sequential Guid for Sql Server.
@@ -559,10 +559,6 @@ public static class CoreHelpers
         if (!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
         {
             return httpContext.Request.Headers[CloudFlareConnectingIp].ToString();
-        }
-        if (globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealIp))
-        {
-            return httpContext.Request.Headers[RealIp].ToString();
         }
 
         return httpContext.Connection?.RemoteIpAddress?.ToString();

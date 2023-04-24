@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
@@ -42,7 +43,7 @@ public class PutGroupCommand : IPutGroupCommand
 
     private async Task UpdateGroupMembersAsync(Group group, ScimGroupRequestModel model)
     {
-        if (_scimContext.RequestScimProvider != Core.Enums.ScimProviderType.Okta)
+        if (_scimContext.RequestScimProvider != ScimProviderType.Okta)
         {
             return;
         }

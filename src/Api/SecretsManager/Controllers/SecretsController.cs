@@ -5,11 +5,13 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -80,6 +82,11 @@ public class SecretsController : Controller
             throw new NotFoundException();
         }
 
+        if (createRequest.ProjectIds != null && createRequest.ProjectIds.Length > 1)
+        {
+            throw new BadRequestException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
 
@@ -140,6 +147,11 @@ public class SecretsController : Controller
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
+        if (updateRequest.ProjectIds != null && updateRequest.ProjectIds.Length > 1)
+        {
+            throw new BadRequestException();
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
         var secret = updateRequest.ToSecret(id);
         var result = await _updateSecretCommand.UpdateAsync(secret, userId);

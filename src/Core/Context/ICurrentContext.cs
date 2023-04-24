@@ -52,7 +52,10 @@ public interface ICurrentContext
     Task<bool> ManageUsers(Guid orgId);
     Task<bool> ManageScim(Guid orgId);
     Task<bool> ManageResetPassword(Guid orgId);
-    Task<bool> ManageBilling(Guid orgId);
+    Task<bool> ViewSubscription(Guid orgId);
+    Task<bool> EditSubscription(Guid orgId);
+    Task<bool> EditPaymentMethods(Guid orgId);
+    Task<bool> ViewBillingHistory(Guid orgId);
     Task<bool> ProviderUserForOrgAsync(Guid orgId);
     bool ProviderProviderAdmin(Guid providerId);
     bool ProviderUser(Guid providerId);

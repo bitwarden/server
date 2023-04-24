@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using Bit.Api.Models.Request;
+using Bit.Api.Tools.Models.Request;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;

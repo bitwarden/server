@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Core.Enums;
 
 namespace Bit.Api.Models.Request.Accounts;
 
