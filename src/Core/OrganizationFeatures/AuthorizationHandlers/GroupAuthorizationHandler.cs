@@ -48,37 +48,27 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
         await Task.CompletedTask;
     }
 
-    private void CanCreate(AuthorizationHandlerContext context,
-        GroupOperationRequirement requirement,
-        Group resource)
+    private void CanCreate(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
         CanManage(context, requirement, resource);
     }
 
-    private void CanRead(AuthorizationHandlerContext context,
-        GroupOperationRequirement requirement,
-        Group resource)
+    private void CanRead(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
         CanManage(context, requirement, resource);
     }
 
-    private void CanUpdate(AuthorizationHandlerContext context,
-        GroupOperationRequirement requirement,
-        Group resource)
+    private void CanUpdate(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
         CanManage(context, requirement, resource);
     }
 
-    private void CanDelete(AuthorizationHandlerContext context,
-        GroupOperationRequirement requirement,
-        Group resource)
+    private void CanDelete(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
         CanManage(context, requirement, resource);
     }
 
-    private void CanManage(AuthorizationHandlerContext context,
-        GroupOperationRequirement requirement,
-        Group resource)
+    private void CanManage(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
         // TODO: providers need to be included in the claims
         var org = _currentContext.GetOrganization(resource.OrganizationId);
