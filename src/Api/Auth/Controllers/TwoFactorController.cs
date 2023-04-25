@@ -288,11 +288,6 @@ public class TwoFactorController : Controller
     [HttpPost("send-email")]
     public async Task SendEmail([FromBody] TwoFactorEmailRequestModel model)
     {
-        if (string.IsNullOrEmpty(model.Email))
-        {
-            throw new BadRequestException("Email required to setup email 2FA.");
-        }
-
         var user = await CheckAsync(model, false);
         model.ToUser(user);
         await _userService.SendTwoFactorEmailAsync(user);
