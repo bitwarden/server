@@ -36,8 +36,14 @@ public class CreateSecretCommand : ICreateSecretCommand
             throw new NotFoundException();
         }
 
-        var access = await _projectRepository.AccessToProjectAsync(project.Id, userId, accessClient);
-        if (!access.Write || accessClient == AccessClientType.ServiceAccount)
+        var hasAccess = accessClient switch
+        {
+            AccessClientType.NoAccessCheck => true,
+            AccessClientType.User => (await _projectRepository.AccessToProjectAsync(project.Id, userId, accessClient)).Write,
+            _ => false,
+        };
+
+        if (!hasAccess)
         {
             throw new NotFoundException();
         }
