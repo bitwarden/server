@@ -17,6 +17,7 @@ namespace Bit.Core.Services;
 public class HandlebarsMailService : IMailService
 {
     private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
+    private const string BillingInfoUrl = "https://bitwarden.com/help/update-billing-info/";
 
     private readonly GlobalSettings _globalSettings;
     private readonly IMailDeliveryService _mailDeliveryService;
@@ -295,7 +296,8 @@ public class HandlebarsMailService : IMailService
             AmountDue = amount,
             DueDate = dueDate,
             Items = items,
-            MentionInvoices = mentionInvoices
+            MentionInvoices = mentionInvoices,
+            UpdateBillingInfoUrl = BillingInfoUrl
         };
         await AddMessageContentAsync(message, "InvoiceUpcoming", model);
         message.Category = "InvoiceUpcoming";
