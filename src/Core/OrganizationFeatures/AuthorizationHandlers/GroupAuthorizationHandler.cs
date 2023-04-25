@@ -18,15 +18,18 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
         GroupOperationRequirement requirement,
         Group resource)
     {
-        // Currently all GroupOperationRequirements have the same permission requirements
-        if (requirement == GroupOperations.Create ||
-            requirement == GroupOperations.Read ||
-            requirement == GroupOperations.Update ||
-            requirement == GroupOperations.Delete ||
-            requirement == GroupOperations.AddUser ||
-            requirement == GroupOperations.DeleteUser)
+        switch (requirement)
         {
-            CanManageGroups(context, requirement, resource);
+            // Currently all GroupOperationRequirements have the same permission requirements,
+            // but create separate private methods if they start to diverge
+            case not null when requirement == GroupOperations.Create:
+            case not null when requirement == GroupOperations.Read:
+            case not null when requirement == GroupOperations.Update:
+            case not null when requirement == GroupOperations.Delete:
+            case not null when requirement == GroupOperations.AddUser:
+            case not null when requirement == GroupOperations.DeleteUser:
+                CanManageGroups(context, requirement, resource);
+                break;
         }
 
         await Task.CompletedTask;

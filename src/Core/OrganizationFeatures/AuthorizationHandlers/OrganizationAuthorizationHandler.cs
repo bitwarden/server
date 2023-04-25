@@ -10,9 +10,11 @@ class OrganizationAuthorizationHandler : AuthorizationHandler<OrganizationOperat
         OrganizationOperationRequirement requirement,
         CurrentContentOrganization resource)
     {
-        if (requirement == OrganizationOperations.ReadAllGroups)
+        switch (requirement)
         {
-            ReadAllGroups(context, requirement, resource);
+            case not null when requirement == OrganizationOperations.ReadAllGroups:
+                ReadAllGroups(context, requirement, resource);
+                break;
         }
 
         await Task.CompletedTask;
