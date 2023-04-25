@@ -9,7 +9,8 @@ namespace Bit.Core.Auth.Models.Business.Tokenables;
 // used maliciously. 
 public class SsoEmail2faSessionTokenable : ExpiringTokenable
 {
-    private const double _tokenLifetimeInHours = (double)5 / 60; // 5 minutes
+    // Just over 2 min expiration (client expires session after 2 min)
+    private const double _tokenLifetimeInHours = (double)2.05 / 60; 
     public const string ClearTextPrefix = "BwSsoEmail2FaSessionToken_";
     public const string DataProtectorPurpose = "SsoEmail2faSessionTokenDataProtector";
 
