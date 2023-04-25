@@ -22,11 +22,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availibleCollections = await (
+            var availableCollections = await (
                 from c in dbContext.Collections
                 where c.OrganizationId == organizationUser.OrganizationId
                 select c).ToListAsync();
-            var filteredCollections = collections.Where(c => availibleCollections.Any(a => c.Id == a.Id));
+            var filteredCollections = collections.Where(c => availableCollections.Any(a => c.Id == a.Id));
             var collectionUsers = filteredCollections.Select(y => new CollectionUser
             {
                 CollectionId = y.Id,
