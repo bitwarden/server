@@ -30,16 +30,30 @@ class GroupUserAuthorizationHandler : AuthorizationHandler<GroupUserOperationReq
         switch (requirement)
         {
             case not null when requirement == GroupUserOperations.Create:
-            case not null when requirement == GroupUserOperations.Delete:
-                CreateOrDeleteCheckAsync(context, requirement, resource);
+                CanCreate(context, requirement, resource);
                 break;
 
+            case not null when requirement == GroupUserOperations.Delete:
+                CanDelete(context, requirement, resource);
+                break;
         }
 
         await Task.CompletedTask;
     }
 
-    private async Task CreateOrDeleteCheckAsync(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
+    private async Task CanCreate(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
+        GroupUser resource)
+    {
+        CanManage(context, requirement, resource);
+    }
+
+    private async Task CanDelete(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
+        GroupUser resource)
+    {
+        CanManage(context, requirement, resource);
+    }
+
+    private async Task CanManage(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
         GroupUser resource)
     {
         var group = await _groupRepository.GetByIdAsync(resource.GroupId);

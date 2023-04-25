@@ -28,20 +28,55 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
 
         switch (requirement)
         {
-            // Currently all GroupOperationRequirements have the same permission requirements,
-            // but create separate private methods if they start to diverge
             case not null when requirement == GroupOperations.Create:
+                CanCreate(context, requirement, resource);
+                break;
+
             case not null when requirement == GroupOperations.Read:
+                CanRead(context, requirement, resource);
+                break;
+
             case not null when requirement == GroupOperations.Update:
+                CanUpdate(context, requirement, resource);
+                break;
+
             case not null when requirement == GroupOperations.Delete:
-                CanManageGroups(context, requirement, resource);
+                CanDelete(context, requirement, resource);
                 break;
         }
 
         await Task.CompletedTask;
     }
 
-    private void CanManageGroups(AuthorizationHandlerContext context,
+    private void CanCreate(AuthorizationHandlerContext context,
+        GroupOperationRequirement requirement,
+        Group resource)
+    {
+        CanManage(context, requirement, resource);
+    }
+
+    private void CanRead(AuthorizationHandlerContext context,
+        GroupOperationRequirement requirement,
+        Group resource)
+    {
+        CanManage(context, requirement, resource);
+    }
+
+    private void CanUpdate(AuthorizationHandlerContext context,
+        GroupOperationRequirement requirement,
+        Group resource)
+    {
+        CanManage(context, requirement, resource);
+    }
+
+    private void CanDelete(AuthorizationHandlerContext context,
+        GroupOperationRequirement requirement,
+        Group resource)
+    {
+        CanManage(context, requirement, resource);
+    }
+
+    private void CanManage(AuthorizationHandlerContext context,
         GroupOperationRequirement requirement,
         Group resource)
     {
