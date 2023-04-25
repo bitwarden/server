@@ -48,11 +48,7 @@ public class GroupsController : Controller
     public async Task<GroupResponseModel> Get(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Read);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Read);
 
         return new GroupResponseModel(group);
     }
@@ -66,12 +62,7 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, groupDetails.group, GroupOperations.Read);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, groupDetails.group, GroupOperations.Read);
 
         return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
     }
@@ -80,12 +71,7 @@ public class GroupsController : Controller
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
         var org = _currentContext.GetOrganization(orgId);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, org, OrganizationOperations.ReadAllGroups);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, org, OrganizationOperations.ReadAllGroups);
 
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
@@ -96,12 +82,7 @@ public class GroupsController : Controller
     public async Task<IEnumerable<Guid>> GetUsers(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Read);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Read);
 
         var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
         return groupIds;
@@ -113,12 +94,7 @@ public class GroupsController : Controller
         var organization = await _organizationRepository.GetByIdAsync(orgId);
         var group = model.ToGroup(orgId);
 
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Create);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Create);
 
         await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
 
@@ -130,12 +106,7 @@ public class GroupsController : Controller
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Update);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Update);
 
         var organization = await _organizationRepository.GetByIdAsync(orgId);
 
@@ -147,12 +118,7 @@ public class GroupsController : Controller
     public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<Guid> model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, group, GroupOperations.AddUser);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.AddUser);
 
         await _groupRepository.UpdateUsersAsync(group.Id, model);
     }
@@ -162,12 +128,7 @@ public class GroupsController : Controller
     public async Task Delete(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Delete);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Delete);
 
         await _deleteGroupCommand.DeleteAsync(group);
     }
@@ -180,11 +141,7 @@ public class GroupsController : Controller
 
         foreach (var group in groups)
         {
-            var authorizationResult = await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Delete);
-            if (!authorizationResult.Succeeded)
-            {
-                throw new NotFoundException();
-            }
+            await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Delete);
         }
 
         await _deleteGroupCommand.DeleteManyAsync(groups);
@@ -195,11 +152,7 @@ public class GroupsController : Controller
     public async Task Delete(Guid orgId, Guid id, Guid orgUserId)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        var authorizationResult = await _authorizationService.AuthorizeAsync(User, group, GroupOperations.DeleteUser);
-        if (!authorizationResult.Succeeded)
-        {
-            throw new NotFoundException();
-        }
+        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.DeleteUser);
 
         await _groupService.DeleteUserAsync(group, orgUserId);
     }
