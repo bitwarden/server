@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_DeleteById]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_DeleteById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -120,3 +120,4 @@ BEGIN
 
     COMMIT TRANSACTION Organization_DeleteById
 END
+GO
