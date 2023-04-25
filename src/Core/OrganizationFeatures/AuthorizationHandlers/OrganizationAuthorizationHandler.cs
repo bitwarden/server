@@ -8,8 +8,14 @@ class OrganizationAuthorizationHandler : AuthorizationHandler<OrganizationOperat
 {
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         OrganizationOperationRequirement requirement,
-        CurrentContentOrganization resource)
+        CurrentContentOrganization? resource)
     {
+        if (resource == null)
+        {
+            context.Fail();
+            return;
+        }
+
         switch (requirement)
         {
             case not null when requirement == OrganizationOperations.ReadAllGroups:

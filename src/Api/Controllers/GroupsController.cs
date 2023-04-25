@@ -48,11 +48,6 @@ public class GroupsController : Controller
     public async Task<GroupResponseModel> Get(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null)
-        {
-            throw new NotFoundException();
-        }
-
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Read);
         if (!authorizationResult.Succeeded)
         {
@@ -85,7 +80,6 @@ public class GroupsController : Controller
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
         var org = _currentContext.GetOrganization(orgId);
-
         var authorizationResult =
             await _authorizationService.AuthorizeAsync(User, org, OrganizationOperations.ReadAllGroups);
         if (!authorizationResult.Succeeded)
@@ -102,11 +96,6 @@ public class GroupsController : Controller
     public async Task<IEnumerable<Guid>> GetUsers(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null)
-        {
-            throw new NotFoundException();
-        }
-
         var authorizationResult =
             await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Read);
         if (!authorizationResult.Succeeded)
@@ -141,11 +130,6 @@ public class GroupsController : Controller
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null)
-        {
-            throw new NotFoundException();
-        }
-
         var authorizationResult =
             await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Update);
         if (!authorizationResult.Succeeded)
@@ -163,11 +147,6 @@ public class GroupsController : Controller
     public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<Guid> model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null)
-        {
-            throw new NotFoundException();
-        }
-
         var authorizationResult =
             await _authorizationService.AuthorizeAsync(User, group, GroupOperations.AddUser);
         if (!authorizationResult.Succeeded)
@@ -183,11 +162,6 @@ public class GroupsController : Controller
     public async Task Delete(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null)
-        {
-            throw new NotFoundException();
-        }
-
         var authorizationResult =
             await _authorizationService.AuthorizeAsync(User, group, GroupOperations.Delete);
         if (!authorizationResult.Succeeded)
@@ -221,11 +195,6 @@ public class GroupsController : Controller
     public async Task Delete(Guid orgId, Guid id, Guid orgUserId)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        if (group == null)
-        {
-            throw new NotFoundException();
-        }
-
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, group, GroupOperations.DeleteUser);
         if (!authorizationResult.Succeeded)
         {

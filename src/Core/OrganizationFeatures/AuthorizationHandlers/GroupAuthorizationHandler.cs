@@ -1,4 +1,6 @@
-﻿using Bit.Core.Context;
+﻿#nullable enable
+
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -16,8 +18,14 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         GroupOperationRequirement requirement,
-        Group resource)
+        Group? resource)
     {
+        if (resource == null)
+        {
+            context.Fail();
+            return;
+        }
+
         switch (requirement)
         {
             // Currently all GroupOperationRequirements have the same permission requirements,
