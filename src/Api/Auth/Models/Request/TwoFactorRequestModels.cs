@@ -77,9 +77,9 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
         return existingUser;
     }
 
-    public Organization ToOrganization(Organization extistingOrg)
+    public Organization ToOrganization(Organization existingOrg)
     {
-        var providers = extistingOrg.GetTwoFactorProviders();
+        var providers = existingOrg.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -99,8 +99,8 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
             },
             Enabled = true
         });
-        extistingOrg.SetTwoFactorProviders(providers);
-        return extistingOrg;
+        existingOrg.SetTwoFactorProviders(providers);
+        return existingOrg;
     }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
