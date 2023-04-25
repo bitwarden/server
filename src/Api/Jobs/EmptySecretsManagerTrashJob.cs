@@ -16,6 +16,8 @@ public class EmptySecretsManagerTrashJob : BaseJob
 
     protected override async Task ExecuteJobAsync(IJobExecutionContext context)
     {
+        _logger.LogInformation("Execute job task: EmptySecretsManagerTrashJob: Start");
         await _secretRepository.EmptyTrash(DateTime.UtcNow, DeleteAfterThisNumberOfDays);
+        _logger.LogInformation("Execute job task: EmptySecretsManagerTrashJob: End");
     }
 }
