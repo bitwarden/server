@@ -118,7 +118,11 @@ public class GroupsController : Controller
     public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<Guid> model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.AddUser);
+        await _authorizationService.AuthorizeOrThrowAsync(User, group, new[]
+            {
+                GroupUserOperations.Create,
+                GroupUserOperations.Delete
+            });
 
         await _groupRepository.UpdateUsersAsync(group.Id, model);
     }
@@ -152,8 +156,14 @@ public class GroupsController : Controller
     public async Task Delete(Guid orgId, Guid id, Guid orgUserId)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.DeleteUser);
+        if (group == null || group.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
 
-        await _groupService.DeleteUserAsync(group, orgUserId);
+        var groupUser = await _groupRepository.GetGroupUserByGroupIdOrganizationUserId(id, orgUserId);
+        await _authorizationService.AuthorizeOrThrowAsync(User, groupUser, GroupUserOperations.Delete);
+
+        await _groupService.DeleteUserAsync(groupUser);
     }
 }

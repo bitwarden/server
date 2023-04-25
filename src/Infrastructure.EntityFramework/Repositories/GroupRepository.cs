@@ -265,4 +265,19 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
             }
         }
     }
+
+    public async Task<Core.Entities.GroupUser> GetGroupUserByGroupIdOrganizationUserId(Guid id, Guid orgUserId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query =
+                from gu in dbContext.GroupUsers
+                where gu.GroupId == id && gu.OrganizationUserId == orgUserId
+                select gu;
+
+            var groupUser = await query.FirstOrDefaultAsync();
+            return Mapper.Map<Core.Entities.GroupUser>(groupUser);
+        }
+    }
 }

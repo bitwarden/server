@@ -97,10 +97,16 @@ public class PatchGroupCommand : IPatchGroupCommand
                 !string.IsNullOrWhiteSpace(operation.Path) &&
                 operation.Path.ToLowerInvariant().StartsWith("members[value eq "))
             {
-                var removeId = GetOperationPathId(operation.Path);
-                if (removeId.HasValue)
+                var organizationUserId = GetOperationPathId(operation.Path);
+                if (organizationUserId.HasValue)
                 {
-                    await _groupService.DeleteUserAsync(group, removeId.Value, EventSystemUser.SCIM);
+                    var groupUser = await _groupRepository.GetGroupUserByGroupIdOrganizationUserId(group.Id, organizationUserId.Value);
+                    if (groupUser == null)
+                    {
+                        throw new NotFoundException();
+                    }
+
+                    await _groupService.DeleteUserAsync(groupUser, EventSystemUser.SCIM);
                     operationHandled = true;
                 }
             }

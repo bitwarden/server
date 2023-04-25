@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
@@ -35,28 +34,17 @@ public class GroupService : IGroupService
         await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted, systemUser);
     }
 
-    public async Task DeleteUserAsync(Group group, Guid organizationUserId)
+    public async Task DeleteUserAsync(GroupUser groupUser)
     {
-        var orgUser = await GroupRepositoryDeleteUserAsync(group, organizationUserId, systemUser: null);
+        var orgUser = await _organizationUserRepository.GetByIdAsync(groupUser.OrganizationUserId);
+        await _groupRepository.DeleteUserAsync(groupUser.GroupId, groupUser.OrganizationUserId);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_UpdatedGroups);
     }
 
-    public async Task DeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser systemUser)
+    public async Task DeleteUserAsync(GroupUser groupUser, EventSystemUser systemUser)
     {
-        var orgUser = await GroupRepositoryDeleteUserAsync(group, organizationUserId, systemUser);
+        var orgUser = await _organizationUserRepository.GetByIdAsync(groupUser.OrganizationUserId);
+        await _groupRepository.DeleteUserAsync(groupUser.GroupId, groupUser.OrganizationUserId);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_UpdatedGroups, systemUser);
-    }
-
-    private async Task<OrganizationUser> GroupRepositoryDeleteUserAsync(Group group, Guid organizationUserId, EventSystemUser? systemUser)
-    {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null || orgUser.OrganizationId != group.OrganizationId)
-        {
-            throw new NotFoundException();
-        }
-
-        await _groupRepository.DeleteUserAsync(group.Id, organizationUserId);
-
-        return orgUser;
     }
 }

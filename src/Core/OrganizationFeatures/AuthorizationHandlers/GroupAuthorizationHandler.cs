@@ -34,8 +34,6 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
             case not null when requirement == GroupOperations.Read:
             case not null when requirement == GroupOperations.Update:
             case not null when requirement == GroupOperations.Delete:
-            case not null when requirement == GroupOperations.AddUser:
-            case not null when requirement == GroupOperations.DeleteUser:
                 CanManageGroups(context, requirement, resource);
                 break;
         }

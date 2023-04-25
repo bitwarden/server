@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build"
-  xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -199,9 +198,9 @@
     <Build Include="dbo\Stored Procedures\GroupUser_Delete.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadByOrganizationId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadByOrganizationUserIds.sql" />
+    <Build Include="dbo\Stored Procedures\GroupUser_ReadByGroupIdOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadGroupIdsByOrganizationUserId.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_ReadOrganizationUserIdsByGroupId.sql" />
-    <Build Include="dbo\Stored Procedures\GroupUser_UpdateGroups.sql" />
     <Build Include="dbo\Stored Procedures\GroupUser_UpdateUsers.sql" />
     <Build Include="dbo\Stored Procedures\Group_Create.sql" />
     <Build Include="dbo\Stored Procedures\Group_CreateWithCollections.sql" />
@@ -482,6 +481,7 @@
     <Build Include="Vault\dbo\Views\FolderView.sql" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="dbo\Stored Procedures\GroupUser_ReadByGroupIdOrganizationUserId.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_Create.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteById.sql" />
     <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteIfExpired.sql" />

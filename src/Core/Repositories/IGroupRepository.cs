@@ -13,6 +13,7 @@ public interface IGroupRepository : IRepository<Group, Guid>
     Task<ICollection<Guid>> GetManyIdsByUserIdAsync(Guid organizationUserId);
     Task<ICollection<Guid>> GetManyUserIdsByIdAsync(Guid id);
     Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId);
+    Task<GroupUser> GetGroupUserByGroupIdOrganizationUserId(Guid id, Guid orgUserId);
     Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
     Task ReplaceAsync(Group obj, IEnumerable<CollectionAccessSelection> collections);
     Task DeleteUserAsync(Guid groupId, Guid organizationUserId);

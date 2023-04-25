@@ -125,5 +125,6 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IAuthorizationHandler, OrganizationAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, GroupUserAuthorizationHandler>();
     }
 }

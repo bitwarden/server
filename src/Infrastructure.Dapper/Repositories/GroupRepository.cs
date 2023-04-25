@@ -188,4 +188,17 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
                 new { Ids = groupIds.ToGuidIdArrayTVP() }, commandType: CommandType.StoredProcedure);
         }
     }
+
+    public async Task<GroupUser> GetGroupUserByGroupIdOrganizationUserId(Guid id, Guid orgUserId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync(
+                $"[{Schema}].[GroupUser_ReadByGroupIdOrganizationUserId]",
+                new { Id = id, OrganizationUserId = orgUserId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
+    }
 }
