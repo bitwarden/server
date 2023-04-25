@@ -72,6 +72,11 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
     {
         // TODO: providers need to be included in the claims
         var org = _currentContext.GetOrganization(resource.OrganizationId);
+        if (org == null)
+        {
+            context.Fail();
+        }
+
         var canAccess = org.Type == OrganizationUserType.Owner ||
                         org.Type == OrganizationUserType.Admin ||
                         org.Permissions.ManageGroups;
