@@ -92,4 +92,5 @@ public enum GlobalEquivalentDomainsType : byte
     TransferWise = 87,
     TakeawayEU = 88,
     Atlassian = 89,
+    InternetArchive = 90,
 }
