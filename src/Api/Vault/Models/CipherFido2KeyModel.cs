@@ -1,6 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
-using Bit.Core.Utilities;
 
 namespace Bit.Api.Vault.Models;
 
