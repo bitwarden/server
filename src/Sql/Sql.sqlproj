@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build"
-  xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -480,6 +479,13 @@
     <Build Include="Vault\dbo\Tables\Folder.sql" />
     <Build Include="Vault\dbo\Views\CipherView.sql" />
     <Build Include="Vault\dbo\Views\FolderView.sql" />
+    <Build Include="dbo\Tables\WebAuthnCredential.sql" />
+    <Build Include="dbo\Views\WebAuthnCredentialView.sql" />
+    <Build Include="dbo\Stored Procedures\WebAuthnCredential_Create.sql" />
+    <Build Include="dbo\Stored Procedures\WebAuthnCredential_DeleteById.sql" />
+    <Build Include="dbo\Stored Procedures\WebAuthnCredential_ReadById.sql" />
+    <Build Include="dbo\Stored Procedures\WebAuthnCredential_ReadByUserId.sql" />
+    <Build Include="dbo\Stored Procedures\WebAuthnCredential_Update.sql" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="dbo\Stored Procedures\OrganizationDomain_Create.sql" />

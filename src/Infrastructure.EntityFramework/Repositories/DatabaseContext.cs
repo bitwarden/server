@@ -59,6 +59,7 @@ public class DatabaseContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
+    public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -99,6 +100,7 @@ public class DatabaseContext : DbContext
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eAuthRequest = builder.Entity<AuthRequest>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
+        var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -121,6 +123,7 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eAuthRequest.Property(ar => ar.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
+        aWebAuthnCredential.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -173,6 +176,7 @@ public class DatabaseContext : DbContext
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eAuthRequest.ToTable(nameof(AuthRequest));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
+        aWebAuthnCredential.ToTable(nameof(WebAuthnCredential));
 
         ConfigureDateTimeUtcQueries(builder);
     }

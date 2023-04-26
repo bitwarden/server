@@ -71,4 +71,31 @@ public class AccountsController : Controller
         }
         return new PreloginResponseModel(kdfInformation);
     }
+
+    [HttpPost("webauthn")]
+    public async Task<PreloginResponseModel> PostWebAuthn([FromBody] PreloginRequestModel model)
+    {
+        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
+        if (kdfInformation == null)
+        {
+            kdfInformation = new UserKdfInformation
+            {
+                Kdf = KdfType.PBKDF2_SHA256,
+                KdfIterations = 100000,
+            };
+        }
+        return new PreloginResponseModel(kdfInformation);
+    }
+
+    [HttpPost("webauthn-assertion-options")]
+    public async Task PostWebAuthnAssertionOptions([FromBody] PreloginRequestModel model)
+    {
+
+    }
+
+    [HttpPost("webauthn-assertion")]
+    public async Task PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
+    {
+
+    }
 }
