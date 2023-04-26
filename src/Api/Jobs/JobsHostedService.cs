@@ -41,10 +41,10 @@ public class JobsHostedService : BaseJobsHostedService
             .StartNow()
             .WithCronSchedule("0 30 */12 * * ?")
             .Build();
-        var everyTopOfTheDayTrigger = TriggerBuilder.Create()
-            .WithIdentity("EveryTopOfTheDayTrigger")
+        var everyDayAtTenPmTrigger = TriggerBuilder.Create()
+            .WithIdentity("EveryDayAtTenPmTrigger")
             .StartNow()
-            .WithCronSchedule("0 0 * * * ?")
+            .WithCronSchedule("0 0 22 * * ?")
             .Build();
         var randomDailySponsorshipSyncTrigger = TriggerBuilder.Create()
             .WithIdentity("RandomDailySponsorshipSyncTrigger")
@@ -68,7 +68,7 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), validateOrganizationDomainTrigger),
-            new Tuple<Type, ITrigger>(typeof(EmptySecretsManagerTrashJob), everyTopOfTheDayTrigger),
+            new Tuple<Type, ITrigger>(typeof(EmptySecretsManagerTrashJob), everyDayAtTenPmTrigger),
         };
 
         if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
