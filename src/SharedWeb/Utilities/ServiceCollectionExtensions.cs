@@ -132,6 +132,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
+        services.AddScoped<IBitAuthorizationService, BitAuthorizationService>();
     }
 
     public static void AddTokenizers(this IServiceCollection services)

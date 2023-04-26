@@ -22,7 +22,7 @@ public class GroupsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
-    private readonly IAuthorizationService _authorizationService;
+    private readonly IBitAuthorizationService _bitAuthorizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IEventService _eventService;
 
@@ -33,7 +33,7 @@ public class GroupsController : Controller
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand,
         IDeleteGroupCommand deleteGroupCommand,
-        IAuthorizationService authorizationService,
+        IBitAuthorizationService bitAuthorizationService,
         IOrganizationUserRepository organizationUserRepository,
         IEventService eventService)
     {
@@ -43,7 +43,7 @@ public class GroupsController : Controller
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
         _deleteGroupCommand = deleteGroupCommand;
-        _authorizationService = authorizationService;
+        _bitAuthorizationService = bitAuthorizationService;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
     }
@@ -52,7 +52,7 @@ public class GroupsController : Controller
     public async Task<GroupResponseModel> Get(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Read);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Read);
 
         return new GroupResponseModel(group);
     }
@@ -66,7 +66,7 @@ public class GroupsController : Controller
             throw new NotFoundException();
         }
 
-        await _authorizationService.AuthorizeOrThrowAsync(User, groupDetails.group, GroupOperations.Read);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, groupDetails.group, GroupOperations.Read);
 
         return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
     }
@@ -75,7 +75,7 @@ public class GroupsController : Controller
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
         var org = _currentContext.GetOrganization(orgId);
-        await _authorizationService.AuthorizeOrThrowAsync(User, org, OrganizationOperations.ReadAllGroups);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, org, OrganizationOperations.ReadAllGroups);
 
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
@@ -86,7 +86,7 @@ public class GroupsController : Controller
     public async Task<IEnumerable<Guid>> GetUsers(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Read);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Read);
 
         var groupIds = await _groupRepository.GetManyUserIdsByIdAsync(id);
         return groupIds;
@@ -98,7 +98,7 @@ public class GroupsController : Controller
         var organization = await _organizationRepository.GetByIdAsync(orgId);
         var group = model.ToGroup(orgId);
 
-        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Create);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Create);
 
         await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
 
@@ -110,7 +110,7 @@ public class GroupsController : Controller
     public async Task<GroupResponseModel> Put(Guid orgId, Guid id, [FromBody] GroupRequestModel model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Update);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Update);
 
         var organization = await _organizationRepository.GetByIdAsync(orgId);
 
@@ -122,7 +122,7 @@ public class GroupsController : Controller
     public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<Guid> model)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        await _authorizationService.AuthorizeOrThrowAsync(User, group, new[]
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, new[]
             {
                 GroupUserOperations.Create,
                 GroupUserOperations.Delete
@@ -149,7 +149,7 @@ public class GroupsController : Controller
 
         foreach (var group in groups)
         {
-            await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Delete);
+            await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Delete);
         }
 
         await _deleteGroupCommand.DeleteManyAsync(groups);
@@ -167,7 +167,7 @@ public class GroupsController : Controller
         }
 
         var groupUser = await _groupRepository.GetGroupUserByGroupIdOrganizationUserId(id, orgUserId);
-        await _authorizationService.AuthorizeOrThrowAsync(User, groupUser, GroupUserOperations.Delete);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, groupUser, GroupUserOperations.Delete);
 
         var orgUser = await _organizationUserRepository.GetByIdAsync(groupUser.OrganizationUserId);
 
