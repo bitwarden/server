@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Reflection;
+using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
@@ -43,6 +44,14 @@ public class ProjectAuthorizationHandlerTests
         }
     }
 
+    [Fact]
+    public void ProjectOperations_OnlyPublicStatic()
+    {
+        var publicStaticFields = typeof(ProjectOperations).GetFields(BindingFlags.Public | BindingFlags.Static);
+        var allFields = typeof(ProjectOperations).GetFields();
+        Assert.Equal(publicStaticFields.Length, allFields.Length);
+    }
+
     [Theory]
     [BitAutoData]
     public async Task Handler_UnsupportedProjectOperationRequirement_Throws(
@@ -67,7 +76,8 @@ public class ProjectAuthorizationHandlerTests
             .Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
 
-        var requirements = new[] { ProjectOperations.Create, ProjectOperations.Update };
+        var requirements = typeof(ProjectOperations).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Select(i => (ProjectOperationRequirement)i.GetValue(null));
 
         foreach (var req in requirements)
         {
