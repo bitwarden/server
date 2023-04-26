@@ -39,7 +39,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
-        IPolicyService policyService, IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
+        IPolicyService policyService,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
             organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
