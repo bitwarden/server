@@ -321,7 +321,7 @@ public class TwoFactorController : Controller
                 }
                 else
                 {
-                    this.ThrowDelayedBadRequestExceptionAsync(
+                    await this.ThrowDelayedBadRequestExceptionAsync(
                         "Cannot send two-factor email: a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.",
                         2000);
                 }
@@ -333,7 +333,7 @@ public class TwoFactorController : Controller
             }
         }
 
-        this.ThrowDelayedBadRequestExceptionAsync(
+        await this.ThrowDelayedBadRequestExceptionAsync(
             "Cannot send two-factor email.", 2000);
     }
 
@@ -472,7 +472,7 @@ public class TwoFactorController : Controller
                decryptedToken.Valid && decryptedToken.TokenIsValid(user);
     }
 
-    private async void ThrowDelayedBadRequestExceptionAsync(string message, int delayTime = 2000)
+    private async Task ThrowDelayedBadRequestExceptionAsync(string message, int delayTime = 2000)
     {
         await Task.Delay(delayTime);
         throw new BadRequestException(message);
