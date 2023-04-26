@@ -118,7 +118,7 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
             case AccessClientType.User:
                 if (projectIdToCheck.HasValue)
                 {
-                    hasAccess = await _projectRepository.UserHasWriteAccessToProject(projectIdToCheck.Value, userId);
+                    hasAccess = (await _projectRepository.AccessToProjectAsync(projectIdToCheck.Value, userId, accessClient)).Write;
                 }
                 else if (serviceAccountIdToCheck.HasValue)
                 {
