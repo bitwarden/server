@@ -13,20 +13,23 @@ namespace Bit.Scim.Groups;
 public class PatchGroupCommand : IPatchGroupCommand
 {
     private readonly IGroupRepository _groupRepository;
-    private readonly IGroupService _groupService;
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly ILogger<PatchGroupCommand> _logger;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IEventService _eventService;
 
     public PatchGroupCommand(
         IGroupRepository groupRepository,
-        IGroupService groupService,
         IUpdateGroupCommand updateGroupCommand,
-        ILogger<PatchGroupCommand> logger)
+        ILogger<PatchGroupCommand> logger,
+        IOrganizationUserRepository organizationUserRepository,
+        IEventService eventService)
     {
         _groupRepository = groupRepository;
-        _groupService = groupService;
         _updateGroupCommand = updateGroupCommand;
         _logger = logger;
+        _organizationUserRepository = organizationUserRepository;
+        _eventService = eventService;
     }
 
     public async Task PatchGroupAsync(Organization organization, Guid id, ScimPatchModel model)
@@ -106,7 +109,11 @@ public class PatchGroupCommand : IPatchGroupCommand
                         throw new NotFoundException();
                     }
 
-                    await _groupService.DeleteUserAsync(groupUser, EventSystemUser.SCIM);
+                    var orgUser = await _organizationUserRepository.GetByIdAsync(groupUser.OrganizationUserId);
+                    await _groupRepository.DeleteUserAsync(groupUser.GroupId, groupUser.OrganizationUserId);
+                    await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_UpdatedGroups,
+                        EventSystemUser.SCIM);
+
                     operationHandled = true;
                 }
             }
