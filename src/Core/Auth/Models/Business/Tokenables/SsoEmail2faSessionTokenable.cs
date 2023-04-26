@@ -10,7 +10,7 @@ namespace Bit.Core.Auth.Models.Business.Tokenables;
 public class SsoEmail2faSessionTokenable : ExpiringTokenable
 {
     // Just over 2 min expiration (client expires session after 2 min)
-    private const double _tokenLifetimeInHours = (double)2.05 / 60;
+    private static readonly TimeSpan _tokenLifetime = TimeSpan.FromMinutes(2.05);
     public const string ClearTextPrefix = "BwSsoEmail2FaSessionToken_";
     public const string DataProtectorPurpose = "SsoEmail2faSessionTokenDataProtector";
 
@@ -24,7 +24,7 @@ public class SsoEmail2faSessionTokenable : ExpiringTokenable
     [JsonConstructor]
     public SsoEmail2faSessionTokenable()
     {
-        ExpirationDate = DateTime.UtcNow.AddHours(_tokenLifetimeInHours);
+        ExpirationDate = DateTime.UtcNow.Add(_tokenLifetime);
     }
 
     public SsoEmail2faSessionTokenable(User user) : this()
