@@ -44,7 +44,7 @@ public class
                 await CanUpdateServiceAccountAsync(context, requirement, resource);
                 break;
             default:
-                throw new ArgumentException("Unsupported project operation requirement type provided.",
+                throw new ArgumentException("Unsupported operation requirement type provided.",
                     nameof(requirement));
         }
     }
