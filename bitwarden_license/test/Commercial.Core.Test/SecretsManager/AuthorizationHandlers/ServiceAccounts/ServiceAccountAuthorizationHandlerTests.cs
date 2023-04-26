@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Reflection;
+using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
@@ -42,6 +43,14 @@ public class ServiceAccountAuthorizationHandlerTests
         }
     }
 
+    [Fact]
+    public void ServiceAccountOperations_OnlyPublicStatic()
+    {
+        var publicStaticFields = typeof(ServiceAccountOperations).GetFields(BindingFlags.Public | BindingFlags.Static);
+        var allFields = typeof(ServiceAccountOperations).GetFields();
+        Assert.Equal(publicStaticFields.Length, allFields.Length);
+    }
+
     [Theory]
     [BitAutoData]
     public async Task Handler_UnsupportedServiceAccountOperationRequirement_Throws(
@@ -66,10 +75,9 @@ public class ServiceAccountAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
             .Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
-        var requirements = new[]
-        {
-            ServiceAccountOperations.Create, ServiceAccountOperations.Update, ServiceAccountOperations.Read,
-        };
+
+        var requirements = typeof(ServiceAccountOperations).GetFields(BindingFlags.Public | BindingFlags.Static)
+            .Select(i => (ServiceAccountOperationRequirement)i.GetValue(null));
 
         foreach (var req in requirements)
         {
@@ -251,8 +259,8 @@ public class ServiceAccountAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
     public async Task CanReadServiceAccount_ShouldNotSucceed(PermissionType permissionType, bool read, bool write,
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal,
@@ -273,9 +281,9 @@ public class ServiceAccountAuthorizationHandlerTests
 
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin, true, true)]
-    [BitAutoData(PermissionType.RunAsAdmin, false, true)]
+    [BitAutoData(PermissionType.RunAsAdmin, true, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false)]
     public async Task CanReadServiceAccount_Success(PermissionType permissionType, bool read, bool write,
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal,
