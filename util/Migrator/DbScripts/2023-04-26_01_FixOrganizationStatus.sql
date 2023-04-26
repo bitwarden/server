@@ -1,4 +1,4 @@
--- Update the status of organizations from Pending to Created if they have no associated reseller provider with no active users.
+-- Update the status of organizations from Pending to Created if they don't meet the criteria for Pending
 UPDATE [dbo].[Organization]
 SET [Status] = 1 -- Created
 WHERE [Status] = 0 -- Pending
