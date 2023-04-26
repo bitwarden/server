@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
@@ -90,7 +91,7 @@ public class ProjectsControllerTests
         }
 
         sutProvider.GetDependency<IProjectRepository>().GetManyByOrganizationIdAsync(default, default, default)
-            .ReturnsForAnyArgs(new List<Project> { mockProject });
+            .ReturnsForAnyArgs(new List<ProjectPermissionDetails> { new() { Project = mockProject, Read = true, Write = true } });
 
         var result = await sutProvider.Sut.ListByOrganizationAsync(data);
 
@@ -213,8 +214,8 @@ public class ProjectsControllerTests
                 break;
             case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, orgId);
-                sutProvider.GetDependency<IProjectRepository>()
-                    .UserHasReadAccessToProject(Arg.Is(data), Arg.Any<Guid>()).ReturnsForAnyArgs(true);
+                sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+                    .Returns((true, true));
                 break;
         }
 
@@ -236,8 +237,8 @@ public class ProjectsControllerTests
         Guid data)
     {
         SetupUserWithPermission(sutProvider, orgId);
-        sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(Arg.Is(data), Arg.Any<Guid>())
-            .ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+            .Returns((false, false));
 
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(Arg.Is(data))
             .ReturnsForAnyArgs(new Project { Id = data, OrganizationId = orgId });

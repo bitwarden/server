@@ -1,5 +1,6 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.Projects;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
 using Bit.Core.SecretsManager.Entities;
@@ -52,7 +53,8 @@ public class DeleteProjectCommandTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ClientType = ClientType.User;
         sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(data).Returns(projects);
-        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(Arg.Any<Guid>(), userId).Returns(true);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), userId, AccessClientType.User)
+            .Returns((true, true));
 
         var results = await sutProvider.Sut.DeleteProjects(data, userId);
 
@@ -74,7 +76,8 @@ public class DeleteProjectCommandTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ClientType = ClientType.User;
         sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(data).Returns(projects);
-        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(userId, userId).Returns(false);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), userId, AccessClientType.User)
+            .Returns((false, false));
 
         var results = await sutProvider.Sut.DeleteProjects(data, userId);
 
@@ -96,6 +99,9 @@ public class DeleteProjectCommandTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
         sutProvider.GetDependency<IProjectRepository>().GetManyWithSecretsByIds(data).Returns(projects);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), userId, AccessClientType.NoAccessCheck)
+            .Returns((true, true));
+
 
         var results = await sutProvider.Sut.DeleteProjects(data, userId);
 
