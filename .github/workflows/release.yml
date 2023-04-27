@@ -295,11 +295,12 @@ jobs:
         if: matrix.origin_docker_repo == 'bitwardenprod.azurecr.io'
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+          ORIGIN_REGISTRY: ${{ matrix.origin_docker_repo }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker pull ${{matrix.origin_docker_repo}}/$PROJECT_NAME:latest
+            docker pull $ORIGIN_REGISTRY/$PROJECT_NAME:dev
           else
-            docker pull ${{matrix.origin_docker_repo}}/$PROJECT_NAME:$_BRANCH_NAME
+            docker pull $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME
           fi
 
       - name: Tag version and latest
@@ -309,7 +310,7 @@ jobs:
           ORIGIN_REGISTRY: ${{ matrix.origin_docker_repo }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:latest $REGISTRY/$PROJECT_NAME:dryrun
+            docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:dev $REGISTRY/$PROJECT_NAME:dryrun
           else
             docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
             docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:latest
