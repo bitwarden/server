@@ -43,10 +43,6 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
             case not null when requirement == GroupOperations.Delete:
                 CanDelete(context, requirement, resource);
                 break;
-
-            case not null when requirement == GroupOperations.ReadAll:
-                CanReadAll(context, requirement, resource);
-                break;
         }
 
         await Task.CompletedTask;
@@ -72,32 +68,6 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
         CanManage(context, requirement, resource);
     }
 
-    private void CanReadAll(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
-    {
-        var org = _currentContext.GetOrganization(resource.OrganizationId);
-        if (org == null)
-        {
-            context.Fail();
-            return;
-        }
-
-        // TODO: providers need to be included in the claims
-        var canAccess = org.Type == OrganizationUserType.Owner ||
-                        org.Type == OrganizationUserType.Admin ||
-                        org.Type == OrganizationUserType.Manager ||
-                        org.Permissions.ManageGroups ||
-                        org.Permissions.EditAssignedCollections ||
-                        org.Permissions.DeleteAssignedCollections ||
-                        org.Permissions.CreateNewCollections ||
-                        org.Permissions.EditAnyCollection ||
-                        org.Permissions.DeleteAnyCollection;
-
-        if (canAccess)
-        {
-            context.Succeed(requirement);
-        }
-    }
-
     private void CanManage(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
         // TODO: providers need to be included in the claims
@@ -105,7 +75,6 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
         if (org == null)
         {
             context.Fail();
-            return;
         }
 
         var canAccess = org.Type == OrganizationUserType.Owner ||

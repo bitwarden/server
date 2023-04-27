@@ -1,7 +1,6 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
@@ -76,8 +75,7 @@ public class GroupsController : Controller
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
         var org = _currentContext.GetOrganization(orgId);
-        await _bitAuthorizationService.AuthorizeOrThrowAsync(User,
-            new Group() { OrganizationId = orgId }, GroupOperations.ReadAll);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, org, OrganizationOperations.ReadAllGroups);
 
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
