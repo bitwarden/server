@@ -291,6 +291,17 @@ jobs:
       - name: Login to Azure ACR
         run: az acr login -n bitwardenprod
 
+      - name: Pull latest project image
+        if: matrix.origin_docker_repo == 'bitwardenprod.azurecr.io'
+        env:
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+        run: |
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker pull ${{matrix.origin_docker_repo}}/$PROJECT_NAME:latest
+          else
+            docker pull ${{matrix.origin_docker_repo}}/$PROJECT_NAME:$_BRANCH_NAME
+          fi
+
       - name: Tag version and latest
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
