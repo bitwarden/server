@@ -7,6 +7,7 @@
     [PushToken]    NVARCHAR (255)   NULL,
     [CreationDate] DATETIME2 (7)    NOT NULL,
     [RevisionDate] DATETIME2 (7)    NOT NULL,
+    [EncryptedKey] VARCHAR(MAX)     NULL,
     CONSTRAINT [PK_Device] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Device_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );
@@ -20,4 +21,3 @@ CREATE UNIQUE NONCLUSTERED INDEX [UX_Device_UserId_Identifier]
 GO
 CREATE NONCLUSTERED INDEX [IX_Device_Identifier]
     ON [dbo].[Device]([Identifier] ASC);
-
