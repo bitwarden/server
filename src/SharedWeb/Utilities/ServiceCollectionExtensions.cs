@@ -19,6 +19,7 @@ using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;

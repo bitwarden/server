@@ -103,15 +103,15 @@ jobs:
           branch: master
           artifacts: ${{ matrix.name }}.zip
 
-      - name: Login to Azure
+      - name: Login to Azure - CI subscription
         uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
         env:
-          VAULT_NAME: "bitwarden-prod-kv"
+          VAULT_NAME: "bitwarden-ci"
         run: |
           webapp_name=$(
             az keyvault secret show --vault-name $VAULT_NAME \
@@ -127,6 +127,11 @@ jobs:
           echo "webapp-name=$webapp_name" >> $GITHUB_OUTPUT
           echo "::add-mask::$publish_profile"
           echo "publish-profile=$publish_profile" >> $GITHUB_OUTPUT
+
+      - name: Login to Azure
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Deploy App
         uses: azure/webapps-deploy@0b651ed7546ecfc75024011f76944cb9b381ef1e
@@ -238,8 +243,8 @@ jobs:
         if: matrix.origin_docker_repo == 'bitwarden'
         uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
         with:
-          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-          azure-keyvault-name: "bitwarden-prod-kv"
+          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          azure-keyvault-name: "bitwarden-ci"
 
       - name: Pull latest project image
         if: matrix.origin_docker_repo == 'bitwarden'

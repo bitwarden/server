@@ -1,5 +1,6 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.Projects;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -35,6 +36,8 @@ public class UpdateProjectCommandTests
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(project.Id, userId, AccessClientType.NoAccessCheck)
+            .Returns((true, true));
 
         var project2 = new Project { Id = project.Id, Name = "newName" };
         var result = await sutProvider.Sut.UpdateAsync(project2, userId);
@@ -51,7 +54,8 @@ public class UpdateProjectCommandTests
     public async Task UpdateAsync_User_NoAccess(Project project, Guid userId, SutProvider<UpdateProjectCommand> sutProvider)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(false);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(project.Id, userId, AccessClientType.User)
+            .Returns((false, false));
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId).Returns(true);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(project, userId));
@@ -64,7 +68,8 @@ public class UpdateProjectCommandTests
     public async Task UpdateAsync_User_Success(Project project, Guid userId, SutProvider<UpdateProjectCommand> sutProvider)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(project.Id).Returns(project);
-        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId).Returns(true);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(project.Id, userId, AccessClientType.User)
+            .Returns((true, true));
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId).Returns(true);
 
         var project2 = new Project { Id = project.Id, Name = "newName" };
