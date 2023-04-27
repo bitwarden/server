@@ -304,6 +304,7 @@ jobs:
           fi
 
       - name: Tag version and latest
+        if: matrix.origin_docker_repo == 'bitwardenprod.azurecr.io'
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
