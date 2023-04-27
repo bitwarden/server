@@ -91,6 +91,22 @@ public class DevicesController : Controller
         return response;
     }
 
+    [HttpPut("{id}/key")]
+    [HttpPost("{id}/key")]
+    public async Task<DeviceResponseModel> PutEncryptedKey(Guid id, [FromBody] DeviceEncryptedKeyRequestModel model)
+    {
+        var device = await _deviceRepository.GetByIdAsync(id, _userService.GetProperUserId(User).Value);
+        if (device == null)
+        {
+            throw new NotFoundException();
+        }
+
+        device.EncryptedKey = model.EncryptedKey;
+
+        await _deviceService.SaveAsync(device);
+        return new DeviceResponseModel(device);
+    }
+
     [HttpPut("identifier/{identifier}/token")]
     [HttpPost("identifier/{identifier}/token")]
     public async Task PutToken(string identifier, [FromBody] DeviceTokenRequestModel model)

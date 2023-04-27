@@ -16,6 +16,7 @@ public class Device : ITableObject<Guid>
     public string PushToken { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
+    public string EncryptedKey { get; set; }
 
     public void SetNewId()
     {
