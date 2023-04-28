@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -54,6 +56,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IOrganizationService _organizationService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
+    private readonly IWebAuthnRepository _webAuthnRepository;
 
     public UserService(
         IUserRepository userRepository,
@@ -83,7 +86,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IGlobalSettings globalSettings,
         IOrganizationService organizationService,
         IProviderUserRepository providerUserRepository,
-        IStripeSyncService stripeSyncService)
+        IStripeSyncService stripeSyncService,
+        IWebAuthnRepository webAuthnRepository)
         : base(
               store,
               optionsAccessor,
@@ -119,6 +123,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _organizationService = organizationService;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
+        _webAuthnRepository = webAuthnRepository;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -496,6 +501,65 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         providers[TwoFactorProviderType.WebAuthn] = provider;
         user.SetTwoFactorProviders(providers);
         await UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.WebAuthn);
+        return true;
+    }
+
+    public async Task<CredentialCreateOptions> StartWebAuthnLoginRegistrationAsync(User user)
+    {
+        var fidoUser = new Fido2User
+        {
+            DisplayName = user.Name,
+            Name = user.Email,
+            Id = user.Id.ToByteArray(),
+        };
+
+        // Get existing keys to exclude
+        var existingKeys = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var excludeCredentials = existingKeys
+            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
+            .ToList();
+
+        var authenticatorSelection = new AuthenticatorSelection
+        {
+            AuthenticatorAttachment = null,
+            RequireResidentKey = false,
+            UserVerification = UserVerificationRequirement.Preferred
+        };
+
+        // TODO: PRF
+        var extensions = new AuthenticationExtensionsClientInputs { };
+
+        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
+            AttestationConveyancePreference.None, extensions);
+
+        // TODO: temp save options to user record somehow
+
+        return options;
+    }
+
+    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name,
+        AuthenticatorAttestationRawResponse attestationResponse)
+    {
+        // TODO: Get options from user record somehow, then clear them
+        var options = CredentialCreateOptions.FromJson("");
+
+        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
+        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
+
+        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
+
+        var credential = new WebAuthnCredential
+        {
+            Name = name,
+            DescriptorId = CoreHelpers.Base64UrlEncode(success.Result.CredentialId),
+            PublicKey = CoreHelpers.Base64UrlEncode(success.Result.PublicKey),
+            Type = success.Result.CredType,
+            AaGuid = success.Result.Aaguid,
+            Counter = (int)success.Result.Counter,
+            UserId = user.Id
+        };
+
+        await _webAuthnRepository.CreateAsync(credential);
         return true;
     }
 

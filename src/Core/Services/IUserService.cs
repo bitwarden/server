@@ -27,6 +27,8 @@ public interface IUserService
     Task<CredentialCreateOptions> StartWebAuthnRegistrationAsync(User user);
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
     Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
+    Task<CredentialCreateOptions> StartWebAuthnLoginRegistrationAsync(User user);
+    Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, AuthenticatorAttestationRawResponse attestationResponse);
     Task SendEmailVerificationAsync(User user);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
     Task InitiateEmailChangeAsync(User user, string newEmail);
