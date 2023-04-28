@@ -20,7 +20,7 @@ BEGIN
         [DomainName] = @DomainName,
         [CreationDate] = @CreationDate,
         [VerifiedDate] = @VerifiedDate,
-        [LastCheckedDate] = @LastCheckedDate
+        [LastCheckedDate] = @LastCheckedDate,
         [NextRunDate] = @NextRunDate,
         [JobRunCount] = @JobRunCount
     WHERE
