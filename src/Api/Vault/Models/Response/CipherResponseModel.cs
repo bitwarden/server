@@ -61,6 +61,7 @@ public class CipherMiniResponseModel : ResponseModel
         Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
         OrganizationUseTotp = orgUseTotp;
         CreationDate = cipher.CreationDate;
+        ArchiveDate = cipher.ArchiveDate;
         DeletedDate = cipher.DeletedDate;
         Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
     }
@@ -81,6 +82,7 @@ public class CipherMiniResponseModel : ResponseModel
     public bool OrganizationUseTotp { get; set; }
     public DateTime RevisionDate { get; set; }
     public DateTime CreationDate { get; set; }
+    public DateTime? ArchiveDate { get; set; }
     public DateTime? DeletedDate { get; set; }
     public CipherRepromptType Reprompt { get; set; }
 }

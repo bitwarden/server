@@ -66,6 +66,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             Attachments = c.Attachments,
             CreationDate = c.CreationDate,
             RevisionDate = c.RevisionDate,
+            ArchiveDate = c.ArchiveDate,
             DeletedDate = c.DeletedDate,
             Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.ToLowerInvariant().Contains($"\"{_userId}\":true"),
             FolderId = GetFolderId(_userId, c),

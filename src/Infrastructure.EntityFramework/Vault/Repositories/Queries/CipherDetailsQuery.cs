@@ -27,6 +27,7 @@ public class CipherDetailsQuery : IQuery<CipherDetails>
                         Attachments = c.Attachments,
                         CreationDate = c.CreationDate,
                         RevisionDate = c.RevisionDate,
+                        ArchiveDate = c.ArchiveDate,
                         DeletedDate = c.DeletedDate,
                         Reprompt = c.Reprompt,
                         Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.ToLowerInvariant().Contains($"\"{_userId}\":true"),

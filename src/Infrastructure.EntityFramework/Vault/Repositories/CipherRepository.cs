@@ -355,6 +355,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                                         Attachments = c.Attachments,
                                         CreationDate = c.CreationDate,
                                         RevisionDate = c.RevisionDate,
+                                        ArchiveDate = c.ArchiveDate,
                                         DeletedDate = c.DeletedDate,
                                         Favorite = c.Favorite,
                                         FolderId = c.FolderId,
@@ -573,6 +574,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             trackedCipher.Data = cipher.Data;
             trackedCipher.Attachments = cipher.Attachments;
             trackedCipher.RevisionDate = cipher.RevisionDate;
+            trackedCipher.ArchiveDate = cipher.ArchiveDate;
             trackedCipher.DeletedDate = cipher.DeletedDate;
 
             await transaction.CommitAsync();

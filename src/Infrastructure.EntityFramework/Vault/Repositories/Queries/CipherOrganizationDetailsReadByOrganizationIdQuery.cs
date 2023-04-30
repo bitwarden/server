@@ -30,6 +30,7 @@ public class CipherOrganizationDetailsReadByOrganizationIdQuery : IQuery<CipherO
                         Attachments = c.Attachments,
                         CreationDate = c.CreationDate,
                         RevisionDate = c.RevisionDate,
+                        ArchiveDate = c.ArchiveDate,
                         DeletedDate = c.DeletedDate,
                         OrganizationUseTotp = o.UseTotp,
                     };

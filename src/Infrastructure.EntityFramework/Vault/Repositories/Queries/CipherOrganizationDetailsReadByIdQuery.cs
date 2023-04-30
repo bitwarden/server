@@ -32,6 +32,7 @@ public class CipherOrganizationDetailsReadByIdQuery : IQuery<CipherOrganizationD
                         Attachments = c.Attachments,
                         CreationDate = c.CreationDate,
                         RevisionDate = c.RevisionDate,
+                        ArchiveDate = c.ArchiveDate,
                         DeletedDate = c.DeletedDate,
                         OrganizationUseTotp = o.UseTotp,
                     };

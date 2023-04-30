@@ -711,6 +711,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         ciphersTable.Columns.Add(creationDateColumn);
         var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
         ciphersTable.Columns.Add(revisionDateColumn);
+        var archiveDateColumn = new DataColumn(nameof(c.ArchiveDate), typeof(DateTime));
+        ciphersTable.Columns.Add(archiveDateColumn);
         var deletedDateColumn = new DataColumn(nameof(c.DeletedDate), typeof(DateTime));
         ciphersTable.Columns.Add(deletedDateColumn);
         var repromptColumn = new DataColumn(nameof(c.Reprompt), typeof(short));
@@ -739,6 +741,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[attachmentsColumn] = cipher.Attachments;
             row[creationDateColumn] = cipher.CreationDate;
             row[revisionDateColumn] = cipher.RevisionDate;
+            row[archiveDateColumn] = cipher.ArchiveDate.HasValue ? (object)cipher.ArchiveDate : DBNull.Value;
             row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
             row[repromptColumn] = cipher.Reprompt;
 
