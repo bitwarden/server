@@ -1,6 +1,7 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -46,7 +47,9 @@ public class UpdateSecretCommandTests
         else
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject((Guid)(data.Projects?.First().Id), userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>()
+                .AccessToProjectAsync((Guid)data.Projects?.First().Id, userId, AccessClientType.User)
+                .Returns((true, true));
         }
 
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(data.Id).Returns(data);

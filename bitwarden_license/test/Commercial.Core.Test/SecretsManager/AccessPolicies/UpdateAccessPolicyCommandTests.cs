@@ -2,6 +2,7 @@
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -28,8 +29,8 @@ public class UpdateAccessPolicyCommandTests
                     .Returns(true);
                 break;
             case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(grantedProject.Id, userId)
-                    .Returns(true);
+                sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(grantedProject.Id, userId, AccessClientType.User)
+                    .Returns((true, true));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);

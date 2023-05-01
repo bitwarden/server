@@ -67,7 +67,9 @@ public class ProjectsController : Controller
 
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId), userId);
-        return new ProjectResponseModel(result);
+
+        // Creating a project means you have read & write permission.
+        return new ProjectResponseModel(result, true, true);
     }
 
     [HttpPut("projects/{id}")]
@@ -76,11 +78,13 @@ public class ProjectsController : Controller
         var userId = _userService.GetProperUserId(User).Value;
 
         var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id), userId);
-        return new ProjectResponseModel(result);
+
+        // Updating a project means you have read & write permission.
+        return new ProjectResponseModel(result, true, true);
     }
 
     [HttpGet("projects/{id}")]
-    public async Task<ProjectPermissionDetailsResponseModel> GetAsync([FromRoute] Guid id)
+    public async Task<ProjectResponseModel> GetAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
         if (project == null)
@@ -104,7 +108,7 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        return new ProjectPermissionDetailsResponseModel(project, access.Read, access.Write);
+        return new ProjectResponseModel(project, access.Read, access.Write);
     }
 
     [HttpPost("projects/delete")]
