@@ -19,7 +19,6 @@ public class WebAuthnLoginTokenable : ExpiringTokenable
     public WebAuthnLoginTokenable()
     {
         ExpirationDate = DateTime.UtcNow.AddHours(_tokenLifetimeInHours);
-        ExpirationDate = DateTime.UtcNow.AddHours(_tokenLifetimeInHours);
     }
 
     public WebAuthnLoginTokenable(User user) : this()
