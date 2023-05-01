@@ -24,6 +24,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
+using static IdentityServer4.Models.IdentityResources;
 using File = System.IO.File;
 
 namespace Bit.Core.Services;
@@ -561,6 +563,65 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         await _webAuthnRepository.CreateAsync(credential);
         return true;
+    }
+
+    public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
+    {
+        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
+        var existingKeys = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var existingCredentials = existingKeys
+            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
+            .ToList();
+
+        if (existingCredentials.Count == 0)
+        {
+            return null;
+        }
+
+        // TODO: PRF?
+        var exts = new AuthenticationExtensionsClientInputs
+        {
+            UserVerificationMethod = true
+        };
+        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Preferred, exts);
+
+        // TODO: temp save options to user record somehow
+
+        return options;
+    }
+
+    public async Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user)
+    {
+        // TODO: Get options from user record somehow, then clear them
+        var options = AssertionOptions.FromJson("");
+
+        var userCredentials = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
+        var credential = userCredentials.FirstOrDefault(c => c.DescriptorId == assertionId);
+        if (credential == null)
+        {
+            return null;
+        }
+
+        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
+        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
+        var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
+        var assertionVerificationResult = await _fido2.MakeAssertionAsync(
+            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+
+        // Update SignatureCounter
+        credential.Counter = (int)assertionVerificationResult.Counter;
+        await _webAuthnRepository.ReplaceAsync(credential);
+
+        if (assertionVerificationResult.Status == "ok")
+        {
+            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider, "webAuthnLogin");
+            return token;
+        }
+        else
+        {
+            return null;
+        }
     }
 
     public async Task SendEmailVerificationAsync(User user)

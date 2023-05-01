@@ -1,4 +1,6 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core.Auth.Enums;
+using System.Text.Json;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
@@ -8,7 +10,9 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.SharedWeb.Utilities;
+using Fido2NetLib;
 using Microsoft.AspNetCore.Mvc;
+using Bit.Identity.IdentityServer;
 
 namespace Bit.Identity.Controllers;
 
@@ -72,30 +76,34 @@ public class AccountsController : Controller
         return new PreloginResponseModel(kdfInformation);
     }
 
-    [HttpPost("webauthn")]
-    public async Task<PreloginResponseModel> PostWebAuthn([FromBody] PreloginRequestModel model)
-    {
-        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
-        {
-            kdfInformation = new UserKdfInformation
-            {
-                Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = 100000,
-            };
-        }
-        return new PreloginResponseModel(kdfInformation);
-    }
-
     [HttpPost("webauthn-assertion-options")]
-    public async Task PostWebAuthnAssertionOptions([FromBody] PreloginRequestModel model)
+    [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
+    // TODO: Create proper models for this call
+    public async Task<AssertionOptions> PostWebAuthnAssertionOptions([FromBody] PreloginRequestModel model)
     {
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+        if (user == null)
+        {
+            // TODO: return something? possible enumeration attacks with this response
+            return new AssertionOptions();
+        }
 
+        var options = await _userService.StartWebAuthnLoginAssertionAsync(user);
+        return options;
     }
 
     [HttpPost("webauthn-assertion")]
-    public async Task PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
+    // TODO: Create proper models for this call
+    public async Task<string> PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
     {
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+        if (user == null)
+        {
+            // TODO: proper response here?
+            throw new BadRequestException();
+        }
 
+        var token = await _userService.CompleteWebAuthLoginAssertionAsync(null, user);
+        return token;
     }
 }
