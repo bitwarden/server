@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +28,7 @@ public class OrganizationUsersController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ISaveOrganizationUserCommand _saveOrganizationUserCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -36,7 +38,8 @@ public class OrganizationUsersController : Controller
         IGroupRepository groupRepository,
         IUserService userService,
         IPolicyRepository policyRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISaveOrganizationUserCommand saveOrganizationUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -46,6 +49,7 @@ public class OrganizationUsersController : Controller
         _userService = userService;
         _policyRepository = policyRepository;
         _currentContext = currentContext;
+        _saveOrganizationUserCommand = saveOrganizationUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -280,7 +284,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
+        await _saveOrganizationUserCommand.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
             model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
     }
 
