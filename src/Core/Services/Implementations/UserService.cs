@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -11,6 +12,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -59,6 +61,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
     private readonly IWebAuthnRepository _webAuthnRepository;
+    private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
 
     public UserService(
         IUserRepository userRepository,
@@ -89,7 +92,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IOrganizationService organizationService,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IWebAuthnRepository webAuthnRepository)
+        IWebAuthnRepository webAuthnRepository,
+        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
         : base(
               store,
               optionsAccessor,
@@ -126,6 +130,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
         _webAuthnRepository = webAuthnRepository;
+        _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -615,7 +620,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (assertionVerificationResult.Status == "ok")
         {
-            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, "webAuthnLogin");
+            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user));
             return token;
         }
         else

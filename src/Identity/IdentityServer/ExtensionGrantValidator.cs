@@ -8,12 +8,15 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
+using Bit.Core.Auth.Models.Business.Tokenables;
 
 namespace Bit.Identity.IdentityServer;
 
 public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValidationContext>, IExtensionGrantValidator
 {
     private UserManager<User> _userManager;
+    private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
 
     public ExtensionGrantValidator(
         UserManager<User> userManager,
@@ -31,13 +34,15 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         IUserRepository userRepository,
-        IPolicyService policyService)
+        IPolicyService policyService,
+        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
               userRepository, policyService)
     {
         _userManager = userManager;
+        _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
     }
 
     public string GrantType => "extension";
@@ -72,9 +77,8 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         {
             return false;
         }
-        var purpose = type == "webAuthn" ? "webAuthnLogin" : null;
-        var verified = await _userManager.VerifyUserTokenAsync(validatorContext.User,
-            TokenOptions.DefaultAuthenticatorProvider, purpose, token);
+        var verified = _webAuthnLoginTokenizer.TryUnprotect(token, out var tokenData) &&
+            tokenData.Valid && tokenData.TokenIsValid(validatorContext.User);
         return verified;
     }
 
