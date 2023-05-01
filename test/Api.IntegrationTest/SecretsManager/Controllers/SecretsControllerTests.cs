@@ -148,11 +148,8 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
-        var project = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123" });
-
         var request = new SecretCreateRequestModel
         {
-            ProjectIds = new Guid[] { project.Id },
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString,

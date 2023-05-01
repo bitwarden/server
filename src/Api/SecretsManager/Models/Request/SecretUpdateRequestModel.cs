@@ -20,11 +20,12 @@ public class SecretUpdateRequestModel
 
     public Guid[] ProjectIds { get; set; }
 
-    public Secret ToSecret(Guid id)
+    public Secret ToSecret(Guid id, Guid organizationId)
     {
         return new Secret()
         {
             Id = id,
+            OrganizationId = organizationId,
             Key = Key,
             Value = Value,
             Note = Note,

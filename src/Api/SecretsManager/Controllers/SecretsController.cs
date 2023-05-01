@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -31,6 +32,7 @@ public class SecretsController : Controller
     private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IReferenceEventService _referenceEventService;
+    private readonly IAuthorizationService _authorizationService;
 
     public SecretsController(
         ICurrentContext currentContext,
@@ -42,7 +44,8 @@ public class SecretsController : Controller
         IDeleteSecretCommand deleteSecretCommand,
         IUserService userService,
         IEventService eventService,
-        IReferenceEventService referenceEventService)
+        IReferenceEventService referenceEventService,
+        IAuthorizationService authorizationService)
     {
         _currentContext = currentContext;
         _projectRepository = projectRepository;
@@ -54,6 +57,7 @@ public class SecretsController : Controller
         _userService = userService;
         _eventService = eventService;
         _referenceEventService = referenceEventService;
+        _authorizationService = authorizationService;
 
     }
 
@@ -77,18 +81,19 @@ public class SecretsController : Controller
     [HttpPost("organizations/{organizationId}/secrets")]
     public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
-        {
-            throw new NotFoundException();
-        }
-
         if (createRequest.ProjectIds != null && createRequest.ProjectIds.Length > 1)
         {
             throw new BadRequestException();
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createSecretCommand.CreateAsync(createRequest.ToSecret(organizationId), userId);
+        var secret = createRequest.ToSecret(organizationId);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Create);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _createSecretCommand.CreateAsync(secret);
 
         // Creating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
@@ -152,9 +157,20 @@ public class SecretsController : Controller
             throw new BadRequestException();
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
-        var secret = updateRequest.ToSecret(id);
-        var result = await _updateSecretCommand.UpdateAsync(secret, userId);
+        var secret = await _secretRepository.GetByIdAsync(id);
+        if (secret == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var updatedSecret = updateRequest.ToSecret(id, secret.OrganizationId);
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, updatedSecret, SecretOperations.Update);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _updateSecretCommand.UpdateAsync(updatedSecret);
 
         // Updating a secret means you have read & write permission.
         return new SecretResponseModel(result, true, true);
