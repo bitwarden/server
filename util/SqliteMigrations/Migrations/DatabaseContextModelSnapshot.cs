@@ -317,6 +317,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("EncryptedKey")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
                         .HasColumnType("TEXT");
