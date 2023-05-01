@@ -20,52 +20,34 @@ on:
     inputs: {}
 
 jobs:
-  build:
-    name: Build DACPAC
-    runs-on: windows-2022
-    env:
-      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  validate:
+    name: Validate
+    runs-on: ubuntu-22.04
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # v3.5.2
+
       - name: Set up dotnet
-        uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829
+        uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829 # v3.0.3
         with:
           dotnet-version: '6.0.x'
-      - name: Set up MSBuild
-        uses: microsoft/setup-msbuild@ab534842b4bdf384b8aaf93765dc6f721d9f5fab
-
+      
       - name: Print environment
         run: |
           dotnet --info
-          msbuild -version
           nuget help | grep Version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
 
-      - name: Checkout repo
-        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
-
       - name: Build DACPAC
-        run: msbuild src/Sql/Sql.sqlproj /p:Configuration=Release /verbosity:minimal
+        run: dotnet build src/Sql --configuration Release --verbosity minimal --output .
         shell: pwsh
 
       - name: Upload DACPAC
-        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535 # v3.1.2
         with:
           name: sql.dacpac
-          path: src/Sql/bin/Release/Sql.dacpac
-
-  validate:
-    name: Validate
-    runs-on: ubuntu-20.04
-    needs: build
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
-
-      - name: Download dacpac
-        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741
-        with:
-          name: sql.dacpac
+          path: Sql.dacpac
 
       - name: Docker Compose up
         working-directory: "dev"
@@ -88,7 +70,7 @@ jobs:
         shell: pwsh
 
       - name: Upload Report
-        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535 # v3.1.2
         with:
           name: report.xml
           path: |
