@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.OrganizationConnectionConfigs;
+﻿using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Xunit;
 
 namespace Bit.Core.Test.Models.OrganizationConnectionConfigs;

@@ -45,6 +45,22 @@ BEGIN
     WHERE 
         [OU].[OrganizationId] = @Id
 
+    DELETE AP
+    FROM
+        [dbo].[AccessPolicy] AP
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [AP].[OrganizationUserId] = [OU].[Id]
+    WHERE
+        [OU].[OrganizationId] = @Id
+
+    DELETE GU
+    FROM
+        [dbo].[GroupUser] GU
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [GU].[OrganizationUserId] = [OU].[Id]
+    WHERE
+        [OU].[OrganizationId] = @Id
+
     DELETE
     FROM 
         [dbo].[OrganizationUser]
@@ -79,6 +95,14 @@ BEGIN
         [dbo].[ApiKey] AK
     INNER JOIN
         [dbo].[ServiceAccount] SA ON [AK].[ServiceAccountId] = [SA].[Id]
+    WHERE
+        [SA].[OrganizationId] = @Id
+
+    DELETE AP
+    FROM
+        [dbo].[AccessPolicy] AP
+    INNER JOIN
+        [dbo].[ServiceAccount] SA ON [AP].[GrantedServiceAccountId] = [SA].[Id]
     WHERE
         [SA].[OrganizationId] = @Id
 
