@@ -29,6 +29,7 @@ public class OrganizationUsersController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ISaveOrganizationUserCommand _saveOrganizationUserCommand;
+    private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -39,7 +40,8 @@ public class OrganizationUsersController : Controller
         IUserService userService,
         IPolicyRepository policyRepository,
         ICurrentContext currentContext,
-        ISaveOrganizationUserCommand saveOrganizationUserCommand)
+        ISaveOrganizationUserCommand saveOrganizationUserCommand,
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -50,6 +52,7 @@ public class OrganizationUsersController : Controller
         _policyRepository = policyRepository;
         _currentContext = currentContext;
         _saveOrganizationUserCommand = saveOrganizationUserCommand;
+        _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
     }
 
     [HttpGet("{id}")]
@@ -305,7 +308,7 @@ public class OrganizationUsersController : Controller
         }
 
         var loggedInUserId = _userService.GetProperUserId(User);
-        await _organizationService.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
+        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]

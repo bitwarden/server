@@ -21,6 +21,7 @@ public class MembersController : Controller
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly ISaveOrganizationUserCommand _saveOrganizationUserCommand;
+    private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
@@ -28,7 +29,8 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
-        ISaveOrganizationUserCommand saveOrganizationUserCommand)
+        ISaveOrganizationUserCommand saveOrganizationUserCommand,
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -36,6 +38,7 @@ public class MembersController : Controller
         _userService = userService;
         _currentContext = currentContext;
         _saveOrganizationUserCommand = saveOrganizationUserCommand;
+        _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
     }
 
     /// <summary>
@@ -187,7 +190,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
+        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
         return new OkResult();
     }
 
