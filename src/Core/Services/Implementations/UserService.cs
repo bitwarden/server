@@ -615,7 +615,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (assertionVerificationResult.Status == "ok")
         {
-            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider, "webAuthnLogin");
+            var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultAuthenticatorProvider, "webAuthnLogin");
             return token;
         }
         else

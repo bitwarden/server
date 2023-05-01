@@ -45,7 +45,9 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
         var email = context.Request.Raw.Get("email");
-        if (string.IsNullOrWhiteSpace(email))
+        var token = context.Request.Raw.Get("token");
+        var type = context.Request.Raw.Get("type");
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(type))
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
             return;
@@ -61,11 +63,19 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         await ValidateAsync(context, context.Request, validatorContext);
     }
 
-    protected override Task<bool> ValidateContextAsync(ExtensionGrantValidationContext context,
+    protected override async Task<bool> ValidateContextAsync(ExtensionGrantValidationContext context,
         CustomValidatorRequestContext validatorContext)
     {
-        var email = context.Request.Raw.Get("email");
-        return Task.FromResult(!string.IsNullOrWhiteSpace(email) && validatorContext.User != null);
+        var token = context.Request.Raw.Get("token");
+        var type = context.Request.Raw.Get("type");
+        if (validatorContext.User == null || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(type))
+        {
+            return false;
+        }
+        var purpose = type == "webAuthn" ? "webAuthnLogin" : null;
+        var verified = await _userManager.VerifyUserTokenAsync(validatorContext.User,
+            TokenOptions.DefaultAuthenticatorProvider, purpose, token);
+        return verified;
     }
 
     protected override Task SetSuccessResult(ExtensionGrantValidationContext context, User user,
