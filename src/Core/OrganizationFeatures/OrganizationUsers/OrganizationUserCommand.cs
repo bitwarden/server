@@ -33,7 +33,7 @@ public abstract class OrganizationUserCommand
             return;
         }
 
-        if (oldType == OrganizationUserType.Custom || newType == OrganizationUserType.Custom)
+        if ((oldType == OrganizationUserType.Custom || newType == OrganizationUserType.Custom) && !await _currentContext.OrganizationCustom(organizationId))
         {
             throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
         }

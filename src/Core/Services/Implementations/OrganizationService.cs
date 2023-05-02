@@ -1621,59 +1621,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
-        OrganizationUserType? oldType)
-    {
-        if (await _currentContext.OrganizationOwner(organizationId))
-        {
-            return;
-        }
-
-        if (oldType == OrganizationUserType.Owner || newType == OrganizationUserType.Owner)
-        {
-            throw new BadRequestException("Only an Owner can configure another Owner's account.");
-        }
-
-        if (await _currentContext.OrganizationAdmin(organizationId))
-        {
-            return;
-        }
-
-        if (oldType == OrganizationUserType.Custom || newType == OrganizationUserType.Custom)
-        {
-            throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
-        }
-
-        if (!await _currentContext.ManageUsers(organizationId))
-        {
-            throw new BadRequestException("Your account does not have permission to manage users.");
-        }
-
-        if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
-        {
-            throw new BadRequestException("Custom users can not manage Admins or Owners.");
-        }
-    }
-
-    private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
-    {
-        if (newType != OrganizationUserType.Custom)
-        {
-            return;
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (!organization.UseCustomPermissions)
-        {
-            throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
-        }
-    }
-
     private async Task ValidateDeleteOrganizationAsync(Organization organization)
     {
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
