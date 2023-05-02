@@ -32,7 +32,6 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class OrganizationServiceTests
 {
-    // [Fact]
     [Theory, PaidOrganizationCustomize, BitAutoData]
     public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Guid userId,
         Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
@@ -647,6 +646,78 @@ public class OrganizationServiceTests
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithCustomPermission_WhenCustomSavingUserHasPermission_Passes(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { savingUser });
+        currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
+        currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
+        currentContext.AccessReports(savingUser.OrganizationId).Returns(true);
+
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithCustomPermission_WhenCustomSavingUserDoesNotHavePermission_Throws(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { savingUser });
+        currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
+        currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
+        currentContext.AccessReports(savingUser.OrganizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups));
+        Assert.Contains("custom users can only grant the same custom permissions that they have", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
