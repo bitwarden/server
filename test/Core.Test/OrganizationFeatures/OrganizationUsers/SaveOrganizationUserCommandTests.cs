@@ -58,6 +58,7 @@ public class SaveOrganizationUserCommandTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.AccessAll = false;
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
@@ -65,6 +66,13 @@ public class SaveOrganizationUserCommandTests
         organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .ReplaceAsync(newUserData, collections);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .UpdateGroupsAsync(newUserData.Id, groups);
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogOrganizationUserEventAsync(newUserData, EventType.OrganizationUser_Updated);
     }
 
     [Theory, BitAutoData]
