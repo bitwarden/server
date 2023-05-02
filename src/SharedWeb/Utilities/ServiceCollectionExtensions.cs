@@ -184,7 +184,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<ILookupClient>(_ =>
         {
-            var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15) };
+            var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15), TcpOnly = true };
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
