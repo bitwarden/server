@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Enums;
 
 namespace Bit.Core.Auth.Models.Api.Request.AuthRequest;

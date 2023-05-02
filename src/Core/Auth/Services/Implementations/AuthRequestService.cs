@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Exceptions;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Context;
@@ -51,8 +51,8 @@ public class AuthRequestService : IAuthRequestService
     public async Task<AuthRequest?> GetValidatedAuthRequestAsync(Guid id, string code)
     {
         var authRequest = await _authRequestRepository.GetByIdAsync(id);
-        if (authRequest == null || 
-            !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code) || 
+        if (authRequest == null ||
+            !CoreHelpers.FixedTimeEquals(authRequest.AccessCode, code) ||
             authRequest.GetExpirationDate() < DateTime.UtcNow)
         {
             return null;
