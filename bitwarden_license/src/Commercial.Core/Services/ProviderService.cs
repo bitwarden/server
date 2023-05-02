@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -31,13 +32,14 @@ public class ProviderService : IProviderService
     private readonly IUserService _userService;
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
+    private readonly IInviteOrganizationUserCommand _inviteOrganizationUserCommand;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext, IInviteOrganizationUserCommand inviteOrganizationUserCommand)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -51,6 +53,7 @@ public class ProviderService : IProviderService
         _globalSettings = globalSettings;
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
+        _inviteOrganizationUserCommand = inviteOrganizationUserCommand;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
@@ -402,7 +405,7 @@ public class ProviderService : IProviderService
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Created);
 
-        await _organizationService.InviteUsersAsync(organization.Id, user.Id,
+        await _inviteOrganizationUserCommand.InviteUsersAsync(organization.Id, user.Id,
             new (OrganizationUserInvite, string)[]
             {
                 (

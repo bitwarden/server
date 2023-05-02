@@ -8,6 +8,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Import.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
@@ -37,7 +38,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
-    private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IImportOrganizationCommand _importOrganizationCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -60,12 +61,13 @@ public class OrganizationsControllerTests : IDisposable
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
         _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
+        _importOrganizationCommand = Substitute.For<IImportOrganizationCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
             _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
-            _cloudGetOrganizationLicenseQuery, _globalSettings);
+            _cloudGetOrganizationLicenseQuery, _importOrganizationCommand, _globalSettings);
     }
 
     public void Dispose()

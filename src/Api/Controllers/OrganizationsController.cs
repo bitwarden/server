@@ -15,6 +15,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.Import.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
@@ -46,6 +47,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IImportOrganizationCommand _importOrganizationCommand;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -65,6 +67,7 @@ public class OrganizationsController : Controller
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
+        IImportOrganizationCommand importOrganizationCommand,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -83,6 +86,7 @@ public class OrganizationsController : Controller
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
+        _importOrganizationCommand = importOrganizationCommand;
         _globalSettings = globalSettings;
     }
 
@@ -450,7 +454,7 @@ public class OrganizationsController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.ImportAsync(
+        await _importOrganizationCommand.ImportAsync(
             orgIdGuid,
             userId.Value,
             model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),

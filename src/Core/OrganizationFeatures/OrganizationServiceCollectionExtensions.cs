@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.OrganizationFeatures.Import;
+using Bit.Core.OrganizationFeatures.Import.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
@@ -39,6 +41,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
+        services.AddOrganizationImportCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
     }
@@ -100,6 +103,11 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
+    }
+
+    private static void AddOrganizationImportCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IImportOrganizationCommand, ImportOrganizationCommand>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
