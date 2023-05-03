@@ -102,6 +102,12 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             Name = _mockEncryptedString,
         });
 
+        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
@@ -112,15 +118,13 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
                 {
                     GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
                 },
+                new UserServiceAccountAccessPolicy
+                {
+                    GrantedServiceAccountId = serviceAccount.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                },
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
-
-        var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
-        {
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString,
-        });
 
         var request = new AccessPoliciesCreateRequest
         {
@@ -241,6 +245,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
                 {
                     GrantedProjectId = initData.ProjectId, OrganizationUserId = orgUser.Id, Read = true, Write = true,
                 },
+                new UserServiceAccountAccessPolicy
+                {
+                    GrantedServiceAccountId = initData.ServiceAccountId, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                },
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
@@ -313,6 +321,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
                 new UserProjectAccessPolicy
                 {
                     GrantedProjectId = initData.ProjectId, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                },
+                new UserServiceAccountAccessPolicy
+                {
+                    GrantedServiceAccountId = initData.ServiceAccountId, OrganizationUserId = orgUser.Id, Read = true, Write = true,
                 },
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
@@ -894,6 +906,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
                 new UserProjectAccessPolicy
                 {
                     GrantedProjectId = project.Id, OrganizationUserId = newOrgUser.Id, Read = true, Write = true,
+                },
+                new UserServiceAccountAccessPolicy
+                {
+                    GrantedServiceAccountId = serviceAccount.Id, OrganizationUserId = newOrgUser.Id, Read = true, Write = true,
                 },
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
