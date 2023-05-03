@@ -26,4 +26,3 @@ public class CreateSecretCommandTests
             .CreateAsync(data);
     }
 }
-
