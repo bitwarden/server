@@ -6,6 +6,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
@@ -1279,5 +1280,57 @@ public class OrganizationServiceTests
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
         await eventService.Received()
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, eventSystemUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_WithConfirmedOwner_ReturnsTrue(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), true);
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_ExcludingConfirmedOwner_ReturnsFalse(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid> { owner.Id }, true);
+
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_WithInvitedOwner_ReturnsFalse(Organization organization, [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), true);
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task HasConfirmedOwnersExcept_WithConfirmedProviderUser_IncludeProviderTrue_ReturnsTrue(bool includeProvider, Organization organization, ProviderUserOrganizationDetails providerUserOrganizationDetails, SutProvider<OrganizationService> sutProvider)
+    {
+        providerUserOrganizationDetails.Status = ProviderUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyOrganizationDetailsByOrganizationAsync(organization.Id, ProviderUserStatusType.Confirmed)
+            .Returns(new List<ProviderUserOrganizationDetails> { providerUserOrganizationDetails });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), includeProvider);
+
+        Assert.Equal(includeProvider, result);
     }
 }

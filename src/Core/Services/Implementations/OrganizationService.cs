@@ -1697,7 +1697,7 @@ public class OrganizationService : IOrganizationService
         bool hasOtherOwner = confirmedOwnersIds.Except(organizationUsersId).Any();
         if (!hasOtherOwner && includeProvider)
         {
-            return (await _currentContext.ProviderIdForOrg(organizationId)).HasValue;
+            return (await _providerUserRepository.GetManyOrganizationDetailsByOrganizationAsync(organizationId, ProviderUserStatusType.Confirmed)).Any();
         }
         return hasOtherOwner;
     }
