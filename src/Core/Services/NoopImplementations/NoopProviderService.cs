@@ -7,8 +7,6 @@ namespace Bit.Core.Services;
 
 public class NoopProviderService : IProviderService
 {
-    public Task CreateAsync(string ownerEmail) => throw new NotImplementedException();
-
     public Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key) => throw new NotImplementedException();
 
     public Task UpdateAsync(Provider provider, bool updateBilling = false) => throw new NotImplementedException();
@@ -25,7 +23,9 @@ public class NoopProviderService : IProviderService
 
     public Task<List<Tuple<ProviderUser, string>>> DeleteUsersAsync(Guid providerId, IEnumerable<Guid> providerUserIds, Guid deletingUserId) => throw new NotImplementedException();
 
-    public Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key) => throw new NotImplementedException();
+    public Task AddOrganization(Guid providerId, Guid organizationId, string key) => throw new NotImplementedException();
+
+    public Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds) => throw new NotImplementedException();
 
     public Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId, OrganizationSignup organizationSignup, string clientOwnerEmail, User user) => throw new NotImplementedException();
 
@@ -34,4 +34,5 @@ public class NoopProviderService : IProviderService
     public Task LogProviderAccessToOrganizationAsync(Guid organizationId) => throw new NotImplementedException();
 
     public Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid userId) => throw new NotImplementedException();
+    public Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail) => throw new NotImplementedException();
 }

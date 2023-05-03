@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using Provider = Bit.Core.Entities.Provider.Provider;
 using ProviderUser = Bit.Core.Entities.Provider.ProviderUser;
 
 namespace Bit.Commercial.Core.Test.Services;
@@ -24,26 +25,6 @@ namespace Bit.Commercial.Core.Test.Services;
 [SutProviderCustomize]
 public class ProviderServiceTests
 {
-    [Theory, BitAutoData]
-    public async Task CreateAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
-    {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.CreateAsync(default));
-        Assert.Contains("Invalid owner.", exception.Message);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CreateAsync_Success(User user, SutProvider<ProviderService> sutProvider)
-    {
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        userRepository.GetByEmailAsync(user.Email).Returns(user);
-
-        await sutProvider.Sut.CreateAsync(user.Email);
-
-        await sutProvider.GetDependency<IProviderRepository>().ReceivedWithAnyArgs().CreateAsync(default);
-        await sutProvider.GetDependency<IMailService>().ReceivedWithAnyArgs().SendProviderSetupInviteEmailAsync(default, default, default);
-    }
-
     [Theory, BitAutoData]
     public async Task CompleteSetupAsync_UserIdIsInvalid_Throws(SutProvider<ProviderService> sutProvider)
     {
@@ -227,6 +208,14 @@ public class ProviderServiceTests
 
         var result = await sutProvider.Sut.ResendInvitesAsync(invite);
         Assert.True(result.All(r => r.Item2 == ""));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendProviderSetupInviteEmailAsync_Success(Provider provider, string email, SutProvider<ProviderService> sutProvider)
+    {
+        await sutProvider.Sut.SendProviderSetupInviteEmailAsync(provider, email);
+
+        await sutProvider.GetDependency<IMailService>().Received(1).SendProviderSetupInviteEmailAsync(provider, Arg.Any<string>(), email);
     }
 
     [Theory, BitAutoData]
@@ -429,7 +418,7 @@ public class ProviderServiceTests
 
     [Theory, BitAutoData]
     public async Task AddOrganization_OrganizationAlreadyBelongsToAProvider_Throws(Provider provider,
-        Organization organization, ProviderOrganization po, User user, string key,
+        Organization organization, ProviderOrganization po, string key,
         SutProvider<ProviderService> sutProvider)
     {
         po.OrganizationId = organization.Id;
@@ -438,12 +427,12 @@ public class ProviderServiceTests
             .Returns(po);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, user.Id, key));
+            () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key));
         Assert.Equal("Organization already belongs to a provider.", exception.Message);
     }
 
     [Theory, BitAutoData]
-    public async Task AddOrganization_Success(Provider provider, Organization organization, User user, string key,
+    public async Task AddOrganization_Success(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
@@ -453,12 +442,55 @@ public class ProviderServiceTests
         providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
-        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, user.Id, key);
+        await sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key);
 
         await providerOrganizationRepository.ReceivedWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<IEventService>()
             .Received().LogProviderOrganizationEventAsync(Arg.Any<ProviderOrganization>(),
                 EventType.ProviderOrganization_Added);
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationsToReseller_WithResellerProvider_Success(Provider provider, ICollection<Organization> organizations, SutProvider<ProviderService> sutProvider)
+    {
+        provider.Type = ProviderType.Reseller;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        foreach (var organization in organizations)
+        {
+            organization.PlanType = PlanType.EnterpriseAnnually;
+        }
+
+        var organizationIds = organizations.Select(o => o.Id).ToArray();
+
+        await sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds);
+
+        await providerOrganizationRepository.Received(1).CreateManyAsync(Arg.Is<IEnumerable<ProviderOrganization>>(i => i.All(po => po.ProviderId == provider.Id && organizations.Any(o => o.Id == po.OrganizationId))));
+        await sutProvider.GetDependency<IEventService>().Received(1).LogProviderOrganizationEventsAsync(
+            Arg.Is<IEnumerable<(ProviderOrganization, EventType, DateTime?)>>(events => events.All(e =>
+                e.Item1.ProviderId == provider.Id && organizationIds.Contains(e.Item1.OrganizationId) && e.Item2 == EventType.ProviderOrganization_Added)));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AddOrganizationsToReseller_WithMspProvider_Throws(Provider provider, ICollection<Organization> organizations, SutProvider<ProviderService> sutProvider)
+    {
+        provider.Type = ProviderType.Msp;
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        foreach (var organization in organizations)
+        {
+            organization.PlanType = PlanType.EnterpriseAnnually;
+        }
+
+        var organizationIds = organizations.Select(o => o.Id).ToArray();
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddOrganizationsToReseller(provider.Id, organizationIds));
+        Assert.Contains("Provider must be of type Reseller in order to assign Organizations to it.", exception.Message);
+
+        await providerOrganizationRepository.DidNotReceiveWithAnyArgs().CreateManyAsync(default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogProviderOrganizationEventsAsync(default);
     }
 
     [Theory, BitAutoData]

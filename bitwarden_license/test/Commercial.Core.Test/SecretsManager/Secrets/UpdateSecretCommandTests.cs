@@ -1,6 +1,7 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -34,6 +35,9 @@ public class UpdateSecretCommandTests
     public async Task UpdateAsync_Success(PermissionType permissionType, Secret data, SutProvider<UpdateSecretCommand> sutProvider, Guid userId, Project mockProject)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IProjectRepository>().ProjectsAreInOrganization(default, default).ReturnsForAnyArgs(true);
+
+        mockProject.OrganizationId = data.OrganizationId;
         data.Projects = new List<Project>() { mockProject };
 
         if (permissionType == PermissionType.RunAsAdmin)
@@ -43,7 +47,9 @@ public class UpdateSecretCommandTests
         else
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(data.OrganizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject((Guid)(data.Projects?.First().Id), userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>()
+                .AccessToProjectAsync((Guid)data.Projects?.First().Id, userId, AccessClientType.User)
+                .Returns((true, true));
         }
 
         sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(data.Id).Returns(data);

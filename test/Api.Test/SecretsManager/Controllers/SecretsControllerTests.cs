@@ -61,7 +61,8 @@ public class SecretsControllerTests
         {
             resultSecret.Projects = new List<Core.SecretsManager.Entities.Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+                .Returns((true, true));
         }
 
 
@@ -107,11 +108,14 @@ public class SecretsControllerTests
         {
             resultSecret.OrganizationId = organizationId;
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.NoAccessCheck)
+                .Returns((true, true));
         }
         else
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.User)
+                .Returns((true, true));
         }
 
         await sutProvider.Sut.GetAsync(resultSecret.Id);
@@ -125,6 +129,12 @@ public class SecretsControllerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void CreateSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Project mockProject, Guid userId)
     {
+        // We currently only allow a secret to be in one project at a time
+        if (data.ProjectIds != null && data.ProjectIds.Length > 1)
+        {
+            data.ProjectIds = new Guid[] { data.ProjectIds.ElementAt(0) };
+        }
+
         var resultSecret = data.ToSecret(organizationId);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -136,7 +146,8 @@ public class SecretsControllerTests
         {
             resultSecret.Projects = new List<Core.SecretsManager.Entities.Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.User)
+                .Returns((true, true));
         }
 
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
@@ -152,6 +163,12 @@ public class SecretsControllerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
     public async void UpdateSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId, Guid userId, Project mockProject)
     {
+        // We currently only allow a secret to be in one project at a time
+        if (data.ProjectIds != null && data.ProjectIds.Length > 1)
+        {
+            data.ProjectIds = new Guid[] { data.ProjectIds.ElementAt(0) };
+        }
+
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
         if (permissionType == PermissionType.RunAsAdmin)
@@ -162,7 +179,8 @@ public class SecretsControllerTests
         {
             data.ProjectIds = new Guid[] { mockProject.Id };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+                .Returns((true, true));
         }
 
         var resultSecret = data.ToSecret(secretId);
@@ -188,7 +206,8 @@ public class SecretsControllerTests
         {
             data.FirstOrDefault().Projects = new List<Project>() { mockProject };
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasReadAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+                .Returns((true, true));
         }
 
 

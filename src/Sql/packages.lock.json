@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "dependencies": {
+    ".NETFramework,Version=v4.6": {
+      "Microsoft.NETFramework.ReferenceAssemblies": {
+        "type": "Direct",
+        "requested": "[1.0.0, )",
+        "resolved": "1.0.0",
+        "contentHash": "7D2TMufjGiowmt0E941kVoTIS+GTNzaPopuzM1/1LSaJAdJdBrVP0SkZW7AgDd0a2U1DjsIeaKG1wxGVBNLDMw==",
+        "dependencies": {
+          "Microsoft.NETFramework.ReferenceAssemblies.net46": "1.0.0"
+        }
+      },
+      "Microsoft.NETFramework.ReferenceAssemblies.net46": {
+        "type": "Transitive",
+        "resolved": "1.0.0",
+        "contentHash": "Zhtz+rFItjyGS3jMl9F011VJYLKyW6hwEUMsH/KfM2w0YrxoeFc8gO9iaOxCdN+bJFs/p2a+kHF1vNJ4y2+LfQ=="
+      }
+    }
+  }
+}
