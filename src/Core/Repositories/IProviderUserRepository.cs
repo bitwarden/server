@@ -18,4 +18,5 @@ public interface IProviderUserRepository : IRepository<ProviderUser, Guid>
     Task DeleteManyAsync(IEnumerable<Guid> userIds);
     Task<IEnumerable<ProviderUserPublicKey>> GetManyPublicKeysByProviderUserAsync(Guid providerId, IEnumerable<Guid> Ids);
     Task<int> GetCountByOnlyOwnerAsync(Guid userId);
+    Task<ICollection<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByOrganizationAsync(Guid organizationId, ProviderUserStatusType? status = null);
 }

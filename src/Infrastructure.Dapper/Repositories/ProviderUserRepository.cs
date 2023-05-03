@@ -160,4 +160,17 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
             return results;
         }
     }
+
+    public async Task<ICollection<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByOrganizationAsync(Guid organizationId, ProviderUserStatusType? status = null)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<ProviderUserOrganizationDetails>(
+                "[dbo].[ProviderUserProviderOrganizationDetails_ReadByOrganizationIdStatus]",
+                new { OrganizationId = organizationId, Status = status },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
 }
