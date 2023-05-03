@@ -1,4 +1,4 @@
-﻿using Bit.Core.Identity;
+﻿using Bit.Core.Auth.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 

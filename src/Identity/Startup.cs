@@ -2,8 +2,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using AspNetCoreRateLimit;
 using Bit.Core;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
-using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
