@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Exceptions;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Context;
@@ -167,6 +168,25 @@ public class AuthRequestServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task CreateAuthRequestAsync_NoDeviceType_ThrowsBadRequest(
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequestCreateRequestModel createModel,
+        User user)
+    {
+        user.Email = createModel.Email;
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByEmailAsync(createModel.Email)
+            .Returns(user);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns((DeviceType?)null);
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAuthRequestAsync(createModel));
+    }
+
+    [Theory, BitAutoData]
     public async Task UpdateAuthRequestAsync_ValidResponse_SendsResponse(
         SutProvider<AuthRequestService> sutProvider,
         AuthRequest authRequest)
@@ -306,4 +326,68 @@ public class AuthRequestServiceTests
         await Assert.ThrowsAsync<NotFoundException>(
             async () => await sutProvider.Sut.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId, updateModel));
     }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAuthRequestAsync_InvalidDeviceIdentifier_ThrowsBadRequest(
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequest authRequest)
+    {
+        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
+        authRequest.Approved = null;
+
+        sutProvider.GetDependency<IAuthRequestRepository>()
+            .GetByIdAsync(authRequest.Id)
+            .Returns(authRequest);
+
+        sutProvider.GetDependency<IDeviceRepository>()
+            .GetByIdentifierAsync(Arg.Any<string>(), authRequest.UserId)
+            .Returns((Device?)null);
+
+        var updateModel = new AuthRequestUpdateRequestModel
+        {
+            Key = "test_key",
+            DeviceIdentifier = "invalid_identifier",
+            RequestApproved = true,
+            MasterPasswordHash = "my_hash",
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId, updateModel));
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpdateAuthRequestAsync_AlreadyApprovedOrRejected_ThrowsDuplicateAuthRequestException(
+        SutProvider<AuthRequestService> sutProvider,
+        AuthRequest authRequest)
+    {
+        // Set CreationDate to a valid recent value and Approved to a non-null value
+        authRequest.CreationDate = DateTime.UtcNow.AddMinutes(-10);
+        authRequest.Approved = true;
+
+        sutProvider.GetDependency<IAuthRequestRepository>()
+            .GetByIdAsync(authRequest.Id)
+            .Returns(authRequest);
+
+        var device = new Device
+        {
+            Id = Guid.NewGuid(),
+            Identifier = "test_identifier",
+        };
+
+        sutProvider.GetDependency<IDeviceRepository>()
+            .GetByIdentifierAsync(device.Identifier, authRequest.UserId)
+            .Returns(device);
+
+        var updateModel = new AuthRequestUpdateRequestModel
+        {
+            Key = "test_key",
+            DeviceIdentifier = "test_identifier",
+            RequestApproved = true,
+            MasterPasswordHash = "my_hash",
+        };
+
+        await Assert.ThrowsAsync<DuplicateAuthRequestException>(
+            async () => await sutProvider.Sut.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId, updateModel));
+    }
+
 }
