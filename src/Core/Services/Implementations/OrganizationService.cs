@@ -1028,7 +1028,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
-        if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, includeProvider: true, systemUser))
+        if (!invitedAreAllOwners && !await HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -1584,7 +1584,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Only owners can delete other owners.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true, systemUser))
+        if (!await HasConfirmedOwnersExceptAsync(organizationId, new[] { organizationUserId }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -1681,14 +1681,14 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true, EventSystemUser? systemUser = null)
+    public async Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true)
     {
         var confirmedOwners = await GetConfirmedOwnersAsync(organizationId);
         var confirmedOwnersIds = confirmedOwners.Select(u => u.Id);
         bool hasOtherOwner = confirmedOwnersIds.Except(organizationUsersId).Any();
         if (!hasOtherOwner && includeProvider)
         {
-            return systemUser == EventSystemUser.SCIM ? await _providerOrganizationRepository.GetByOrganizationId(organizationId) != null : (await _currentContext.ProviderIdForOrg(organizationId)).HasValue;
+            return (await _currentContext.ProviderIdForOrg(organizationId)).HasValue;
         }
         return hasOtherOwner;
     }
@@ -2181,7 +2181,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Already revoked.");
         }
 
-        if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }, includeProvider: true, systemUser))
+        if (!await HasConfirmedOwnersExceptAsync(organizationUser.OrganizationId, new[] { organizationUser.Id }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }

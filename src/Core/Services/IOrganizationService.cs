@@ -60,7 +60,7 @@ public interface IOrganizationService
         bool overwriteExisting);
     Task DeleteSsoUserAsync(Guid userId, Guid? organizationId);
     Task<Organization> UpdateOrganizationKeysAsync(Guid orgId, string publicKey, string privateKey);
-    Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true, EventSystemUser? systemUser = null);
+    Task<bool> HasConfirmedOwnersExceptAsync(Guid organizationId, IEnumerable<Guid> organizationUsersId, bool includeProvider = true);
     Task RevokeUserAsync(OrganizationUser organizationUser, Guid? revokingUserId);
     Task RevokeUserAsync(OrganizationUser organizationUser, EventSystemUser systemUser);
     Task<List<Tuple<OrganizationUser, string>>> RevokeUsersAsync(Guid organizationId,
