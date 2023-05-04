@@ -16,8 +16,6 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
 
     private static List<BaseAccessPolicy> ClearGranteeAndGrantedReferences(List<BaseAccessPolicy> accessPolicies)
     {
-        var result = new List<BaseAccessPolicy>();
-
         foreach (var policy in accessPolicies)
         {
             switch (policy)
@@ -25,34 +23,29 @@ public class CreateAccessPoliciesCommand : ICreateAccessPoliciesCommand
                 case UserProjectAccessPolicy ap:
                     ap.GrantedProject = null;
                     ap.User = null;
-                    result.Add(ap);
                     break;
                 case GroupProjectAccessPolicy ap:
                     ap.GrantedProject = null;
                     ap.Group = null;
-                    result.Add(ap);
                     break;
                 case ServiceAccountProjectAccessPolicy ap:
                     ap.GrantedProject = null;
                     ap.ServiceAccount = null;
-                    result.Add(ap);
                     break;
                 case UserServiceAccountAccessPolicy ap:
                     ap.GrantedServiceAccount = null;
                     ap.User = null;
-                    result.Add(ap);
                     break;
                 case GroupServiceAccountAccessPolicy ap:
                     ap.GrantedServiceAccount = null;
                     ap.Group = null;
-                    result.Add(ap);
                     break;
                 default:
                     throw new ArgumentException("Unsupported access policy type provided.", nameof(policy));
             }
         }
 
-        return result;
+        return accessPolicies;
     }
 
     public async Task<IEnumerable<BaseAccessPolicy>> CreateManyAsync(List<BaseAccessPolicy> accessPolicies)
