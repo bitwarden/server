@@ -49,19 +49,13 @@ public class DeleteProjectCommand : IDeleteProjectCommand
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var results = new List<Tuple<Project, String>>(projects.Count);
+        var results = new List<Tuple<Project, string>>(projects.Count);
         var deleteIds = new List<Guid>();
 
         foreach (var project in projects)
         {
-            var hasAccess = accessClient switch
-            {
-                AccessClientType.NoAccessCheck => true,
-                AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
-                _ => false,
-            };
-
-            if (!hasAccess)
+            var access = await _projectRepository.AccessToProjectAsync(project.Id, userId, accessClient);
+            if (!access.Write || accessClient == AccessClientType.ServiceAccount)
             {
                 results.Add(new Tuple<Project, string>(project, "access denied"));
             }

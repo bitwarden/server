@@ -11,7 +11,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.AccessPolicies;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.AccessPolicies;
 
 [SutProviderCustomize]
 [ProjectCustomize]
@@ -136,8 +136,8 @@ public class CreateAccessPoliciesCommandTests
     {
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
-            sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(project.Id, userId)
-                .Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(project.Id, userId, AccessClientType.User)
+                .Returns((true, true));
         }
     }
 
