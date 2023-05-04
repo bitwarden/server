@@ -13,7 +13,7 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.AccessPolicies;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.AccessPolicies;
 
 [SutProviderCustomize]
 [ProjectCustomize]

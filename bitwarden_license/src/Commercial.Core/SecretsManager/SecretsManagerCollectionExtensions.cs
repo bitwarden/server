@@ -1,4 +1,5 @@
-﻿using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
+﻿using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
+using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
 using Bit.Commercial.Core.SecretsManager.Commands.AccessTokens;
 using Bit.Commercial.Core.SecretsManager.Commands.Porting;
 using Bit.Commercial.Core.SecretsManager.Commands.Projects;
@@ -12,6 +13,7 @@ using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Commands.Trash.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Core.SecretsManager;
@@ -20,6 +22,7 @@ public static class SecretsManagerCollectionExtensions
 {
     public static void AddSecretsManagerServices(this IServiceCollection services)
     {
+        services.AddScoped<IAuthorizationHandler, ProjectAuthorizationHandler>();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
         services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();

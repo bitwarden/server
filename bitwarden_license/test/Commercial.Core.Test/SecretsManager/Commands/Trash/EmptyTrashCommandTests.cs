@@ -8,15 +8,15 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.Trash;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.Trash;
 
 [SutProviderCustomize]
 [ProjectCustomize]
-public class RestoreTrashCommandTests
+public class EmptyTrashCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task RestoreTrash_Throws_NotFoundException(Guid orgId, Secret s1, Secret s2, SutProvider<RestoreTrashCommand> sutProvider)
+    public async Task EmptyTrash_Throws_NotFoundException(Guid orgId, Secret s1, Secret s2, SutProvider<EmptyTrashCommand> sutProvider)
     {
         s1.DeletedDate = DateTime.Now;
 
@@ -25,14 +25,14 @@ public class RestoreTrashCommandTests
             .GetManyByOrganizationIdInTrashByIdsAsync(orgId, ids)
             .Returns(new List<Secret> { s1 });
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.RestoreTrash(orgId, ids));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.EmptyTrash(orgId, ids));
 
         await sutProvider.GetDependency<ISecretRepository>().DidNotReceiveWithAnyArgs().RestoreManyByIdAsync(default);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task RestoreTrash_Success(Guid orgId, Secret s1, Secret s2, SutProvider<RestoreTrashCommand> sutProvider)
+    public async Task EmptyTrash_Success(Guid orgId, Secret s1, Secret s2, SutProvider<EmptyTrashCommand> sutProvider)
     {
         s1.DeletedDate = DateTime.Now;
 
@@ -41,8 +41,8 @@ public class RestoreTrashCommandTests
             .GetManyByOrganizationIdInTrashByIdsAsync(orgId, ids)
             .Returns(new List<Secret> { s1, s2 });
 
-        await sutProvider.Sut.RestoreTrash(orgId, ids);
+        await sutProvider.Sut.EmptyTrash(orgId, ids);
 
-        await sutProvider.GetDependency<ISecretRepository>().Received(1).RestoreManyByIdAsync(ids);
+        await sutProvider.GetDependency<ISecretRepository>().Received(1).HardDeleteManyByIdAsync(ids);
     }
 }
