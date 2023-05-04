@@ -22,7 +22,20 @@ public class SsoConfigurationData
 
     public SsoType ConfigType { get; set; }
 
-    public bool KeyConnectorEnabled { get; set; }
+    public MemberDecryptionType MemberDecryptionType { get; set; }
+
+    [Obsolete("Use MemberDecryptionType instead")]
+    public bool KeyConnectorEnabled
+    {
+        get => MemberDecryptionType == MemberDecryptionType.KeyConnector;
+        set
+        {
+            if (value)
+            {
+                MemberDecryptionType = MemberDecryptionType.KeyConnector;
+            }
+        }
+    }
     public string KeyConnectorUrl { get; set; }
 
     // OIDC
