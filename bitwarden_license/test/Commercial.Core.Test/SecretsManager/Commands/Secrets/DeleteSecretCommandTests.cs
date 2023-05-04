@@ -1,6 +1,7 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -11,7 +12,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.SecretsManager.Secrets;
+namespace Bit.Commercial.Core.Test.SecretsManager.Commands.Secrets;
 
 [SutProviderCustomize]
 [ProjectCustomize]
@@ -60,7 +61,8 @@ public class DeleteSecretCommandTests
         else
         {
             sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(mockProject.Id, userId).Returns(true);
+            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(mockProject.Id, userId, AccessClientType.User)
+                .Returns((true, true));
             projects = new List<Project>() { mockProject };
         }
 
