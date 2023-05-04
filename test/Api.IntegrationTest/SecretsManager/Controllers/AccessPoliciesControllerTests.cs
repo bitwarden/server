@@ -532,7 +532,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         Assert.NotNull(result?.Data);
         Assert.NotEmpty(result!.Data);
-        Assert.Equal(serviceAccount.Id.ToString(), result.Data.First(x => x.Id == serviceAccount.Id.ToString()).Id);
+        Assert.Equal(serviceAccount.Id, result.Data.First(x => x.Id == serviceAccount.Id).Id);
     }
 
     [Theory]
@@ -610,7 +610,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         Assert.NotNull(result?.Data);
         Assert.NotEmpty(result!.Data);
-        Assert.Equal(project.Id.ToString(), result.Data.First(x => x.Id == project.Id.ToString()).Id);
+        Assert.Equal(project.Id, result.Data.First(x => x.Id == project.Id).Id);
     }
 
     [Theory]

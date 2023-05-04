@@ -36,7 +36,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         var groupId = ScimApplicationFactory.TestGroupId1;
         var expectedResponse = new ScimGroupResponseModel
         {
-            Id = groupId,
+            Id = Guid.Parse(groupId),
             DisplayName = "Test Group 1",
             ExternalId = "A",
             Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
@@ -86,14 +86,14 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             {
                 new ScimGroupResponseModel
                 {
-                    Id = ScimApplicationFactory.TestGroupId1,
+                    Id = Guid.Parse(ScimApplicationFactory.TestGroupId1),
                     DisplayName = "Test Group 1",
                     ExternalId = "A",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
                 },
                 new ScimGroupResponseModel
                 {
-                    Id = ScimApplicationFactory.TestGroupId2,
+                    Id = Guid.Parse(ScimApplicationFactory.TestGroupId2),
                     DisplayName = "Test Group 2",
                     ExternalId = "B",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
@@ -126,7 +126,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             {
                 new ScimGroupResponseModel
                 {
-                    Id = ScimApplicationFactory.TestGroupId2,
+                    Id = Guid.Parse(ScimApplicationFactory.TestGroupId2),
                     DisplayName = "Test Group 2",
                     ExternalId = "B",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
@@ -159,7 +159,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             {
                 new ScimGroupResponseModel
                 {
-                    Id = ScimApplicationFactory.TestGroupId3,
+                    Id = Guid.Parse(ScimApplicationFactory.TestGroupId3),
                     DisplayName = "Test Group 3",
                     ExternalId = "C",
                     Schemas = new List<string> { ScimConstants.Scim2SchemaGroup }
@@ -234,14 +234,13 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
 
         var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
-        Assert.NotNull(responseModel.Id);
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialGroupCount + 1, databaseContext.Groups.Count());
         Assert.True(databaseContext.Groups.Any(g => g.Name == displayName && g.ExternalId == externalId));
 
         Assert.Equal(_initialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == responseModel.Id && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId1));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == responseModel.Id && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId1));
     }
 
     [Theory]
@@ -304,7 +303,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         };
         var expectedResponse = new ScimGroupResponseModel
         {
-            Id = groupId,
+            Id = Guid.Parse(groupId),
             DisplayName = newGroupName,
             ExternalId = "A",
             Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }

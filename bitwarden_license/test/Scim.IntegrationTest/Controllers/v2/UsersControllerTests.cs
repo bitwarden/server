@@ -35,7 +35,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         var organizationUserId = ScimApplicationFactory.TestOrganizationUserId1;
         var expectedResponse = new ScimUserResponseModel
         {
-            Id = ScimApplicationFactory.TestOrganizationUserId1,
+            Id = Guid.Parse(ScimApplicationFactory.TestOrganizationUserId1),
             DisplayName = "Test User 1",
             ExternalId = "UA",
             Active = true,
@@ -92,7 +92,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             {
                 new ScimUserResponseModel
                 {
-                    Id = ScimApplicationFactory.TestOrganizationUserId1,
+                    Id = Guid.Parse(ScimApplicationFactory.TestOrganizationUserId1),
                     DisplayName = "Test User 1",
                     ExternalId = "UA",
                     Active = true,
@@ -107,7 +107,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
                 },
                 new ScimUserResponseModel
                 {
-                    Id = ScimApplicationFactory.TestOrganizationUserId2,
+                    Id = Guid.Parse(ScimApplicationFactory.TestOrganizationUserId2),
                     DisplayName = "Test User 2",
                     ExternalId = "UB",
                     Active = true,
@@ -147,7 +147,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             {
                 new ScimUserResponseModel
                 {
-                    Id = ScimApplicationFactory.TestOrganizationUserId2,
+                    Id = Guid.Parse(ScimApplicationFactory.TestOrganizationUserId2),
                     DisplayName = "Test User 2",
                     ExternalId = "UB",
                     Active = true,
@@ -187,7 +187,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             {
                 new ScimUserResponseModel
                 {
-                    Id = ScimApplicationFactory.TestOrganizationUserId3,
+                    Id = Guid.Parse(ScimApplicationFactory.TestOrganizationUserId3),
                     DisplayName = "Test User 3",
                     ExternalId = "UC",
                     Active = false,
@@ -274,7 +274,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
-        Assert.NotNull(responseModel.Id);
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialUserCount + 1, databaseContext.OrganizationUsers.Count());
@@ -352,7 +351,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         };
         var expectedResponse = new ScimUserResponseModel
         {
-            Id = ScimApplicationFactory.TestOrganizationUserId2,
+            Id = Guid.Parse(ScimApplicationFactory.TestOrganizationUserId2),
             DisplayName = "Test User 2",
             ExternalId = "UB",
             Active = false,
@@ -387,7 +386,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         };
         var expectedResponse = new ScimUserResponseModel
         {
-            Id = ScimApplicationFactory.TestOrganizationUserId3,
+            Id = Guid.Parse(ScimApplicationFactory.TestOrganizationUserId3),
             DisplayName = "Test User 3",
             ExternalId = "UC",
             Active = true,

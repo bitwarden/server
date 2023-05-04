@@ -16,7 +16,7 @@ public class OrganizationResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(organization));
         }
 
-        Id = organization.Id.ToString();
+        Id = organization.Id;
         Name = organization.Name;
         BusinessName = organization.BusinessName;
         BusinessAddress1 = organization.BusinessAddress1;
@@ -49,7 +49,7 @@ public class OrganizationResponseModel : ResponseModel
         HasPublicAndPrivateKeys = organization.PublicKey != null && organization.PrivateKey != null;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
     public string BusinessName { get; set; }
     public string BusinessAddress1 { get; set; }

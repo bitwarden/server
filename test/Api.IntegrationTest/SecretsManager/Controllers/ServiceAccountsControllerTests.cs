@@ -190,8 +190,8 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
         Assert.NotNull(result);
-        Assert.Equal(serviceAccount.Id.ToString(), result!.Id);
-        Assert.Equal(serviceAccount.OrganizationId.ToString(), result.OrganizationId);
+        Assert.Equal(serviceAccount.Id, result!.Id);
+        Assert.Equal(serviceAccount.OrganizationId, result.OrganizationId);
         Assert.Equal(serviceAccount.Name, result.Name);
         Assert.Equal(serviceAccount.CreationDate, result.CreationDate);
         Assert.Equal(serviceAccount.RevisionDate, result.RevisionDate);
@@ -229,7 +229,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
 
-        var createdServiceAccount = await _serviceAccountRepository.GetByIdAsync(new Guid(result.Id));
+        var createdServiceAccount = await _serviceAccountRepository.GetByIdAsync(result.Id);
         Assert.NotNull(result);
         Assert.Equal(request.Name, createdServiceAccount.Name);
         AssertHelper.AssertRecent(createdServiceAccount.RevisionDate);

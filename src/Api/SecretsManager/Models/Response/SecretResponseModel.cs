@@ -14,8 +14,8 @@ public class SecretResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(secret));
         }
 
-        Id = secret.Id.ToString();
-        OrganizationId = secret.OrganizationId.ToString();
+        Id = secret.Id;
+        OrganizationId = secret.OrganizationId;
         Key = secret.Key;
         Value = secret.Value;
         Note = secret.Note;
@@ -31,9 +31,9 @@ public class SecretResponseModel : ResponseModel
     {
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
 
-    public string OrganizationId { get; set; }
+    public Guid OrganizationId { get; set; }
 
     public string Key { get; set; }
 
