@@ -39,7 +39,7 @@ public class CreateSecretCommand : ICreateSecretCommand
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
+            AccessClientType.User => (await _projectRepository.AccessToProjectAsync(project.Id, userId, accessClient)).Write,
             _ => false,
         };
 

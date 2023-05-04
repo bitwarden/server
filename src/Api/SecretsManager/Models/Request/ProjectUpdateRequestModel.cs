@@ -12,11 +12,10 @@ public class ProjectUpdateRequestModel
 
     public Project ToProject(Guid id)
     {
-        return new Project()
+        return new Project
         {
             Id = id,
             Name = Name,
         };
     }
 }
-
