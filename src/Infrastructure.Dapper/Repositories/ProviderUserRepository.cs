@@ -161,12 +161,12 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
         }
     }
 
-    public async Task<ICollection<ProviderUserOrganizationDetails>> GetManyOrganizationDetailsByOrganizationAsync(Guid organizationId, ProviderUserStatusType? status = null)
+    public async Task<ICollection<ProviderUser>> GetManyByOrganizationAsync(Guid organizationId, ProviderUserStatusType? status = null)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.QueryAsync<ProviderUserOrganizationDetails>(
-                "[dbo].[ProviderUserProviderOrganizationDetails_ReadByOrganizationIdStatus]",
+            var results = await connection.QueryAsync<ProviderUser>(
+                "[dbo].[ProviderUser_ReadByOrganizationIdStatus]",
                 new { OrganizationId = organizationId, Status = status },
                 commandType: CommandType.StoredProcedure);
 

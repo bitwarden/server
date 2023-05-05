@@ -5,6 +5,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
@@ -1321,13 +1322,13 @@ public class OrganizationServiceTests
     [Theory]
     [BitAutoData(true)]
     [BitAutoData(false)]
-    public async Task HasConfirmedOwnersExcept_WithConfirmedProviderUser_IncludeProviderTrue_ReturnsTrue(bool includeProvider, Organization organization, ProviderUserOrganizationDetails providerUserOrganizationDetails, SutProvider<OrganizationService> sutProvider)
+    public async Task HasConfirmedOwnersExcept_WithConfirmedProviderUser_IncludeProviderTrue_ReturnsTrue(bool includeProvider, Organization organization, ProviderUser providerUser, SutProvider<OrganizationService> sutProvider)
     {
-        providerUserOrganizationDetails.Status = ProviderUserStatusType.Confirmed;
+        providerUser.Status = ProviderUserStatusType.Confirmed;
 
         sutProvider.GetDependency<IProviderUserRepository>()
-            .GetManyOrganizationDetailsByOrganizationAsync(organization.Id, ProviderUserStatusType.Confirmed)
-            .Returns(new List<ProviderUserOrganizationDetails> { providerUserOrganizationDetails });
+            .GetManyByOrganizationAsync(organization.Id, ProviderUserStatusType.Confirmed)
+            .Returns(new List<ProviderUser> { providerUser });
 
         var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), includeProvider);
 
