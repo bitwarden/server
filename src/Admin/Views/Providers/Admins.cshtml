@@ -1,4 +1,11 @@
+@using Bit.Admin.Enums;
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
 @model ProviderViewModel
+
+@{
+    var canResendEmailInvite = AccessControlService.UserHasPermission(Permission.Provider_ResendEmailInvite);
+}
+
 <h2>Provider Admins</h2>
 <div class="row">
     <div class="col-8">
@@ -31,7 +38,8 @@
                                 </td>
                                 <td>
                                     @if(admin.Status.Equals(ProviderUserStatusType.Confirmed) 
-                                        && @Model.Provider.Status.Equals(ProviderStatusType.Pending))
+                                        && @Model.Provider.Status.Equals(ProviderStatusType.Pending)
+                                        && canResendEmailInvite)
                                     {
                                         @if(@TempData["InviteResentTo"] != null && @TempData["InviteResentTo"].ToString() == @admin.UserId.Value.ToString())
                                         {
