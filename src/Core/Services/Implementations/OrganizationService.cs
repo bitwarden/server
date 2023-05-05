@@ -1570,11 +1570,11 @@ public class OrganizationService : IOrganizationService
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId,
         EventSystemUser systemUser)
     {
-        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null, systemUser);
+        var orgUser = await RepositoryDeleteUserAsync(organizationId, organizationUserId, null);
         await _eventService.LogOrganizationUserEventAsync(orgUser, EventType.OrganizationUser_Removed, systemUser);
     }
 
-    private async Task<OrganizationUser> RepositoryDeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId, EventSystemUser? systemUser = null)
+    private async Task<OrganizationUser> RepositoryDeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != organizationId)
@@ -2183,7 +2183,7 @@ public class OrganizationService : IOrganizationService
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Revoked, systemUser);
     }
 
-    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser, EventSystemUser? systemUser = null)
+    private async Task RepositoryRevokeUserAsync(OrganizationUser organizationUser)
     {
         if (organizationUser.Status == OrganizationUserStatusType.Revoked)
         {
