@@ -396,8 +396,7 @@ public class OrganizationsController : Controller
         var user = await _userService.GetUserByPrincipalAsync(User);
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
-        if (ssoConfig?.GetData()?.KeyConnectorEnabled == true &&
-            user.UsesKeyConnector)
+        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector && user.UsesKeyConnector)
         {
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }

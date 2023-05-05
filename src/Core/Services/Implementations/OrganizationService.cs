@@ -262,7 +262,7 @@ public class OrganizationService : IOrganizationService
         if (!newPlan.HasKeyConnector && organization.UseKeyConnector)
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
+            if (ssoConfig != null && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector)
             {
                 throw new BadRequestException("Your new plan does not allow the Key Connector feature. " +
                                               "Disable your Key Connector.");
@@ -2153,7 +2153,7 @@ public class OrganizationService : IOrganizationService
     private async Task ValidateDeleteOrganizationAsync(Organization organization)
     {
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-        if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
+        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
             throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
         }

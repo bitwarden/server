@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -1192,7 +1193,7 @@ public class OrganizationServiceTests
         SsoConfig ssoConfig)
     {
         ssoConfig.Enabled = true;
-        ssoConfig.SetData(new SsoConfigurationData { KeyConnectorEnabled = true });
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
         var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();

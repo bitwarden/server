@@ -51,14 +51,14 @@ public class SsoConfigService : ISsoConfigService
             config.CreationDate = now;
         }
 
-        var useKeyConnector = config.GetData().KeyConnectorEnabled;
+        var useKeyConnector = config.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector;
         if (useKeyConnector)
         {
             await VerifyDependenciesAsync(config, organization);
         }
 
         var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
-        var disabledKeyConnector = oldConfig?.GetData()?.KeyConnectorEnabled == true && !useKeyConnector;
+        var disabledKeyConnector = oldConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector && !useKeyConnector;
         if (disabledKeyConnector && await AnyOrgUserHasKeyConnectorEnabledAsync(config.OrganizationId))
         {
             throw new BadRequestException("Key Connector cannot be disabled at this moment.");
@@ -121,8 +121,9 @@ public class SsoConfigService : ISsoConfigService
             await _eventService.LogOrganizationEventAsync(organization, e);
         }
 
-        var keyConnectorEnabled = config.GetData().KeyConnectorEnabled;
-        if (oldConfig?.GetData()?.KeyConnectorEnabled != keyConnectorEnabled)
+        var keyConnectorEnabled = config.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector;
+        var oldKeyConnectorEnabled = oldConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector;
+        if (oldKeyConnectorEnabled != keyConnectorEnabled)
         {
             var e = keyConnectorEnabled
                 ? EventType.Organization_EnabledKeyConnector
