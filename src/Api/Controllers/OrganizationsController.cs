@@ -8,6 +8,8 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Api.SecretsManager;
+using Bit.Core;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -46,6 +48,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationsController(
@@ -65,6 +68,7 @@ public class OrganizationsController : Controller
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
+        IFeatureService featureService,
         GlobalSettings globalSettings)
     {
         _organizationRepository = organizationRepository;
@@ -83,6 +87,7 @@ public class OrganizationsController : Controller
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
+        _featureService = featureService;
         _globalSettings = globalSettings;
     }
 
@@ -676,6 +681,12 @@ public class OrganizationsController : Controller
         if (organization == null)
         {
             throw new NotFoundException();
+        }
+
+        if (model.Data.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption &&
+            !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
+        {
+            throw new BadRequestException(nameof(model.Data.MemberDecryptionType), "Invalid member decryption type.");
         }
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
