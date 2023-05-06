@@ -194,6 +194,7 @@ public class NotificationsApiPushNotificationService : BaseIdentityClientService
     {
         var contextId = GetContextIdentifier(excludeCurrentContext);
         var request = new PushNotificationData<T>(type, payload, contextId);
+        _logger.LogDebug("Sending request payload of {@Request} to {url} and requesting a token from {identity}", request, _globalSettings.BaseServiceUri.InternalNotifications, _globalSettings.BaseServiceUri.InternalIdentity);
         await SendAsync(HttpMethod.Post, "send", request);
     }
 
