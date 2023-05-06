@@ -157,6 +157,12 @@ public static class ServiceCollectionExtensions
                 SsoTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<SsoEmail2faSessionTokenable>(
+                SsoEmail2faSessionTokenable.ClearTextPrefix,
+                SsoEmail2faSessionTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoEmail2faSessionTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -184,7 +190,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ILicensingService, LicensingService>();
         services.AddSingleton<ILookupClient>(_ =>
         {
-            var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15) };
+            var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15), UseTcpOnly = true };
             return new LookupClient(options);
         });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
