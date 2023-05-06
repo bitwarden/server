@@ -20,7 +20,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task ReplaceAsync(CipherDetails cipher);
     Task UpsertAsync(CipherDetails cipher);
     Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
-    Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
+    Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite, DateTime? archivedDate);
     Task UpdateAttachmentAsync(CipherAttachment attachment);
     Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
     Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);

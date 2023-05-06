@@ -195,13 +195,13 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite)
+    public async Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite, DateTime? archivedDate)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[Cipher_UpdatePartial]",
-                new { Id = id, UserId = userId, FolderId = folderId, Favorite = favorite },
+                new { Id = id, UserId = userId, FolderId = folderId, Favorite = favorite, ArchivedDate = archivedDate },
                 commandType: CommandType.StoredProcedure);
         }
     }
@@ -711,8 +711,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         ciphersTable.Columns.Add(creationDateColumn);
         var revisionDateColumn = new DataColumn(nameof(c.RevisionDate), c.RevisionDate.GetType());
         ciphersTable.Columns.Add(revisionDateColumn);
-        var archiveDateColumn = new DataColumn(nameof(c.ArchiveDate), typeof(DateTime));
-        ciphersTable.Columns.Add(archiveDateColumn);
+        var archivedDateColumn = new DataColumn(nameof(c.ArchivedDate), typeof(DateTime));
+        ciphersTable.Columns.Add(archivedDateColumn);
         var deletedDateColumn = new DataColumn(nameof(c.DeletedDate), typeof(DateTime));
         ciphersTable.Columns.Add(deletedDateColumn);
         var repromptColumn = new DataColumn(nameof(c.Reprompt), typeof(short));
@@ -741,7 +741,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[attachmentsColumn] = cipher.Attachments;
             row[creationDateColumn] = cipher.CreationDate;
             row[revisionDateColumn] = cipher.RevisionDate;
-            row[archiveDateColumn] = cipher.ArchiveDate.HasValue ? (object)cipher.ArchiveDate : DBNull.Value;
+            row[archivedDateColumn] = cipher.ArchivedDate.HasValue ? (object)cipher.ArchivedDate : DBNull.Value;
             row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
             row[repromptColumn] = cipher.Reprompt;
 

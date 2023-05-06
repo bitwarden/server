@@ -241,7 +241,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         var cipherId = new Guid(id);
-        await _cipherRepository.UpdatePartialAsync(cipherId, userId, folderId, model.Favorite);
+        await _cipherRepository.UpdatePartialAsync(cipherId, userId, folderId, model.Favorite, model.ArchivedDate);
 
         var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
         var response = new CipherResponseModel(cipher, _globalSettings);

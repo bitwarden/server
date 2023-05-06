@@ -48,6 +48,7 @@ public class CipherRequestModel
             OrganizationId = allowOrgIdSet && hasOrgId ? new Guid(OrganizationId) : (Guid?)null,
             Edit = true,
             ViewPassword = true,
+            ArchivedDate = null
         };
         ToCipherDetails(cipher);
         return cipher;
