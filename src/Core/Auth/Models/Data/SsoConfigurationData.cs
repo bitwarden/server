@@ -27,7 +27,7 @@ public class SsoConfigurationData
     /// <summary>
     /// Legacy property to determine if KeyConnector was enabled.
     /// Kept for backwards compatibility with old configs that will not have
-    /// the new MemberDecryptionType when deserialized from the database.
+    /// the new <see cref="MemberDecryptionType"/> when deserialized from the database.
     /// </summary>
     [Obsolete("Use MemberDecryptionType instead")]
     public bool KeyConnectorEnabled
