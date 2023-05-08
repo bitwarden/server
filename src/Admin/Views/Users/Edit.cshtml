@@ -1,6 +1,22 @@
-﻿@model UserEditModel
+﻿@using Bit.Admin.Enums;
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+@model UserEditModel
 @{
     ViewData["Title"] = "User: " + Model.User.Email;
+
+    var canViewUserInformation = AccessControlService.UserHasPermission(Permission.User_UserInformation_View);
+    var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.User_BillingInformation_View);
+    var canViewGeneral = AccessControlService.UserHasPermission(Permission.User_GeneralDetails_View);
+    var canViewPremium = AccessControlService.UserHasPermission(Permission.User_Premium_View);
+    var canViewLicensing = AccessControlService.UserHasPermission(Permission.User_Licensing_View);
+    var canViewBilling = AccessControlService.UserHasPermission(Permission.User_Billing_View);
+    
+    var canEditPremium = AccessControlService.UserHasPermission(Permission.User_Premium_Edit);
+    var canEditLicensing = AccessControlService.UserHasPermission(Permission.User_Licensing_Edit);
+    var canEditBilling = AccessControlService.UserHasPermission(Permission.User_Billing_Edit);
+    var canLaunchGateway = AccessControlService.UserHasPermission(Permission.User_Billing_LaunchGateway);
+    var canUpgradePremium = AccessControlService.UserHasPermission(Permission.User_UpgradePremium);
+    var canDeleteUser = AccessControlService.UserHasPermission(Permission.User_Delete);
 }
 
 @section Scripts {
@@ -56,66 +72,76 @@
 
 <h1>User <small>@Model.User.Email</small></h1>
 
-<h2>User Information</h2>
-@await Html.PartialAsync("_ViewInformation", Model)
-<h2>Billing Information</h2>
-@await Html.PartialAsync("_BillingInformation", 
-    new BillingInformationModel { BillingInfo = Model.BillingInfo, UserId = Model.User.Id })
-<form method="post" id="edit-form">
+@if (canViewUserInformation)
+{
+    <h2>User Information</h2>
+    @await Html.PartialAsync("_ViewInformation", Model)
+}
+@if (canViewBillingInformation)
+{
+    <h2>Billing Information</h2>
+    @await Html.PartialAsync("_BillingInformation", 
+        new BillingInformationModel { BillingInfo = Model.BillingInfo, UserId = Model.User.Id, Entity = "User" })
+}
+@if (canViewGeneral)
+{
     <h2>General</h2>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="Name"></label>
-                <input type="text" class="form-control" asp-for="Name">
-            </div>
-        </div>
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="Email"></label>
-                <input type="email" class="form-control" asp-for="Email" required>
-            </div>
-        </div>
-    </div>
+    <dl class="row">
+        <dt class="col-sm-4 col-lg-3">Name</dt>
+        <dd class="col-sm-8 col-lg-9">@Model.Name</dd>
+
+        <dt class="col-sm-4 col-lg-3">Email</dt>
+        <dd class="col-sm-8 col-lg-9">@Model.Email</dd>
+    </dl>
     <div class="form-check mb-3">
-        <input type="checkbox" class="form-check-input" asp-for="EmailVerified">
+        <input type="checkbox" class="form-check-input" asp-for="EmailVerified" disabled>
         <label class="form-check-label" asp-for="EmailVerified"></label>
     </div>
-    <h2>Premium</h2>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="MaxStorageGb"></label>
-                <input type="number" class="form-control" asp-for="MaxStorageGb" min="1">
+}
+    <form method="post" id="edit-form">
+    @if (canViewPremium)
+    {
+        <h2>Premium</h2>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="MaxStorageGb"></label>
+                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPremium)'>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="form-check mb-3">
-        <input type="checkbox" class="form-check-input" asp-for="Premium">
-        <label class="form-check-label" asp-for="Premium"></label>
-    </div>
-    <h2>Licensing</h2>
-    <div class="row">
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="LicenseKey"></label>
-                <input type="text" class="form-control" asp-for="LicenseKey">
+        <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" asp-for="Premium" readonly='@(!canUpgradePremium)'>
+            <label class="form-check-label" asp-for="Premium"></label>
+        </div>
+    }
+    @if (canViewLicensing)
+    {
+        <h2>Licensing</h2>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="LicenseKey"></label>
+                    <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="PremiumExpirationDate"></label>
+                    <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate" readonly='@(!canEditLicensing)'>
+                </div>
             </div>
         </div>
-        <div class="col-sm">
-            <div class="form-group">
-                <label asp-for="PremiumExpirationDate"></label>
-                <input type="datetime-local" class="form-control" asp-for="PremiumExpirationDate">
-            </div>
-        </div>
-    </div>
+    }
+@if (canViewBilling)
+{
     <h2>Billing</h2>
     <div class="row">
         <div class="col-md">
             <div class="form-group">
                 <div class="form-group">
                     <label asp-for="Gateway"></label>
-                    <select class="form-control" asp-for="Gateway"
+                    <select class="form-control" asp-for="Gateway" disabled='@(canEditBilling ? null : "disabled")'
                             asp-items="Html.GetEnumSelectList<Bit.Core.Enums.GatewayType>()">
                         <option value="">--</option>
                     </select>
@@ -126,12 +152,15 @@
             <div class="form-group">
                 <label asp-for="GatewayCustomerId"></label>
                 <div class="input-group">
-                    <input type="text" class="form-control" asp-for="GatewayCustomerId">
-                    <div class="input-group-append">
-                        <button class="btn btn-secondary" type="button" id="gateway-customer-link">
-                            <i class="fa fa-external-link"></i>
-                        </button>
-                    </div>
+                    <input type="text" class="form-control" asp-for="GatewayCustomerId" readonly='@(!canEditBilling)'>
+                    @if (canLaunchGateway)
+                    {
+                        <div class="input-group-append">
+                            <button class="btn btn-secondary" type="button" id="gateway-customer-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -139,26 +168,36 @@
             <div class="form-group">
                 <label asp-for="GatewaySubscriptionId"></label>
                 <div class="input-group">
-                    <input type="text" class="form-control" asp-for="GatewaySubscriptionId">
-                    <div class="input-group-append">
-                        <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
-                            <i class="fa fa-external-link"></i>
-                        </button>
-                    </div>
+                    <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
+                    @if (canLaunchGateway)
+                    {
+                        <div class="input-group-append">
+                            <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
+                                <i class="fa fa-external-link"></i>
+                            </button>
+                        </div>
+                    }
                 </div>
             </div>
         </div>
     </div>
+}
 </form>
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
     <div class="ml-auto d-flex">
-        <button class="btn btn-secondary mr-2" type="button" id="upgrade-premium">
-            Upgrade Premium
-        </button>
-        <form asp-action="Delete" asp-route-id="@Model.User.Id"
-              onsubmit="return confirm('Are you sure you want to delete this user?')">
-            <button class="btn btn-danger" type="submit">Delete</button>
-        </form>
+        @if (canUpgradePremium)
+        {
+            <button class="btn btn-secondary mr-2" type="button" id="upgrade-premium">
+                Upgrade Premium
+            </button>
+        }
+        @if (canDeleteUser)
+        {
+            <form asp-action="Delete" asp-route-id="@Model.User.Id"
+                onsubmit="return confirm('Are you sure you want to delete this user?')">
+                <button class="btn btn-danger" type="submit">Delete</button>
+            </form>
+        }
     </div>
 </div>

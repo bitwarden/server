@@ -1,4 +1,7 @@
-﻿using Bit.Admin.Models;
+﻿using Bit.Admin.Enums;
+using Bit.Admin.Models;
+using Bit.Admin.Services;
+using Bit.Admin.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
@@ -36,6 +39,7 @@ public class OrganizationsController : Controller
     private readonly IUserService _userService;
     private readonly IProviderRepository _providerRepository;
     private readonly ILogger<OrganizationsController> _logger;
+    private readonly IAccessControlService _accessControlService;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -54,7 +58,8 @@ public class OrganizationsController : Controller
         IReferenceEventService referenceEventService,
         IUserService userService,
         IProviderRepository providerRepository,
-        ILogger<OrganizationsController> logger)
+        ILogger<OrganizationsController> logger,
+        IAccessControlService accessControlService)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -73,8 +78,10 @@ public class OrganizationsController : Controller
         _userService = userService;
         _providerRepository = providerRepository;
         _logger = logger;
+        _accessControlService = accessControlService;
     }
 
+    [RequirePermission(Permission.Org_List_View)]
     public async Task<IActionResult> Index(string name = null, string userEmail = null, bool? paid = null,
         int page = 1, int count = 25)
     {
@@ -163,8 +170,8 @@ public class OrganizationsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<IActionResult> Edit(Guid id, OrganizationEditModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        model.ToOrganization(organization);
+        var organization = await GetOrganization(id, model);
+
         await _organizationRepository.ReplaceAsync(organization);
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization)
@@ -177,6 +184,7 @@ public class OrganizationsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Org_Delete)]
     public async Task<IActionResult> Delete(Guid id)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
@@ -241,4 +249,57 @@ public class OrganizationsController : Controller
 
         return Json(null);
     }
+    private async Task<Organization> GetOrganization(Guid id, OrganizationEditModel model)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+
+        if (_accessControlService.UserHasPermission(Permission.Org_CheckEnabledBox))
+        {
+            organization.Enabled = model.Enabled;
+        }
+
+        if (_accessControlService.UserHasPermission(Permission.Org_Plan_Edit))
+        {
+            organization.PlanType = model.PlanType.Value;
+            organization.Plan = model.Plan;
+            organization.Seats = model.Seats;
+            organization.MaxAutoscaleSeats = model.MaxAutoscaleSeats;
+            organization.MaxCollections = model.MaxCollections;
+            organization.MaxStorageGb = model.MaxStorageGb;
+
+            //features
+            organization.SelfHost = model.SelfHost;
+            organization.Use2fa = model.Use2fa;
+            organization.UseApi = model.UseApi;
+            organization.UseGroups = model.UseGroups;
+            organization.UsePolicies = model.UsePolicies;
+            organization.UseSso = model.UseSso;
+            organization.UseKeyConnector = model.UseKeyConnector;
+            organization.UseScim = model.UseScim;
+            organization.UseDirectory = model.UseDirectory;
+            organization.UseEvents = model.UseEvents;
+            organization.UseResetPassword = model.UseResetPassword;
+            organization.UseCustomPermissions = model.UseCustomPermissions;
+            organization.UseTotp = model.UseTotp;
+            organization.UsersGetPremium = model.UsersGetPremium;
+            organization.UseSecretsManager = model.UseSecretsManager;
+        }
+
+        if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))
+        {
+            organization.LicenseKey = model.LicenseKey;
+            organization.ExpirationDate = model.ExpirationDate;
+        }
+
+        if (_accessControlService.UserHasPermission(Permission.Org_Billing_Edit))
+        {
+            organization.BillingEmail = model.BillingEmail?.ToLowerInvariant()?.Trim();
+            organization.Gateway = model.Gateway;
+            organization.GatewayCustomerId = model.GatewayCustomerId;
+            organization.GatewaySubscriptionId = model.GatewaySubscriptionId;
+        }
+
+        return organization;
+    }
+
 }
