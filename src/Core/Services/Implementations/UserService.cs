@@ -60,7 +60,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IOrganizationService _organizationService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IWebAuthnRepository _webAuthnRepository;
+    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
 
     public UserService(
@@ -92,7 +92,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IOrganizationService organizationService,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IWebAuthnRepository webAuthnRepository,
+        IWebAuthnCredentialRepository webAuthnRepository,
         IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
         : base(
               store,
@@ -129,7 +129,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _organizationService = organizationService;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
-        _webAuthnRepository = webAuthnRepository;
+        _webAuthnCredentialRepository = webAuthnRepository;
         _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
     }
 
@@ -521,7 +521,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         };
 
         // Get existing keys to exclude
-        var existingKeys = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var excludeCredentials = existingKeys
             .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
             .ToList();
@@ -566,14 +566,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             UserId = user.Id
         };
 
-        await _webAuthnRepository.CreateAsync(credential);
+        await _webAuthnCredentialRepository.CreateAsync(credential);
         return true;
     }
 
     public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        var existingKeys = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var existingCredentials = existingKeys
             .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
             .ToList();
@@ -600,7 +600,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         // TODO: Get options from user record somehow, then clear them
         var options = AssertionOptions.FromJson("");
 
-        var userCredentials = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
         var credential = userCredentials.FirstOrDefault(c => c.DescriptorId == assertionId);
         if (credential == null)
@@ -616,7 +616,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         // Update SignatureCounter
         credential.Counter = (int)assertionVerificationResult.Counter;
-        await _webAuthnRepository.ReplaceAsync(credential);
+        await _webAuthnCredentialRepository.ReplaceAsync(credential);
 
         if (assertionVerificationResult.Status == "ok")
         {

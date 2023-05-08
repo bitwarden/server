@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Auth.Repositories;
 
-public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAuthnCredential, WebAuthnCredential, Guid>, IWebAuthnRepository
+public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAuthnCredential, WebAuthnCredential, Guid>, IWebAuthnCredentialRepository
 {
     public WebAuthnCredentialRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (context) => context.WebAuthnCredentials)

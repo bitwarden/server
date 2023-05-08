@@ -9,7 +9,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
-public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>, IWebAuthnRepository
+public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>, IWebAuthnCredentialRepository
 {
     public WebAuthnCredentialRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)

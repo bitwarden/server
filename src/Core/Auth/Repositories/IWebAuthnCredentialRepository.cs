@@ -3,7 +3,7 @@ using Bit.Core.Repositories;
 
 namespace Bit.Core.Auth.Repositories;
 
-public interface IWebAuthnRepository : IRepository<WebAuthnCredential, Guid>
+public interface IWebAuthnCredentialRepository : IRepository<WebAuthnCredential, Guid>
 {
     Task<ICollection<WebAuthnCredential>> GetManyByUserIdAsync(Guid userId);
 }
