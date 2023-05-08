@@ -56,10 +56,10 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
             .Select(i => i.invite.Type.Value));
         if (invitingUserId.HasValue && inviteTypes.Count > 0)
         {
-            foreach (var type in inviteTypes)
+            foreach (var (invite, _) in invites)
             {
-                await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
-                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, type);
+                await ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null, invite.Permissions);
+                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, invite.Type.Value);
             }
         }
 

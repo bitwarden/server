@@ -46,7 +46,7 @@ public class SaveOrganizationUserCommand : OrganizationUserCommand, ISaveOrganiz
 
         if (savingUserId.HasValue)
         {
-            await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
+            await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
         }
 
         await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);

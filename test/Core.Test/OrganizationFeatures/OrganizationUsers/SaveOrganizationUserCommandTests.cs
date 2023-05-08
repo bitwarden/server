@@ -46,6 +46,7 @@ public class SaveOrganizationUserCommandTests
         OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<SaveOrganizationUserCommand> sutProvider)
     {
@@ -60,6 +61,10 @@ public class SaveOrganizationUserCommandTests
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
         newUserData.AccessAll = false;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
@@ -97,6 +102,7 @@ public class SaveOrganizationUserCommandTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = null;
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
@@ -119,6 +125,7 @@ public class SaveOrganizationUserCommandTests
         OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<SaveOrganizationUserCommand> sutProvider)
     {
@@ -135,6 +142,10 @@ public class SaveOrganizationUserCommandTests
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
         newUserData.Type = newUserType;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
@@ -151,6 +162,7 @@ public class SaveOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<SaveOrganizationUserCommand> sutProvider)
     {
@@ -166,6 +178,10 @@ public class SaveOrganizationUserCommandTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
@@ -176,7 +192,7 @@ public class SaveOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_WithCustomPermission_WhenCustomSavingUserHasPermission_Passes(
+    public async Task SaveUser_WithCustomPermission_WhenSavingUserHasCustomPermission_Passes(
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,

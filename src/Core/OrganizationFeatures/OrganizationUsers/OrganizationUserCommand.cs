@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
@@ -16,7 +17,7 @@ public abstract class OrganizationUserCommand
         _organizationRepository = organizationRepository;
     }
 
-    protected async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType)
+    protected async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
     {
         if (await _currentContext.OrganizationOwner(organizationId))
         {
@@ -33,11 +34,6 @@ public abstract class OrganizationUserCommand
             return;
         }
 
-        if ((oldType == OrganizationUserType.Custom || newType == OrganizationUserType.Custom) && !await _currentContext.OrganizationCustom(organizationId))
-        {
-            throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
-        }
-
         if (!await _currentContext.ManageUsers(organizationId))
         {
             throw new BadRequestException("Your account does not have permission to manage users.");
@@ -46,6 +42,11 @@ public abstract class OrganizationUserCommand
         if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
         {
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
+        }
+
+        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organizationId, permissions))
+        {
+            throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
     }
 
@@ -66,5 +67,85 @@ public abstract class OrganizationUserCommand
         {
             throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
         }
+    }
+
+    private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
+    {
+        if (permissions == null || await _currentContext.OrganizationOwner(organizationId) || await _currentContext.OrganizationAdmin(organizationId))
+        {
+            return true;
+        }
+
+        if (permissions.ManageUsers && !await _currentContext.ManageUsers(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.AccessReports && !await _currentContext.AccessReports(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManageGroups && !await _currentContext.ManageGroups(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManagePolicies && !await _currentContext.ManagePolicies(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManageScim && !await _currentContext.ManageScim(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManageSso && !await _currentContext.ManageSso(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.AccessEventLogs && !await _currentContext.AccessEventLogs(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.AccessImportExport && !await _currentContext.AccessImportExport(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.CreateNewCollections && !await _currentContext.CreateNewCollections(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.DeleteAnyCollection && !await _currentContext.DeleteAnyCollection(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
+        {
+            return false;
+        }
+
+        return true;
     }
 }

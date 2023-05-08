@@ -17,7 +17,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 public class UpdateOrganizationUserGroupsCommandTests
 {
     [Theory, BitAutoData]
-    public async Task SaveUser_Passes(
+    public async Task UpdateUserGroups_Passes(
         OrganizationUser organizationUser,
         IEnumerable<Guid> groupIds,
         SutProvider<UpdateOrganizationUserGroupsCommand> sutProvider)
@@ -31,12 +31,14 @@ public class UpdateOrganizationUserGroupsCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_WithSavingUserId_Passes(
+    public async Task UpdateUserGroups_WithSavingUserId_Passes(
         OrganizationUser organizationUser,
         IEnumerable<Guid> groupIds,
         Guid savingUserId,
         SutProvider<UpdateOrganizationUserGroupsCommand> sutProvider)
     {
+        organizationUser.Permissions = null;
+
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
         currentContext.OrganizationOwner(organizationUser.OrganizationId).Returns(true);
 
@@ -49,15 +51,17 @@ public class UpdateOrganizationUserGroupsCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_WithSavingUserId_WithNoPermission_Throws(
+    public async Task UpdateUserGroups_WithSavingUserId_WithNoPermission_Throws(
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser organizationUser,
         IEnumerable<Guid> groupIds,
         Guid savingUserId,
         SutProvider<UpdateOrganizationUserGroupsCommand> sutProvider)
     {
+        organizationUser.Permissions = null;
+
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateUserGroupsAsync(organizationUser, groupIds, savingUserId));
-        Assert.Contains("configure custom accounts", exception.Message.ToLowerInvariant());
+        Assert.Contains("your account does not have permission to manage users.", exception.Message.ToLowerInvariant());
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpdateGroupsAsync(default, default);

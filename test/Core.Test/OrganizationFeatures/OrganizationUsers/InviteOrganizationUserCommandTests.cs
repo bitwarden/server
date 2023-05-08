@@ -112,7 +112,7 @@ public class InviteOrganizationUserCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
-        Assert.Contains("only owners and admins", exception.Message.ToLowerInvariant());
+        Assert.Contains("your account does not have permission to manage users", exception.Message.ToLowerInvariant());
     }
 
     [Theory]
@@ -302,6 +302,19 @@ public class InviteOrganizationUserCommandTests
         organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new[] { owner });
         currentContext.ManageUsers(organization.Id).Returns(true);
+        currentContext.AccessReports(organization.Id).Returns(true);
+        currentContext.ManageGroups(organization.Id).Returns(true);
+        currentContext.ManagePolicies(organization.Id).Returns(true);
+        currentContext.ManageScim(organization.Id).Returns(true);
+        currentContext.ManageSso(organization.Id).Returns(true);
+        currentContext.AccessEventLogs(organization.Id).Returns(true);
+        currentContext.AccessImportExport(organization.Id).Returns(true);
+        currentContext.CreateNewCollections(organization.Id).Returns(true);
+        currentContext.DeleteAnyCollection(organization.Id).Returns(true);
+        currentContext.DeleteAssignedCollections(organization.Id).Returns(true);
+        currentContext.EditAnyCollection(organization.Id).Returns(true);
+        currentContext.EditAssignedCollections(organization.Id).Returns(true);
+        currentContext.ManageResetPassword(organization.Id).Returns(true);
         organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>()).Returns(true);
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
