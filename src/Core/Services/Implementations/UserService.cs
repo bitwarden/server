@@ -533,7 +533,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             UserVerification = UserVerificationRequirement.Preferred
         };
 
-        // TODO: PRF
+        // TODO: PRF, maybe extension logic should be moved to client since it's gonna need to encrypt
+        // key using PRF output
         var extensions = new AuthenticationExtensionsClientInputs { };
 
         var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
