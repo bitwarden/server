@@ -1,5 +1,6 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Identity;
+﻿using Bit.Admin.Auth.IdentityServer;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -20,7 +21,8 @@ public static class ServiceCollectionExtensions
         var passwordlessIdentityBuilder = services.AddIdentity<IdentityUser, Role>()
             .AddUserStore<TUserStore>()
             .AddRoleStore<RoleStore>()
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddClaimsPrincipalFactory<CustomClaimsPrincipalFactory>();
 
         var regularIdentityBuilder = services.AddIdentityCore<User>()
             .AddUserStore<UserStore>();

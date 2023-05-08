@@ -1,11 +1,14 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Validation;
@@ -35,11 +38,13 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IPolicyService policyService,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
-              organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository)
+            organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+            applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+            userRepository, policyService, tokenDataFactory)
     {
         _userManager = userManager;
         _ssoConfigRepository = ssoConfigRepository;
@@ -71,11 +76,13 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         CustomValidatorRequestContext validatorContext)
     {
         var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
-            ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
+                    ?? context.Result.ValidatedRequest.ClientClaims
+                        ?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
         if (!string.IsNullOrWhiteSpace(email))
         {
             validatorContext.User = await _userManager.FindByEmailAsync(email);
         }
+
         return validatorContext.User != null;
     }
 
@@ -109,6 +116,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse["ApiUseKeyConnector"] = true;
                 context.Result.CustomResponse["ResetMasterPassword"] = false;
             }
+
             return;
         }
 

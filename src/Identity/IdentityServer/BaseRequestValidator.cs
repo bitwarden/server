@@ -3,16 +3,21 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
-using Bit.Core.Models;
 using Bit.Core.Models.Api;
+using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -36,6 +41,8 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly GlobalSettings _globalSettings;
     private readonly IPolicyRepository _policyRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IPolicyService _policyService;
+    private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -52,7 +59,9 @@ public abstract class BaseRequestValidator<T> where T : class
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IPolicyService policyService,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -69,6 +78,8 @@ public abstract class BaseRequestValidator<T> where T : class
         _globalSettings = globalSettings;
         _policyRepository = policyRepository;
         _userRepository = userRepository;
+        _policyService = policyService;
+        _tokenDataFactory = tokenDataFactory;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -86,7 +97,7 @@ public abstract class BaseRequestValidator<T> where T : class
         var twoFactorProvider = request.Raw["TwoFactorProvider"]?.ToString();
         var twoFactorRemember = request.Raw["TwoFactorRemember"]?.ToString() == "1";
         var twoFactorRequest = !string.IsNullOrWhiteSpace(twoFactorToken) &&
-            !string.IsNullOrWhiteSpace(twoFactorProvider);
+                               !string.IsNullOrWhiteSpace(twoFactorProvider);
 
         var valid = await ValidateContextAsync(context, validatorContext);
         var user = validatorContext.User;
@@ -94,6 +105,7 @@ public abstract class BaseRequestValidator<T> where T : class
         {
             await UpdateFailedAuthDetailsAsync(user, false, !validatorContext.KnownDevice);
         }
+
         if (!valid || isBot)
         {
             await BuildErrorResultAsync("Username or password is incorrect. Try again.", false, context, user);
@@ -144,14 +156,16 @@ public abstract class BaseRequestValidator<T> where T : class
                 await BuildErrorResultAsync("No device information provided.", false, context, user);
                 return;
             }
+
             await BuildSuccessResultAsync(user, context, device, twoFactorRequest && twoFactorRemember);
         }
         else
         {
-            SetSsoResult(context, new Dictionary<string, object>
-            {{
-                "ErrorModel", new ErrorResponseModel("SSO authentication is required.")
-            }});
+            SetSsoResult(context,
+                new Dictionary<string, object>
+                {
+                    { "ErrorModel", new ErrorResponseModel("SSO authentication is required.") }
+                });
         }
     }
 
@@ -179,6 +193,7 @@ public abstract class BaseRequestValidator<T> where T : class
             customResponse.Add("Key", user.Key);
         }
 
+        customResponse.Add("MasterPasswordPolicy", await GetMasterPasswordPolicy(user));
         customResponse.Add("ForcePasswordReset", user.ForcePasswordReset);
         customResponse.Add("ResetMasterPassword", string.IsNullOrWhiteSpace(user.MasterPassword));
         customResponse.Add("Kdf", (byte)user.Kdf);
@@ -233,12 +248,23 @@ public abstract class BaseRequestValidator<T> where T : class
             providers.Add(((byte)provider.Key).ToString(), infoDict);
         }
 
-        SetTwoFactorResult(context,
-            new Dictionary<string, object>
-            {
-                { "TwoFactorProviders", providers.Keys },
-                { "TwoFactorProviders2", providers }
-            });
+        var twoFactorResultDict = new Dictionary<string, object>
+        {
+            { "TwoFactorProviders", providers.Keys },
+            { "TwoFactorProviders2", providers },
+            { "MasterPasswordPolicy", await GetMasterPasswordPolicy(user) },
+        };
+
+        // If we have email as a 2FA provider, we might need an SsoEmail2fa Session Token
+        if (enabledProviders.Any(p => p.Key == TwoFactorProviderType.Email))
+        {
+            twoFactorResultDict.Add("SsoEmail2faSessionToken",
+                _tokenDataFactory.Protect(new SsoEmail2faSessionTokenable(user)));
+
+            twoFactorResultDict.Add("Email", user.Email);
+        }
+
+        SetTwoFactorResult(context, twoFactorResultDict);
 
         if (enabledProviders.Count() == 1 && enabledProviders.First().Key == TwoFactorProviderType.Email)
         {
@@ -264,10 +290,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         await Task.Delay(2000); // Delay for brute force.
         SetErrorResult(context,
-            new Dictionary<string, object>
-            {{
-                "ErrorModel", new ErrorResponseModel(message)
-            }});
+            new Dictionary<string, object> { { "ErrorModel", new ErrorResponseModel(message) } });
     }
 
     protected abstract void SetTwoFactorResult(T context, Dictionary<string, object> customResponse);
@@ -288,8 +311,8 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         var individualRequired = _userManager.SupportsUserTwoFactor &&
-            await _userManager.GetTwoFactorEnabledAsync(user) &&
-            (await _userManager.GetValidTwoFactorProvidersAsync(user)).Count > 0;
+                                 await _userManager.GetTwoFactorEnabledAsync(user) &&
+                                 (await _userManager.GetValidTwoFactorProvidersAsync(user)).Count > 0;
 
         Organization firstEnabledOrg = null;
         var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
@@ -338,7 +361,8 @@ public abstract class BaseRequestValidator<T> where T : class
                         PolicyType.RequireSso);
                     // Owners and Admins are exempt from this policy
                     if (orgPolicy != null && orgPolicy.Enabled &&
-                        (_globalSettings.Sso.EnforceSsoPolicyForAllUsers || (userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)))
+                        (_globalSettings.Sso.EnforceSsoPolicyForAllUsers ||
+                         (userOrg.Type != OrganizationUserType.Owner && userOrg.Type != OrganizationUserType.Admin)))
                     {
                         return false;
                     }
@@ -353,7 +377,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private bool OrgUsing2fa(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
     {
         return orgAbilities != null && orgAbilities.ContainsKey(orgId) &&
-            orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
+               orgAbilities[orgId].Enabled && orgAbilities[orgId].Using2fa;
     }
 
     private bool OrgCanUseSso(IDictionary<Guid, OrganizationAbility> orgAbilities, Guid orgId)
@@ -400,6 +424,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 {
                     return false;
                 }
+
                 return await _userManager.VerifyTwoFactorTokenAsync(user,
                     CoreHelpers.CustomProviderName(type), token);
             case TwoFactorProviderType.OrganizationDuo:
@@ -449,18 +474,13 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 else if (type == TwoFactorProviderType.Email)
                 {
-                    return new Dictionary<string, object>
-                    {
-                        ["Email"] = token
-                    };
+                    return new Dictionary<string, object> { ["Email"] = token };
                 }
                 else if (type == TwoFactorProviderType.YubiKey)
                 {
-                    return new Dictionary<string, object>
-                    {
-                        ["Nfc"] = (bool)provider.MetaData["Nfc"]
-                    };
+                    return new Dictionary<string, object> { ["Nfc"] = (bool)provider.MetaData["Nfc"] };
                 }
+
                 return null;
             case TwoFactorProviderType.OrganizationDuo:
                 if (await _organizationDuoWebTokenProvider.CanGenerateTwoFactorTokenAsync(organization))
@@ -471,6 +491,7 @@ public abstract class BaseRequestValidator<T> where T : class
                         ["Signature"] = await _organizationDuoWebTokenProvider.GenerateAsync(organization, user)
                     };
                 }
+
                 return null;
             default:
                 return null;
@@ -565,5 +586,19 @@ public abstract class BaseRequestValidator<T> where T : class
         var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
         var failedLoginCount = user?.FailedLoginCount ?? 0;
         return unknownDevice && failedLoginCeiling > 0 && failedLoginCount == failedLoginCeiling;
+    }
+
+    private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicy(User user)
+    {
+        // Check current context/cache to see if user is in any organizations, avoids extra DB call if not
+        var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
+            .ToList();
+
+        if (!orgs.Any())
+        {
+            return null;
+        }
+
+        return new MasterPasswordPolicyResponseModel(await _policyService.GetMasterPasswordPolicyForUserAsync(user));
     }
 }

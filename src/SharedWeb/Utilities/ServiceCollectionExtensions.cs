@@ -2,23 +2,29 @@
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.IdentityServer;
+using Bit.Core.Auth.LoginFeatures;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
 using Bit.Core.Identity;
 using Bit.Core.IdentityServer;
-using Bit.Core.LoginFeatures;
-using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using DnsClient;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
 using IdentityServer4.Configuration;
@@ -151,6 +157,12 @@ public static class ServiceCollectionExtensions
                 SsoTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<SsoEmail2faSessionTokenable>(
+                SsoEmail2faSessionTokenable.ClearTextPrefix,
+                SsoEmail2faSessionTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoEmail2faSessionTokenable>>>()));
     }
 
     public static void AddDefaultServices(this IServiceCollection services, GlobalSettings globalSettings)
@@ -176,6 +188,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IStripeSyncService, StripeSyncService>();
         services.AddSingleton<IMailService, HandlebarsMailService>();
         services.AddSingleton<ILicensingService, LicensingService>();
+        services.AddSingleton<ILookupClient>(_ =>
+        {
+            var options = new LookupClientOptions { Timeout = TimeSpan.FromSeconds(15), UseTcpOnly = true };
+            return new LookupClient(options);
+        });
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
         services.AddTokenizers();

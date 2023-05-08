@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
@@ -91,6 +92,45 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         }
     }
 
+    public async Task<ICollection<Core.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from o in dbContext.Organizations
+                        where o.PlanType >= PlanType.TeamsMonthly && o.PlanType <= PlanType.EnterpriseAnnually &&
+                              !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                              (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
+                        select o;
+
+            if (!string.IsNullOrWhiteSpace(ownerEmail))
+            {
+                if (dbContext.Database.IsNpgsql())
+                {
+                    query = from o in query
+                            join ou in dbContext.OrganizationUsers
+                                on o.Id equals ou.OrganizationId
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.Type == OrganizationUserType.Owner && EF.Functions.ILike(EF.Functions.Collate(u.Email, "default"), $"{ownerEmail}%")
+                            select o;
+                }
+                else
+                {
+                    query = from o in query
+                            join ou in dbContext.OrganizationUsers
+                                on o.Id equals ou.OrganizationId
+                            join u in dbContext.Users
+                                on ou.UserId equals u.Id
+                            where ou.Type == OrganizationUserType.Owner && EF.Functions.Like(u.Email, $"{ownerEmail}%")
+                            select o;
+                }
+            }
+
+            return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
+        }
+    }
+
     public async Task UpdateStorageAsync(Guid id)
     {
         await OrganizationUpdateStorage(id);
@@ -158,22 +198,14 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var organization = await GetDbSet(dbContext).FindAsync(id);
-            if (organization == null)
-            {
-                return null;
-            }
 
-            var selfHostOrganization = Mapper.Map<SelfHostedOrganizationDetails>(organization);
+            var selfHostedOrganization = await dbContext.Organizations
+                .Where(o => o.Id == id)
+                .AsSplitQuery()
+                .ProjectTo<SelfHostedOrganizationDetails>(Mapper.ConfigurationProvider)
+                .SingleOrDefaultAsync();
 
-            selfHostOrganization.OccupiedSeatCount =
-                organization.OrganizationUsers.Count(ou => ou.Status >= OrganizationUserStatusType.Invited);
-            selfHostOrganization.CollectionCount = organization.Collections?.Count ?? 0;
-            selfHostOrganization.GroupCount = organization?.Groups.Count ?? 0;
-            selfHostOrganization.SsoConfig = organization.SsoConfigs.SingleOrDefault();
-            selfHostOrganization.ScimConnections = organization.Connections.Where(c => c.Type == OrganizationConnectionType.Scim);
-
-            return selfHostOrganization;
+            return selfHostedOrganization;
         }
     }
 }
