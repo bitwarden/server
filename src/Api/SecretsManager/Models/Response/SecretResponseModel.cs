@@ -21,7 +21,7 @@ public class SecretResponseModel : ResponseModel
         Note = secret.Note;
         CreationDate = secret.CreationDate;
         RevisionDate = secret.RevisionDate;
-        Projects = secret.Projects?.Select(p => new InnerProject(p));
+        Projects = secret.Projects?.Select(p => new SecretResponseInnerProject(p));
 
         Read = read;
         Write = write;
@@ -45,21 +45,21 @@ public class SecretResponseModel : ResponseModel
 
     public DateTime RevisionDate { get; set; }
 
-    public IEnumerable<InnerProject> Projects { get; set; }
+    public IEnumerable<SecretResponseInnerProject> Projects { get; set; }
 
     public bool Read { get; set; }
 
     public bool Write { get; set; }
 
-    public class InnerProject
+    public class SecretResponseInnerProject
     {
-        public InnerProject(Project project)
+        public SecretResponseInnerProject(Project project)
         {
             Id = project.Id;
             Name = project.Name;
         }
 
-        public InnerProject()
+        public SecretResponseInnerProject()
         {
         }
 
