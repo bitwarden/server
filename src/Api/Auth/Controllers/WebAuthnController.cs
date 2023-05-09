@@ -1,11 +1,12 @@
-﻿using Bit.Api.Auth.Models.Request;
-using Bit.Api.Auth.Models.Request.Accounts;
+﻿using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Api.Auth.Models.Response.TwoFactor;
+using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
-using Bit.Core.Entities;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Fido2NetLib;
+using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,11 +17,14 @@ namespace Bit.Api.Auth.Controllers;
 public class WebAuthnController : Controller
 {
     private readonly IUserService _userService;
+    private readonly IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> _createOptionsDataProtector;
 
     public WebAuthnController(
-        IUserService userService)
+        IUserService userService,
+        IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> createOptionsDataProtector)
     {
         _userService = userService;
+        _createOptionsDataProtector = createOptionsDataProtector;
     }
 
     [HttpGet("")]
@@ -37,30 +41,34 @@ public class WebAuthnController : Controller
 
     [HttpPost("options")]
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
-    public async Task<CredentialCreateOptions> PostOptions([FromBody] SecretVerificationRequestModel model)
+    public async Task<WebAuthnCredentialCreateOptionsResponseModel> PostOptions([FromBody] SecretVerificationRequestModel model)
     {
         var user = await CheckAsync(model);
-        var reg = await _userService.StartWebAuthnLoginRegistrationAsync(user);
-        return reg;
+        var options = await _userService.StartWebAuthnLoginRegistrationAsync(user);
+
+        var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
+        var token = _createOptionsDataProtector.Protect(tokenable);
+
+        return new WebAuthnCredentialCreateOptionsResponseModel
+        {
+            Options = options,
+            Token = token,
+        };
     }
 
     [HttpPost("")]
     // TODO: Create proper models for this call
-    public async Task<TwoFactorWebAuthnResponseModel> Post([FromBody] TwoFactorWebAuthnRequestModel model)
+    public async Task<TwoFactorWebAuthnResponseModel> Post([FromBody] WebAuthnCredentialRequestModel model)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, model.DeviceResponse);
-        if (!success)
-        {
-            throw new BadRequestException("Unable to complete WebAuthn registration.");
-        }
-        var response = new TwoFactorWebAuthnResponseModel(user);
-        return response;
+        return null;
+        //var user = await CheckAsync(model);
+        //var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, model.DeviceResponse);
+        //if (!success)
+        //{
+        //    throw new BadRequestException("Unable to complete WebAuthn registration.");
+        //}
+        //var response = new TwoFactorWebAuthnResponseModel(user);
+        //return response;
     }
 
     [HttpDelete("{id}")]
@@ -75,7 +83,7 @@ public class WebAuthnController : Controller
         // TODO: Delete
     }
 
-    private async Task<User> CheckAsync(SecretVerificationRequestModel model)
+    private async Task<Core.Entities.User> CheckAsync(SecretVerificationRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
