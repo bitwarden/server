@@ -12,7 +12,7 @@ public static class ClaimsExtensions
     {
         var normalizedClaims = claims.Select(c => (Normalize(c.Type), c.Value)).ToList();
 
-        // Order of prescendence is by passed in names
+        // Order of precedence is by passed in names
         foreach (var name in possibleNames.Select(Normalize))
         {
             // Second by order of claims (find claim by name)

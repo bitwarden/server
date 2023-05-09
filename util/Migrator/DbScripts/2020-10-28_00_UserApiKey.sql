@@ -55,7 +55,7 @@ WHERE
     [ApiKey] IS NULL
 GO
 
--- Change dbo.User.ApiKey to not null to enforece all future users to have one on create
+-- Change dbo.User.ApiKey to not null to enforce all future users to have one on create
 ALTER TABLE
     [dbo].[User]
 ALTER COLUMN
