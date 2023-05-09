@@ -10,27 +10,24 @@
   "profiles": {
     "IIS Express": {
       "commandName": "IISExpress",
-      "launchBrowser": false,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
     "Admin": {
       "commandName": "Project",
-      "launchBrowser": false,
+      "applicationUrl": "http://localhost:62911/",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "http://localhost:62911/"
+      }
     },
     "Admin-SelfHost": {
       "commandName": "Project",
-      "launchBrowser": false,
+      "applicationUrl": "http://localhost:62912/",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "developSelfHosted": "true"
-      },
-      "applicationUrl": "http://localhost:62912/"
+      }
     }
   }
 }

@@ -10,14 +10,12 @@
   "profiles": {
     "IIS Express": {
       "commandName": "IISExpress",
-      "launchBrowser": false,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
     "Identity": {
       "commandName": "Project",
-      "launchBrowser": false,
       "applicationUrl": "http://localhost:33656",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
@@ -25,7 +23,6 @@
     },
     "Identity-SelfHost": {
       "commandName": "Project",
-      "launchBrowser": false,
       "applicationUrl": "http://localhost:33657",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
