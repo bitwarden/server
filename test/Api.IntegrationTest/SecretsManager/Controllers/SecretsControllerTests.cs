@@ -255,7 +255,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             Name = _mockEncryptedString
         });
 
-        var orgUserId = (Guid)orgAdminUser.UserId;
+        var orgUserId = (Guid)orgAdminUser.UserId!;
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
@@ -270,7 +270,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
                     GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id , Read = true, Write = true,
                 },
             };
-            orgUserId = (Guid)orgUser.UserId;
+            orgUserId = (Guid)orgUser.UserId!;
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
 
