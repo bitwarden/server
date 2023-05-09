@@ -546,11 +546,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     }
 
     public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name,
+        CredentialCreateOptions options,
         AuthenticatorAttestationRawResponse attestationResponse)
     {
-        // TODO: Get options from user record somehow, then clear them
-        var options = CredentialCreateOptions.FromJson("");
-
         // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
 

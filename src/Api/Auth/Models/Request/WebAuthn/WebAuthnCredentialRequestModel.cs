@@ -7,6 +7,11 @@ public class WebAuthnCredentialRequestModel
 {
     [Required]
     public AuthenticatorAttestationRawResponse DeviceResponse { get; set; }
+
+    [Required]
     public string Name { get; set; }
+
+    [Required]
+    public string Token { get; set; }
 }
 

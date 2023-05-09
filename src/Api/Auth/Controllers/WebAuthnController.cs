@@ -1,4 +1,5 @@
-﻿using Bit.Api.Auth.Models.Request.Accounts;
+﻿using Amazon.Runtime.Credentials.Internal;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Auth.Models.Response.WebAuthn;
@@ -8,6 +9,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
@@ -60,15 +62,21 @@ public class WebAuthnController : Controller
     // TODO: Create proper models for this call
     public async Task<TwoFactorWebAuthnResponseModel> Post([FromBody] WebAuthnCredentialRequestModel model)
     {
-        return null;
-        //var user = await CheckAsync(model);
-        //var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, model.DeviceResponse);
-        //if (!success)
-        //{
-        //    throw new BadRequestException("Unable to complete WebAuthn registration.");
-        //}
-        //var response = new TwoFactorWebAuthnResponseModel(user);
-        //return response;
+        var user = await _userService.GetUserByPrincipalAsync(User);
+
+        var tokenable = _createOptionsDataProtector.Unprotect(model.Token);
+        if (!tokenable.TokenIsValid(user))
+        {
+            throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
+        }
+
+        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, tokenable.Options, model.DeviceResponse);
+        if (!success)
+        {
+            throw new BadRequestException("Unable to complete WebAuthn registration.");
+        }
+        var response = new TwoFactorWebAuthnResponseModel(user);
+        return response;
     }
 
     [HttpDelete("{id}")]
