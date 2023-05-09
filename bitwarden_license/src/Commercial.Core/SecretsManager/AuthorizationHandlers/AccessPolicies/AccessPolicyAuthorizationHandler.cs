@@ -46,7 +46,7 @@ public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolic
                 await CanDeleteAccessPolicyAsync(context, requirement, resource);
                 break;
             default:
-                throw new ArgumentException("Unsupported project operation requirement type provided.",
+                throw new ArgumentException("Unsupported operation requirement type provided.",
                     nameof(requirement));
         }
     }
@@ -138,15 +138,15 @@ public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolic
         var projectOrganizationId = resource.GrantedProject?.OrganizationId;
         var serviceAccountOrgId = resource.ServiceAccount?.OrganizationId;
 
-        if (projectOrganizationId == null && resource.GrantedProjectId.HasValue)
+        if (projectOrganizationId == null)
         {
-            var project = await _projectRepository.GetByIdAsync(resource.GrantedProjectId.Value);
+            var project = await _projectRepository.GetByIdAsync(resource.GrantedProjectId!.Value);
             projectOrganizationId = project?.OrganizationId;
         }
 
-        if (serviceAccountOrgId == null && resource.ServiceAccountId.HasValue)
+        if (serviceAccountOrgId == null)
         {
-            var serviceAccount = await _serviceAccountRepository.GetByIdAsync(resource.ServiceAccountId.Value);
+            var serviceAccount = await _serviceAccountRepository.GetByIdAsync(resource.ServiceAccountId!.Value);
             serviceAccountOrgId = serviceAccount?.OrganizationId;
         }
 
@@ -228,7 +228,8 @@ public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolic
 
         var (accessClient, userId) = await GetAccessClientAsync(context, organizationId);
 
-        if (accessClient is AccessClientType.ServiceAccount or AccessClientType.Organization)
+        // Only users and admins should be able to manipulate access policies
+        if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
         {
             return (false, false);
         }
