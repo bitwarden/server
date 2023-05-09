@@ -30,30 +30,30 @@ class GroupUserAuthorizationHandler : AuthorizationHandler<GroupUserOperationReq
         switch (requirement)
         {
             case not null when requirement == GroupUserOperations.Create:
-                CanCreate(context, requirement, resource);
+                await CanCreateAsync(context, requirement, resource);
                 break;
 
             case not null when requirement == GroupUserOperations.Delete:
-                CanDelete(context, requirement, resource);
+                await CanDeleteAsync(context, requirement, resource);
                 break;
         }
 
         await Task.CompletedTask;
     }
 
-    private async Task CanCreate(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
+    private async Task CanCreateAsync(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
         GroupUser resource)
     {
-        CanManage(context, requirement, resource);
+        await CanManageAsync(context, requirement, resource);
     }
 
-    private async Task CanDelete(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
+    private async Task CanDeleteAsync(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
         GroupUser resource)
     {
-        CanManage(context, requirement, resource);
+        await CanManageAsync(context, requirement, resource);
     }
 
-    private async Task CanManage(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
+    private async Task CanManageAsync(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,
         GroupUser resource)
     {
         var group = await _groupRepository.GetByIdAsync(resource.GroupId);
@@ -63,7 +63,6 @@ class GroupUserAuthorizationHandler : AuthorizationHandler<GroupUserOperationReq
             return;
         }
 
-        // TODO: providers need to be included in the claims
         var org = _currentContext.GetOrganization(group.OrganizationId);
         if (org == null)
         {
@@ -72,7 +71,8 @@ class GroupUserAuthorizationHandler : AuthorizationHandler<GroupUserOperationReq
 
         var canAccess = org.Type == OrganizationUserType.Owner ||
                         org.Type == OrganizationUserType.Admin ||
-                        org.Permissions.ManageGroups;
+                        org.Permissions.ManageGroups ||
+                        await _currentContext.ProviderUserForOrgAsync(org.Id);
 
         if (canAccess)
         {

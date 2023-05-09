@@ -29,48 +29,47 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
         switch (requirement)
         {
             case not null when requirement == GroupOperations.Create:
-                CanCreate(context, requirement, resource);
+                await CanCreateAsync(context, requirement, resource);
                 break;
 
             case not null when requirement == GroupOperations.Read:
-                CanRead(context, requirement, resource);
+                await CanReadAsync(context, requirement, resource);
                 break;
 
             case not null when requirement == GroupOperations.Update:
-                CanUpdate(context, requirement, resource);
+                await CanUpdateAsync(context, requirement, resource);
                 break;
 
             case not null when requirement == GroupOperations.Delete:
-                CanDelete(context, requirement, resource);
+                await CanDeleteAsync(context, requirement, resource);
                 break;
         }
 
         await Task.CompletedTask;
     }
 
-    private void CanCreate(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
+    private async Task CanCreateAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
-        CanManage(context, requirement, resource);
+        await CanManageAsync(context, requirement, resource);
     }
 
-    private void CanRead(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
+    private async Task CanReadAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
-        CanManage(context, requirement, resource);
+        await CanManageAsync(context, requirement, resource);
     }
 
-    private void CanUpdate(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
+    private async Task CanUpdateAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
-        CanManage(context, requirement, resource);
+        await CanManageAsync(context, requirement, resource);
     }
 
-    private void CanDelete(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
+    private async Task CanDeleteAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
-        CanManage(context, requirement, resource);
+        await CanManageAsync(context, requirement, resource);
     }
 
-    private void CanManage(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
+    private async Task CanManageAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement, Group resource)
     {
-        // TODO: providers need to be included in the claims
         var org = _currentContext.GetOrganization(resource.OrganizationId);
         if (org == null)
         {
@@ -79,7 +78,8 @@ class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequirement
 
         var canAccess = org.Type == OrganizationUserType.Owner ||
                         org.Type == OrganizationUserType.Admin ||
-                        org.Permissions.ManageGroups;
+                        org.Permissions.ManageGroups ||
+                        await _currentContext.ProviderUserForOrgAsync(org.Id);
 
         if (canAccess)
         {

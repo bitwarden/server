@@ -6,6 +6,12 @@ namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
 class OrganizationAuthorizationHandler : AuthorizationHandler<OrganizationOperationRequirement, CurrentContentOrganization>
 {
+    private readonly ICurrentContext _currentContext;
+
+    public OrganizationAuthorizationHandler(ICurrentContext currentContext)
+    {
+        _currentContext = currentContext;
+    }
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         OrganizationOperationRequirement requirement,
         CurrentContentOrganization? resource)
@@ -19,18 +25,17 @@ class OrganizationAuthorizationHandler : AuthorizationHandler<OrganizationOperat
         switch (requirement)
         {
             case not null when requirement == OrganizationOperations.ReadAllGroups:
-                ReadAllGroups(context, requirement, resource);
+                await ReadAllGroupsAsync(context, requirement, resource);
                 break;
         }
 
         await Task.CompletedTask;
     }
 
-    private void ReadAllGroups(AuthorizationHandlerContext context,
+    private async Task ReadAllGroupsAsync(AuthorizationHandlerContext context,
         OrganizationOperationRequirement requirement,
         CurrentContentOrganization resource)
     {
-        // TODO: providers need to be included in the claims
         var canAccess = resource.Type == OrganizationUserType.Owner ||
                         resource.Type == OrganizationUserType.Admin ||
                         resource.Type == OrganizationUserType.Manager ||
@@ -39,7 +44,8 @@ class OrganizationAuthorizationHandler : AuthorizationHandler<OrganizationOperat
                         resource.Permissions.DeleteAssignedCollections ||
                         resource.Permissions.CreateNewCollections ||
                         resource.Permissions.EditAnyCollection ||
-                        resource.Permissions.DeleteAnyCollection;
+                        resource.Permissions.DeleteAnyCollection ||
+                        await _currentContext.ProviderUserForOrgAsync(resource.Id);
 
         if (canAccess)
         {
