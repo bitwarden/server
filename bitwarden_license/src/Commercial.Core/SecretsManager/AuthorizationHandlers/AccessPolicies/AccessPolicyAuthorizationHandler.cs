@@ -209,7 +209,7 @@ public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolic
             GroupProjectAccessPolicy ap => await GetAccessAsync(context, ap.GrantedProject!.OrganizationId,
                 ap.GrantedProjectId),
             ServiceAccountProjectAccessPolicy ap => await GetAccessAsync(context, ap.GrantedProject!.OrganizationId,
-                ap.GrantedProjectId, ap.ServiceAccountId),
+                ap.GrantedProjectId),
             UserServiceAccountAccessPolicy ap => await GetAccessAsync(context, ap.GrantedServiceAccount!.OrganizationId,
                 serviceAccountIdToCheck: ap.GrantedServiceAccountId),
             GroupServiceAccountAccessPolicy ap => await GetAccessAsync(context,
