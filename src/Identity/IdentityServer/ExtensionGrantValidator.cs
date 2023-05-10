@@ -35,11 +35,12 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         IPolicyRepository policyRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, policyService)
+              userRepository, policyService, tokenDataFactory)
     {
         _userManager = userManager;
         _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
