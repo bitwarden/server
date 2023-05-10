@@ -4,6 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Scim.Groups;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -11,6 +12,8 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
+using Group = Bit.Core.Entities.Group;
+using Organization = Bit.Core.Entities.Organization;
 
 namespace Bit.Scim.Test.Groups;
 
@@ -172,13 +175,26 @@ public class PatchGroupCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task PatchGroup_RemoveSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider, Organization organization, Group group, Guid userId)
+    public async Task PatchGroup_RemoveSingleMember_Success(SutProvider<PatchGroupCommand> sutProvider,
+        Organization organization, Group group, OrganizationUser organizationUser)
     {
         group.OrganizationId = organization.Id;
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(group.Id)
             .Returns(group);
+
+        sutProvider.GetDependency<IGroupRepository>()
+            .GetGroupUserByGroupIdOrganizationUserId(group.Id, organizationUser.Id)
+            .Returns(new GroupUser()
+            {
+                OrganizationUserId = organizationUser.Id,
+                GroupId = group.Id
+            });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
 
         var scimPatchModel = new Models.ScimPatchModel
         {
@@ -187,7 +203,7 @@ public class PatchGroupCommandTests
                 new ScimPatchModel.OperationModel
                 {
                     Op = "remove",
-                    Path = $"members[value eq \"{userId}\"]",
+                    Path = $"members[value eq \"{organizationUser.Id}\"]",
                 }
             },
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -195,7 +211,9 @@ public class PatchGroupCommandTests
 
         await sutProvider.Sut.PatchGroupAsync(organization, group.Id, scimPatchModel);
 
-        await sutProvider.GetDependency<IGroupService>().Received(1).DeleteUserAsync(group, userId, EventSystemUser.SCIM);
+        await sutProvider.GetDependency<IGroupRepository>().Received(1).DeleteUserAsync(group.Id, organizationUser.Id);
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventAsync(organizationUser,
+            EventType.OrganizationUser_UpdatedGroups, EventSystemUser.SCIM);
     }
 
     [Theory]
@@ -252,7 +270,7 @@ public class PatchGroupCommandTests
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().UpdateUsersAsync(default, default);
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyUserIdsByIdAsync(default);
         await sutProvider.GetDependency<IUpdateGroupCommand>().DidNotReceiveWithAnyArgs().UpdateGroupAsync(default, default);
-        await sutProvider.GetDependency<IGroupService>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().DeleteUserAsync(default, default);
     }
 
     [Theory]
