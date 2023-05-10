@@ -26,6 +26,9 @@ public interface IBitAuthorizationService
     /// </summary>
     Task AuthorizeOrThrowAsync(ClaimsPrincipal user, object? resource, IEnumerable<IAuthorizationRequirement> requirements);
 
+    Task AuthorizeOrThrowAsync(ClaimsPrincipal user, IAuthorizationRequirement requirement);
+    Task AuthorizeOrThrowAsync(ClaimsPrincipal user, IEnumerable<IAuthorizationRequirement> requirements);
+
     /// <summary>
     /// Checks if a user meets the specified requirement for the specified resource.
     /// <returns>AuthorizationResult indicating whether the requirement is met or not</returns>

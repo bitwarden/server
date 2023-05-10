@@ -123,7 +123,6 @@ public static class OrganizationServiceCollectionExtensions
 
     private static void AddAuthorizationHandlers(this IServiceCollection services)
     {
-        services.AddScoped<IAuthorizationHandler, OrganizationAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, GroupAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, GroupUserAuthorizationHandler>();
     }

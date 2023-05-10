@@ -75,7 +75,7 @@ public class GroupsController : Controller
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
         var org = _currentContext.GetOrganization(orgId);
-        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, org, OrganizationOperations.ReadAllGroups);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, GroupOperations.ReadAllForOrganization(orgId));
 
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));

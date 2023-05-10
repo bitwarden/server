@@ -18,6 +18,12 @@ public class BitAuthorizationService : IBitAuthorizationService
     public async Task AuthorizeOrThrowAsync(ClaimsPrincipal user, object? resource, IAuthorizationRequirement requirement)
         => await AuthorizeOrThrowAsync(user, resource, new[] { requirement });
 
+    public async Task AuthorizeOrThrowAsync(ClaimsPrincipal user, IAuthorizationRequirement requirement)
+        => await AuthorizeOrThrowAsync(user, null, new[] { requirement });
+
+    public async Task AuthorizeOrThrowAsync(ClaimsPrincipal user, IEnumerable<IAuthorizationRequirement> requirements)
+        => await AuthorizeOrThrowAsync(user, null, requirements);
+
     public async Task AuthorizeOrThrowAsync(ClaimsPrincipal user, object? resource,
         IEnumerable<IAuthorizationRequirement> requirements)
     {
