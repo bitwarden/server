@@ -13,24 +13,24 @@ public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolic
 {
     private readonly ICurrentContext _currentContext;
     private readonly IAccessClientQuery _accessClientQuery;
+    private readonly IGroupRepository _groupRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IGroupRepository _groupRepository;
 
     public AccessPolicyAuthorizationHandler(ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
-        IProjectRepository projectRepository,
-        IServiceAccountRepository serviceAccountRepository,
+        IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository)
+        IProjectRepository projectRepository,
+        IServiceAccountRepository serviceAccountRepository)
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
+        _groupRepository = groupRepository;
+        _organizationUserRepository = organizationUserRepository;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
-        _organizationUserRepository = organizationUserRepository;
-        _groupRepository = groupRepository;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -153,7 +153,8 @@ public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolic
             serviceAccountOrgId = serviceAccount?.OrganizationId;
         }
 
-        if (!serviceAccountOrgId.HasValue || !projectOrganizationId.HasValue || serviceAccountOrgId != projectOrganizationId)
+        if (!serviceAccountOrgId.HasValue || !projectOrganizationId.HasValue ||
+            serviceAccountOrgId != projectOrganizationId)
         {
             return;
         }
