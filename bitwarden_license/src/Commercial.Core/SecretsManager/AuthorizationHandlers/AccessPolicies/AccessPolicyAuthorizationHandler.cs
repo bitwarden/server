@@ -3,8 +3,8 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
@@ -12,22 +12,25 @@ namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicie
 public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolicyOperationRequirement, BaseAccessPolicy>
 {
     private readonly ICurrentContext _currentContext;
-    private readonly IGroupRepository _groupRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IAccessClientQuery _accessClientQuery;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private readonly IUserService _userService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IGroupRepository _groupRepository;
 
-    public AccessPolicyAuthorizationHandler(ICurrentContext currentContext, IUserService userService,
-        IProjectRepository projectRepository, IServiceAccountRepository serviceAccountRepository,
-        IOrganizationUserRepository organizationUserRepository, IGroupRepository groupRepository)
+    public AccessPolicyAuthorizationHandler(ICurrentContext currentContext,
+        IAccessClientQuery accessClientQuery,
+        IProjectRepository projectRepository,
+        IServiceAccountRepository serviceAccountRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
     {
         _currentContext = currentContext;
-        _userService = userService;
-        _organizationUserRepository = organizationUserRepository;
+        _accessClientQuery = accessClientQuery;
         _projectRepository = projectRepository;
-        _groupRepository = groupRepository;
         _serviceAccountRepository = serviceAccountRepository;
+        _organizationUserRepository = organizationUserRepository;
+        _groupRepository = groupRepository;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -226,7 +229,7 @@ public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolic
             return (false, false);
         }
 
-        var (accessClient, userId) = await GetAccessClientAsync(context, organizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, organizationId);
 
         // Only users and admins should be able to manipulate access policies
         if (accessClient != AccessClientType.User && accessClient != AccessClientType.NoAccessCheck)
@@ -258,14 +261,5 @@ public class AccessPolicyAuthorizationHandler : AuthorizationHandler<AccessPolic
         }
 
         throw new ArgumentException("No ID to check provided.");
-    }
-
-    private async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientAsync(
-        AuthorizationHandlerContext context, Guid organizationId)
-    {
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var userId = _userService.GetProperUserId(context.User).Value;
-        return (accessClient, userId);
     }
 }

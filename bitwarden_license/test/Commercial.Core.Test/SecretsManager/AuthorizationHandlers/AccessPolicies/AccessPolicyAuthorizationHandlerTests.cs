@@ -5,12 +5,11 @@ using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -27,19 +26,18 @@ public class AccessPolicyAuthorizationHandlerTests
     private static void SetupCurrentUserPermission(SutProvider<AccessPolicyAuthorizationHandler> sutProvider,
         PermissionType permissionType, Guid organizationId, Guid userId = new())
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(ClientType.User);
 
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+                    (AccessClientType.NoAccessCheck, userId));
                 break;
             case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+                    (AccessClientType.User, userId));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
@@ -292,16 +290,16 @@ public class AccessPolicyAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.GroupServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.GroupServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.UserServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.GroupServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.UserServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.GroupServiceAccountAccessPolicy)]
     public async Task CanCreate_UnsupportedClientTypes_DoesNotSucceed(
-        ClientType clientType,
+        AccessClientType clientType,
         AccessPolicyType accessPolicyType,
         SutProvider<AccessPolicyAuthorizationHandler> sutProvider,
         Guid organizationId,
@@ -316,9 +314,8 @@ public class AccessPolicyAuthorizationHandlerTests
         SetupOrganizationMatch(sutProvider, resource, organizationId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(clientType);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+            (clientType, Guid.NewGuid()));
 
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
@@ -470,10 +467,10 @@ public class AccessPolicyAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(ClientType.ServiceAccount)]
-    [BitAutoData(ClientType.Organization)]
+    [BitAutoData(AccessClientType.ServiceAccount)]
+    [BitAutoData(AccessClientType.Organization)]
     public async Task CanCreate_ServiceAccountProjectAccessPolicy_UnsupportedClientTypes_DoesNotSucceed(
-        ClientType clientType,
+        AccessClientType clientType,
         SutProvider<AccessPolicyAuthorizationHandler> sutProvider, ServiceAccountProjectAccessPolicy resource,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -481,9 +478,8 @@ public class AccessPolicyAuthorizationHandlerTests
         resource.ServiceAccount!.OrganizationId = resource.GrantedProject!.OrganizationId;
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.GrantedProject!.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(clientType);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, resource.ServiceAccount!.OrganizationId).ReturnsForAnyArgs(
+            (clientType, new Guid()));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
@@ -561,18 +557,18 @@ public class AccessPolicyAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.ServiceAccountProjectAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.GroupServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.ServiceAccountProjectAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.GroupServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.ServiceAccountProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.UserServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.GroupServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.ServiceAccountProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.UserServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.GroupServiceAccountAccessPolicy)]
     public async Task CanUpdate_UnsupportedClientTypes_DoesNotSucceed(
-        ClientType clientType,
+        AccessClientType clientType,
         AccessPolicyType accessPolicyType,
         SutProvider<AccessPolicyAuthorizationHandler> sutProvider,
         Guid organizationId,
@@ -585,10 +581,8 @@ public class AccessPolicyAuthorizationHandlerTests
         mockGrantedServiceAccount.OrganizationId = organizationId;
         var resource = CreatePolicy(accessPolicyType, mockGrantedProject, mockGrantedServiceAccount);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(clientType);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
-
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+            (clientType, new Guid()));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
@@ -678,18 +672,18 @@ public class AccessPolicyAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.ServiceAccountProjectAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.ServiceAccount, AccessPolicyType.GroupServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.ServiceAccountProjectAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(ClientType.Organization, AccessPolicyType.GroupServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.ServiceAccountProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.UserServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.ServiceAccount, AccessPolicyType.GroupServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.UserProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.GroupProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.ServiceAccountProjectAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.UserServiceAccountAccessPolicy)]
+    [BitAutoData(AccessClientType.Organization, AccessPolicyType.GroupServiceAccountAccessPolicy)]
     public async Task CanDelete_UnsupportedClientTypes_DoesNotSucceed(
-        ClientType clientType,
+        AccessClientType clientType,
         AccessPolicyType accessPolicyType,
         SutProvider<AccessPolicyAuthorizationHandler> sutProvider,
         Guid organizationId,
@@ -702,10 +696,8 @@ public class AccessPolicyAuthorizationHandlerTests
         mockGrantedServiceAccount.OrganizationId = organizationId;
         var resource = CreatePolicy(accessPolicyType, mockGrantedProject, mockGrantedServiceAccount);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(clientType);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
-
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+            (clientType, new Guid()));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
