@@ -4,11 +4,10 @@ using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -23,20 +22,18 @@ public class ServiceAccountAuthorizationHandlerTests
     private static void SetupPermission(SutProvider<ServiceAccountAuthorizationHandler> sutProvider,
         PermissionType permissionType, Guid organizationId, Guid userId = new())
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
             .Returns(true);
-
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(ClientType.User);
 
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+                    (AccessClientType.NoAccessCheck, userId));
                 break;
             case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+                    (AccessClientType.User, userId));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
@@ -74,7 +71,6 @@ public class ServiceAccountAuthorizationHandlerTests
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
 
         var requirements = typeof(ServiceAccountOperations).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Select(i => (ServiceAccountOperationRequirement)i.GetValue(null));
@@ -106,9 +102,9 @@ public class ServiceAccountAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(ClientType.ServiceAccount)]
-    [BitAutoData(ClientType.Organization)]
-    public async Task CanCreateServiceAccount_NotSupportedClientTypes_DoesNotSucceed(ClientType clientType,
+    [BitAutoData(AccessClientType.ServiceAccount)]
+    [BitAutoData(AccessClientType.Organization)]
+    public async Task CanCreateServiceAccount_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -117,9 +113,8 @@ public class ServiceAccountAuthorizationHandlerTests
             .Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(serviceAccount.OrganizationId)
             .Returns(false);
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(clientType);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, serviceAccount.OrganizationId).ReturnsForAnyArgs(
+            (clientType, new Guid()));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
