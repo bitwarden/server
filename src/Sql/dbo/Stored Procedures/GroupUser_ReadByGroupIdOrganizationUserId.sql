@@ -1,5 +1,5 @@
 CREATE OR ALTER PROCEDURE [dbo].[GroupUser_ReadByGroupIdOrganizationUserId]
-    @Id UNIQUEIDENTIFIER
+    @Id UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER
 AS
 BEGIN
