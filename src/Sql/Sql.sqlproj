@@ -1,30 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <Sdk Name="Microsoft.Build.Sql" Version="0.1.9-preview" />
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <Name>Sql</Name>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectVersion>4.1</ProjectVersion>
     <ProjectGuid>{58554e52-fdec-4832-aff9-302b01e08dca}</ProjectGuid>
     <DSP>Microsoft.Data.Tools.Schema.Sql.SqlAzureV12DatabaseSchemaProvider</DSP>
-    <OutputType>Database</OutputType>
-    <RootPath>
-    </RootPath>
-    <RootNamespace>Sql</RootNamespace>
-    <AssemblyName>Sql</AssemblyName>
     <ModelCollation>1033,CI</ModelCollation>
-    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
-    <DeployToDatabase>True</DeployToDatabase>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <TargetLanguage>CS</TargetLanguage>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <SqlServerVerification>False</SqlServerVerification>
-    <IncludeCompositeObjects>True</IncludeCompositeObjects>
-    <TargetDatabaseSet>True</TargetDatabaseSet>
-    <DefaultCollation>SQL_Latin1_General_CP1_CI_AS</DefaultCollation>
-    <DefaultFilegroup>PRIMARY</DefaultFilegroup>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <OutputPath>bin\Release\</OutputPath>
@@ -488,19 +470,6 @@
     <Build Include="dbo\Stored Procedures\WebAuthnCredential_Update.sql" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_Create.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteById.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_DeleteIfExpired.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_OrganizationDeleted.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByClaimedDomain.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByNextRunDate.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadById.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadByOrganizationId.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadDomainByOrgIdAndDomainName.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_ReadIfExpired.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomain_Update.sql" />
-    <Content Include="dbo\Stored Procedures\OrganizationDomainSsoDetails_ReadByEmail.sql" />
-    <Content Include="dbo\Tables\OrganizationDomain.sql" />
-    <Content Include="dbo\Views\OrganizationDomainView.sql" />
+    <Build Remove="dbo_future/**/*"/>
   </ItemGroup>
 </Project>
