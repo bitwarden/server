@@ -95,7 +95,14 @@ public class WebAuthnController : Controller
         {
             throw new UnauthorizedAccessException();
         }
-        // TODO: Delete
+
+        var credential = await _credentialRepository.GetByIdAsync(new Guid(id), user.Id);
+        if (credential == null)
+        {
+            throw new NotFoundException("Credential not found.");
+        }
+
+        await _credentialRepository.DeleteAsync(credential);
     }
 
     private async Task<Core.Entities.User> CheckAsync(SecretVerificationRequestModel model)

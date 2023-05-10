@@ -19,6 +19,19 @@ public class WebAuthnCredentialRepository : Repository<WebAuthnCredential, Guid>
         : base(connectionString, readOnlyConnectionString)
     { }
 
+    public async Task<WebAuthnCredential> GetByIdAsync(Guid id, Guid userId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<WebAuthnCredential>(
+                $"[{Schema}].[{Table}_ReadByIdUserId]",
+                new { Id = id, UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
+
     public async Task<ICollection<WebAuthnCredential>> GetManyByUserIdAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
