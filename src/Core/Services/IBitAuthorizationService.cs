@@ -26,7 +26,16 @@ public interface IBitAuthorizationService
     /// </summary>
     Task AuthorizeOrThrowAsync(ClaimsPrincipal user, object? resource, IEnumerable<IAuthorizationRequirement> requirements);
 
+    /// <summary>
+    /// Checks if a user meets the specified requirement.
+    /// <exception cref="NotFoundException">If the user does not meet the requirement.</exception>
+    /// </summary>
     Task AuthorizeOrThrowAsync(ClaimsPrincipal user, IAuthorizationRequirement requirement);
+
+    /// <summary>
+    /// Checks if a user meets the specified requirements.
+    /// <exception cref="NotFoundException">If the user does not meet the requirements.</exception>
+    /// </summary>
     Task AuthorizeOrThrowAsync(ClaimsPrincipal user, IEnumerable<IAuthorizationRequirement> requirements);
 
     /// <summary>
