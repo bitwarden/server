@@ -5,6 +5,7 @@ using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -19,26 +20,32 @@ namespace Bit.Api.Auth.Controllers;
 public class WebAuthnController : Controller
 {
     private readonly IUserService _userService;
+    private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> _createOptionsDataProtector;
 
     public WebAuthnController(
         IUserService userService,
+        IWebAuthnCredentialRepository credentialRepository,
         IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> createOptionsDataProtector)
     {
         _userService = userService;
+        _credentialRepository = credentialRepository;
         _createOptionsDataProtector = createOptionsDataProtector;
     }
 
     [HttpGet("")]
     // TODO: Create proper models for this call
-    public async Task<ListResponseModel<TwoFactorWebAuthnResponseModel>> Get()
+    public async Task<ListResponseModel<WebAuthnCredentialResponseModel>> Get()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {
             throw new UnauthorizedAccessException();
         }
-        return new ListResponseModel<TwoFactorWebAuthnResponseModel>(new List<TwoFactorWebAuthnResponseModel> { });
+
+        var credentials = await _credentialRepository.GetManyByUserIdAsync(user.Id);
+
+        return new ListResponseModel<WebAuthnCredentialResponseModel>(credentials.Select(c => new WebAuthnCredentialResponseModel(c)));
     }
 
     [HttpPost("options")]
