@@ -50,7 +50,7 @@ public class CustomRedisProcessingStrategy : RedisProcessingStrategy
             return SkipRateLimitResult();
         }
 
-        // Check if any Redis timeouts have occured recently
+        // Check if any Redis timeouts have occurred recently
         if (_memoryCache.TryGetValue<TimeoutCounter>(_redisTimeoutCacheKey, out var timeoutCounter))
         {
             // We've exceeded threshold, backoff Redis and skip rate limiting for now
