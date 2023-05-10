@@ -13,7 +13,6 @@ CREATE TABLE [dbo].[Cipher] (
     [DeletedDate]    DATETIME2 (7)    NULL,
     [Reprompt]       TINYINT          NULL,
     [Key]            VARCHAR(MAX)     NULL,
-    [ForceKeyRotation] BIT            NOT NULL CONSTRAINT D_Cipher_ForceKeyRotation DEFAULT (0),
     CONSTRAINT [PK_Cipher] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Cipher_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Cipher_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])

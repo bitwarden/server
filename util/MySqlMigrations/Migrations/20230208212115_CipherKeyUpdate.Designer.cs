@@ -106,9 +106,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("Folders")
                         .HasColumnType("longtext");
 
-                    b.Property<bool>("ForceKeyRotation")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<string>("Key")
                         .HasColumnType("longtext");
 

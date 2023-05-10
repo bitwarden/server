@@ -19,7 +19,6 @@ public class CipherRequestModel
     public bool Favorite { get; set; }
     public CipherRepromptType Reprompt { get; set; }
     public string Key { get; set; }
-    public bool ForceKeyRotation { get; set; }
     [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]

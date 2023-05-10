@@ -110,9 +110,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("Folders")
                         .HasColumnType("text");
 
-                    b.Property<bool>("ForceKeyRotation")
-                        .HasColumnType("boolean");
-
                     b.Property<string>("Key")
                         .HasColumnType("text");
 
