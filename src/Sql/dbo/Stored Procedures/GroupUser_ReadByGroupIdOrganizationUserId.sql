@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[GroupUser_ReadByGroupIdOrganizationUserId]
+CREATE PROCEDURE [dbo].[GroupUser_ReadByGroupIdOrganizationUserId]
     @Id UNIQUEIDENTIFIER,
     @OrganizationUserId UNIQUEIDENTIFIER
 AS
