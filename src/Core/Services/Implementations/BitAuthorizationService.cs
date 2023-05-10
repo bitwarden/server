@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.Services;
 
+/// <summary>
+/// A wrapper around the default AuthorizationService implementation, to provide some helper methods and wrap
+/// extension methods so that we can assert calls to them in tests.
+/// </summary>
 public class BitAuthorizationService : IBitAuthorizationService
 {
     private readonly IAuthorizationService _defaultAuthorizationService;

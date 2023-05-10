@@ -21,12 +21,6 @@ class GroupUserAuthorizationHandler : AuthorizationHandler<GroupUserOperationReq
         GroupUserOperationRequirement requirement,
         GroupUser resource)
     {
-        if (resource == null)
-        {
-            context.Fail();
-            return;
-        }
-
         switch (requirement)
         {
             case not null when requirement == GroupUserOperations.Create:
@@ -37,8 +31,6 @@ class GroupUserAuthorizationHandler : AuthorizationHandler<GroupUserOperationReq
                 await CanDeleteAsync(context, requirement, resource);
                 break;
         }
-
-        await Task.CompletedTask;
     }
 
     private async Task CanCreateAsync(AuthorizationHandlerContext context, GroupUserOperationRequirement requirement,

@@ -61,20 +61,15 @@ public class GroupsController : Controller
     public async Task<GroupDetailsResponseModel> GetDetails(Guid orgId, Guid id)
     {
         var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
-        if (groupDetails.group == null)
-        {
-            throw new NotFoundException();
-        }
 
         await _bitAuthorizationService.AuthorizeOrThrowAsync(User, groupDetails.group, GroupOperations.Read);
 
-        return new GroupDetailsResponseModel(groupDetails.Item1, groupDetails.Item2);
+        return new GroupDetailsResponseModel(groupDetails.group, groupDetails.accessSelection);
     }
 
     [HttpGet("")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
-        var org = _currentContext.GetOrganization(orgId);
         await _bitAuthorizationService.AuthorizeOrThrowAsync(User, GroupOperations.ReadAllForOrganization(orgId));
 
         var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
@@ -95,11 +90,10 @@ public class GroupsController : Controller
     [HttpPost("")]
     public async Task<GroupResponseModel> Post(Guid orgId, [FromBody] GroupRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(orgId);
         var group = model.ToGroup(orgId);
-
         await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Create);
 
+        var organization = await _organizationRepository.GetByIdAsync(orgId);
         await _createGroupCommand.CreateGroupAsync(group, organization, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
 
         return new GroupResponseModel(group);
@@ -113,8 +107,8 @@ public class GroupsController : Controller
         await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Update);
 
         var organization = await _organizationRepository.GetByIdAsync(orgId);
-
         await _updateGroupCommand.UpdateGroupAsync(model.ToGroup(group), organization, model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Users);
+
         return new GroupResponseModel(group);
     }
 
@@ -136,7 +130,7 @@ public class GroupsController : Controller
     public async Task Delete(Guid orgId, Guid id)
     {
         var group = await _groupRepository.GetByIdAsync(id);
-        // await _authorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Delete);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Delete);
 
         await _deleteGroupCommand.DeleteAsync(group);
     }

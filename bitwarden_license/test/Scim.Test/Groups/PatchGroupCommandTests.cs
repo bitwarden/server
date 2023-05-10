@@ -12,8 +12,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using Group = Bit.Core.Entities.Group;
-using Organization = Bit.Core.Entities.Organization;
 
 namespace Bit.Scim.Test.Groups;
 
