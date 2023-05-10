@@ -28,12 +28,14 @@ public class ServiceAccountAuthorizationHandlerTests
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
-                    (AccessClientType.NoAccessCheck, userId));
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+                    .ReturnsForAnyArgs(
+                        (AccessClientType.NoAccessCheck, userId));
                 break;
             case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
-                    (AccessClientType.User, userId));
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+                    .ReturnsForAnyArgs(
+                        (AccessClientType.User, userId));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
@@ -113,8 +115,9 @@ public class ServiceAccountAuthorizationHandlerTests
             .Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(serviceAccount.OrganizationId)
             .Returns(false);
-        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, serviceAccount.OrganizationId).ReturnsForAnyArgs(
-            (clientType, new Guid()));
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, serviceAccount.OrganizationId)
+            .ReturnsForAnyArgs(
+                (clientType, new Guid()));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
