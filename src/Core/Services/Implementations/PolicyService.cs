@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Repositories;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -185,7 +186,7 @@ public class PolicyService : IPolicyService
     {
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
-        if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
+        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
             throw new BadRequestException("Key Connector is enabled.");
         }
