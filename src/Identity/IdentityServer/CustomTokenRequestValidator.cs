@@ -130,6 +130,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
             var ssoConfigData = ssoConfig.GetData();
 
+            context.Result.CustomResponse["MemberDecryptionType"] = ssoConfigData.MemberDecryptionType;
+
             if (ssoConfigData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
             {
                 context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
