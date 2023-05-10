@@ -88,7 +88,7 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
 
     public string SubscriberName()
     {
-        return string.IsNullOrWhiteSpace(Name) ? Email : Name;
+        return string.IsNullOrWhiteSpace(Name) ? Email.Substring(0, 30) : Name.Substring(0, 30);
     }
 
     public string BraintreeCustomerIdPrefix()
