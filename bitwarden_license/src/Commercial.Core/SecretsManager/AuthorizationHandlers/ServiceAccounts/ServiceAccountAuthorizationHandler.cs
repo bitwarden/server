@@ -2,8 +2,8 @@
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
@@ -13,14 +13,15 @@ public class
 {
     private readonly ICurrentContext _currentContext;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private readonly IUserService _userService;
+    private readonly IAccessClientQuery _accessClientQuery;
 
-    public ServiceAccountAuthorizationHandler(ICurrentContext currentContext, IUserService userService,
-        IServiceAccountRepository serviceAccountRepository)
+    public ServiceAccountAuthorizationHandler(ICurrentContext currentContext,
+        IServiceAccountRepository serviceAccountRepository,
+        IAccessClientQuery accessClientQuery)
     {
         _currentContext = currentContext;
-        _userService = userService;
         _serviceAccountRepository = serviceAccountRepository;
+        _accessClientQuery = accessClientQuery;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
@@ -52,7 +53,7 @@ public class
     private async Task CanCreateServiceAccountAsync(AuthorizationHandlerContext context,
         ServiceAccountOperationRequirement requirement, ServiceAccount resource)
     {
-        var (accessClient, _) = await GetAccessClientAsync(context, resource.OrganizationId);
+        var (accessClient, _) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
@@ -70,7 +71,7 @@ public class
     private async Task CanReadServiceAccountAsync(AuthorizationHandlerContext context,
         ServiceAccountOperationRequirement requirement, ServiceAccount resource)
     {
-        var (accessClient, userId) = await GetAccessClientAsync(context, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
         var access =
             await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
                 accessClient);
@@ -84,7 +85,7 @@ public class
     private async Task CanUpdateServiceAccountAsync(AuthorizationHandlerContext context,
         ServiceAccountOperationRequirement requirement, ServiceAccount resource)
     {
-        var (accessClient, userId) = await GetAccessClientAsync(context, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
         var access =
             await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
                 accessClient);
@@ -93,14 +94,5 @@ public class
         {
             context.Succeed(requirement);
         }
-    }
-
-    private async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientAsync(
-        AuthorizationHandlerContext context, Guid organizationId)
-    {
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var userId = _userService.GetProperUserId(context.User).Value;
-        return (accessClient, userId);
     }
 }
