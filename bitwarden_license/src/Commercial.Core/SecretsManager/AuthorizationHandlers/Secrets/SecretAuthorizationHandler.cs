@@ -2,8 +2,8 @@
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
@@ -11,15 +11,15 @@ namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
 public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRequirement, Secret>
 {
     private readonly ICurrentContext _currentContext;
+    private readonly IAccessClientQuery _accessClientQuery;
     private readonly IProjectRepository _projectRepository;
     private readonly ISecretRepository _secretRepository;
-    private readonly IUserService _userService;
 
-    public SecretAuthorizationHandler(ICurrentContext currentContext, IUserService userService,
+    public SecretAuthorizationHandler(ICurrentContext currentContext, IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository, ISecretRepository secretRepository)
     {
         _currentContext = currentContext;
-        _userService = userService;
+        _accessClientQuery = accessClientQuery;
         _projectRepository = projectRepository;
         _secretRepository = secretRepository;
     }
@@ -49,7 +49,7 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
     private async Task CanCreateSecretAsync(AuthorizationHandlerContext context,
         SecretOperationRequirement requirement, Secret resource)
     {
-        var (accessClient, userId) = await GetAccessClientAsync(context, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
         var project = resource.Projects?.FirstOrDefault();
 
         if (project == null && accessClient != AccessClientType.NoAccessCheck)
@@ -84,7 +84,7 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
     private async Task CanUpdateSecretAsync(AuthorizationHandlerContext context,
         SecretOperationRequirement requirement, Secret resource)
     {
-        var (accessClient, userId) = await GetAccessClientAsync(context, resource.OrganizationId);
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
 
         // All projects should be apart of the same organization
         if (resource.Projects != null
@@ -119,14 +119,5 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         {
             context.Succeed(requirement);
         }
-    }
-
-    private async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientAsync(
-        AuthorizationHandlerContext context, Guid organizationId)
-    {
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var userId = _userService.GetProperUserId(context.User).Value;
-        return (accessClient, userId);
     }
 }

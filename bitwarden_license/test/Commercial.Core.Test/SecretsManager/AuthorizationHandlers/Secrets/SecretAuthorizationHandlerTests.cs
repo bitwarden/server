@@ -3,11 +3,11 @@ using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
-using Bit.Core.Identity;
+using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -23,14 +23,10 @@ public class SecretAuthorizationHandlerTests
 {
     private static void SetupPermission(SutProvider<SecretAuthorizationHandler> sutProvider,
         PermissionType permissionType, Guid organizationId, Guid userId = new(),
-        ClientType clientType = ClientType.User)
+        AccessClientType clientType = AccessClientType.User)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
             .Returns(true);
-
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(clientType);
 
         sutProvider.GetDependency<IProjectRepository>().ProjectsAreInOrganization(default, default)
             .ReturnsForAnyArgs(true);
@@ -38,10 +34,12 @@ public class SecretAuthorizationHandlerTests
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+                    (AccessClientType.NoAccessCheck, userId));
                 break;
             case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+                    (clientType, userId));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
@@ -77,7 +75,6 @@ public class SecretAuthorizationHandlerTests
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
         var requirements = typeof(SecretOperations).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Select(i => (SecretOperationRequirement)i.GetValue(null));
 
@@ -108,9 +105,9 @@ public class SecretAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(ClientType.ServiceAccount)]
-    [BitAutoData(ClientType.Organization)]
-    public async Task CanCreateSecret_NotSupportedClientTypes_DoesNotSucceed(ClientType clientType,
+    [BitAutoData(AccessClientType.ServiceAccount)]
+    [BitAutoData(AccessClientType.Organization)]
+    public async Task CanCreateSecret_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
@@ -119,7 +116,6 @@ public class SecretAuthorizationHandlerTests
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
                 (true, true));
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
 
@@ -247,9 +243,9 @@ public class SecretAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(ClientType.ServiceAccount)]
-    [BitAutoData(ClientType.Organization)]
-    public async Task CanUpdateSecret_NotSupportedClientTypes_DoesNotSucceed(ClientType clientType,
+    [BitAutoData(AccessClientType.ServiceAccount)]
+    [BitAutoData(AccessClientType.Organization)]
+    public async Task CanUpdateSecret_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
         ClaimsPrincipal claimsPrincipal)
     {
