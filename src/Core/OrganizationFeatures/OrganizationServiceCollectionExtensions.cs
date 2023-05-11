@@ -33,7 +33,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IOrganizationService, OrganizationService>();
         services.AddTokenizers();
         services.AddAuthorizationHandlers();
-        services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
         services.AddOrganizationApiKeyCommandsQueries();
@@ -90,7 +89,6 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
     {
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
-        services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
     }
 

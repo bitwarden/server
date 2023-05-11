@@ -1,6 +1,5 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
@@ -17,9 +16,7 @@ namespace Bit.Api.Controllers;
 public class GroupsController : Controller
 {
     private readonly IGroupRepository _groupRepository;
-    private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly ICurrentContext _currentContext;
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly IBitAuthorizationService _bitAuthorizationService;
@@ -29,20 +26,16 @@ public class GroupsController : Controller
     public GroupsController(
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
-        ICurrentContext currentContext,
         ICreateGroupCommand createGroupCommand,
         IUpdateGroupCommand updateGroupCommand,
-        IDeleteGroupCommand deleteGroupCommand,
         IBitAuthorizationService bitAuthorizationService,
         IOrganizationUserRepository organizationUserRepository,
         IEventService eventService)
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
-        _currentContext = currentContext;
         _createGroupCommand = createGroupCommand;
         _updateGroupCommand = updateGroupCommand;
-        _deleteGroupCommand = deleteGroupCommand;
         _bitAuthorizationService = bitAuthorizationService;
         _organizationUserRepository = organizationUserRepository;
         _eventService = eventService;
@@ -132,7 +125,8 @@ public class GroupsController : Controller
         var group = await _groupRepository.GetByIdAsync(id);
         await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Delete);
 
-        await _deleteGroupCommand.DeleteAsync(group);
+        await _groupRepository.DeleteAsync(group);
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted);
     }
 
     [HttpDelete("")]
@@ -146,7 +140,11 @@ public class GroupsController : Controller
             await _bitAuthorizationService.AuthorizeOrThrowAsync(User, group, GroupOperations.Delete);
         }
 
-        await _deleteGroupCommand.DeleteManyAsync(groups);
+        await _groupRepository.DeleteManyAsync(groups.Select(g => g.Id));
+        await _eventService.LogGroupEventsAsync(
+            groups.Select(g =>
+                (g, EventType.Group_Deleted, (EventSystemUser?)null, (DateTime?)DateTime.UtcNow)
+            ));
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]

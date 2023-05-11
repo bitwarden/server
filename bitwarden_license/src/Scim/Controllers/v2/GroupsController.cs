@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;
@@ -18,7 +18,7 @@ public class GroupsController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IGetGroupsListQuery _getGroupsListQuery;
-    private readonly IDeleteGroupCommand _deleteGroupCommand;
+    private readonly IEventService _eventService;
     private readonly IPatchGroupCommand _patchGroupCommand;
     private readonly IPostGroupCommand _postGroupCommand;
     private readonly IPutGroupCommand _putGroupCommand;
@@ -28,7 +28,7 @@ public class GroupsController : Controller
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
         IGetGroupsListQuery getGroupsListQuery,
-        IDeleteGroupCommand deleteGroupCommand,
+        IEventService eventService,
         IPatchGroupCommand patchGroupCommand,
         IPostGroupCommand postGroupCommand,
         IPutGroupCommand putGroupCommand,
@@ -37,7 +37,7 @@ public class GroupsController : Controller
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
         _getGroupsListQuery = getGroupsListQuery;
-        _deleteGroupCommand = deleteGroupCommand;
+        _eventService = eventService;
         _patchGroupCommand = patchGroupCommand;
         _postGroupCommand = postGroupCommand;
         _putGroupCommand = putGroupCommand;
@@ -103,7 +103,14 @@ public class GroupsController : Controller
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(Guid organizationId, Guid id)
     {
-        await _deleteGroupCommand.DeleteGroupAsync(organizationId, id, EventSystemUser.SCIM);
+        var group = await _groupRepository.GetByIdAsync(id);
+        if (group == null || group.OrganizationId != organizationId)
+        {
+            throw new NotFoundException();
+        }
+
+        await _groupRepository.DeleteAsync(group);
+        await _eventService.LogGroupEventAsync(group, EventType.Group_Deleted, EventSystemUser.SCIM);
         return new NoContentResult();
     }
 }
