@@ -88,7 +88,7 @@ public class CipherService : ICipherService
                 await _cipherRepository.CreateAsync(cipher, collectionIds);
 
                 await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value)));
+                    new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value), _currentContext));
             }
             else
             {
@@ -759,7 +759,7 @@ public class CipherService : ICipherService
         if (org != null)
         {
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.VaultImported, org));
+                new ReferenceEvent(ReferenceEventType.VaultImported, org, _currentContext));
         }
     }
 

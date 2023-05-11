@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -9,7 +10,7 @@ public class ReferenceEvent
 {
     public ReferenceEvent() { }
 
-    public ReferenceEvent(ReferenceEventType type, IReferenceable source)
+    public ReferenceEvent(ReferenceEventType type, IReferenceable source, ICurrentContext currentContext)
     {
         Type = type;
         if (source != null)
@@ -17,6 +18,11 @@ public class ReferenceEvent
             Source = source.IsUser() ? ReferenceEventSource.User : ReferenceEventSource.Organization;
             Id = source.Id;
             ReferenceData = source.ReferenceData;
+        }
+        if (currentContext != null)
+        {
+            ClientId = currentContext.ClientId;
+            ClientVersion = currentContext.ClientVersion;
         }
     }
 
@@ -59,4 +65,7 @@ public class ReferenceEvent
     public string EventRaisedByUser { get; set; }
 
     public bool? SalesAssistedTrialStarted { get; set; }
+
+    public string ClientId { get; set; }
+    public Version? ClientVersion { get; set; }
 }
