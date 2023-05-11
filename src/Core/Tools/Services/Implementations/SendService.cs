@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -267,6 +267,7 @@ public class SendService : ISendService
             SendType = send.Type,
             MaxAccessCount = send.MaxAccessCount,
             HasPassword = !string.IsNullOrWhiteSpace(send.Password),
+            SendHasNotes = send.Data?.Contains("Notes"),
             ClientId = _currentContext.ClientId,
             ClientVersion = _currentContext.ClientVersion
         });

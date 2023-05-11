@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Tools.Entities;
@@ -57,6 +57,8 @@ public class ReferenceEvent
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public SendType? SendType { get; set; }
+
+    public bool? SendHasNotes { get; set; }
 
     public int? MaxAccessCount { get; set; }
 
