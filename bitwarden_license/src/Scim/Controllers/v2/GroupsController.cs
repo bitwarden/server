@@ -106,7 +106,7 @@ public class GroupsController : Controller
         var group = await _groupRepository.GetByIdAsync(id);
         if (group == null || group.OrganizationId != organizationId)
         {
-            throw new NotFoundException();
+            throw new NotFoundException("Group not found.");
         }
 
         await _groupRepository.DeleteAsync(group);
