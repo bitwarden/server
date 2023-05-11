@@ -533,14 +533,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             UserVerification = UserVerificationRequirement.Preferred
         };
 
-        // TODO: PRF, maybe extension logic should be moved to client since it's gonna need to encrypt
-        // key using PRF output
         var extensions = new AuthenticationExtensionsClientInputs { };
 
         var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
             AttestationConveyancePreference.None, extensions);
-
-        // TODO: temp save options to user record somehow
 
         return options;
     }
@@ -549,8 +545,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         CredentialCreateOptions options,
         AuthenticatorAttestationRawResponse attestationResponse)
     {
-        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
+        var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+        if (existingCredentials.Count >= 5)
+        {
+            return false;
+        }
+
+        var existingCredentialIds = existingCredentials.Select(c => c.DescriptorId);
+        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
 
         var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 
