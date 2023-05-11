@@ -1,7 +1,5 @@
-﻿using Amazon.Runtime.Credentials.Internal;
-using Bit.Api.Auth.Models.Request.Accounts;
+﻿using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.Webauthn;
-using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -10,7 +8,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
@@ -34,7 +31,6 @@ public class WebAuthnController : Controller
     }
 
     [HttpGet("")]
-    // TODO: Create proper models for this call
     public async Task<ListResponseModel<WebAuthnCredentialResponseModel>> Get()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
@@ -66,8 +62,7 @@ public class WebAuthnController : Controller
     }
 
     [HttpPost("")]
-    // TODO: Create proper models for this call
-    public async Task<TwoFactorWebAuthnResponseModel> Post([FromBody] WebAuthnCredentialRequestModel model)
+    public async Task Post([FromBody] WebAuthnCredentialRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
@@ -82,8 +77,6 @@ public class WebAuthnController : Controller
         {
             throw new BadRequestException("Unable to complete WebAuthn registration.");
         }
-        var response = new TwoFactorWebAuthnResponseModel(user);
-        return response;
     }
 
     [HttpPost("{id}/delete")]
