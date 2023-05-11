@@ -86,16 +86,10 @@ public class WebAuthnController : Controller
         return response;
     }
 
-    [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
-    public async Task Delete(string id)
+    public async Task Delete(string id, [FromBody] SecretVerificationRequestModel model)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
+        var user = await CheckAsync(model);
         var credential = await _credentialRepository.GetByIdAsync(new Guid(id), user.Id);
         if (credential == null)
         {
