@@ -18,7 +18,9 @@ public static class HubHelpers
         CancellationToken cancellationToken = default(CancellationToken)
     )
     {
+        logger.LogDebug("Deserializing notification: {@notificationJson}", notificationJson);
         var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson);
+        logger.LogDebug("Sending notification to SignalR devices: {@payload}", notification);
         switch (notification.Type)
         {
             case PushType.SyncCipherUpdate:
