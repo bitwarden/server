@@ -19,7 +19,7 @@ public static class HubHelpers
     )
     {
         logger.LogDebug("Deserializing notification: {@notificationJson}", notificationJson);
-        var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson);
+        var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson, _deserializerOptions);
         logger.LogDebug("Sending notification to SignalR devices: {@payload}", notification);
         switch (notification.Type)
         {
