@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -566,7 +564,7 @@ public class CurrentContext : ICurrentContext
         return _providerOrganizationProviderDetails;
     }
 
-    public CurrentContentOrganization? GetOrganization(Guid orgId)
+    public CurrentContentOrganization GetOrganization(Guid orgId)
     {
         return Organizations.Find(o => o.Id == orgId);
     }
