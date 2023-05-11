@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
+using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -15,13 +17,16 @@ using IdentityServer4.Extensions;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
 
+#nullable enable
+
 namespace Bit.Identity.IdentityServer;
 
 public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenRequestValidationContext>,
     ICustomTokenRequestValidator
 {
-    private UserManager<User> _userManager;
+    private readonly UserManager<User> _userManager;
     private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly IFeatureService _featureService;
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
@@ -41,7 +46,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
+        IFeatureService featureService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
             organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
@@ -49,6 +55,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     {
         _userManager = userManager;
         _ssoConfigRepository = ssoConfigRepository;
+        _featureService = featureService;
     }
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -101,6 +108,20 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             }
         }
 
+        // Attempts to find ssoConfigData for a given validate request subject
+        // this is actually guarenteed to pretty often be null, because more than just sso login requests will come
+        // through here
+        var ssoConfigData = await GetSsoConfigurationDataAsync(context.Result.ValidatedRequest.Subject);
+
+        // You can't put this below the user.MasterPassword != null check because TDE users can still have a MasterPassword
+        // It's worth noting that CurrentContext here will build a user in LaunchDarkly that is anonymous but DOES belong
+        // to an organization. So we will not be able to turn this feature on for only a single user, only for an entire 
+        // organization at a time.
+        if (ssoConfigData != null && _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext))
+        {
+            context.Result.CustomResponse["MemberDecryptionType"] = ssoConfigData.MemberDecryptionType;
+        }
+
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
         {
             return;
@@ -122,23 +143,31 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         }
 
         // SSO login
-        var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-        if (organizationClaim?.Value != null)
+        // This does a double check, that ssoConfigData is not null and that it has the KeyConnector member decryption type
+        if (ssoConfigData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
         {
-            var organizationId = new Guid(organizationClaim.Value);
-
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
-            var ssoConfigData = ssoConfig.GetData();
-
-            context.Result.CustomResponse["MemberDecryptionType"] = ssoConfigData.MemberDecryptionType;
-
-            if (ssoConfigData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
-            {
-                context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
-                // Prevent clients redirecting to set-password
-                context.Result.CustomResponse["ResetMasterPassword"] = false;
-            }
+            context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
+            // Prevent clients redirecting to set-password
+            context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
+    }
+
+    private async Task<SsoConfigurationData?> GetSsoConfigurationDataAsync(ClaimsPrincipal? subject)
+    {
+        var organizationClaim = subject?.FindFirstValue("organizationId");
+
+        if (organizationClaim == null || !Guid.TryParse(organizationClaim, out var organizationId))
+        {
+            return null;
+        }
+
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
+        if (ssoConfig == null)
+        {
+            return null;
+        }
+
+        return ssoConfig.GetData();
     }
 
     protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,
