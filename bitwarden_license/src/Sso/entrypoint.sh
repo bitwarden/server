@@ -46,4 +46,9 @@ if [[ $globalSettings__selfHosted == "true" ]]; then
     && update-ca-certificates
 fi
 
+if [ -f "/etc/krb5/bitwarden.keytab" ]; then
+  gosu $USERNAME:$GROUPNAME kinit bitwarden -k -t /etc/krb5/bitwarden.keytab
+fi
+
+
 exec gosu $USERNAME:$GROUPNAME dotnet /app/Sso.dll
