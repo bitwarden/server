@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
@@ -129,7 +130,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
             var ssoConfigData = ssoConfig.GetData();
 
-            if (ssoConfigData is { KeyConnectorEnabled: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+            if (ssoConfigData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
             {
                 context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
                 // Prevent clients redirecting to set-password
