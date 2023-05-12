@@ -75,7 +75,7 @@ public static class HubHelpers
                 var authRequestResponseNotification =
                     JsonSerializer.Deserialize<PushNotificationData<AuthRequestPushNotification>>(
                             notificationJson, _deserializerOptions);
-                logger.LogDebug("Sending AuthRequest notification to SignalR devices registered for {UserId}: {@payload}", authRequestResponseNotification.Payload.UserId.ToString(), authRequestResponseNotification);
+                logger.LogDebug("Sending AuthRequest notification to SignalR devices registered for Group {group}: {@payload}", authRequestResponseNotification.Payload.Id.ToString(), authRequestResponseNotification);
                 await anonymousHubContext.Clients.Group(authRequestResponseNotification.Payload.Id.ToString())
                     .SendAsync("AuthRequestResponseRecieved", authRequestResponseNotification, cancellationToken);
                 break;
