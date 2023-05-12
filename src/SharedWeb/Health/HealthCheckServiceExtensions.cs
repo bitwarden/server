@@ -12,9 +12,7 @@ public static class HealthCheckServiceExtensions
     public static void AddHealthCheckServices(this IServiceCollection services, GlobalSettings globalSettings,
         Action<IHealthChecksBuilder> addBuilder = null)
     {
-        var builder = services.AddHealthChecks()
-            .AddSqlServer(globalSettings.SqlServer.ConnectionString);
-
+        var builder = services.AddHealthChecks();
         addBuilder?.Invoke(builder);
     }
 

@@ -136,21 +136,7 @@ public class Startup
         services.AddCoreLocalizationServices();
 
         //health check
-        services.AddHealthCheckServices(globalSettings, builder =>
-        {
-            var identityUri = new Uri(globalSettings.BaseServiceUri.Identity
-                                      + "/.well-known/openid-configuration");
-
-            builder.AddUrlGroup(identityUri, "identity")
-                .AddRedis(globalSettings.Redis.ConnectionString)
-                .AddAzureQueueStorage(globalSettings.Storage.ConnectionString, name: "storage_queue")
-                .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue")
-                .AddAzureQueueStorage(globalSettings.Notifications.ConnectionString, name: "notifications_queue")
-                .AddAzureServiceBusTopic(_ => globalSettings.ServiceBus.ConnectionString,
-                    _ => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "service_bus")
-                .AddSendGrid(globalSettings.Mail.SendGridApiKey)
-                .AddCheck<AmazonSesHealthCheck>("amazon_ses");
-        });
+        services.AddHealthChecks(globalSettings);
 
 #if OSS
         services.AddOosServices();
