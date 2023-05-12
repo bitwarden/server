@@ -41,8 +41,14 @@ public class SsoConfigurationDataRequest : IValidatableObject
 
     [Required]
     public SsoType ConfigType { get; set; }
+    public MemberDecryptionType MemberDecryptionType { get; set; }
 
-    public bool KeyConnectorEnabled { get; set; }
+    [Obsolete("Use MemberDecryptionType instead")]
+    public bool KeyConnectorEnabled
+    {
+        // Setter is kept for backwards compatibility with older clients that still use this property.
+        set { MemberDecryptionType = value ? MemberDecryptionType.KeyConnector : MemberDecryptionType.MasterPassword; }
+    }
     public string KeyConnectorUrl { get; set; }
 
     // OIDC
@@ -166,7 +172,7 @@ public class SsoConfigurationDataRequest : IValidatableObject
         return new SsoConfigurationData
         {
             ConfigType = ConfigType,
-            KeyConnectorEnabled = KeyConnectorEnabled,
+            MemberDecryptionType = MemberDecryptionType,
             KeyConnectorUrl = KeyConnectorUrl,
             Authority = Authority,
             ClientId = ClientId,

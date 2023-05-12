@@ -37,7 +37,7 @@ internal class CipherBuilder : ISpecimenBuilder
                     .Without(c => c.OrganizationId));
         }
 
-        // Can't test valid Favorites and Folders without creating those values inide each test,
+        // Can't test valid Favorites and Folders without creating those values inside each test,
         // since we won't have any UserIds until the test is running & creating data
         fixture.Customize<Cipher>(c => c
             .Without(e => e.Favorites)
