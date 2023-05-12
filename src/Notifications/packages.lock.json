@@ -23,15 +23,6 @@
           "StackExchange.Redis": "2.2.4"
         }
       },
-      "AspNetCore.HealthChecks.SqlServer": {
-        "type": "Transitive",
-        "resolved": "6.0.2",
-        "contentHash": "Af7ws27DnZZ4bKCiEREm7emSAKEtIiYirEAkI0ixFgK1fwJ99jmMnPC+kU01zfqn3FyCO/gZOUO7WbyVvTPpFg==",
-        "dependencies": {
-          "Microsoft.Data.SqlClient": "3.0.1",
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.0"
-        }
-      },
       "AspNetCoreRateLimit": {
         "type": "Transitive",
         "resolved": "4.0.2",
@@ -760,22 +751,6 @@
           "System.Text.Encodings.Web": "6.0.0",
           "System.Text.Json": "6.0.0"
         }
-      },
-      "Microsoft.Extensions.Diagnostics.HealthChecks": {
-        "type": "Transitive",
-        "resolved": "6.0.0",
-        "contentHash": "ktOGFY2uJ6QqZbLgLZgYg6qWuOnwKEIYbpgGDR/1QY8E+8NhnL75dJZ+WDl88h7Q4JkIFeTkFBUGF5QmNcfUEg==",
-        "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": "6.0.0",
-          "Microsoft.Extensions.Hosting.Abstractions": "6.0.0",
-          "Microsoft.Extensions.Logging.Abstractions": "6.0.0",
-          "Microsoft.Extensions.Options": "6.0.0"
-        }
-      },
-      "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": {
-        "type": "Transitive",
-        "resolved": "6.0.0",
-        "contentHash": "6C9uhsA7GwT1qlXF+1JgOktilrWBSMLNVcwIjg63UvFaDVizg8fYTv826MC58dznvvT9yG31gGwsN1cFfg+yZQ=="
       },
       "Microsoft.Extensions.Features": {
         "type": "Transitive",
@@ -2861,7 +2836,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
+          "Core": "2023.4.3",
           "Dapper": "2.0.123"
         }
       },
@@ -2869,7 +2844,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "12.0.1",
-          "Core": "2023.3.0",
+          "Core": "2023.4.3",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.12",
           "Microsoft.EntityFrameworkCore.SqlServer": "6.0.12",
           "Microsoft.EntityFrameworkCore.Sqlite": "6.0.12",
@@ -2881,9 +2856,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "Infrastructure.Dapper": "2023.3.0",
-          "Infrastructure.EntityFramework": "2023.3.0"
+          "Core": "2023.4.3",
+          "Infrastructure.Dapper": "2023.4.3",
+          "Infrastructure.EntityFramework": "2023.4.3"
         }
       }
     }

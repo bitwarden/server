@@ -6,8 +6,4 @@
       <ProjectReference Include="..\Infrastructure.EntityFramework\Infrastructure.EntityFramework.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="6.0.2" />
-    </ItemGroup>
-
 </Project>
