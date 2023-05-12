@@ -10,11 +10,13 @@ namespace Bit.Notifications;
 public class SendController : Controller
 {
     private readonly IHubContext<NotificationsHub> _hubContext;
+    private readonly IHubContext<AnonymousNotificationsHub> _anonymousHubContext;
     private readonly ILogger<SendController> _logger;
 
-    public SendController(IHubContext<NotificationsHub> hubContext, ILogger<SendController> logger)
+    public SendController(IHubContext<NotificationsHub> hubContext, IHubContext<AnonymousNotificationsHub> anonymousHubContext, ILogger<SendController> logger)
     {
         _hubContext = hubContext;
+        _anonymousHubContext = anonymousHubContext;
         _logger = logger;
     }
 
@@ -28,7 +30,7 @@ public class SendController : Controller
             _logger.LogDebug("Received notification: {@NotificationJson}", notificationJson);
             if (!string.IsNullOrWhiteSpace(notificationJson))
             {
-                await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext, null, _logger);
+                await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext, _anonymousHubContext, _logger);
             }
         }
     }
