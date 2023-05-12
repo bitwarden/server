@@ -95,7 +95,7 @@ public static class ServiceCollectionExtensions
                 builder.AddAzureQueueStorage(globalSettings.Storage.ConnectionString, name: "storage_queue")
                     .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue");
             }
-            
+
             if (!string.IsNullOrEmpty(globalSettings.Notifications.ConnectionString))
             {
                 builder.AddAzureQueueStorage(globalSettings.Notifications.ConnectionString,
@@ -111,8 +111,8 @@ public static class ServiceCollectionExtensions
             if (!string.IsNullOrEmpty(globalSettings.Mail.SendGridApiKey))
             {
                 builder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
-            }    
-            
+            }
+
             builder.AddCheck<AmazonSesHealthCheck>("amazon_ses");
         });
     }
