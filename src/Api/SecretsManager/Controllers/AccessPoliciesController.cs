@@ -249,14 +249,8 @@ public class AccessPoliciesController : Controller
         }
 
         var (accessClient, userId) = await GetAccessClientTypeAsync(project.OrganizationId);
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(project.Id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
+        var access = await _projectRepository.AccessToProjectAsync(project.Id, userId, accessClient);
+        if (!access.Write || accessClient == AccessClientType.ServiceAccount)
         {
             throw new NotFoundException();
         }

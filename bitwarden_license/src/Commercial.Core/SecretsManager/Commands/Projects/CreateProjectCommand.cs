@@ -14,8 +14,7 @@ public class CreateProjectCommand : ICreateProjectCommand
     public CreateProjectCommand(
         IAccessPolicyRepository accessPolicyRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IProjectRepository projectRepository
-        )
+        IProjectRepository projectRepository)
     {
         _accessPolicyRepository = accessPolicyRepository;
         _organizationUserRepository = organizationUserRepository;
