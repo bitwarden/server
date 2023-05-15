@@ -49,6 +49,7 @@ public class OrganizationsController : Controller
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
+    private readonly ILicensingService _licensingService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -68,7 +69,8 @@ public class OrganizationsController : Controller
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IFeatureService featureService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        ILicensingService licensingService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -88,6 +90,7 @@ public class OrganizationsController : Controller
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _featureService = featureService;
         _globalSettings = globalSettings;
+        _licensingService = licensingService;
     }
 
     [HttpGet("{id}")]
@@ -155,10 +158,14 @@ public class OrganizationsController : Controller
 
             return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, hideSensitiveData);
         }
-        else
+
+        if (_globalSettings.SelfHosted)
         {
-            return new OrganizationSubscriptionResponseModel(organization);
+            var orgLicense = await _licensingService.ReadOrganizationLicenseAsync(organization);
+            return new OrganizationSubscriptionResponseModel(organization, orgLicense);
         }
+
+        return new OrganizationSubscriptionResponseModel(organization);
     }
 
     [HttpGet("{id}/license")]
