@@ -45,7 +45,6 @@ public class WebAuthnController : Controller
     }
 
     [HttpPost("options")]
-    [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> PostOptions([FromBody] SecretVerificationRequestModel model)
     {
         var user = await CheckAsync(model);
