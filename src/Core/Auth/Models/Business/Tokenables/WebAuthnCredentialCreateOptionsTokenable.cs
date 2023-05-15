@@ -14,7 +14,7 @@ public class WebAuthnCredentialCreateOptionsTokenable : ExpiringTokenable
     public const string TokenIdentifier = "WebAuthnCredentialCreateOptionsToken";
 
     public string Identifier { get; set; } = TokenIdentifier;
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
     public CredentialCreateOptions Options { get; set; }
 
     [JsonConstructor]
@@ -25,13 +25,13 @@ public class WebAuthnCredentialCreateOptionsTokenable : ExpiringTokenable
 
     public WebAuthnCredentialCreateOptionsTokenable(User user, CredentialCreateOptions options) : this()
     {
-        UserId = user?.Id ?? default;
+        UserId = user?.Id;
         Options = options;
     }
 
     public bool TokenIsValid(User user)
     {
-        if (UserId == default || user == default)
+        if (UserId == null || user == default)
         {
             return false;
         }
@@ -39,6 +39,6 @@ public class WebAuthnCredentialCreateOptionsTokenable : ExpiringTokenable
         return UserId == user.Id;
     }
 
-    protected override bool TokenIsValid() => Identifier == TokenIdentifier && UserId != default && Options != default;
+    protected override bool TokenIsValid() => Identifier == TokenIdentifier && UserId != null && Options != default;
 }
 
