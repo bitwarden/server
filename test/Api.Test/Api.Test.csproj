@@ -26,4 +26,12 @@
     <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Remove="Auth\" />
+    <None Remove="Auth\Controllers\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Auth\" />
+    <Folder Include="Auth\Controllers\" />
+  </ItemGroup>
 </Project>
