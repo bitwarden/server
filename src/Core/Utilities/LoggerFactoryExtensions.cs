@@ -77,7 +77,7 @@ public static class LoggerFactoryExtensions
         }
         else if (CoreHelpers.SettingHasValue(globalSettings?.Syslog.Destination))
         {
-            // appending sitename to project name to allow eaiser identification in syslog.
+            // appending sitename to project name to allow easier identification in syslog.
             var appName = $"{globalSettings.SiteName}-{globalSettings.ProjectName}";
             if (globalSettings.Syslog.Destination.Equals("local", StringComparison.OrdinalIgnoreCase))
             {

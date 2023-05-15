@@ -24,6 +24,7 @@ public class SendService : ISendService
     private readonly ISendRepository _sendRepository;
     private readonly IUserRepository _userRepository;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyService _policyService;
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISendFileStorageService _sendFileStorageService;
@@ -45,12 +46,14 @@ public class SendService : ISendService
         IReferenceEventService referenceEventService,
         GlobalSettings globalSettings,
         IPolicyRepository policyRepository,
+        IPolicyService policyService,
         ICurrentContext currentContext)
     {
         _sendRepository = sendRepository;
         _userRepository = userRepository;
         _userService = userService;
         _policyRepository = policyRepository;
+        _policyService = policyService;
         _organizationRepository = organizationRepository;
         _sendFileStorageService = sendFileStorageService;
         _passwordHasher = passwordHasher;
@@ -282,17 +285,17 @@ public class SendService : ISendService
             return;
         }
 
-        var disableSendPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(userId.Value,
+        var anyDisableSendPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId.Value,
             PolicyType.DisableSend);
-        if (disableSendPolicyCount > 0)
+        if (anyDisableSendPolicies)
         {
             throw new BadRequestException("Due to an Enterprise Policy, you are only able to delete an existing Send.");
         }
 
         if (send.HideEmail.GetValueOrDefault())
         {
-            var sendOptionsPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId.Value, PolicyType.SendOptions);
-            if (sendOptionsPolicies.Any(p => p.GetDataModel<SendOptionsPolicyData>()?.DisableHideEmail ?? false))
+            var sendOptionsPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId.Value, PolicyType.SendOptions);
+            if (sendOptionsPolicies.Any(p => CoreHelpers.LoadClassFromJsonData<SendOptionsPolicyData>(p.PolicyData)?.DisableHideEmail ?? false))
             {
                 throw new BadRequestException("Due to an Enterprise Policy, you are not allowed to hide your email address from recipients when creating or editing a Send.");
             }

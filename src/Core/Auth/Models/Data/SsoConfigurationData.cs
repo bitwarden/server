@@ -22,7 +22,25 @@ public class SsoConfigurationData
 
     public SsoType ConfigType { get; set; }
 
-    public bool KeyConnectorEnabled { get; set; }
+    public MemberDecryptionType MemberDecryptionType { get; set; }
+
+    /// <summary>
+    /// Legacy property to determine if KeyConnector was enabled.
+    /// Kept for backwards compatibility with old configs that will not have
+    /// the new <see cref="MemberDecryptionType"/> when deserialized from the database.
+    /// </summary>
+    [Obsolete("Use MemberDecryptionType instead")]
+    public bool KeyConnectorEnabled
+    {
+        get => MemberDecryptionType == MemberDecryptionType.KeyConnector;
+        set
+        {
+            if (value)
+            {
+                MemberDecryptionType = MemberDecryptionType.KeyConnector;
+            }
+        }
+    }
     public string KeyConnectorUrl { get; set; }
 
     // OIDC
