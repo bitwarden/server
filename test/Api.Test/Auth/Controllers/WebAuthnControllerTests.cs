@@ -1,11 +1,15 @@
 ﻿using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.Webauthn;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Fido2NetLib;
+using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -67,6 +71,47 @@ public class WebAuthnControllerTests
 
         // Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_ExpiredToken_ThrowsBadRequestException(WebAuthnCredentialRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(default)
+            .ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
+            .Unprotect(requestModel.Token)
+            .Returns(token);
+
+        // Act
+        var result = () => sutProvider.Sut.Post(requestModel);
+
+        // Assert
+        await Assert.ThrowsAsync<BadRequestException>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_ValidInput_Returns(WebAuthnCredentialRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(default)
+            .ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>()
+            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>())
+            .Returns(true);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
+            .Unprotect(requestModel.Token)
+            .Returns(token);
+
+        // Act
+        await sutProvider.Sut.Post(requestModel);
+
+        // Assert
+        // Nothing to assert since return is void
     }
 
     [Theory, BitAutoData]
