@@ -1,10 +1,11 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
@@ -173,7 +174,7 @@ public class SelfHostedOrganizationDetailsTests
     {
         var (orgDetails, orgLicense) = GetOrganizationAndLicense(orgUsers, policies, ssoConfig, scimConnections, license);
         orgLicense.UseKeyConnector = false;
-        orgDetails.SsoConfig.SetData(new SsoConfigurationData() { KeyConnectorEnabled = false });
+        orgDetails.SsoConfig.SetData(new SsoConfigurationData() { MemberDecryptionType = MemberDecryptionType.MasterPassword });
 
         var result = orgDetails.CanUseLicense(license, out var exception);
 
@@ -318,7 +319,7 @@ public class SelfHostedOrganizationDetailsTests
         ssoConfig.Enabled = true;
         ssoConfig.SetData(new SsoConfigurationData()
         {
-            KeyConnectorEnabled = true
+            MemberDecryptionType = MemberDecryptionType.KeyConnector,
         });
 
         var enabledScimConfig = new ScimConfig() { Enabled = true };

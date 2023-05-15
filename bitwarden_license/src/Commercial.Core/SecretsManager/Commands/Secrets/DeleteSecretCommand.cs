@@ -54,16 +54,10 @@ public class DeleteSecretCommand : IDeleteSecretCommand
             if (secret.Projects != null && secret.Projects?.Count > 0)
             {
                 var projectId = secret.Projects.First().Id;
-
-                hasAccess = accessClient switch
-                {
-                    AccessClientType.NoAccessCheck => true,
-                    AccessClientType.User => await _projectRepository.UserHasWriteAccessToProject(projectId, userId),
-                    _ => false,
-                };
+                hasAccess = (await _projectRepository.AccessToProjectAsync(projectId, userId, accessClient)).Write;
             }
 
-            if (!hasAccess)
+            if (!hasAccess || accessClient == AccessClientType.ServiceAccount)
             {
                 results.Add(new Tuple<Secret, string>(secret, "access denied"));
             }

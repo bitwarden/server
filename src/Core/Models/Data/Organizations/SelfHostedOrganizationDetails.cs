@@ -1,8 +1,9 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.OrganizationConnectionConfigs;
 
 namespace Bit.Core.Models.Data.Organizations;
 
@@ -56,7 +57,7 @@ public class SelfHostedOrganizationDetails : Organization
         }
 
         if (!license.UseKeyConnector && UseKeyConnector && SsoConfig?.Data != null &&
-            SsoConfig.GetData().KeyConnectorEnabled)
+            SsoConfig.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
             exception = $"Your organization currently has Key Connector enabled. " +
                 $"Your new license does not allow for the use of Key Connector. Disable your Key Connector.";

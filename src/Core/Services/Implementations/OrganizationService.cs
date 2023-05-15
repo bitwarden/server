@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Repositories;
@@ -11,9 +12,11 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
-using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
@@ -39,6 +42,7 @@ public class OrganizationService : IOrganizationService
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyService _policyService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly ISsoUserRepository _ssoUserRepository;
     private readonly IReferenceEventService _referenceEventService;
@@ -67,6 +71,7 @@ public class OrganizationService : IOrganizationService
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
+        IPolicyService policyService,
         ISsoConfigRepository ssoConfigRepository,
         ISsoUserRepository ssoUserRepository,
         IReferenceEventService referenceEventService,
@@ -94,6 +99,7 @@ public class OrganizationService : IOrganizationService
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyRepository = policyRepository;
+        _policyService = policyService;
         _ssoConfigRepository = ssoConfigRepository;
         _ssoUserRepository = ssoUserRepository;
         _referenceEventService = referenceEventService;
@@ -259,7 +265,7 @@ public class OrganizationService : IOrganizationService
         if (!newPlan.HasKeyConnector && organization.UseKeyConnector)
         {
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig != null && ssoConfig.GetData().KeyConnectorEnabled)
+            if (ssoConfig != null && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector)
             {
                 throw new BadRequestException("Your new plan does not allow the Key Connector feature. " +
                                               "Disable your Key Connector.");
@@ -687,8 +693,8 @@ public class OrganizationService : IOrganizationService
 
     private async Task ValidateSignUpPoliciesAsync(Guid ownerId)
     {
-        var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(ownerId, PolicyType.SingleOrg);
-        if (singleOrgPolicyCount > 0)
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(ownerId, PolicyType.SingleOrg);
+        if (anySingleOrgPolicies)
         {
             throw new BadRequestException("You may not create an organization. You belong to an organization " +
                 "which has a policy that prohibits you from being a member of any other organization.");
@@ -1293,7 +1299,7 @@ public class OrganizationService : IOrganizationService
         // Enforce Single Organization Policy of organization user is trying to join
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
         var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var invitedSingleOrgPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
+        var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
             PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
 
         if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
@@ -1303,9 +1309,9 @@ public class OrganizationService : IOrganizationService
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
-        var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(user.Id,
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
             PolicyType.SingleOrg);
-        if (singleOrgPolicyCount > 0)
+        if (anySingleOrgPolicies)
         {
             throw new BadRequestException("You cannot join this organization because you are a member of " +
                 "another organization which forbids it");
@@ -1314,7 +1320,7 @@ public class OrganizationService : IOrganizationService
         // Enforce Two Factor Authentication Policy of organization user is trying to join
         if (!await userService.TwoFactorIsEnabledAsync(user))
         {
-            var invitedTwoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
+            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
@@ -2150,7 +2156,7 @@ public class OrganizationService : IOrganizationService
     private async Task ValidateDeleteOrganizationAsync(Organization organization)
     {
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-        if (ssoConfig?.GetData()?.KeyConnectorEnabled == true)
+        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
             throw new BadRequestException("You cannot delete an Organization that is using Key Connector.");
         }
@@ -2381,7 +2387,7 @@ public class OrganizationService : IOrganizationService
         // Enforce Single Organization Policy of organization user is being restored to
         var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(userId);
         var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var singleOrgPoliciesApplyingToRevokedUsers = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId,
+        var singleOrgPoliciesApplyingToRevokedUsers = await _policyService.GetPoliciesApplicableToUserAsync(userId,
             PolicyType.SingleOrg, OrganizationUserStatusType.Revoked);
         var singleOrgPolicyApplies = singleOrgPoliciesApplyingToRevokedUsers.Any(p => p.OrganizationId == orgUser.OrganizationId);
 
@@ -2392,9 +2398,9 @@ public class OrganizationService : IOrganizationService
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
-        var singleOrgPolicyCount = await _policyRepository.GetCountByTypeApplicableToUserIdAsync(userId,
+        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(userId,
             PolicyType.SingleOrg);
-        if (singleOrgPolicyCount > 0)
+        if (anySingleOrgPolicies)
         {
             throw new BadRequestException("You cannot restore this user because they are a member of " +
                 "another organization which forbids it");
@@ -2404,7 +2410,7 @@ public class OrganizationService : IOrganizationService
         var user = await _userRepository.GetByIdAsync(userId);
         if (!await userService.TwoFactorIsEnabledAsync(user))
         {
-            var invitedTwoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(userId,
+            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(userId,
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
