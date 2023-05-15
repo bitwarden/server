@@ -79,10 +79,10 @@ public class WebAuthnController : Controller
     }
 
     [HttpPost("{id}/delete")]
-    public async Task Delete(string id, [FromBody] SecretVerificationRequestModel model)
+    public async Task Delete(Guid id, [FromBody] SecretVerificationRequestModel model)
     {
         var user = await CheckAsync(model);
-        var credential = await _credentialRepository.GetByIdAsync(new Guid(id), user.Id);
+        var credential = await _credentialRepository.GetByIdAsync(id, user.Id);
         if (credential == null)
         {
             throw new NotFoundException("Credential not found.");
