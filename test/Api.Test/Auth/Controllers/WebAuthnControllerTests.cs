@@ -1,9 +1,12 @@
 ﻿using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.Webauthn;
+using Bit.Core.Entities;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
@@ -40,6 +43,20 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PostOptions_UserVerificationFailed_ThrowsBadRequestException(SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).Returns(false);
+
+        // Act
+        var result = () => sutProvider.Sut.PostOptions(requestModel);
+
+        // Assert
+        await Assert.ThrowsAsync<BadRequestException>(result);
+    }
+
+    [Theory, BitAutoData]
     public async Task Post_UserNotFound_ThrowsUnauthorizedAccessException(WebAuthnCredentialRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange 
@@ -63,6 +80,20 @@ public class WebAuthnControllerTests
 
         // Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Delete_UserVerificationFailed_ThrowsBadRequestException(Guid credentialId, SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).Returns(false);
+
+        // Act
+        var result = () => sutProvider.Sut.Delete(credentialId, requestModel);
+
+        // Assert
+        await Assert.ThrowsAsync<BadRequestException>(result);
     }
 }
 
