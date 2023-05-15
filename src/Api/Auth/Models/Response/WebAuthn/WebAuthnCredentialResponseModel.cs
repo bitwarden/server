@@ -7,14 +7,14 @@ public class WebAuthnCredentialResponseModel : ResponseModel
 {
     private const string ResponseObj = "webauthnCredential";
 
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public bool PrfSupport { get; set; }
-
     public WebAuthnCredentialResponseModel(WebAuthnCredential credential) : base(ResponseObj)
     {
         Id = credential.Id.ToString();
         Name = credential.Name;
         PrfSupport = false;
     }
+
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public bool PrfSupport { get; set; }
 }
