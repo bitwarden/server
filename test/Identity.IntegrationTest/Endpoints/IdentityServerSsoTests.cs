@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Entities;
@@ -145,14 +145,14 @@ public class IdentityServerSsoTests
     {
         var factory = new IdentityApplicationFactory();
 
-        
+
         var authorizationCode = new AuthorizationCode
         {
             ClientId = "web",
             CreationTime = DateTime.UtcNow,
             Lifetime = (int)TimeSpan.FromMinutes(5).TotalSeconds,
             RedirectUri = "https://localhost:8080/sso-connector.html",
-            RequestedScopes = new [] { "api", "offline_access" },
+            RequestedScopes = new[] { "api", "offline_access" },
             CodeChallenge = challenge.Sha256(),
             CodeChallengeMethod = "plain", // 
             Subject = null, // Temporarily set it to null
@@ -201,7 +201,7 @@ public class IdentityServerSsoTests
             Data = JsonSerializer.Serialize(ssoConfigurationData, JsonHelpers.CamelCase),
         });
 
-        var subject = new ClaimsPrincipal(new ClaimsIdentity(new []
+        var subject = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
             new Claim(JwtClaimTypes.Subject, user.Id.ToString()), // Get real user id
             new Claim(JwtClaimTypes.Name, TestEmail),

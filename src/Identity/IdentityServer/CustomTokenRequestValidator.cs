@@ -2,6 +2,7 @@
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -119,7 +120,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         // organization at a time.
         if (ssoConfigData != null && _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext))
         {
-            context.Result.CustomResponse["MemberDecryptionType"] = ssoConfigData.MemberDecryptionType;
+            context.Result.CustomResponse["MemberDecryptionOptions"] = CreateMemberDecryptionOptions(ssoConfigData, user);
         }
 
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
@@ -146,6 +147,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         // This does a double check, that ssoConfigData is not null and that it has the KeyConnector member decryption type
         if (ssoConfigData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
         {
+            // TODO: Can be removed in the future
             context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
             // Prevent clients redirecting to set-password
             context.Result.CustomResponse["ResetMasterPassword"] = false;
@@ -194,5 +196,27 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.Error = "invalid_grant";
         context.Result.IsError = true;
         context.Result.CustomResponse = customResponse;
+    }
+
+    /// <summary>
+    /// 
+    /// </summary>
+    private static MemberDecryptionOptions? CreateMemberDecryptionOptions(SsoConfigurationData ssoConfigurationData, User user)
+    {
+        switch (ssoConfigurationData.MemberDecryptionType)
+        {
+            case MemberDecryptionType.TrustedDeviceEncryption:
+                return new TrustedDeviceMemberDecryptionOptions(
+                    !string.IsNullOrEmpty(user.MasterPassword));
+            case MemberDecryptionType.KeyConnector:
+                if (string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
+                {
+                    return null;
+                }
+
+                return new KeyConnectorMemberDecryptionOptions(ssoConfigurationData.KeyConnectorUrl);
+            default:
+                return null;
+        }
     }
 }
