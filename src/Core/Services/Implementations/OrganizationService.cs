@@ -147,7 +147,7 @@ public class OrganizationService : IOrganizationService
 
         await _paymentService.CancelSubscriptionAsync(organization, eop);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, organization)
+            new ReferenceEvent(ReferenceEventType.CancelSubscription, organization, _currentContext)
             {
                 EndOfPeriod = endOfPeriod,
             });
@@ -163,7 +163,7 @@ public class OrganizationService : IOrganizationService
 
         await _paymentService.ReinstateSubscriptionAsync(organization);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization));
+            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization, _currentContext));
     }
 
     public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
@@ -357,7 +357,7 @@ public class OrganizationService : IOrganizationService
         if (success)
         {
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, organization)
+                new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
                 {
                     PlanName = newPlan.Name,
                     PlanType = newPlan.Type,
@@ -393,7 +393,7 @@ public class OrganizationService : IOrganizationService
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
             plan.StripeStoragePlanId);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, organization)
+            new ReferenceEvent(ReferenceEventType.AdjustStorage, organization, _currentContext)
             {
                 PlanName = plan.Name,
                 PlanType = plan.Type,
@@ -530,7 +530,7 @@ public class OrganizationService : IOrganizationService
 
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization)
+            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
             {
                 PlanName = plan.Name,
                 PlanType = plan.Type,
@@ -681,7 +681,7 @@ public class OrganizationService : IOrganizationService
         var ownerId = provider ? default : signup.Owner.Id;
         var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.Signup, organization)
+            new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
             {
                 PlanName = plan.Name,
                 PlanType = plan.Type,
@@ -853,7 +853,7 @@ public class OrganizationService : IOrganizationService
                     organization.ExpirationDate.Value >= DateTime.UtcNow;
                 await _paymentService.CancelSubscriptionAsync(organization, eop);
                 await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.DeleteAccount, organization));
+                    new ReferenceEvent(ReferenceEventType.DeleteAccount, organization, _currentContext));
             }
             catch (GatewayException) { }
         }
@@ -1136,7 +1136,7 @@ public class OrganizationService : IOrganizationService
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
+                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
                 {
                     Users = orgUserInvitedCount
                 });
@@ -1971,7 +1971,7 @@ public class OrganizationService : IOrganizationService
         }
 
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization));
+            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
 
     public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)
@@ -2472,7 +2472,7 @@ public class OrganizationService : IOrganizationService
         await SendInviteAsync(ownerOrganizationUser, organization, true);
         await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
 
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization, _currentContext)
         {
             EventRaisedByUser = userService.GetUserName(user),
             SalesAssistedTrialStarted = salesAssistedTrialStarted,
