@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -33,8 +34,8 @@ public class SendServiceTests
         send.Id = default;
         send.Type = sendType;
 
-        sutProvider.GetDependency<IPolicyRepository>().GetCountByTypeApplicableToUserIdAsync(
-            Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser ? 1 : 0);
+        sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(
+            Arg.Any<Guid>(), PolicyType.DisableSend).Returns(disableSendPolicyAppliesToUser);
     }
 
     // Disable Send policy check
@@ -79,10 +80,10 @@ public class SendServiceTests
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         });
 
-        sutProvider.GetDependency<IPolicyRepository>().GetManyByTypeApplicableToUserIdAsync(
-            Arg.Any<Guid>(), PolicyType.SendOptions).Returns(new List<Policy>
+        sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(
+            Arg.Any<Guid>(), PolicyType.SendOptions).Returns(new List<OrganizationUserPolicyDetails>()
             {
-                policy,
+                new() { PolicyType = policy.Type, PolicyData = policy.Data, OrganizationId = policy.OrganizationId, PolicyEnabled = policy.Enabled }
             });
     }
 
