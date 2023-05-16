@@ -1,6 +1,9 @@
 ﻿using System.Text.Json;
+using AutoFixture;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
@@ -9,6 +12,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -169,5 +173,20 @@ public class UserServiceTests
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
 
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
+    }
+
+    [Theory, BitAutoData]
+    public async void CompleteWebAuthLoginRegistrationAsync_ExceedsExistingCredentialsLimit_ReturnsFalse(SutProvider<UserService> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
+    {
+        // Arrange
+        var existingCredentials = credentialGenerator.Take(5).ToList();
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(existingCredentials);
+
+        // Act
+        var result = await sutProvider.Sut.CompleteWebAuthLoginRegistrationAsync(user, "name", options, response);
+
+        // Assert
+        Assert.False(result);
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().DidNotReceive();
     }
 }
