@@ -104,12 +104,6 @@ public class WebAuthnController : Controller
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
-        // TODO: Is premium requried?
-        //if (premium && !(await _userService.CanAccessPremium(user)))
-        //{
-        //    throw new BadRequestException("Premium status is required.");
-        //}
-
         return user;
     }
 }
