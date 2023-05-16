@@ -202,9 +202,9 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     [EmailAddress]
     [StringLength(256)]
     public string Email { get; set; }
-
     public string AuthRequestId { get; set; }
-
+    // An auth session token used for obtaining email and as an authN factor for the sending of emailed 2FA OTPs.  
+    public string SsoEmail2FaSessionToken { get; set; }
     public User ToUser(User existingUser)
     {
         var providers = existingUser.GetTwoFactorProviders();
@@ -224,6 +224,14 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
         });
         existingUser.SetTwoFactorProviders(providers);
         return existingUser;
+    }
+
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.IsNullOrEmpty(Secret) && string.IsNullOrEmpty(AuthRequestAccessCode) && string.IsNullOrEmpty((SsoEmail2FaSessionToken)))
+        {
+            yield return new ValidationResult("MasterPasswordHash, OTP, AccessCode, or SsoEmail2faSessionToken must be supplied.");
+        }
     }
 }
 

@@ -140,7 +140,7 @@ public class StripePaymentService : IPaymentService
                 {
                     Country = taxInfo.BillingAddressCountry,
                     PostalCode = taxInfo.BillingAddressPostalCode,
-                    // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name intead.
+                    // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name instead.
                     Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
                     Line2 = taxInfo.BillingAddressLine2,
                     City = taxInfo.BillingAddressCity,

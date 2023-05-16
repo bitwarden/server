@@ -110,7 +110,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
 
             foreach (var requestedCollectionId in collectionIds)
             {
-                // I don't totally agree with t.CipherId = cipherId here because that should have been guarenteed by
+                // I don't totally agree with t.CipherId = cipherId here because that should have been guaranteed by
                 // the WHERE above but the SQL Server CTE has it
                 var existingCollectionCipher = collectionCiphers
                     .FirstOrDefault(t => t.CollectionId == requestedCollectionId && t.CipherId == cipherId);

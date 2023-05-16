@@ -7,6 +7,8 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Identity;
 using Stripe;
 using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Bit.Admin.Services;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
@@ -64,6 +66,7 @@ public class Startup
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
+        services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
         // Identity
         services.AddPasswordlessIdentityServices<ReadOnlyEnvIdentityUserStore>(globalSettings);
@@ -82,6 +85,7 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddScoped<IAccessControlService, AccessControlService>();
 
 #if OSS
         services.AddOosServices();
