@@ -1,5 +1,5 @@
-﻿using Fido2NetLib;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
+using Fido2NetLib;
 
 namespace Bit.Api.Auth.Models.Request.Webauthn;
 

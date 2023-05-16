@@ -26,8 +26,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
-using static IdentityServer4.Models.IdentityResources;
 using File = System.IO.File;
 
 namespace Bit.Core.Services;

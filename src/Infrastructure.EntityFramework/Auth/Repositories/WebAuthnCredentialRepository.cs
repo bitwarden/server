@@ -13,7 +13,8 @@ public class WebAuthnCredentialRepository : Repository<Core.Auth.Entities.WebAut
         : base(serviceScopeFactory, mapper, (context) => context.WebAuthnCredentials)
     { }
 
-    public async Task<Core.Auth.Entities.WebAuthnCredential> GetByIdAsync(Guid id, Guid userId) {
+    public async Task<Core.Auth.Entities.WebAuthnCredential> GetByIdAsync(Guid id, Guid userId)
+    {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);

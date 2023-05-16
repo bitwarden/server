@@ -9,7 +9,6 @@ using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Fido2NetLib;
-using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;

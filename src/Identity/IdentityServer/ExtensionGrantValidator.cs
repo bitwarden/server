@@ -1,15 +1,15 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Context;
+using Bit.Core.Entities;
+using Bit.Core.Repositories;
+using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
-using Bit.Core.Auth.Identity;
-using Bit.Core.Context;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Entities;
-using Bit.Core.Settings;
-using Bit.Core.Tokens;
-using Bit.Core.Auth.Models.Business.Tokenables;
 
 namespace Bit.Identity.IdentityServer;
 
