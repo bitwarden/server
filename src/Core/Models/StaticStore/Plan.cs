@@ -52,4 +52,8 @@ public class Plan
     public decimal SeatPrice { get; set; }
     public decimal AdditionalStoragePricePerGb { get; set; }
     public decimal PremiumAccessOptionPrice { get; set; }
+    public decimal AdditionalPricePerServiceAccount { get; set; }
+    public short? BaseServiceAccount { get; set; }
+    public bool HasAdditionalServiceAccountOption { get; set; }
+    public BitwardenProductType BitwardenProduct { get; set; }
 }

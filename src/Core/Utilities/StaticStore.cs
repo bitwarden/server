@@ -111,6 +111,7 @@ public class StaticStore
             {
                 Type = PlanType.Free,
                 Product = ProductType.Free,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Free",
                 NameLocalizationKey = "planNameFree",
                 DescriptionLocalizationKey = "planDescFree",
@@ -127,6 +128,7 @@ public class StaticStore
             {
                 Type = PlanType.FamiliesAnnually2019,
                 Product = ProductType.Families,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Families 2019",
                 IsAnnual = true,
                 NameLocalizationKey = "planNameFamilies",
@@ -159,6 +161,7 @@ public class StaticStore
             {
                 Type = PlanType.TeamsAnnually2019,
                 Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Teams (Annually) 2019",
                 IsAnnual = true,
                 NameLocalizationKey = "planNameTeams",
@@ -190,6 +193,7 @@ public class StaticStore
             {
                 Type = PlanType.TeamsMonthly2019,
                 Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Teams (Monthly) 2019",
                 NameLocalizationKey = "planNameTeams",
                 DescriptionLocalizationKey = "planDescTeams",
@@ -222,6 +226,7 @@ public class StaticStore
                 Name = "Enterprise (Annually) 2019",
                 IsAnnual = true,
                 Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 NameLocalizationKey = "planNameEnterprise",
                 DescriptionLocalizationKey = "planDescEnterprise",
                 CanBeUsedByBusiness = true,
@@ -260,6 +265,7 @@ public class StaticStore
             {
                 Type = PlanType.EnterpriseMonthly2019,
                 Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Enterprise (Monthly) 2019",
                 NameLocalizationKey = "planNameEnterprise",
                 DescriptionLocalizationKey = "planDescEnterprise",
@@ -299,6 +305,7 @@ public class StaticStore
             {
                 Type = PlanType.FamiliesAnnually,
                 Product = ProductType.Families,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Families",
                 IsAnnual = true,
                 NameLocalizationKey = "planNameFamilies",
@@ -328,6 +335,7 @@ public class StaticStore
             {
                 Type = PlanType.TeamsAnnually,
                 Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Teams (Annually)",
                 IsAnnual = true,
                 NameLocalizationKey = "planNameTeams",
@@ -362,6 +370,7 @@ public class StaticStore
             {
                 Type = PlanType.TeamsMonthly,
                 Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Teams (Monthly)",
                 NameLocalizationKey = "planNameTeams",
                 DescriptionLocalizationKey = "planDescTeams",
@@ -396,6 +405,7 @@ public class StaticStore
                 Type = PlanType.EnterpriseAnnually,
                 Name = "Enterprise (Annually)",
                 Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 IsAnnual = true,
                 NameLocalizationKey = "planNameEnterprise",
                 DescriptionLocalizationKey = "planDescEnterprise",
@@ -437,6 +447,7 @@ public class StaticStore
             {
                 Type = PlanType.EnterpriseMonthly,
                 Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Enterprise (Monthly)",
                 NameLocalizationKey = "planNameEnterprise",
                 DescriptionLocalizationKey = "planDescEnterprise",
@@ -474,6 +485,177 @@ public class StaticStore
 
                 AllowSeatAutoscale = true,
             },
+             new Plan
+            {
+                Type = PlanType.EnterpriseMonthly,
+                Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.SecretManager,
+                Name = "Enterprise (Monthly)",
+                NameLocalizationKey = "planNameEnterprise",
+                DescriptionLocalizationKey = "planDescEnterprise",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 0,
+                BaseServiceAccount = 100,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalServiceAccountOption = true,
+                TrialPeriodDays = 7,
+
+                HasPolicies = true,
+                HasGroups = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasTotp = true,
+                Has2fa = true,
+                HasApi = true,
+                HasSelfHost = true,
+                HasSso = true,
+                HasKeyConnector = true,
+                HasScim = true,
+                HasResetPassword = true,
+                UsersGetPremium = true,
+                HasCustomPermissions = true,
+
+                UpgradeSortOrder = 3,
+                DisplaySortOrder = 3,
+
+                StripeSeatPlanId = "sm-enterprise-seat-monthly",
+                StripeStoragePlanId = "service-account-monthly",
+                BasePrice = 0,
+                SeatPrice = 28,
+                AdditionalPricePerServiceAccount = 1,
+
+                AllowSeatAutoscale = true,
+            },
+             new Plan
+            {
+                Type = PlanType.EnterpriseAnnually,
+                Name = "Enterprise (Annually)",
+                Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.SecretManager,
+                IsAnnual = true,
+                NameLocalizationKey = "planNameEnterprise",
+                DescriptionLocalizationKey = "planDescEnterprise",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 0,
+                BaseServiceAccount = 100,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalServiceAccountOption = true,
+                TrialPeriodDays = 7,
+
+                HasPolicies = true,
+                HasSelfHost = true,
+                HasGroups = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasTotp = true,
+                Has2fa = true,
+                HasApi = true,
+                HasSso = true,
+                HasKeyConnector = true,
+                HasScim = true,
+                HasResetPassword = true,
+                UsersGetPremium = true,
+                HasCustomPermissions = true,
+
+                UpgradeSortOrder = 3,
+                DisplaySortOrder = 3,
+
+                StripeSeatPlanId = "sm-enterprise-seat-annually",
+                StripeStoragePlanId = "service-account-annually",
+                BasePrice = 0,
+                SeatPrice = 24,
+                AdditionalPricePerServiceAccount = 1,
+
+                AllowSeatAutoscale = true,
+            },
+             new Plan
+            {
+                Type = PlanType.TeamsMonthly,
+                Name = "Teams (Monthly)",
+                Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.SecretManager,
+                IsAnnual = true,
+                NameLocalizationKey = "planNameTeams",
+                DescriptionLocalizationKey = "planDescTeams",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 0,
+                BaseServiceAccount = 40,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalServiceAccountOption = true,
+                TrialPeriodDays = 7,
+
+                HasPolicies = true,
+                HasSelfHost = true,
+                HasGroups = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasTotp = true,
+                Has2fa = true,
+                HasApi = true,
+                HasSso = true,
+                HasKeyConnector = true,
+                HasScim = true,
+                HasResetPassword = true,
+                UsersGetPremium = true,
+                HasCustomPermissions = true,
+
+                UpgradeSortOrder = 3,
+                DisplaySortOrder = 3,
+
+                StripeSeatPlanId = "sm-teams-seat-monthly",
+                StripeStoragePlanId = "service-account-monthly",
+                BasePrice = 0,
+                SeatPrice = 14,
+                AdditionalPricePerServiceAccount = 1,
+
+                AllowSeatAutoscale = true,
+            },
+            new Plan
+            {
+                Type = PlanType.TeamsAnnually,
+                Name = "Teams (Annually)",
+                Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.SecretManager,
+                IsAnnual = true,
+                NameLocalizationKey = "planNameTeams",
+                DescriptionLocalizationKey = "planDescTeams",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 0,
+                BaseServiceAccount = 40,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalServiceAccountOption = true,
+                TrialPeriodDays = 7,
+
+                HasPolicies = true,
+                HasSelfHost = true,
+                HasGroups = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasTotp = true,
+                Has2fa = true,
+                HasApi = true,
+                HasSso = true,
+                HasKeyConnector = true,
+                HasScim = true,
+                HasResetPassword = true,
+                UsersGetPremium = true,
+                HasCustomPermissions = true,
+
+                UpgradeSortOrder = 3,
+                DisplaySortOrder = 3,
+
+                StripeSeatPlanId = "sm-teams-seat-annually",
+                StripeStoragePlanId = "service-account-annually",
+                BasePrice = 0,
+                SeatPrice = 12,
+                AdditionalPricePerServiceAccount = 1,
+
+                AllowSeatAutoscale = true,
+            },
             new Plan
             {
                 Type = PlanType.Custom,
@@ -499,8 +681,8 @@ public class StaticStore
                     GetPlan(org.PlanType).Product == ProductType.Enterprise,
             }
         };
-    public static Plan GetPlan(PlanType planType) =>
-        Plans.FirstOrDefault(p => p.Type == planType);
+    public static Plan GetPlan(PlanType planType, BitwardenProductType bitwardenProduct = BitwardenProductType.PasswordManager) =>
+        Plans.FirstOrDefault(p => p.Type == planType && p.BitwardenProduct == bitwardenProduct);
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
 }
