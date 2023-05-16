@@ -19,6 +19,9 @@ public class DeviceResponseModel : ResponseModel
         Type = device.Type;
         Identifier = device.Identifier;
         CreationDate = device.CreationDate;
+        PublicKeyEncryptedSymmetricKey = device.PublicKeyEncryptedSymmetricKey;
+        EncryptionKeyEncryptedPublicKey = device.EncryptionKeyEncryptedPublicKey;
+        DeviceKeyEncryptedPrivateKey = device.DeviceKeyEncryptedPrivateKey;
     }
 
     public string Id { get; set; }
@@ -26,4 +29,7 @@ public class DeviceResponseModel : ResponseModel
     public DeviceType Type { get; set; }
     public string Identifier { get; set; }
     public DateTime CreationDate { get; set; }
+    public string PublicKeyEncryptedSymmetricKey { get; }
+    public string EncryptionKeyEncryptedPublicKey { get; }
+    public string DeviceKeyEncryptedPrivateKey { get; }
 }

@@ -17,6 +17,22 @@ public class Device : ITableObject<Guid>
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// 1
+    /// </summary>
+    public string PublicKeyEncryptedSymmetricKey { get; set; }
+
+    /// <summary>
+    /// 2
+    /// </summary>
+    public string EncryptionKeyEncryptedPublicKey { get; set; }
+
+    /// <summary>
+    /// 3
+    /// </summary>
+    public string DeviceKeyEncryptedPrivateKey { get; set; }
+
+
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();

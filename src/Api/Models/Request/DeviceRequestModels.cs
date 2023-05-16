@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request;
 
@@ -44,6 +45,33 @@ public class DeviceTokenRequestModel
     public Device ToDevice(Device existingDevice)
     {
         existingDevice.PushToken = PushToken;
+        return existingDevice;
+    }
+}
+
+public class DeviceKeysRequestModel
+{
+    /// <inheritdoc cref="Device.PublicKeyEncryptedSymmetricKey" />
+    [Required]
+    [EncryptedString]
+    public string PublicKeyEncryptedSymmetricKey { get; set; }
+
+    /// <inheritdoc cref="Device.EncryptionKeyEncryptedPublicKey" />
+    [Required]
+    [EncryptedString]
+    public string EncryptionKeyEncryptedPublicKey { get; set; }
+
+    /// <inheritdoc cref="Device.DeviceKeyEncryptedPrivateKey" />
+    [Required]
+    [EncryptedString]
+    public string DeviceKeyEncryptedPrivateKey { get; set; }
+
+    public Device ToDevice(Device existingDevice)
+    {
+        existingDevice.PublicKeyEncryptedSymmetricKey = PublicKeyEncryptedSymmetricKey;
+        existingDevice.EncryptionKeyEncryptedPublicKey = EncryptionKeyEncryptedPublicKey;
+        existingDevice.DeviceKeyEncryptedPrivateKey = DeviceKeyEncryptedPrivateKey;
+
         return existingDevice;
     }
 }
