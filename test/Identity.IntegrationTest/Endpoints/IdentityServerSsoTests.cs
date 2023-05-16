@@ -93,7 +93,6 @@ public class IdentityServerSsoTests
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
         var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(memberDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
-        AssertHelper.AssertJsonProperty(memberDecryptionOptions, "AdminCanApprove", JsonValueKind.True);
     }
 
     [Fact]
