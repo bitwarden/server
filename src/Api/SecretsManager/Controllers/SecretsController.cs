@@ -12,13 +12,14 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
-[SecretsManager]
 [Authorize("secrets")]
+[SelfHosted(NotSelfHostedOnly = true)]
 public class SecretsController : Controller
 {
     private readonly ICurrentContext _currentContext;
