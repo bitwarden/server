@@ -51,7 +51,7 @@ public class WebAuthnController : Controller
         return new WebAuthnCredentialCreateOptionsResponseModel
         {
             Options = options,
-            Token = token,
+            Token = token
         };
     }
 
