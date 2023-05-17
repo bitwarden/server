@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
@@ -83,7 +84,7 @@ public class SsoConfigServiceTests
             Id = 1,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -127,7 +128,7 @@ public class SsoConfigServiceTests
             Id = 1,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -165,7 +166,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -193,7 +194,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -227,7 +228,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = false,
             OrganizationId = organization.Id,
@@ -262,7 +263,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -297,7 +298,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,

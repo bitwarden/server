@@ -126,6 +126,9 @@ jobs:
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
@@ -244,6 +247,10 @@ jobs:
             dotnet: true
           - project_name: Billing
             base_path: ./src
+            docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            dotnet: true
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
             docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
     steps:
