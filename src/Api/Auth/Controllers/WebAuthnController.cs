@@ -7,6 +7,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -100,7 +101,7 @@ public class WebAuthnController : Controller
         var user = await GetUserAsync();
         if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
-            await Task.Delay(2000);
+            await Task.Delay(Constants.FailedSecretVerificationDelay);
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
