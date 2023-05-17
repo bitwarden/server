@@ -28,7 +28,7 @@ public interface IUserService
     Task<bool> DeleteWebAuthnKeyAsync(User user, int id);
     Task<bool> CompleteWebAuthRegistrationAsync(User user, int value, string name, AuthenticatorAttestationRawResponse attestationResponse);
     Task<CredentialCreateOptions> StartWebAuthnLoginRegistrationAsync(User user);
-    Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse);
+    Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, string userKey, string prfPublicKey, string prfPrivateKey, bool supportsPrf, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse);
     Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user);
     Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user);
     Task SendEmailVerificationAsync(User user);

@@ -25,6 +25,19 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[WebAuthnCredentialView]') IS NOT NULL
+BEGIN
+    DROP VIEW [dbo].[WebAuthnCredentialView]
+END
+GO
+
+CREATE VIEW [dbo].[WebAuthnCredentialView]
+AS
+SELECT
+    *
+FROM
+    [dbo].[WebAuthnCredential]
+
 GO
 CREATE OR ALTER PROCEDURE [dbo].[WebAuthnCredential_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
