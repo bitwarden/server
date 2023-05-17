@@ -8,6 +8,9 @@
     @Type VARCHAR(20),
     @AaGuid UNIQUEIDENTIFIER,
     @UserKey VARCHAR (MAX),
+    @PrfPublicKey VARCHAR (MAX),
+    @PrfPrivateKey VARCHAR (MAX),
+    @SupportsPrf BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -25,6 +28,9 @@ BEGIN
         [Type],
         [AaGuid],
         [UserKey],
+        [PrfPublicKey],
+        [PrfPrivateKey],
+        [SupportsPrf],
         [CreationDate],
         [RevisionDate]
     )
@@ -39,6 +45,9 @@ BEGIN
         @Type,
         @AaGuid,
         @UserKey,
+        @PrfPublicKey,
+        @PrfPrivateKey,
+        @SupportsPrf,
         @CreationDate,
         @RevisionDate
     )

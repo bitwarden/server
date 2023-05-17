@@ -8,6 +8,9 @@
     @Type VARCHAR(20),
     @AaGuid UNIQUEIDENTIFIER,
     @UserKey VARCHAR (MAX),
+    @PrfPublicKey VARCHAR (MAX),
+    @PrfPrivateKey VARCHAR (MAX),
+    @SupportsPrf BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -25,6 +28,9 @@ BEGIN
         [Type] = @Type,
         [AaGuid] = @AaGuid,
         [UserKey] = @UserKey,
+        [PrfPublicKey] = @PrfPublicKey,
+        [PrfPrivateKey] = @PrfPrivateKey,
+        [SupportsPrf] = @SupportsPrf,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE
