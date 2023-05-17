@@ -1,4 +1,4 @@
-﻿using Bit.Billing.Controllers;
+using Bit.Billing.Controllers;
 using Bit.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -26,7 +26,7 @@ public class FreshdeskControllerTests
     public async Task PostWebhook_NullRequiredParameters_BadRequest(string freshdeskWebhookKey, FreshdeskWebhookModel model,
         BillingSettings billingSettings, SutProvider<FreshdeskController> sutProvider)
     {
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskWebhookKey.Returns(billingSettings.FreshdeskWebhookKey);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(billingSettings.FreshDesk.WebhookKey);
 
         var response = await sutProvider.Sut.PostWebhook(freshdeskWebhookKey, model);
 
@@ -52,8 +52,8 @@ public class FreshdeskControllerTests
 
         sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
 
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskWebhookKey.Returns(WebhookKey);
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskApiKey.Returns(ApiKey);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(WebhookKey);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.ApiKey.Returns(ApiKey);
 
         var response = await sutProvider.Sut.PostWebhook(WebhookKey, model);
 

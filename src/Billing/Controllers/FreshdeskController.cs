@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text;
 using Bit.Billing.Models;
@@ -43,7 +43,7 @@ public class FreshdeskController : Controller
     public async Task<IActionResult> PostWebhook([FromQuery, Required] string key,
         [FromBody, Required] FreshdeskWebhookModel model)
     {
-        if (string.IsNullOrWhiteSpace(key) || !CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshdeskWebhookKey))
+        if (string.IsNullOrWhiteSpace(key) || !CoreHelpers.FixedTimeEquals(key, _billingSettings.FreshDesk.WebhookKey))
         {
             return new BadRequestResult();
         }
@@ -145,7 +145,7 @@ public class FreshdeskController : Controller
     {
         try
         {
-            var freshdeskAuthkey = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_billingSettings.FreshdeskApiKey}:X"));
+            var freshdeskAuthkey = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_billingSettings.FreshDesk.ApiKey}:X"));
             var httpClient = _httpClientFactory.CreateClient("FreshdeskApi");
             request.Headers.Add("Authorization", $"Basic {freshdeskAuthkey}");
             var response = await httpClient.SendAsync(request);
