@@ -19,11 +19,11 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availibleCollections = await (
+            var availableCollections = await (
                 from c in dbContext.Collections
                 where c.OrganizationId == grp.OrganizationId
                 select c).ToListAsync();
-            var filteredCollections = collections.Where(c => availibleCollections.Any(a => c.Id == a.Id));
+            var filteredCollections = collections.Where(c => availableCollections.Any(a => c.Id == a.Id));
             var collectionGroups = filteredCollections.Select(y => new CollectionGroup
             {
                 CollectionId = y.Id,

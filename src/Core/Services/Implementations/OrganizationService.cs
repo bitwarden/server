@@ -147,7 +147,7 @@ public class OrganizationService : IOrganizationService
 
         await _paymentService.CancelSubscriptionAsync(organization, eop);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, organization)
+            new ReferenceEvent(ReferenceEventType.CancelSubscription, organization, _currentContext)
             {
                 EndOfPeriod = endOfPeriod,
             });
@@ -163,7 +163,7 @@ public class OrganizationService : IOrganizationService
 
         await _paymentService.ReinstateSubscriptionAsync(organization);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization));
+            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization, _currentContext));
     }
 
     public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
@@ -357,7 +357,7 @@ public class OrganizationService : IOrganizationService
         if (success)
         {
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, organization)
+                new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
                 {
                     PlanName = newPlan.Name,
                     PlanType = newPlan.Type,
@@ -393,7 +393,7 @@ public class OrganizationService : IOrganizationService
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, organization, storageAdjustmentGb,
             plan.StripeStoragePlanId);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, organization)
+            new ReferenceEvent(ReferenceEventType.AdjustStorage, organization, _currentContext)
             {
                 PlanName = plan.Name,
                 PlanType = plan.Type,
@@ -530,7 +530,7 @@ public class OrganizationService : IOrganizationService
 
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization)
+            new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
             {
                 PlanName = plan.Name,
                 PlanType = plan.Type,
@@ -681,7 +681,7 @@ public class OrganizationService : IOrganizationService
         var ownerId = provider ? default : signup.Owner.Id;
         var returnValue = await SignUpAsync(organization, ownerId, signup.OwnerKey, signup.CollectionName, true);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.Signup, organization)
+            new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
             {
                 PlanName = plan.Name,
                 PlanType = plan.Type,
@@ -853,7 +853,7 @@ public class OrganizationService : IOrganizationService
                     organization.ExpirationDate.Value >= DateTime.UtcNow;
                 await _paymentService.CancelSubscriptionAsync(organization, eop);
                 await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.DeleteAccount, organization));
+                    new ReferenceEvent(ReferenceEventType.DeleteAccount, organization, _currentContext));
             }
             catch (GatewayException) { }
         }
@@ -986,10 +986,10 @@ public class OrganizationService : IOrganizationService
             .Select(i => i.invite.Type.Value));
         if (invitingUserId.HasValue && inviteTypes.Count > 0)
         {
-            foreach (var type in inviteTypes)
+            foreach (var (invite, _) in invites)
             {
-                await ValidateOrganizationUserUpdatePermissions(organizationId, type, null);
-                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, type);
+                await ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null, invite.Permissions);
+                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, invite.Type.Value);
             }
         }
 
@@ -1136,7 +1136,7 @@ public class OrganizationService : IOrganizationService
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
+                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
                 {
                     Users = orgUserInvitedCount
                 });
@@ -1536,7 +1536,7 @@ public class OrganizationService : IOrganizationService
 
         if (savingUserId.HasValue)
         {
-            await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type);
+            await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
         }
 
         await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
@@ -1709,7 +1709,7 @@ public class OrganizationService : IOrganizationService
     {
         if (loggedInUserId.HasValue)
         {
-            await ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null);
+            await ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null, organizationUser.GetPermissions());
         }
         await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
         await _eventService.LogOrganizationUserEventAsync(organizationUser,
@@ -1971,7 +1971,7 @@ public class OrganizationService : IOrganizationService
         }
 
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization));
+            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
 
     public async Task DeleteSsoUserAsync(Guid userId, Guid? organizationId)
@@ -2100,8 +2100,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
-        OrganizationUserType? oldType)
+    private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
     {
         if (await _currentContext.OrganizationOwner(organizationId))
         {
@@ -2118,11 +2117,6 @@ public class OrganizationService : IOrganizationService
             return;
         }
 
-        if (oldType == OrganizationUserType.Custom || newType == OrganizationUserType.Custom)
-        {
-            throw new BadRequestException("Only Owners and Admins can configure Custom accounts.");
-        }
-
         if (!await _currentContext.ManageUsers(organizationId))
         {
             throw new BadRequestException("Your account does not have permission to manage users.");
@@ -2131,6 +2125,11 @@ public class OrganizationService : IOrganizationService
         if (oldType == OrganizationUserType.Admin || newType == OrganizationUserType.Admin)
         {
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
+        }
+
+        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organizationId, permissions))
+        {
+            throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
     }
 
@@ -2151,6 +2150,86 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("To enable custom permissions the organization must be on an Enterprise plan.");
         }
+    }
+
+    private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
+    {
+        if (permissions == null || await _currentContext.OrganizationOwner(organizationId) || await _currentContext.OrganizationAdmin(organizationId))
+        {
+            return true;
+        }
+
+        if (permissions.ManageUsers && !await _currentContext.ManageUsers(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.AccessReports && !await _currentContext.AccessReports(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManageGroups && !await _currentContext.ManageGroups(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManagePolicies && !await _currentContext.ManagePolicies(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManageScim && !await _currentContext.ManageScim(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManageSso && !await _currentContext.ManageSso(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.AccessEventLogs && !await _currentContext.AccessEventLogs(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.AccessImportExport && !await _currentContext.AccessImportExport(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.CreateNewCollections && !await _currentContext.CreateNewCollections(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.DeleteAnyCollection && !await _currentContext.DeleteAnyCollection(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
+        {
+            return false;
+        }
+
+        if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
+        {
+            return false;
+        }
+
+        return true;
     }
 
     private async Task ValidateDeleteOrganizationAsync(Organization organization)
@@ -2472,7 +2551,7 @@ public class OrganizationService : IOrganizationService
         await SendInviteAsync(ownerOrganizationUser, organization, true);
         await _eventService.LogOrganizationUserEventAsync(ownerOrganizationUser, EventType.OrganizationUser_Invited);
 
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization)
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationCreatedByAdmin, organization, _currentContext)
         {
             EventRaisedByUser = userService.GetUserName(user),
             SalesAssistedTrialStarted = salesAssistedTrialStarted,

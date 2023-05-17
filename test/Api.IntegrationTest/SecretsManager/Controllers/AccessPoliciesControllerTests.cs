@@ -794,7 +794,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task GetServiceAccountAccessPolicies(PermissionType permissionType)
     {
-        var (org, owerOrgUser) = await _organizationHelper.Initialize(true, true);
+        var (org, ownerOrgUser) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
         var initData = await SetupAccessPolicyRequest(org.Id);
 
@@ -820,7 +820,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             new UserServiceAccountAccessPolicy
             {
                 GrantedServiceAccountId = initData.ServiceAccountId,
-                OrganizationUserId = owerOrgUser.Id,
+                OrganizationUserId = ownerOrgUser.Id,
                 Read = true,
                 Write = true,
             },
@@ -834,8 +834,8 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         Assert.NotNull(result?.UserAccessPolicies);
         Assert.NotEmpty(result!.UserAccessPolicies);
-        Assert.Equal(owerOrgUser.Id,
-            result.UserAccessPolicies.First(x => x.OrganizationUserId == owerOrgUser.Id).OrganizationUserId);
+        Assert.Equal(ownerOrgUser.Id,
+            result.UserAccessPolicies.First(x => x.OrganizationUserId == ownerOrgUser.Id).OrganizationUserId);
     }
 
     [Theory]
