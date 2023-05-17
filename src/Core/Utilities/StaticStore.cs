@@ -576,7 +576,6 @@ public class StaticStore
                 Name = "Teams (Monthly)",
                 Product = ProductType.Teams,
                 BitwardenProduct = BitwardenProductType.SecretManager,
-                IsAnnual = true,
                 NameLocalizationKey = "planNameTeams",
                 DescriptionLocalizationKey = "planDescTeams",
                 CanBeUsedByBusiness = true,
@@ -655,6 +654,25 @@ public class StaticStore
                 AdditionalPricePerServiceAccount = 1,
 
                 AllowSeatAutoscale = true,
+            },
+            new Plan
+            {
+                Type = PlanType.Free,
+                Product = ProductType.Free,
+                BitwardenProduct = BitwardenProductType.SecretManager,
+                Name = "Free",
+                NameLocalizationKey = "planNameFree",
+                DescriptionLocalizationKey = "planDescFree",
+                BaseSeats = 2,
+                BaseServiceAccount = 3,
+                MaxCollections = 2,
+                MaxUsers = 2,
+                MaxServiceAccount = 3,
+
+                UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
+                DisplaySortOrder = -1,
+
+                AllowSeatAutoscale = false,
             },
             new Plan
             {
