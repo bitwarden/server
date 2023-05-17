@@ -31,7 +31,7 @@ public class WebAuthnCredentialCreateOptionsTokenable : ExpiringTokenable
 
     public bool TokenIsValid(User user)
     {
-        if (!Valid || user == default)
+        if (!Valid || user == null)
         {
             return false;
         }
@@ -39,6 +39,6 @@ public class WebAuthnCredentialCreateOptionsTokenable : ExpiringTokenable
         return UserId == user.Id;
     }
 
-    protected override bool TokenIsValid() => Identifier == TokenIdentifier && UserId != null && Options != default;
+    protected override bool TokenIsValid() => Identifier == TokenIdentifier && UserId != null && Options != null;
 }
 
