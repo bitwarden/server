@@ -18,7 +18,7 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
         GlobalSettings globalSettings)
         : base(organizationRepository, providerRepository)
     {
-        _subName = CoreHelpers.GetApplicationCacheServiceBusSubcriptionName(globalSettings);
+        _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
         _topicClient = new TopicClient(globalSettings.ServiceBus.ConnectionString,
             globalSettings.ServiceBus.ApplicationCacheTopicName);
     }

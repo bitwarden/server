@@ -24,7 +24,7 @@ public class EmergencyAccessRepositoryTests
         SqlRepo.UserRepository sqlUserRepo
         )
     {
-        var savedEmergencyAccesss = new List<EmergencyAccess>();
+        var savedEmergencyAccesses = new List<EmergencyAccess>();
         foreach (var sut in suts)
         {
             var i = suts.IndexOf(sut);
@@ -41,7 +41,7 @@ public class EmergencyAccessRepositoryTests
             sut.ClearChangeTracking();
 
             var savedEmergencyAccess = await sut.GetByIdAsync(postEfEmergencyAccess.Id);
-            savedEmergencyAccesss.Add(savedEmergencyAccess);
+            savedEmergencyAccesses.Add(savedEmergencyAccess);
         }
 
         for (int j = 0; j < users.Count; j++)
@@ -53,9 +53,9 @@ public class EmergencyAccessRepositoryTests
         emergencyAccess.GranteeId = users[0].Id;
         var sqlEmergencyAccess = await sqlEmergencyAccessRepo.CreateAsync(emergencyAccess);
         var savedSqlEmergencyAccess = await sqlEmergencyAccessRepo.GetByIdAsync(sqlEmergencyAccess.Id);
-        savedEmergencyAccesss.Add(savedSqlEmergencyAccess);
+        savedEmergencyAccesses.Add(savedSqlEmergencyAccess);
 
-        var distinctItems = savedEmergencyAccesss.Distinct(equalityComparer);
+        var distinctItems = savedEmergencyAccesses.Distinct(equalityComparer);
         Assert.True(!distinctItems.Skip(1).Any());
     }
 }
