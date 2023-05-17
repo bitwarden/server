@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Enums;
 
-public enum BitwardenProductType  : byte
+public enum BitwardenProductType : byte
 {
     [Display(Name = "PasswordManager")]
     PasswordManager = 0,

@@ -12,7 +12,7 @@ public class StaticStoreTests
         var plans = StaticStore.Plans;
         Assert.NotNull(plans);
         Assert.NotEmpty(plans);
-        Assert.Equal(17, plans.Count()); 
+        Assert.Equal(17, plans.Count());
     }
 
     [Fact]
@@ -21,7 +21,7 @@ public class StaticStoreTests
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         Assert.NotNull(plan);
-        Assert.Equal(plan.Type,PlanType.EnterpriseAnnually);
+        Assert.Equal(PlanType.EnterpriseAnnually,plan.Type);
     }
 
     [Fact]
@@ -29,14 +29,14 @@ public class StaticStoreTests
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         Assert.NotNull(plan);
-        Assert.Equal(plan.BitwardenProduct,BitwardenProductType.PasswordManager);
+        Assert.Equal(plan.BitwardenProduct, BitwardenProductType.PasswordManager);
     }
-    
+
     [Fact]
     public void StaticStore_GetPlanPlanTypBitwardenProductType_ReturnsSecretManagerPlans()
     {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually,BitwardenProductType.SecretManager);
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually, BitwardenProductType.SecretManager);
         Assert.NotNull(plan);
-        Assert.Equal(plan.BitwardenProduct,BitwardenProductType.SecretManager);
+        Assert.Equal(BitwardenProductType.SecretManager,plan.BitwardenProduct);
     }
 }
