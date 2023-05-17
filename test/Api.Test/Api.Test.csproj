@@ -27,10 +27,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="Auth\" />
-    <None Remove="Auth\Controllers\" />
-  </ItemGroup>
-  <ItemGroup>
     <Folder Include="Auth\" />
     <Folder Include="Auth\Controllers\" />
   </ItemGroup>
