@@ -33,7 +33,7 @@ public class WebAuthnController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<WebAuthnCredentialResponseModel>> Get()
     {
-        var user = await GetUser();
+        var user = await GetUserAsync();
         var credentials = await _credentialRepository.GetManyByUserIdAsync(user.Id);
 
         return new ListResponseModel<WebAuthnCredentialResponseModel>(credentials.Select(c => new WebAuthnCredentialResponseModel(c)));
@@ -42,7 +42,7 @@ public class WebAuthnController : Controller
     [HttpPost("options")]
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> PostOptions([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await VerifyUser(model);
+        var user = await VerifyUserAsync(model);
         var options = await _userService.StartWebAuthnLoginRegistrationAsync(user);
 
         var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
@@ -58,7 +58,7 @@ public class WebAuthnController : Controller
     [HttpPost("")]
     public async Task Post([FromBody] WebAuthnCredentialRequestModel model)
     {
-        var user = await GetUser();
+        var user = await GetUserAsync();
         var tokenable = _createOptionsDataProtector.Unprotect(model.Token);
         if (!tokenable.TokenIsValid(user))
         {
@@ -75,7 +75,7 @@ public class WebAuthnController : Controller
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid id, [FromBody] SecretVerificationRequestModel model)
     {
-        var user = await VerifyUser(model);
+        var user = await VerifyUserAsync(model);
         var credential = await _credentialRepository.GetByIdAsync(id, user.Id);
         if (credential == null)
         {
@@ -85,7 +85,7 @@ public class WebAuthnController : Controller
         await _credentialRepository.DeleteAsync(credential);
     }
 
-    private async Task<Core.Entities.User> GetUser()
+    private async Task<Core.Entities.User> GetUserAsync()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -95,9 +95,9 @@ public class WebAuthnController : Controller
         return user;
     }
 
-    private async Task<Core.Entities.User> VerifyUser(SecretVerificationRequestModel model)
+    private async Task<Core.Entities.User> VerifyUserAsync(SecretVerificationRequestModel model)
     {
-        var user = await GetUser();
+        var user = await GetUserAsync();
         if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
             await Task.Delay(2000);
