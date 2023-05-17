@@ -30,15 +30,14 @@ public class IdentityServerSsoTests
     [Fact]
     public async Task Test_MasterPassword_DecryptionType()
     {
+        // Arrange
         var challenge = new string('c', 50);
         var factory = await CreateFactoryAsync(new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.MasterPassword,
         }, challenge);
 
-        // var userManager = _factory.Services.GetRequiredService<UserManager<User>>();
-        // var user = await userManager.FindByEmailAsync("sso_user@email.com");
-
+        // Act
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
@@ -55,22 +54,30 @@ public class IdentityServerSsoTests
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }));
 
+        // Assert
+        // If the organization has a member decryption type of MasterPassword that should be the only option in the reply
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Null);
+        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+
+        var masterPasswordOption = Assert.Single(memberDecryptionOptions);
+        var objectType = AssertHelper.AssertJsonProperty(masterPasswordOption, "Object", JsonValueKind.String).GetString();
+        Assert.Equal("masterPasswordOption", objectType);
     }
 
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryption_ReturnsOptions()
     {
+        // Arrange
         var challenge = new string('c', 50);
         var factory = await CreateFactoryAsync(new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
         }, challenge);
 
+        // Act
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
@@ -87,17 +94,119 @@ public class IdentityServerSsoTests
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }));
 
+        // Assert
+        // If the organization has selected TrustedDeviceEncryption but the user still has their master password
+        // they can decrypt with either option
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Object);
-        AssertHelper.AssertJsonProperty(memberDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
+        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+
+        // Should have one item for master password & one for trusted device with admin approval
+        Assert.Single(memberDecryptionOptions, o => 
+        {
+            if (!o.TryGetProperty("Object", out var objectType))
+            {
+                return false;
+            }
+
+            if (objectType.GetString() != "masterPasswordOption")
+            {
+                return false;
+            }
+
+            return true;
+        });
+        Assert.Single(memberDecryptionOptions, o => 
+        {
+            if (!o.TryGetProperty("Object", out var objectType))
+            {
+                return false;
+            }
+
+            if (objectType.GetString() != "trustedDeviceOption")
+            {
+                return false;
+            }
+
+            if (!o.TryGetProperty("HasAdminApproval", out var hasAdminApproval))
+            {
+                return false;
+            }
+
+            return hasAdminApproval.ValueKind == JsonValueKind.True;
+        });
+    }
+
+    [Fact]
+    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_ReturnsOneOption()
+    {
+        // Arrange
+        var challenge = new string('c', 50);
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+        }, challenge);
+
+        await UpdateUserAsync(factory, user => user.MasterPassword = null);
+
+        // Act
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "10" },
+            { "deviceIdentifier", "test_id" },
+            { "deviceName", "firefox" },
+            { "twoFactorToken", "TEST"},
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }));
+
+        // Assert
+        // If the organization has selected TrustedDeviceEncryption but the user still has their master password
+        // they can decrypt with either option
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = responseBody.RootElement;
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+
+        // Should only have a single item 
+        var memberDecryptionOption = Assert.Single(memberDecryptionOptions, o => 
+        {
+            if (!o.TryGetProperty("Object", out var objectType))
+            {
+                return false;
+            }
+
+            if (objectType.GetString() != "trustedDeviceOption")
+            {
+                return false;
+            }
+
+            if (!o.TryGetProperty("HasAdminApproval", out var hasAdminApproval))
+            {
+                return false;
+            }
+
+            return hasAdminApproval.ValueKind == JsonValueKind.True;
+        });
+
+        var objectType = AssertHelper.AssertJsonProperty(memberDecryptionOption, "Object", JsonValueKind.String).GetString();
+        Assert.Equal("trustedDeviceOption", objectType);
+        AssertHelper.AssertJsonProperty(memberDecryptionOption, "HasAdminApproval", JsonValueKind.True);
     }
 
     [Fact]
     public async Task SsoLogin_KeyConnector_ReturnsOptions()
     {
+        // Arrange
         var challenge = new string('c', 50);
         var factory = await CreateFactoryAsync(new SsoConfigurationData
         {
@@ -105,12 +214,9 @@ public class IdentityServerSsoTests
             KeyConnectorUrl = "https://key_connector.com"
         }, challenge);
 
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-        var user = await userRepository.GetByEmailAsync(TestEmail);
+        await UpdateUserAsync(factory, user => user.MasterPassword = null);
 
-        user.MasterPassword = null;
-        await userRepository.ReplaceAsync(user);
-
+        // Act
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
@@ -127,12 +233,19 @@ public class IdentityServerSsoTests
             { "redirect_uri", "https://localhost:8080/sso-connector.html" }
         }));
 
+        // Assert
         Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Object);
-        var keyConnectorUrl = AssertHelper.AssertJsonProperty(memberDecryptionOptions, "KeyConnectorUrl", JsonValueKind.String).GetString();
+
+        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+        var keyConnectorOption = Assert.Single(memberDecryptionOptions);
+
+        var objectType = AssertHelper.AssertJsonProperty(keyConnectorOption, "Object", JsonValueKind.String).GetString();
+        Assert.Equal("keyConnectorOption", objectType);
+
+        var keyConnectorUrl = AssertHelper.AssertJsonProperty(keyConnectorOption, "KeyConnectorUrl", JsonValueKind.String).GetString();
         Assert.Equal("https://key_connector.com", keyConnectorUrl);
 
         // For backwards compatibility reasons the url should also be on the root
@@ -214,5 +327,15 @@ public class IdentityServerSsoTests
         authorizationCode.Subject = subject;
 
         return factory;
+    }
+
+    private static async Task UpdateUserAsync(IdentityApplicationFactory factory, Action<User> changeUser)
+    {
+        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(TestEmail);
+
+        changeUser(user);
+
+        await userRepository.ReplaceAsync(user);
     }
 }

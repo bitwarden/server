@@ -120,7 +120,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         // organization at a time.
         if (ssoConfigData != null && _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext))
         {
-            context.Result.CustomResponse["MemberDecryptionOptions"] = CreateMemberDecryptionOptions(ssoConfigData, user);
+            context.Result.CustomResponse["MemberDecryptionOptions"] = CreateMemberDecryptionOptions(ssoConfigData, user).ToList();
         }
 
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
@@ -201,22 +201,24 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     /// <summary>
     /// 
     /// </summary>
-    private static MemberDecryptionOptions? CreateMemberDecryptionOptions(SsoConfigurationData ssoConfigurationData, User user)
+    private static IEnumerable<UserDecryptionOption> CreateMemberDecryptionOptions(SsoConfigurationData ssoConfigurationData, User user)
     {
-        switch (ssoConfigurationData.MemberDecryptionType)
+        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
         {
-            case MemberDecryptionType.TrustedDeviceEncryption:
-                return new TrustedDeviceMemberDecryptionOptions(
-                    !string.IsNullOrEmpty(user.MasterPassword));
-            case MemberDecryptionType.KeyConnector:
-                if (string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
-                {
-                    return null;
-                }
+            // KeyConnector makes it mutually exclusive
+            yield return new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
+            yield break;
+        }
 
-                return new KeyConnectorMemberDecryptionOptions(ssoConfigurationData.KeyConnectorUrl);
-            default:
-                return null;
+        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
+        {
+            // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
+            yield return new TrustedDeviceUserDecryptionOption(hasAdminApproval: true);
+        }
+
+        if (!string.IsNullOrEmpty(user.MasterPassword))
+        {
+            yield return new MasterPasswordUserDecryptionOption();
         }
     }
 }
