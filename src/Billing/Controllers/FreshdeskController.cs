@@ -66,7 +66,7 @@ public class FreshdeskController : Controller
             {
                 var userLink = $"{_globalSettings.BaseServiceUri.Admin}/users/edit/{user.Id}";
                 note += $"<li>User, {user.Email}: {userLink}</li>";
-                customFields.Add("cf_user", userLink);
+                customFields.Add(_billingSettings.FreshDesk.UserFieldName, userLink);
                 var tags = new HashSet<string>();
                 if (user.Premium)
                 {
@@ -81,11 +81,11 @@ public class FreshdeskController : Controller
                     note += $"<li>Org, {orgNote}</li>";
                     if (!customFields.Any(kvp => kvp.Key == "cf_org"))
                     {
-                        customFields.Add("cf_org", orgNote);
+                        customFields.Add(_billingSettings.FreshDesk.OrgFieldName, orgNote);
                     }
                     else
                     {
-                        customFields["cf_org"] += $"\n{orgNote}";
+                        customFields[_billingSettings.FreshDesk.OrgFieldName] += $"\n{orgNote}";
                     }
 
                     var planName = GetAttribute<DisplayAttribute>(org.PlanType).Name.Split(" ").FirstOrDefault();

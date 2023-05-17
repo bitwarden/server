@@ -1,4 +1,4 @@
-using Bit.Billing.Controllers;
+﻿using Bit.Billing.Controllers;
 using Bit.Billing.Models;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -18,6 +18,9 @@ public class FreshdeskControllerTests
 {
     private const string ApiKey = "TESTFRESHDESKAPIKEY";
     private const string WebhookKey = "TESTKEY";
+
+    private const string UserFieldName = "cf_user";
+    private const string OrgFieldName = "cf_org";
 
     [Theory]
     [BitAutoData((string)null, null)]
@@ -54,6 +57,8 @@ public class FreshdeskControllerTests
 
         sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(WebhookKey);
         sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.ApiKey.Returns(ApiKey);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.UserFieldName.Returns(UserFieldName);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.OrgFieldName.Returns(OrgFieldName);
 
         var response = await sutProvider.Sut.PostWebhook(WebhookKey, model);
 

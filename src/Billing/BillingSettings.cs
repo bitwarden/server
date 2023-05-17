@@ -23,5 +23,7 @@ public class BillingSettings
     {
         public virtual string ApiKey { get; set; }
         public virtual string WebhookKey { get; set; }
+        public virtual string UserFieldName { get; set; }
+        public virtual string OrgFieldName { get; set; }
     }
 }
