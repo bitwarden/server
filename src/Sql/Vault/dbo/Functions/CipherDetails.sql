@@ -27,7 +27,6 @@ SELECT
     END [FolderId],
     C.[DeletedDate],
     C.[Reprompt],
-    C.[Key],
-    C.[ForceKeyRotation]
+    C.[Key]
 FROM
     [dbo].[Cipher] C

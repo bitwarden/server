@@ -104,9 +104,6 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("Folders")
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("ForceKeyRotation")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
 

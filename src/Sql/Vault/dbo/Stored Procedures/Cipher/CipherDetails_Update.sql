@@ -16,8 +16,7 @@
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(2),
     @Reprompt TINYINT,
-    @Key VARCHAR(MAX) = NULL,
-    @ForceKeyRotation BIT = 0
+    @Key VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -54,8 +53,7 @@ BEGIN
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
         [DeletedDate] = @DeletedDate,
-        [Key] = @Key,
-        [ForceKeyRotation] = @ForceKeyRotation
+        [Key] = @Key
     WHERE
         [Id] = @Id
 

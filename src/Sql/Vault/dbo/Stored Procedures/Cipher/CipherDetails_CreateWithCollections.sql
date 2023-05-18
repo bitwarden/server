@@ -17,7 +17,6 @@
     @DeletedDate DATETIME2(7),
     @Reprompt TINYINT,
     @Key VARCHAR(MAX) = NULL,
-    @ForceKeyRotation BIT = 0,
     @CollectionIds AS [dbo].[GuidIdArray] READONLY
 AS
 BEGIN
@@ -25,7 +24,7 @@ BEGIN
 
     EXEC [dbo].[CipherDetails_Create] @Id, @UserId, @OrganizationId, @Type, @Data, @Favorites, @Folders,
         @Attachments, @CreationDate, @RevisionDate, @FolderId, @Favorite, @Edit, @ViewPassword,
-        @OrganizationUseTotp, @DeletedDate, @Reprompt, @Key, @ForceKeyRotation
+        @OrganizationUseTotp, @DeletedDate, @Reprompt, @Key
 
     DECLARE @UpdateCollectionsSuccess INT
     EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds

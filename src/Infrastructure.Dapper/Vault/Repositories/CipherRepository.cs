@@ -716,8 +716,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         ciphersTable.Columns.Add(repromptColumn);
         var keyColummn = new DataColumn(nameof(c.Key), typeof(string));
         ciphersTable.Columns.Add(keyColummn);
-        var forceKeyRotationColumn = new DataColumn(nameof(c.ForceKeyRotation), typeof(bool));
-        ciphersTable.Columns.Add(forceKeyRotationColumn);
 
         foreach (DataColumn col in ciphersTable.Columns)
         {
@@ -745,7 +743,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
             row[repromptColumn] = cipher.Reprompt;
             row[keyColummn] = cipher.Key;
-            row[forceKeyRotationColumn] = cipher.ForceKeyRotation;
 
             ciphersTable.Rows.Add(row);
         }
