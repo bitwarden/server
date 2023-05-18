@@ -12,7 +12,7 @@ public class AccessTokenCreationResponseModel : ResponseModel
     {
         Id = apiKey.Id;
         Name = apiKey.Name;
-        ClientSecret = apiKey.ClientSecret;
+        ClientSecret = apiKey.HashedClientSecret;
         ExpireAt = apiKey.ExpireAt;
         CreationDate = apiKey.CreationDate;
         RevisionDate = apiKey.RevisionDate;

@@ -4,7 +4,6 @@ SELECT
     AK.[Id],
     AK.[ServiceAccountId],
     AK.[Name],
-    AK.[ClientSecret],
     AK.[HashedClientSecret],
     AK.[Scope],
     AK.[EncryptedPayload],

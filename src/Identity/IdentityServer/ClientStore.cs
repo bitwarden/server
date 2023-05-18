@@ -100,7 +100,7 @@ public class ClientStore : IClientStore
         {
             ClientId = clientId,
             RequireClientSecret = true,
-            ClientSecrets = { new Secret(apiKey.ClientSecret.Sha256()) },
+            ClientSecrets = { new Secret(apiKey.HashedClientSecret) },
             AllowedScopes = apiKey.GetScopes(),
             AllowedGrantTypes = GrantTypes.ClientCredentials,
             AccessTokenLifetime = 3600 * 1,

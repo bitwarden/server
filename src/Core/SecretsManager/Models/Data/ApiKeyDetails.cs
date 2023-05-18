@@ -11,7 +11,7 @@ public class ApiKeyDetails : ApiKey
         Id = apiKey.Id;
         ServiceAccountId = apiKey.ServiceAccountId;
         Name = apiKey.Name;
-        ClientSecret = apiKey.ClientSecret;
+        HashedClientSecret = apiKey.HashedClientSecret;
         Scope = apiKey.Scope;
         EncryptedPayload = apiKey.EncryptedPayload;
         Key = apiKey.Key;

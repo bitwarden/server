@@ -1,4 +1,6 @@
-﻿using Bit.Core.Context;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
@@ -55,7 +57,22 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
             throw new NotFoundException();
         }
 
-        apiKey.ClientSecret = CoreHelpers.SecureRandomString(_clientSecretMaxLength);
-        return await _apiKeyRepository.CreateAsync(apiKey);
+        var clientSecret = CoreHelpers.SecureRandomString(_clientSecretMaxLength);
+
+        // Store the hash of the client secret in the database.
+        apiKey.HashedClientSecret = GetHash(clientSecret);
+        var result = await _apiKeyRepository.CreateAsync(apiKey);
+
+        // Return the plain text client secret to the client to generate the access token.
+        result.HashedClientSecret = clientSecret;
+        return result;
+    }
+
+    private static string GetHash(string input)
+    {
+        using var sha = SHA256.Create();
+        var bytes = Encoding.UTF8.GetBytes(input);
+        var hash = sha.ComputeHash(bytes);
+        return Convert.ToBase64String(hash);
     }
 }

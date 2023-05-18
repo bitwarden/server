@@ -10,8 +10,9 @@ public class ApiKey : ITableObject<Guid>
     public Guid? ServiceAccountId { get; set; }
     [MaxLength(200)]
     public string Name { get; set; }
-    [MaxLength(30)]
-    public string ClientSecret { get; set; }
+
+    [MaxLength(128)]
+    public string HashedClientSecret { get; set; }
     [MaxLength(4000)]
     public string Scope { get; set; }
     [MaxLength(4000)]

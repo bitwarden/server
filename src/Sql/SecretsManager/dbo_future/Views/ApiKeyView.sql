@@ -3,7 +3,6 @@ AS
 SELECT [Id],
     [ServiceAccountId],
     [Name],
-    [ClientSecret],
     [HashedClientSecret],
     [Scope],
     [EncryptedPayload],
