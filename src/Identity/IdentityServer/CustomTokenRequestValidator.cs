@@ -120,7 +120,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         // organization at a time.
         if (ssoConfigData != null && _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext))
         {
-            context.Result.CustomResponse["MemberDecryptionOptions"] = CreateMemberDecryptionOptions(ssoConfigData, user).ToList();
+            context.Result.CustomResponse["UserDecryptionOptions"] = CreateUserDecryptionOptions(ssoConfigData, user).ToList();
         }
 
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
@@ -199,9 +199,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     }
 
     /// <summary>
-    /// 
+    /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
     /// </summary>
-    private static IEnumerable<UserDecryptionOption> CreateMemberDecryptionOptions(SsoConfigurationData ssoConfigurationData, User user)
+    private static IEnumerable<UserDecryptionOption> CreateUserDecryptionOptions(SsoConfigurationData ssoConfigurationData, User user)
     {
         if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
         {

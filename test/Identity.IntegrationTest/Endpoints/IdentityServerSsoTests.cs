@@ -60,9 +60,9 @@ public class IdentityServerSsoTests
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Array).EnumerateArray();
 
-        var masterPasswordOption = Assert.Single(memberDecryptionOptions);
+        var masterPasswordOption = Assert.Single(userDecryptionOptions);
         var objectType = AssertHelper.AssertJsonProperty(masterPasswordOption, "Object", JsonValueKind.String).GetString();
         Assert.Equal("masterPasswordOption", objectType);
     }
@@ -101,10 +101,10 @@ public class IdentityServerSsoTests
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Array).EnumerateArray();
 
         // Should have one item for master password & one for trusted device with admin approval
-        Assert.Single(memberDecryptionOptions, o => 
+        Assert.Single(userDecryptionOptions, o =>
         {
             if (!o.TryGetProperty("Object", out var objectType))
             {
@@ -118,7 +118,7 @@ public class IdentityServerSsoTests
 
             return true;
         });
-        Assert.Single(memberDecryptionOptions, o => 
+        Assert.Single(userDecryptionOptions, o =>
         {
             if (!o.TryGetProperty("Object", out var objectType))
             {
@@ -175,10 +175,10 @@ public class IdentityServerSsoTests
         using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Array).EnumerateArray();
 
         // Should only have a single item 
-        var memberDecryptionOption = Assert.Single(memberDecryptionOptions, o => 
+        var userDecryptionOption = Assert.Single(userDecryptionOptions, o =>
         {
             if (!o.TryGetProperty("Object", out var objectType))
             {
@@ -198,9 +198,9 @@ public class IdentityServerSsoTests
             return hasAdminApproval.ValueKind == JsonValueKind.True;
         });
 
-        var objectType = AssertHelper.AssertJsonProperty(memberDecryptionOption, "Object", JsonValueKind.String).GetString();
+        var objectType = AssertHelper.AssertJsonProperty(userDecryptionOption, "Object", JsonValueKind.String).GetString();
         Assert.Equal("trustedDeviceOption", objectType);
-        AssertHelper.AssertJsonProperty(memberDecryptionOption, "HasAdminApproval", JsonValueKind.True);
+        AssertHelper.AssertJsonProperty(userDecryptionOption, "HasAdminApproval", JsonValueKind.True);
     }
 
     [Fact]
@@ -239,8 +239,8 @@ public class IdentityServerSsoTests
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
 
-        var memberDecryptionOptions = AssertHelper.AssertJsonProperty(root, "MemberDecryptionOptions", JsonValueKind.Array).EnumerateArray();
-        var keyConnectorOption = Assert.Single(memberDecryptionOptions);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+        var keyConnectorOption = Assert.Single(userDecryptionOptions);
 
         var objectType = AssertHelper.AssertJsonProperty(keyConnectorOption, "Object", JsonValueKind.String).GetString();
         Assert.Equal("keyConnectorOption", objectType);
