@@ -76,17 +76,21 @@ public class AccountsController : Controller
     [HttpPost("webauthn-assertion-options")]
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     // TODO: Create proper models for this call
-    public async Task<AssertionOptions> PostWebAuthnAssertionOptions([FromBody] PreloginRequestModel model)
+    public async Task<WebAuthnCredentialAssertionOptionsResponseModel> PostWebAuthnAssertionOptions([FromBody] WebauthnCredentialAssertionRequestModel model)
     {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
-        {
-            // TODO: return something? possible enumeration attacks with this response
-            return new AssertionOptions();
-        }
+        //var user = await _userRepository.GetByEmailAsync(model.Email);
+        //if (user == null)
+        //{
+        //    // TODO: return something? possible enumeration attacks with this response
+        //    return new AssertionOptions();
+        //}
 
-        var options = await _userService.StartWebAuthnLoginAssertionAsync(user);
-        return options;
+        var options = await _userService.StartWebAuthnLoginAssertionAsync(null);
+        return new WebAuthnCredentialAssertionOptionsResponseModel
+        {
+            Options = options,
+            Token = "NotImplemented"
+        };
     }
 
     [HttpPost("webauthn-assertion")]

@@ -575,22 +575,28 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
     {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var existingCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
-            .ToList();
-
-        if (existingCredentials.Count == 0)
+        if (user != null)
         {
-            return null;
+            throw new NotImplementedException();
         }
 
-        // TODO: PRF?
-        var exts = new AuthenticationExtensionsClientInputs
-        {
-            UserVerificationMethod = true
-        };
+        //var extensions = new AuthenticationExtensionsClientInputs { };
+
+        //var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
+        //    AttestationConveyancePreference.None, extensions);
+        //var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
+        //var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+        //var existingCredentials = existingKeys
+        //    .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
+        //    .ToList();
+        var existingCredentials = new List<PublicKeyCredentialDescriptor>();
+
+        //if (existingCredentials.Count == 0)
+        //{
+        //    return null;
+        //}
+
+        var exts = new AuthenticationExtensionsClientInputs();
         var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Preferred, exts);
 
         // TODO: temp save options to user record somehow
