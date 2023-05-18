@@ -495,7 +495,7 @@ public class StaticStore
                 DescriptionLocalizationKey = "planDescEnterprise",
                 CanBeUsedByBusiness = true,
                 BaseSeats = 0,
-                BaseServiceAccount = 100,
+                BaseServiceAccount = 200,
 
                 HasAdditionalSeatsOption = true,
                 HasAdditionalServiceAccountOption = true,
@@ -522,8 +522,8 @@ public class StaticStore
                 StripeSeatPlanId = "sm-enterprise-seat-monthly",
                 StripeStoragePlanId = "service-account-monthly",
                 BasePrice = 0,
-                SeatPrice = 28,
-                AdditionalPricePerServiceAccount = 1,
+                SeatPrice = 12,
+                AdditionalPricePerServiceAccount = 0.5M,
 
                 AllowSeatAutoscale = true,
             },
@@ -538,7 +538,7 @@ public class StaticStore
                 DescriptionLocalizationKey = "planDescEnterprise",
                 CanBeUsedByBusiness = true,
                 BaseSeats = 0,
-                BaseServiceAccount = 100,
+                BaseServiceAccount = 200,
 
                 HasAdditionalSeatsOption = true,
                 HasAdditionalServiceAccountOption = true,
@@ -565,8 +565,8 @@ public class StaticStore
                 StripeSeatPlanId = "sm-enterprise-seat-annually",
                 StripeStoragePlanId = "service-account-annually",
                 BasePrice = 0,
-                SeatPrice = 24,
-                AdditionalPricePerServiceAccount = 1,
+                SeatPrice = 10,
+                AdditionalPricePerServiceAccount = 0.5M,
 
                 AllowSeatAutoscale = true,
             },
@@ -580,7 +580,7 @@ public class StaticStore
                 DescriptionLocalizationKey = "planDescTeams",
                 CanBeUsedByBusiness = true,
                 BaseSeats = 0,
-                BaseServiceAccount = 40,
+                BaseServiceAccount = 50,
 
                 HasAdditionalSeatsOption = true,
                 HasAdditionalServiceAccountOption = true,
@@ -607,8 +607,8 @@ public class StaticStore
                 StripeSeatPlanId = "sm-teams-seat-monthly",
                 StripeStoragePlanId = "service-account-monthly",
                 BasePrice = 0,
-                SeatPrice = 14,
-                AdditionalPricePerServiceAccount = 1,
+                SeatPrice = 6,
+                AdditionalPricePerServiceAccount = 0.5M,
 
                 AllowSeatAutoscale = true,
             },
@@ -623,7 +623,7 @@ public class StaticStore
                 DescriptionLocalizationKey = "planDescTeams",
                 CanBeUsedByBusiness = true,
                 BaseSeats = 0,
-                BaseServiceAccount = 40,
+                BaseServiceAccount = 50,
 
                 HasAdditionalSeatsOption = true,
                 HasAdditionalServiceAccountOption = true,
@@ -650,8 +650,8 @@ public class StaticStore
                 StripeSeatPlanId = "sm-teams-seat-annually",
                 StripeStoragePlanId = "service-account-annually",
                 BasePrice = 0,
-                SeatPrice = 12,
-                AdditionalPricePerServiceAccount = 1,
+                SeatPrice = 4,
+                AdditionalPricePerServiceAccount = 0.5M,
 
                 AllowSeatAutoscale = true,
             },
