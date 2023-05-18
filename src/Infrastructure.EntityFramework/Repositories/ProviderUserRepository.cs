@@ -180,4 +180,19 @@ public class ProviderUserRepository :
                 .CountAsync();
         }
     }
+
+    public async Task<ICollection<ProviderUser>> GetManyByOrganizationAsync(Guid organizationId, ProviderUserStatusType? status = null)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = from pu in dbContext.ProviderUsers
+                        join po in dbContext.ProviderOrganizations
+                            on pu.ProviderId equals po.ProviderId
+                        where po.OrganizationId == organizationId &&
+                              (status == null || pu.Status == status)
+                        select pu;
+            return await query.ToArrayAsync();
+        }
+    }
 }

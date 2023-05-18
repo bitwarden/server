@@ -52,9 +52,9 @@ internal class CipherBuilder : ISpecimenBuilder
         {
             var obj = fixture.WithAutoNSubstitutions().Create<Cipher>();
             var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
-            var cipherAttachements = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
+            var cipherAttachments = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
             obj.Data = JsonSerializer.Serialize(cipherData, serializerOptions);
-            obj.Attachments = JsonSerializer.Serialize(cipherAttachements, serializerOptions);
+            obj.Attachments = JsonSerializer.Serialize(cipherAttachments, serializerOptions);
 
             return obj;
         }
@@ -64,9 +64,9 @@ internal class CipherBuilder : ISpecimenBuilder
             for (var i = 0; i < ciphers.Count(); i++)
             {
                 var cipherData = fixture.WithAutoNSubstitutions().Create<CipherLoginData>();
-                var cipherAttachements = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
+                var cipherAttachments = fixture.WithAutoNSubstitutions().Create<List<CipherAttachment>>();
                 ciphers[i].Data = JsonSerializer.Serialize(cipherData, serializerOptions);
-                ciphers[i].Attachments = JsonSerializer.Serialize(cipherAttachements, serializerOptions);
+                ciphers[i].Attachments = JsonSerializer.Serialize(cipherAttachments, serializerOptions);
             }
 
             return ciphers;
