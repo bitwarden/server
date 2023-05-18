@@ -96,6 +96,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
+        HasMasterPassword = organizationUser.HasMasterPassword;
     }
 
 
@@ -104,6 +105,7 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
+    public bool HasMasterPassword { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
 }

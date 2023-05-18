@@ -1,4 +1,4 @@
-﻿CREATE VIEW [dbo].[OrganizationUserUserDetailsView]
+CREATE OR ALTER VIEW [dbo].[OrganizationUserUserDetailsView]
 AS
 SELECT
     OU.[Id],
@@ -25,3 +25,22 @@ LEFT JOIN
     [dbo].[User] U ON U.[Id] = OU.[UserId]
 LEFT JOIN
     [dbo].[SsoUser] SU ON SU.[UserId] = OU.[UserId] AND SU.[OrganizationId] = OU.[OrganizationId]
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadByOrganizationId]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUser_ReadByMinimumRole]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUser_ReadByMinimumRole]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadById]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserUserDetails_ReadById]';
+END
+GO
