@@ -131,6 +131,8 @@ public class StripePaymentService : IPaymentService
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
                             Name = org.SubscriberType(),
+                            // We are taking only first 30 characters of the SubscriberName because stripe provide
+                            // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create
                             Value = string.IsNullOrWhiteSpace(org.SubscriberName()) ? "" : org.SubscriberName().Substring(0, 30),
                         },
                     },
