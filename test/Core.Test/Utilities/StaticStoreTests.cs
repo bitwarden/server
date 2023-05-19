@@ -12,31 +12,34 @@ public class StaticStoreTests
         var plans = StaticStore.Plans;
         Assert.NotNull(plans);
         Assert.NotEmpty(plans);
-        Assert.Equal(17, plans.Count());
+        Assert.Equal(18, plans.Count());
     }
 
-    [Fact]
-    public void StaticStore_GetPlanByPlanType_Success()
+    [Theory]
+    [InlineData(PlanType.EnterpriseAnnually)]
+    public void StaticStore_GetPlanByPlanType_Success(PlanType planType)
     {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        var plan = StaticStore.GetPlan(planType);
 
         Assert.NotNull(plan);
-        Assert.Equal(PlanType.EnterpriseAnnually, plan.Type);
+        Assert.Equal(planType, plan.Type);
     }
 
-    [Fact]
-    public void StaticStore_GetPlanPlanTypeOnly_ReturnsPasswordManagerPlans()
+    [Theory]
+    [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
+    public void StaticStore_GetPlanPlanTypeOnly_ReturnsPasswordManagerPlans(PlanType planType,BitwardenProductType bitwardenProductType)
     {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        var plan = StaticStore.GetPlan(planType);
         Assert.NotNull(plan);
-        Assert.Equal(BitwardenProductType.PasswordManager, plan.BitwardenProduct);
+        Assert.Equal(bitwardenProductType, plan.BitwardenProduct);
     }
 
-    [Fact]
-    public void StaticStore_GetPlanPlanTypBitwardenProductType_ReturnsSecretManagerPlans()
+    [Theory]
+    [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
+    public void StaticStore_GetPlanPlanTypBitwardenProductType_ReturnsSecretManagerPlans(PlanType planType,BitwardenProductType bitwardenProductType)
     {
-        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually, BitwardenProductType.SecretManager);
+        var plan = StaticStore.GetPlan(planType, bitwardenProductType);
         Assert.NotNull(plan);
-        Assert.Equal(BitwardenProductType.SecretManager, plan.BitwardenProduct);
+        Assert.Equal(bitwardenProductType, plan.BitwardenProduct);
     }
 }

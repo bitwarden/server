@@ -4,8 +4,8 @@ namespace Bit.Core.Enums;
 
 public enum BitwardenProductType : byte
 {
-    [Display(Name = "PasswordManager")]
+    [Display(Name = "Password Manager")]
     PasswordManager = 0,
-    [Display(Name = "SecretManager")]
-    SecretManager = 1,
+    [Display(Name = "Secrets Manager")]
+    SecretsManager = 1,
 }

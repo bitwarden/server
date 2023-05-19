@@ -3,7 +3,7 @@ using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Utilities;
 
-public static class SecretManagerPlanStore
+public static class SecretsManagerPlanStore
 {
     public static IEnumerable<Plan> CreatePlan()
     {
