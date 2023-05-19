@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -20,7 +21,7 @@ public class PlansController : Controller
     [AllowAnonymous]
     public ListResponseModel<PlanResponseModel> Get()
     {
-        var data = StaticStore.Plans;
+        var data = StaticStore.Plans.Where(x=>x.BitwardenProduct == BitwardenProductType.PasswordManager);
         var responses = data.Select(plan => new PlanResponseModel(plan));
         return new ListResponseModel<PlanResponseModel>(responses);
     }
