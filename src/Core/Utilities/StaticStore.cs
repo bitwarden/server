@@ -105,12 +105,12 @@ public class StaticStore
         #endregion
 
         #region Plans
-        
+
         var passwordManagerPlans = PasswordManagerPlanStore.CreatePlan();
         var secretManagerPlans = SecretsManagerPlanStore.CreatePlan();
 
         Plans = passwordManagerPlans.Concat(secretManagerPlans);
-        
+
 
         #endregion
     }

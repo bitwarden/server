@@ -27,7 +27,7 @@ public class StaticStoreTests
 
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
-    public void StaticStore_GetPlanPlanTypeOnly_ReturnsPasswordManagerPlans(PlanType planType,BitwardenProductType bitwardenProductType)
+    public void StaticStore_GetPlanPlanTypeOnly_ReturnsPasswordManagerPlans(PlanType planType, BitwardenProductType bitwardenProductType)
     {
         var plan = StaticStore.GetPlan(planType);
         Assert.NotNull(plan);
@@ -36,7 +36,7 @@ public class StaticStoreTests
 
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
-    public void StaticStore_GetPlanPlanTypBitwardenProductType_ReturnsSecretManagerPlans(PlanType planType,BitwardenProductType bitwardenProductType)
+    public void StaticStore_GetPlanPlanTypBitwardenProductType_ReturnsSecretManagerPlans(PlanType planType, BitwardenProductType bitwardenProductType)
     {
         var plan = StaticStore.GetPlan(planType, bitwardenProductType);
         Assert.NotNull(plan);

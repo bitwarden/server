@@ -7,7 +7,7 @@ public static class PasswordManagerPlanStore
 {
     public static IEnumerable<Plan> CreatePlan()
     {
-        return  new List<Plan>
+        return new List<Plan>
         {
             new Plan
             {
