@@ -175,8 +175,7 @@ public static class SecretsManagerPlanStore
                 UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
                 DisplaySortOrder = -1,
                 AllowSeatAutoscale = false,
-            },
-            new Plan { Type = PlanType.Custom, AllowSeatAutoscale = true, },
+            }
         };
     }
 }
