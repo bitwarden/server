@@ -131,7 +131,7 @@ public class StripePaymentService : IPaymentService
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
                             Name = org.SubscriberType(),
-                            Value = org.SubscriberName(),
+                            Value = string.IsNullOrWhiteSpace(org.SubscriberName()) ? "" : org.SubscriberName().Substring(0, 30),
                         },
                     },
                 },
@@ -443,7 +443,7 @@ public class StripePaymentService : IPaymentService
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
                             Name = user.SubscriberType(),
-                            Value = user.SubscriberName(),
+                            Value = string.IsNullOrWhiteSpace(user.SubscriberName()) ? "" : user.SubscriberName().Substring(0, 30),
                         },
                     }
                 },
@@ -1358,7 +1358,7 @@ public class StripePaymentService : IPaymentService
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
                                 Name = subscriber.SubscriberType(),
-                                Value = subscriber.SubscriberName(),
+                                Value = string.IsNullOrWhiteSpace(subscriber.SubscriberName()) ? "" : subscriber.SubscriberName().Substring(0, 30),
                             },
                         }
                     },
@@ -1438,7 +1438,7 @@ public class StripePaymentService : IPaymentService
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
                                 Name = subscriber.SubscriberType(),
-                                Value = subscriber.SubscriberName(),
+                                Value = string.IsNullOrWhiteSpace(subscriber.SubscriberName()) ? "" : subscriber.SubscriberName().Substring(0, 30),
                             },
                         }
                     },

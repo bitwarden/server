@@ -93,7 +93,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
 
     public string SubscriberName()
     {
-        return string.IsNullOrWhiteSpace(Name) ? "" : Name.Substring(0, 30);
+        return Name;
     }
 
     public string BraintreeCustomerIdPrefix()
