@@ -7,7 +7,6 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
-using Bit.Api.SecretsManager;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -706,7 +705,6 @@ public class OrganizationsController : Controller
     }
 
     // This is a temporary endpoint to self-enroll in secrets manager
-    [SecretsManager]
     [SelfHosted(NotSelfHostedOnly = true)]
     [HttpPost("{id}/enroll-secrets-manager")]
     public async Task EnrollSecretsManager(Guid id, [FromBody] OrganizationEnrollSecretsManagerRequestModel model)
