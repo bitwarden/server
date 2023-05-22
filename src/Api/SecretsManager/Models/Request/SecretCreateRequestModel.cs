@@ -35,7 +35,7 @@ public class SecretCreateRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (ProjectIds != null && ProjectIds.Length > 1)
+        if (ProjectIds is { Length: > 1 })
         {
             yield return new ValidationResult(
                 $"Only one project assignment is supported.",
