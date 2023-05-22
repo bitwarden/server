@@ -91,11 +91,11 @@ public class DevicesController : Controller
         return response;
     }
 
-    [HttpPut("{id}/keys")]
-    [HttpPost("{id}/keys")]
-    public async Task<DeviceResponseModel> PutKeys(Guid id, [FromBody] DeviceKeysRequestModel model)
+    [HttpPut("{identifier}/keys")]
+    [HttpPost("{identifier}/keys")]
+    public async Task<DeviceResponseModel> PutKeys(string identifier, [FromBody] DeviceKeysRequestModel model)
     {
-        var device = await _deviceRepository.GetByIdAsync(id, _userService.GetProperUserId(User).Value);
+        var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
         if (device == null)
         {
             throw new NotFoundException();
