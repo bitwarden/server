@@ -17,7 +17,7 @@ namespace Bit.Commercial.Core.Services;
 
 public class ProviderService : IProviderService
 {
-    public static PlanType[] ProviderDisllowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
+    public static PlanType[] ProviderDisallowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
 
     private readonly IDataProtector _dataProtector;
     private readonly IMailService _mailService;
@@ -493,7 +493,7 @@ public class ProviderService : IProviderService
 
     private void ThrowOnInvalidPlanType(PlanType requestedType)
     {
-        if (ProviderDisllowedOrganizationTypes.Contains(requestedType))
+        if (ProviderDisallowedOrganizationTypes.Contains(requestedType))
         {
             throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
         }
