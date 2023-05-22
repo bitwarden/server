@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Auth.Models.Api.Request.Accounts;
 
-public class WebauthnCredentialAssertionRequestModel
+public class WebauthnCredentialAssertionOptionsRequestModel
 {
     [EmailAddress]
     [StringLength(256)]

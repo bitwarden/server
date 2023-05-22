@@ -81,7 +81,7 @@ public class AccountsController : Controller
     [HttpPost("webauthn-assertion-options")]
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     // TODO: Create proper models for this call
-    public async Task<WebAuthnCredentialAssertionOptionsResponseModel> PostWebAuthnAssertionOptions([FromBody] WebauthnCredentialAssertionRequestModel model)
+    public async Task<WebAuthnCredentialAssertionOptionsResponseModel> PostWebAuthnAssertionOptions([FromBody] WebauthnCredentialAssertionOptionsRequestModel model)
     {
         //var user = await _userRepository.GetByEmailAsync(model.Email);
         //if (user == null)
@@ -103,16 +103,23 @@ public class AccountsController : Controller
 
     [HttpPost("webauthn-assertion")]
     // TODO: Create proper models for this call
-    public async Task<string> PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
+    public async Task<WebAuthnCredentialAssertionResponseModel> PostWebAuthnAssertion([FromBody] WebauthnCredentialAssertionRequestModel model)
     {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
+
+        //var user = await _userRepository.GetByEmailAsync(model.Email);
+        //if (user == null)
+        //{
+        //    // TODO: proper response here?
+        //    throw new BadRequestException();
+        //}
+        var optionsToken = _assertionOptionsDataProtector.Unprotect(model.Token);
+        var loginToken = await _userService.CompleteWebAuthLoginAssertionAsync(optionsToken.UserId, optionsToken.Options, model.DeviceResponse);
+
+        if (loginToken == null)
         {
-            // TODO: proper response here?
-            throw new BadRequestException();
+            throw new UnauthorizedAccessException();
         }
 
-        var token = await _userService.CompleteWebAuthLoginAssertionAsync(null, user);
-        return token;
+        return new WebAuthnCredentialAssertionResponseModel { Token = loginToken };
     }
 }

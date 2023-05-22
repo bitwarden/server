@@ -14,9 +14,11 @@ public class WebAuthnCredentialRequestModel
     [Required]
     public string Token { get; set; }
 
+    [Required]
+    public bool SupportsPrf { get; set; }
+
     public string UserKey { get; set; }
     public string PrfPublicKey { get; set; }
     public string PrfPrivateKey { get; set; }
-    public bool SupportsPrf { get; set; }
 }
 
