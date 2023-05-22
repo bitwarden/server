@@ -12,4 +12,5 @@ public class ProviderUserUserDetails
     public ProviderUserStatusType Status { get; set; }
     public ProviderUserType Type { get; set; }
     public string Permissions { get; set; }
+    public bool HasMasterPassword { get; set; }
 }

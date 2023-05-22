@@ -8,7 +8,8 @@ SELECT
     ISNULL(U.[Email], PU.[Email]) Email,
     PU.[Status],
     PU.[Type],
-    PU.[Permissions]
+    PU.[Permissions],
+    CASE WHEN U.[MasterPassword] IS NOT NULL THEN 1 ELSE 0 END AS HasMasterPassword
 FROM
     [dbo].[ProviderUser] PU
 LEFT JOIN

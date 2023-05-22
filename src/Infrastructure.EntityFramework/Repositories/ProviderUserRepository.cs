@@ -125,6 +125,7 @@ public class ProviderUserRepository :
                     Status = e.pu.Status,
                     Type = e.pu.Type,
                     Permissions = e.pu.Permissions,
+                    HasMasterPassword = e.u != null && !string.IsNullOrWhiteSpace(e.u.MasterPassword)
                 }).ToArrayAsync();
             return data;
         }
