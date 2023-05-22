@@ -6,41 +6,16 @@ END
 GO
 
 -- Refresh views
-CREATE OR ALTER VIEW [dbo].[ApiKeyDetailsView]
-AS
-SELECT
-    AK.[Id],
-    AK.[ServiceAccountId],
-    AK.[Name],
-    AK.[ClientSecret],
-    AK.[HashedClientSecret],
-    AK.[Scope],
-    AK.[EncryptedPayload],
-    AK.[Key],
-    AK.[ExpireAt],
-    AK.[CreationDate],
-    AK.[RevisionDate],
-    SA.[OrganizationId] ServiceAccountOrganizationId
-FROM
-    [dbo].[ApiKey] AS AK
-LEFT JOIN
-    [dbo].[ServiceAccount] SA ON SA.[Id] = AK.[ServiceAccountId]
+IF OBJECT_ID('[dbo].[ApiKeyDetailsView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshview N'[dbo].[ApiKeyDetailsView]';
+    END
 GO
 
-CREATE OR ALTER VIEW [dbo].[ApiKeyView]
-AS
-SELECT [Id],
-    [ServiceAccountId],
-    [Name],
-    [ClientSecret],
-    [HashedClientSecret],
-    [Scope],
-    [EncryptedPayload],
-    [Key],
-    [ExpireAt],
-    [CreationDate],
-    [RevisionDate]
-FROM [dbo].[ApiKey]
+IF OBJECT_ID('[dbo].[ApiKeyView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshview N'[dbo].[ApiKeyView]';
+    END
 GO
 
 -- Drop existing SPROC

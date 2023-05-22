@@ -1,17 +1,7 @@
 ﻿CREATE VIEW [dbo].[ApiKeyDetailsView]
 AS
 SELECT
-    AK.[Id],
-    AK.[ServiceAccountId],
-    AK.[Name],
-    AK.[ClientSecret],
-    AK.[HashedClientSecret],
-    AK.[Scope],
-    AK.[EncryptedPayload],
-    AK.[Key],
-    AK.[ExpireAt],
-    AK.[CreationDate],
-    AK.[RevisionDate],
+    AK.*,
     SA.[OrganizationId] ServiceAccountOrganizationId
 FROM
     [dbo].[ApiKey] AS AK
