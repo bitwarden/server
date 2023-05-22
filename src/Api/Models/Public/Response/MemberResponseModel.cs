@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Auth.Models.Public.Response;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -11,7 +12,7 @@ namespace Bit.Api.Models.Public.Response;
 /// </summary>
 public class MemberResponseModel : MemberBaseModel, IResponseModel
 {
-    public MemberResponseModel(OrganizationUser user, IEnumerable<SelectionReadOnly> collections)
+    public MemberResponseModel(OrganizationUser user, IEnumerable<CollectionAccessSelection> collections)
         : base(user)
     {
         if (user == null)
@@ -27,7 +28,7 @@ public class MemberResponseModel : MemberBaseModel, IResponseModel
     }
 
     public MemberResponseModel(OrganizationUserUserDetails user, bool twoFactorEnabled,
-        IEnumerable<SelectionReadOnly> collections)
+        IEnumerable<CollectionAccessSelection> collections)
         : base(user)
     {
         if (user == null)

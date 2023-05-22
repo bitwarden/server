@@ -9,6 +9,12 @@ on:
     paths-ignore:
       - ".github/workflows/**"
   workflow_dispatch:
+  pull_request:
+    branches-ignore:
+      - "l10n_master"
+      - "gh-pages"
+    paths:
+      - ".github/workflows/build-self-host.yml"
 
 jobs:
   build-docker:
@@ -16,7 +22,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
 
       - name: Check Branch to Publish
         env:
@@ -33,14 +39,14 @@ jobs:
 
       ########## Set up Docker ##########
       - name: Set up QEMU emulators
-        uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18
+        uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18 # v2.1.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8c0edbc76e98fa90f69d9a2c020dcb50019dc325
+        uses: docker/setup-buildx-action@4b4e9c3e2d4531116a6f8ba8e71fc6e2cb6e6c8c # v2.5.0
 
       ########## Login to Docker registries ##########
       - name: Login to Azure - QA Subscription
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
         with:
           creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
 
@@ -48,17 +54,31 @@ jobs:
         run: az acr login -n bitwardenqa
 
       - name: Login to Azure - Prod Subscription
-        if: ${{ env.is_publish_branch == 'true' }}
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Login to Azure ACR
+        run: az acr login -n bitwardenprod
+
+      - name: Login to Azure - CI Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve github PAT secrets
+        id: retrieve-secret-pat
+        uses: bitwarden/gh-actions/get-keyvault-secrets@34ecb67b2a357795dc893549df0795e7383ff50f
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
       - name: Retrieve secrets
         if: ${{ env.is_publish_branch == 'true' }}
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
+        uses: bitwarden/gh-actions/get-keyvault-secrets@34ecb67b2a357795dc893549df0795e7383ff50f
         with:
-          keyvault: "bitwarden-prod-kv"
+          keyvault: "bitwarden-ci"
           secrets: "docker-password,
             docker-username,
             dct-delegate-2-repo-passphrase,
@@ -102,13 +122,13 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
         run: |
           if [ "$IMAGE_TAG" = "dev" ] || [ "$IMAGE_TAG" = "beta" ]; then
-            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwardenprod.azurecr.io/self-host:${IMAGE_TAG},bitwarden/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           else
-            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+            echo "tags=bitwardenqa.azurecr.io/self-host:${IMAGE_TAG},bitwardenprod.azurecr.io/self-host:${IMAGE_TAG}" >> $GITHUB_OUTPUT
           fi
 
       - name: Build Docker image
-        uses: docker/build-push-action@c56af957549030174b10d6867f20e78cfd7debc5
+        uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671 # v3.2.0
         with:
           context: .
           file: docker-unified/Dockerfile
@@ -118,6 +138,8 @@ jobs:
             linux/arm64/v8
           push: true
           tags: ${{ steps.tag-list.outputs.tags }}
+          secrets: |
+            "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
       - name: Log out of Docker and disable Docker Notary
         if: ${{ env.is_publish_branch == 'true' }}
@@ -143,22 +165,22 @@ jobs:
               exit 1
           fi
 
-      - name: Login to Azure - Prod Subscription
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+      - name: Login to Azure - CI subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
         if: failure()
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@c3b3285993151c5af47cefcb3b9134c28ab479af
+        uses: bitwarden/gh-actions/get-keyvault-secrets@34ecb67b2a357795dc893549df0795e7383ff50f
         if: failure()
         with:
-          keyvault: "bitwarden-prod-kv"
+          keyvault: "bitwarden-ci"
           secrets: "devops-alerts-slack-webhook-url"
 
       - name: Notify Slack on failure
-        uses: act10ns/slack@da3191ebe2e67f49b46880b4633f5591a96d1d33
+        uses: act10ns/slack@ed1309ab9862e57e9e583e51c7889486b9a00b0f # v2.0.0
         if: failure()
         env:
           SLACK_WEBHOOK_URL: ${{ steps.retrieve-secrets.outputs.devops-alerts-slack-webhook-url }}

@@ -13,4 +13,5 @@ public enum PolicyType : byte
     ResetPassword = 8,
     MaximumVaultTimeout = 9,
     DisablePersonalVaultExport = 10,
+    ActivateAutofill = 11,
 }

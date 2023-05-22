@@ -1,3 +1,4 @@
+# syntax = docker/dockerfile:1.2
 ###############################################
 #                 Build stage                 #
 ###############################################
@@ -13,7 +14,12 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /tmp
 
 # Download tags from 'clients' repository
-RUN curl https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json
+RUN --mount=type=secret,id=GH_PAT,target=/etc/secrets/GH_PAT if [ -e "/etc/secrets/GH_PAT" ]; then \
+curl --header "Authorization: token $(cat /etc/secrets/GH_PAT)" \
+  https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json ; else \
+  curl https://api.github.com/repos/bitwarden/clients/git/refs/tags --output tags.json ; fi
+
+RUN cat tags.json
 
 # Grab last tag/release of the 'web' client
 RUN cat tags.json | jq -r 'last(.[] | select(.ref|test("refs/tags/web-v[0-9]{4}.[0-9]{1,2}.[0-9]+"))) | .ref | split("/")[2]' > tag.txt
@@ -75,6 +81,7 @@ COPY util/MySqlMigrations/*.csproj ./util/MySqlMigrations/
 COPY util/PostgresMigrations/*.csproj ./util/PostgresMigrations/
 COPY util/SqliteMigrations/*.csproj ./util/SqliteMigrations/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
+COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
@@ -129,6 +136,7 @@ COPY util/PostgresMigrations/. ./util/PostgresMigrations/
 COPY util/SqliteMigrations/. ./util/SqliteMigrations/
 COPY util/EfShared/. ./util/EfShared/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
+COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY .git/. ./.git/
 
 # Build Admin app
@@ -195,7 +203,7 @@ ENV globalSettings__baseServiceUri__internalIdentity="http://localhost:5005"
 ENV globalSettings__baseServiceUri__internalNotifications="http://localhost:5006"
 ENV globalSettings__baseServiceUri__internalSso="http://localhost:5007"
 ENV globalSettings__baseServiceUri__internalScim="http://localhost:5002"
-ENV globalSettings__baseServiceUri__internalVault="http://localhost:80"
+ENV globalSettings__baseServiceUri__internalVault="http://localhost:8080"
 ENV globalSettings__identityServer__certificatePassword="default_cert_password"
 ENV globalSettings__dataProtection__directory="/etc/bitwarden/data-protection"
 ENV globalSettings__attachment__baseDirectory="/etc/bitwarden/attachments"
@@ -212,7 +220,6 @@ RUN apt-get update && apt-get install -y \
     supervisor \
     tzdata \
     unzip \
-    sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Create required directories
@@ -226,6 +233,7 @@ RUN mkdir -p /var/log/bitwarden
 RUN mkdir -p /var/log/nginx/logs
 RUN mkdir -p /etc/nginx/http.d
 RUN mkdir -p /var/run/nginx
+RUN mkdir -p /var/lib/nginx/tmp
 RUN touch /var/run/nginx/nginx.pid
 RUN mkdir -p /app
 

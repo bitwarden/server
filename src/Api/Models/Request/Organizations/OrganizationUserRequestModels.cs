@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
-using Bit.Api.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -17,8 +16,10 @@ public class OrganizationUserInviteRequestModel
     [Required]
     public OrganizationUserType? Type { get; set; }
     public bool AccessAll { get; set; }
+    public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 
     public OrganizationUserInviteData ToData()
     {
@@ -27,10 +28,25 @@ public class OrganizationUserInviteRequestModel
             Emails = Emails,
             Type = Type,
             AccessAll = AccessAll,
+            AccessSecretsManager = AccessSecretsManager,
             Collections = Collections?.Select(c => c.ToSelectionReadOnly()),
+            Groups = Groups,
             Permissions = Permissions,
         };
     }
+}
+
+public class OrganizationUserAcceptInitRequestModel
+{
+    [Required]
+    public string Token { get; set; }
+    [Required]
+    public string Key { get; set; }
+    [Required]
+    public OrganizationKeysRequestModel Keys { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string CollectionName { get; set; }
 }
 
 public class OrganizationUserAcceptRequestModel
@@ -71,17 +87,17 @@ public class OrganizationUserUpdateRequestModel
     [Required]
     public OrganizationUserType? Type { get; set; }
     public bool AccessAll { get; set; }
+    public bool AccessSecretsManager { get; set; }
     public Permissions Permissions { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    public IEnumerable<Guid> Groups { get; set; }
 
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
         existingUser.Type = Type.Value;
-        existingUser.Permissions = JsonSerializer.Serialize(Permissions, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
+        existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
         existingUser.AccessAll = AccessAll;
+        existingUser.AccessSecretsManager = AccessSecretsManager;
         return existingUser;
     }
 }

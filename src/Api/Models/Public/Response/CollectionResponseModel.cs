@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Api.Auth.Models.Public.Response;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 
@@ -9,7 +10,7 @@ namespace Bit.Api.Models.Public.Response;
 /// </summary>
 public class CollectionResponseModel : CollectionBaseModel, IResponseModel
 {
-    public CollectionResponseModel(Collection collection, IEnumerable<SelectionReadOnly> groups)
+    public CollectionResponseModel(Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
         if (collection == null)
         {

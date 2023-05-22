@@ -1,4 +1,6 @@
-﻿namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
+﻿using Bit.Core.Enums.Provider;
+
+namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 public class OrganizationUserOrganizationDetails
 {
@@ -16,6 +18,7 @@ public class OrganizationUserOrganizationDetails
     public bool Use2fa { get; set; }
     public bool UseApi { get; set; }
     public bool UseResetPassword { get; set; }
+    public bool UseSecretsManager { get; set; }
     public bool SelfHost { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool UseCustomPermissions { get; set; }
@@ -35,9 +38,11 @@ public class OrganizationUserOrganizationDetails
     public string PrivateKey { get; set; }
     public Guid? ProviderId { get; set; }
     public string ProviderName { get; set; }
+    public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }
     public string SsoConfig { get; set; }
     public DateTime? FamilySponsorshipLastSyncDate { get; set; }
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
+    public bool AccessSecretsManager { get; set; }
 }

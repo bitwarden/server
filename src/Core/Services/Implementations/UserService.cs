@@ -1,14 +1,21 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Repositories;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.DataProtection;
@@ -39,6 +46,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyService _policyService;
     private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFido2 _fido2;
@@ -46,7 +54,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationService _organizationService;
     private readonly IProviderUserRepository _providerUserRepository;
-    private readonly IDeviceRepository _deviceRepository;
     private readonly IStripeSyncService _stripeSyncService;
 
     public UserService(
@@ -71,13 +78,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IDataProtectionProvider dataProtectionProvider,
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
+        IPolicyService policyService,
         IReferenceEventService referenceEventService,
         IFido2 fido2,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings,
         IOrganizationService organizationService,
         IProviderUserRepository providerUserRepository,
-        IDeviceRepository deviceRepository,
         IStripeSyncService stripeSyncService)
         : base(
               store,
@@ -105,6 +112,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyRepository = policyRepository;
+        _policyService = policyService;
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
         _referenceEventService = referenceEventService;
@@ -113,7 +121,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _globalSettings = globalSettings;
         _organizationService = organizationService;
         _providerUserRepository = providerUserRepository;
-        _deviceRepository = deviceRepository;
         _stripeSyncService = stripeSyncService;
     }
 
@@ -178,6 +185,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new ApplicationException("Use register method to create a new user.");
         }
 
+        // if the name is empty, set it to null
+        if (String.Equals(user.Name, String.Empty))
+        {
+            user.Name = null;
+        }
+
         user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
         await _userRepository.ReplaceAsync(user);
 
@@ -240,7 +253,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         await _userRepository.DeleteAsync(user);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DeleteAccount, user));
+            new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
     }
@@ -311,7 +324,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -323,7 +336,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -347,7 +360,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _mailService.SendMasterPasswordHintEmailAsync(email, user.MasterPasswordHint);
     }
 
-    public async Task SendTwoFactorEmailAsync(User user, bool isBecauseNewDeviceLogin = false)
+    public async Task SendTwoFactorEmailAsync(User user)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.Email);
         if (provider == null || provider.MetaData == null || !provider.MetaData.ContainsKey("Email"))
@@ -359,14 +372,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
             "2faEmail:" + email);
 
-        if (isBecauseNewDeviceLogin)
-        {
-            await _mailService.SendNewDeviceLoginTwoFactorEmailAsync(email, token);
-        }
-        else
-        {
-            await _mailService.SendTwoFactorEmailAsync(email, token);
-        }
+        await _mailService.SendTwoFactorEmailAsync(email, token);
     }
 
     public async Task<bool> VerifyTwoFactorEmailAsync(User user, string token)
@@ -442,9 +448,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var options = CredentialCreateOptions.FromJson((string)provider.MetaData["pending"]);
 
-        // Callback to ensure credential id is unique. Always return true since we don't care if another
-        // account uses the same 2fa key.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = args => Task.FromResult(true);
+        // Callback to ensure credential ID is unique. Always return true since we don't care if another
+        // account uses the same 2FA key.
+        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
 
         var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 
@@ -555,10 +561,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return result;
         }
 
+        var now = DateTime.UtcNow;
+
         user.Key = key;
         user.Email = newEmail;
         user.EmailVerified = true;
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+        user.RevisionDate = user.AccountRevisionDate = now;
+        user.LastEmailChangeDate = now;
         await _userRepository.ReplaceAsync(user);
 
         if (user.Gateway == GatewayType.Stripe)
@@ -612,7 +621,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 return result;
             }
 
-            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+            user.RevisionDate = user.AccountRevisionDate = now;
+            user.LastPasswordChangeDate = now;
             user.Key = key;
             user.MasterPasswordHint = passwordHint;
 
@@ -824,7 +835,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     }
 
     public async Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword,
-        string key, KdfType kdf, int kdfIterations)
+        string key, KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         if (user == null)
         {
@@ -839,10 +850,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 return result;
             }
 
-            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+            user.RevisionDate = user.AccountRevisionDate = now;
+            user.LastKdfChangeDate = now;
             user.Key = key;
             user.Kdf = kdf;
             user.KdfIterations = kdfIterations;
+            user.KdfMemory = kdfMemory;
+            user.KdfParallelism = kdfParallelism;
             await _userRepository.ReplaceAsync(user);
             await _pushService.PushLogOutAsync(user.Id);
             return IdentityResult.Success;
@@ -862,7 +877,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (await CheckPasswordAsync(user, masterPassword))
         {
-            user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
+            var now = DateTime.UtcNow;
+            user.RevisionDate = user.AccountRevisionDate = now;
+            user.LastKeyRotationDate = now;
             user.SecurityStamp = Guid.NewGuid().ToString();
             user.Key = key;
             user.PrivateKey = privateKey;
@@ -1032,7 +1049,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await SaveUserAsync(user);
             await _pushService.PushSyncVaultAsync(user.Id);
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, user)
+                new ReferenceEvent(ReferenceEventType.UpgradePlan, user, _currentContext)
                 {
                     Storage = user.MaxStorageGb,
                     PlanName = PremiumPlanId,
@@ -1121,7 +1138,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
             StoragePlanId);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, user)
+            new ReferenceEvent(ReferenceEventType.AdjustStorage, user, _currentContext)
             {
                 Storage = storageAdjustmentGb,
                 PlanName = StoragePlanId,
@@ -1154,7 +1171,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         await _paymentService.CancelSubscriptionAsync(user, eop, accountDelete);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, user)
+            new ReferenceEvent(ReferenceEventType.CancelSubscription, user, _currentContext)
             {
                 EndOfPeriod = eop,
             });
@@ -1164,7 +1181,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     {
         await _paymentService.ReinstateSubscriptionAsync(user);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user));
+            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user, _currentContext));
     }
 
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
@@ -1400,8 +1417,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
     {
-        var twoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
-            PolicyType.TwoFactorAuthentication);
+        var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
@@ -1420,7 +1436,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result.Succeeded)
         {
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user));
+                new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user, _currentContext));
         }
         return result;
     }
@@ -1460,37 +1476,5 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return user.UsesKeyConnector
             ? await VerifyOTPAsync(user, secret)
             : await CheckPasswordAsync(user, secret);
-    }
-
-    public async Task<bool> Needs2FABecauseNewDeviceAsync(User user, string deviceIdentifier, string grantType)
-    {
-        return CanEditDeviceVerificationSettings(user)
-               && user.UnknownDeviceVerificationEnabled
-               && grantType != "authorization_code"
-               && await IsNewDeviceAndNotTheFirstOneAsync(user, deviceIdentifier);
-    }
-
-    public bool CanEditDeviceVerificationSettings(User user)
-    {
-        return _globalSettings.TwoFactorAuth.EmailOnNewDeviceLogin
-               && user.EmailVerified
-               && !user.UsesKeyConnector
-               && !(user.GetTwoFactorProviders()?.Any() ?? false);
-    }
-
-    private async Task<bool> IsNewDeviceAndNotTheFirstOneAsync(User user, string deviceIdentifier)
-    {
-        if (user == null)
-        {
-            return default;
-        }
-
-        var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
-        if (!devices.Any())
-        {
-            return false;
-        }
-
-        return !devices.Any(d => d.Identifier == deviceIdentifier);
     }
 }

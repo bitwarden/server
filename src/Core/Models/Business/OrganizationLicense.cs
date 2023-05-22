@@ -78,7 +78,8 @@ public class OrganizationLicense : ILicense
                 subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
             {
                 Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo?.Subscription.PeriodEndDate.Value.AddDays(60);
+                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
+                ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
             }
             else
             {
@@ -123,6 +124,7 @@ public class OrganizationLicense : ILicense
     public DateTime Issued { get; set; }
     public DateTime? Refresh { get; set; }
     public DateTime? Expires { get; set; }
+    public DateTime? ExpirationWithoutGracePeriod { get; set; }
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
@@ -133,10 +135,12 @@ public class OrganizationLicense : ILicense
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
-    private const int CURRENT_LICENSE_FILE_VERSION = 10;
+    /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
+    /// getting out of date license errors</remarks>
+    private const int CURRENT_LICENSE_FILE_VERSION = 11;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 11;
+        get => Version is >= 1 and <= 12;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -170,6 +174,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 10 || !p.Name.Equals(nameof(UseScim))) &&
                     // UseCustomPermissions was added in Version 11
                     (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
+                    // ExpirationWithoutGracePeriod was added in Version 12
+                    (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod))) &&
                     (
                         !forHash ||
                         (
@@ -199,21 +205,42 @@ public class OrganizationLicense : ILicense
         }
     }
 
-    public bool CanUse(IGlobalSettings globalSettings)
+    public bool CanUse(IGlobalSettings globalSettings, ILicensingService licensingService, out string exception)
     {
         if (!Enabled || Issued > DateTime.UtcNow || Expires < DateTime.UtcNow)
         {
+            exception = "Invalid license. Your organization is disabled or the license has expired.";
             return false;
         }
 
-        if (ValidLicenseVersion)
+        if (!ValidLicenseVersion)
         {
-            return InstallationId == globalSettings.Installation.Id && SelfHost;
+            exception = $"Version {Version} is not supported.";
+            return false;
         }
-        else
+
+        if (InstallationId != globalSettings.Installation.Id || !SelfHost)
         {
-            throw new NotSupportedException($"Version {Version} is not supported.");
+            exception = "Invalid license. Make sure your license allows for on-premise " +
+                "hosting of organizations and that the installation id matches your current installation.";
+            return false;
         }
+
+        if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
+        {
+            exception = "Premium licenses cannot be applied to an organization. "
+                                          + "Upload this license from your personal account settings page.";
+            return false;
+        }
+
+        if (!licensingService.VerifyLicense(this))
+        {
+            exception = "Invalid license.";
+            return false;
+        }
+
+        exception = "";
+        return true;
     }
 
     public bool VerifyData(Organization organization, IGlobalSettings globalSettings)

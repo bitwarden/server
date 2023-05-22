@@ -12,7 +12,7 @@ adduser --no-create-home --shell /bin/bash --disabled-password --uid $PUID --gid
 VAULT_SERVICE_URI=https://$BW_DOMAIN
 MYSQL_CONNECTION_STRING="server=$BW_DB_SERVER;port=${BW_DB_PORT:-3306};database=$BW_DB_DATABASE;user=$BW_DB_USERNAME;password=$BW_DB_PASSWORD"
 POSTGRESQL_CONNECTION_STRING="Host=$BW_DB_SERVER;Port=${BW_DB_PORT:-5432};Database=$BW_DB_DATABASE;Username=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD"
-SQLSERVER_CONNECTION_STRING="Server=$BW_DB_SERVER,${BW_DB_PORT:-1433};Database=$BW_DB_DATABASE;User Id=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD;"
+SQLSERVER_CONNECTION_STRING="Server=$BW_DB_SERVER,${BW_DB_PORT:-1433};Database=$BW_DB_DATABASE;User Id=$BW_DB_USERNAME;Password=$BW_DB_PASSWORD;Encrypt=True;TrustServerCertificate=True"
 SQLITE_CONNECTION_STRING="Data Source=$BW_DB_FILE;"
 INTERNAL_IDENTITY_KEY=$(openssl rand -hex 30)
 OIDC_IDENTITY_CLIENT_KEY=$(openssl rand -hex 30)
@@ -30,6 +30,12 @@ export globalSettings__mysql__connectionString=${globalSettings__mysql__connecti
 export globalSettings__postgreSql__connectionString=${globalSettings__postgreSql__connectionString:-$POSTGRESQL_CONNECTION_STRING}
 export globalSettings__sqlServer__connectionString=${globalSettings__sqlServer__connectionString:-$SQLSERVER_CONNECTION_STRING}
 export globalSettings__sqlite__connectionString=${globalSettings__sqlite__connectionString:-$SQLITE_CONNECTION_STRING}
+
+if [ "$BW_ENABLE_SSL" = "true" ]; then
+  export globalSettings__baseServiceUri__internalVault=https://localhost:${BW_PORT_HTTPS:-8443}
+else
+  export globalSettings__baseServiceUri__internalVault=http://localhost:${BW_PORT_HTTP:-8080}
+fi
 
 # Generate Identity certificate
 if [ ! -f /etc/bitwarden/identity.pfx ]; then
@@ -99,4 +105,4 @@ chown -R $PUID:$PGID \
     /var/run/nginx \
     /run
 
-sudo -E -u \#$PUID /usr/bin/supervisord
+exec setpriv --reuid=$PUID --regid=$PGID --init-groups /usr/bin/supervisord

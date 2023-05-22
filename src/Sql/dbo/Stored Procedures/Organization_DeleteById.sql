@@ -45,6 +45,22 @@ BEGIN
     WHERE 
         [OU].[OrganizationId] = @Id
 
+    DELETE AP
+    FROM
+        [dbo].[AccessPolicy] AP
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [AP].[OrganizationUserId] = [OU].[Id]
+    WHERE
+        [OU].[OrganizationId] = @Id
+
+    DELETE GU
+    FROM
+        [dbo].[GroupUser] GU
+    INNER JOIN
+        [dbo].[OrganizationUser] OU ON [GU].[OrganizationUserId] = [OU].[Id]
+    WHERE
+        [OU].[OrganizationId] = @Id
+
     DELETE
     FROM 
         [dbo].[OrganizationUser]
@@ -60,6 +76,41 @@ BEGIN
     EXEC [dbo].[OrganizationApiKey_OrganizationDeleted] @Id
     EXEC [dbo].[OrganizationConnection_OrganizationDeleted] @Id
     EXEC [dbo].[OrganizationSponsorship_OrganizationDeleted] @Id
+    EXEC [dbo].[OrganizationDomain_OrganizationDeleted] @Id
+
+    DELETE
+    FROM
+        [dbo].[Project]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[Secret]
+    WHERE
+        [OrganizationId] = @Id
+
+    DELETE AK
+    FROM
+        [dbo].[ApiKey] AK
+    INNER JOIN
+        [dbo].[ServiceAccount] SA ON [AK].[ServiceAccountId] = [SA].[Id]
+    WHERE
+        [SA].[OrganizationId] = @Id
+
+    DELETE AP
+    FROM
+        [dbo].[AccessPolicy] AP
+    INNER JOIN
+        [dbo].[ServiceAccount] SA ON [AP].[GrantedServiceAccountId] = [SA].[Id]
+    WHERE
+        [SA].[OrganizationId] = @Id
+
+    DELETE
+    FROM
+        [dbo].[ServiceAccount]
+    WHERE
+        [OrganizationId] = @Id
 
     DELETE
     FROM

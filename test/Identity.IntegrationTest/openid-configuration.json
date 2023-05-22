@@ -11,6 +11,7 @@
     "api.organization",
     "api.installation",
     "internal",
+    "api.secrets",
     "offline_access"
   ],
   "claims_supported": [
@@ -27,7 +28,9 @@
     "orgcustom",
     "providerprovideradmin",
     "providerserviceuser",
-    "sub"
+    "accesssecretsmanager",
+    "sub",
+    "organization"
   ],
   "grant_types_supported": [
     "authorization_code",

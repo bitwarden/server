@@ -1,6 +1,12 @@
-﻿@model ProvidersModel
+@using Bit.SharedWeb.Utilities
+@using Bit.Admin.Enums;
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+
+@model ProvidersModel
 @{
     ViewData["Title"] = "Providers";
+
+    var canCreateProvider = AccessControlService.UserHasPermission(Permission.Provider_Create);
 }
 
 <h1>Providers</h1>
@@ -15,9 +21,12 @@
             <button type="submit" class="btn btn-primary mb-2" title="Search"><i class="fa fa-search"></i> Search</button>
         </form>
     </div>
-    <div class="col-auto">
-        <a asp-action="Create" class="btn btn-secondary">Create Provider</a>
-    </div>
+    @if (canCreateProvider)
+    {
+        <div class="col-auto">
+            <a asp-action="Create" class="btn btn-secondary">Create Provider</a>
+        </div>
+    }
 </div>
 
 <div class="table-responsive">
@@ -25,6 +34,7 @@
         <thead>
             <tr>
                 <th>Name</th>
+                <th style="width: 190px;">Provider Type</th>
                 <th style="width: 190px;">Status</th>
                 <th style="width: 150px;">Created</th>
             </tr>
@@ -44,6 +54,7 @@
                         <td>
                             <a asp-action="@Model.Action" asp-route-id="@provider.Id">@(provider.Name ?? "Pending")</a>
                         </td>
+                        <td>@provider.Type.GetDisplayAttribute()?.GetShortName()</td>
                         <td>@provider.Status</td>
                         <td>
                             <span title="@provider.CreationDate.ToString()">

@@ -12,6 +12,7 @@
     [CreationDate]                  DATETIME2 (7)       NOT NULL,
     [RevisionDate]                  DATETIME2 (7)       NOT NULL,
     [Permissions]                   NVARCHAR (MAX)      NULL,
+    [AccessSecretsManager]          BIT                 NOT NULL CONSTRAINT [DF_OrganizationUser_SecretsManager] DEFAULT (0),
     CONSTRAINT [PK_OrganizationUser] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_OrganizationUser_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE,
     CONSTRAINT [FK_OrganizationUser_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])

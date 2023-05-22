@@ -1,7 +1,14 @@
 ﻿using System.Text.Json;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Business;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
@@ -12,6 +19,9 @@ using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Test.AutoFixture.PolicyFixtures;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -25,7 +35,6 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class OrganizationServiceTests
 {
-    // [Fact]
     [Theory, PaidOrganizationCustomize, BitAutoData]
     public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Guid userId,
         Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
@@ -64,7 +73,7 @@ public class OrganizationServiceTests
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(org.Name,
-            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
+            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), org.PlanType == PlanType.Free);
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -122,7 +131,7 @@ public class OrganizationServiceTests
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(org.Name,
-            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount));
+            Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), org.PlanType == PlanType.Free);
 
         // Sent events
         await sutProvider.GetDependency<IEventService>().Received(1)
@@ -192,6 +201,7 @@ public class OrganizationServiceTests
         OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         invite.Emails = null;
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         await Assert.ThrowsAsync<NotFoundException>(
@@ -217,7 +227,7 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invite.Emails.Distinct().Count()));
+                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invite.Emails.Distinct().Count()), organization.PlanType == PlanType.Free);
     }
 
     [Theory]
@@ -273,7 +283,7 @@ public class OrganizationServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
-        Assert.Contains("only owners and admins", exception.Message.ToLowerInvariant());
+        Assert.Contains("your account does not have permission to manage users", exception.Message.ToLowerInvariant());
     }
 
     [Theory]
@@ -311,6 +321,7 @@ public class OrganizationServiceTests
     public async Task InviteUser_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 10;
         organization.UseCustomPermissions = true;
 
         invite.Permissions = null;
@@ -336,6 +347,7 @@ public class OrganizationServiceTests
     public async Task InviteUser_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(OrganizationUserType inviteUserType, Organization organization, OrganizationUserInvite invite,
         OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
     {
+        organization.Seats = 10;
         organization.UseCustomPermissions = false;
 
         invite.Type = inviteUserType;
@@ -453,12 +465,25 @@ public class OrganizationServiceTests
         organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new[] { owner });
         currentContext.ManageUsers(organization.Id).Returns(true);
+        currentContext.AccessReports(organization.Id).Returns(true);
+        currentContext.ManageGroups(organization.Id).Returns(true);
+        currentContext.ManagePolicies(organization.Id).Returns(true);
+        currentContext.ManageScim(organization.Id).Returns(true);
+        currentContext.ManageSso(organization.Id).Returns(true);
+        currentContext.AccessEventLogs(organization.Id).Returns(true);
+        currentContext.AccessImportExport(organization.Id).Returns(true);
+        currentContext.CreateNewCollections(organization.Id).Returns(true);
+        currentContext.DeleteAnyCollection(organization.Id).Returns(true);
+        currentContext.DeleteAssignedCollections(organization.Id).Returns(true);
+        currentContext.EditAnyCollection(organization.Id).Returns(true);
+        currentContext.EditAssignedCollections(organization.Id).Returns(true);
+        currentContext.ManageResetPassword(organization.Id).Returns(true);
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()));
+                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()), organization.PlanType == PlanType.Free);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
     }
@@ -492,29 +517,29 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()));
+                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()), organization.PlanType == PlanType.Free);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>());
     }
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<SelectionReadOnly> collections, SutProvider<OrganizationService> sutProvider)
+        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
     {
         user.Id = default(Guid);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections));
+            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections, groups));
         Assert.Contains("invite the user first", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<SelectionReadOnly> collections, SutProvider<OrganizationService> sutProvider)
+        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository.GetByIdAsync(user.Id).Returns(user);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections));
+            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections, groups));
         Assert.Contains("make changes before saving", exception.Message.ToLowerInvariant());
     }
 
@@ -523,7 +548,9 @@ public class OrganizationServiceTests
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
-        IEnumerable<SelectionReadOnly> collections,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -536,12 +563,16 @@ public class OrganizationServiceTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
 
     [Theory, BitAutoData]
@@ -549,7 +580,8 @@ public class OrganizationServiceTests
         Organization organization,
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<SelectionReadOnly> collections,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -564,13 +596,14 @@ public class OrganizationServiceTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = null;
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections));
+            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups));
         Assert.Contains("to enable custom permissions", exception.Message.ToLowerInvariant());
     }
 
@@ -584,7 +617,9 @@ public class OrganizationServiceTests
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
-        IEnumerable<SelectionReadOnly> collections,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -600,12 +635,16 @@ public class OrganizationServiceTests
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
         newUserData.Type = newUserType;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
 
     [Theory, BitAutoData]
@@ -613,7 +652,9 @@ public class OrganizationServiceTests
         Organization organization,
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<SelectionReadOnly> collections,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -628,12 +669,121 @@ public class OrganizationServiceTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections);
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithCustomPermission_WhenSavingUserHasCustomPermission_Passes(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationOwner,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organizationOwner.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { organizationOwner });
+        currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
+        currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
+        currentContext.AccessReports(savingUser.OrganizationId).Returns(true);
+
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithCustomPermission_WhenSavingUserDoesNotHaveCustomPermission_Throws(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
+        currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
+        currentContext.AccessReports(savingUser.OrganizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups));
+        Assert.Contains("custom users can only grant the same custom permissions that they have", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithCustomPermission_WhenUpgradingToAdmin_Throws(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        currentContext.OrganizationCustom(oldUserData.OrganizationId).Returns(true);
+        currentContext.ManageUsers(oldUserData.OrganizationId).Returns(true);
+        currentContext.AccessReports(oldUserData.OrganizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveUserAsync(newUserData, oldUserData.UserId, collections, groups));
+        Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
@@ -1179,7 +1329,7 @@ public class OrganizationServiceTests
         SsoConfig ssoConfig)
     {
         ssoConfig.Enabled = true;
-        ssoConfig.SetData(new SsoConfigurationData { KeyConnectorEnabled = true });
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
         var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
@@ -1266,5 +1416,57 @@ public class OrganizationServiceTests
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
         await eventService.Received()
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, eventSystemUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_WithConfirmedOwner_ReturnsTrue(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), true);
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_ExcludingConfirmedOwner_ReturnsFalse(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid> { owner.Id }, true);
+
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_WithInvitedOwner_ReturnsFalse(Organization organization, [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), true);
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task HasConfirmedOwnersExcept_WithConfirmedProviderUser_IncludeProviderTrue_ReturnsTrue(bool includeProvider, Organization organization, ProviderUser providerUser, SutProvider<OrganizationService> sutProvider)
+    {
+        providerUser.Status = ProviderUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, ProviderUserStatusType.Confirmed)
+            .Returns(new List<ProviderUser> { providerUser });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), includeProvider);
+
+        Assert.Equal(includeProvider, result);
     }
 }

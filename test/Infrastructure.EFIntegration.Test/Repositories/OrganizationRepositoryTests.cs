@@ -1,4 +1,6 @@
-﻿using Bit.Core.Models.Data.Organizations;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
@@ -145,5 +147,43 @@ public class OrganizationRepositoryTests
 
         list.Concat(await sqlOrganizationRepo.GetManyAbilitiesAsync());
         Assert.True(list.All(x => x.GetType() == typeof(OrganizationAbility)));
+    }
+
+    [CiSkippedTheory, EfOrganizationUserAutoData]
+    public async void SearchUnassignedAsync_Works(OrganizationUser orgUser, User user, Organization org,
+        List<EfRepo.OrganizationUserRepository> efOrgUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
+        SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.OrganizationRepository sqlOrgRepo, SqlRepo.UserRepository sqlUserRepo)
+    {
+        orgUser.Type = OrganizationUserType.Owner;
+        org.PlanType = PlanType.EnterpriseAnnually;
+
+        var efList = new List<Organization>();
+        foreach (var efOrgUserRepo in efOrgUserRepos)
+        {
+            var i = efOrgUserRepos.IndexOf(efOrgUserRepo);
+            var postEfUser = await efUserRepos[i].CreateAsync(user);
+            var postEfOrg = await efOrgRepos[i].CreateAsync(org);
+            efOrgUserRepo.ClearChangeTracking();
+
+            orgUser.UserId = postEfUser.Id;
+            orgUser.OrganizationId = postEfOrg.Id;
+            await efOrgUserRepo.CreateAsync(orgUser);
+            efOrgUserRepo.ClearChangeTracking();
+
+            efList.AddRange(await efOrgRepos[i].SearchUnassignedToProviderAsync(org.Name, user.Email, 0, 10));
+        }
+
+        var postSqlUser = await sqlUserRepo.CreateAsync(user);
+        var postSqlOrg = await sqlOrgRepo.CreateAsync(org);
+
+        orgUser.UserId = postSqlUser.Id;
+        orgUser.OrganizationId = postSqlOrg.Id;
+        await sqlOrgUserRepo.CreateAsync(orgUser);
+        var sqlResult = await sqlOrgRepo.SearchUnassignedToProviderAsync(org.Name, user.Email, 0, 10);
+
+        Assert.Equal(efOrgRepos.Count, efList.Count);
+        Assert.True(efList.All(o => o.Name == org.Name));
+        Assert.Equal(1, sqlResult.Count);
+        Assert.True(sqlResult.All(o => o.Name == org.Name));
     }
 }

@@ -1,10 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Entities;
+using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.Models;
 
@@ -12,18 +16,26 @@ public class OrganizationEditModel : OrganizationViewModel
 {
     public OrganizationEditModel() { }
 
-    public OrganizationEditModel(Organization org, IEnumerable<OrganizationUserUserDetails> orgUsers,
+    public OrganizationEditModel(Provider provider)
+    {
+        Provider = provider;
+        BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
+        PlanType = Core.Enums.PlanType.TeamsMonthly;
+        Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+    }
+
+    public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
         IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
         GlobalSettings globalSettings)
-        : base(org, connections, orgUsers, ciphers, collections, groups, policies)
+        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies)
     {
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
 
         Name = org.Name;
         BusinessName = org.BusinessName;
-        BillingEmail = org.BillingEmail;
+        BillingEmail = provider?.Type == ProviderType.Reseller ? provider.BillingEmail : org.BillingEmail;
         PlanType = org.PlanType;
         Plan = org.Plan;
         Seats = org.Seats;
@@ -39,6 +51,7 @@ public class OrganizationEditModel : OrganizationViewModel
         UseTotp = org.UseTotp;
         Use2fa = org.Use2fa;
         UseApi = org.UseApi;
+        UseSecretsManager = org.UseSecretsManager;
         UseResetPassword = org.UseResetPassword;
         SelfHost = org.SelfHost;
         UsersGetPremium = org.UsersGetPremium;
@@ -58,7 +71,7 @@ public class OrganizationEditModel : OrganizationViewModel
     public string BraintreeMerchantId { get; set; }
 
     [Required]
-    [Display(Name = "Name")]
+    [Display(Name = "Organization Name")]
     public string Name { get; set; }
     [Display(Name = "Business Name")]
     public string BusinessName { get; set; }
@@ -98,6 +111,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public bool UseResetPassword { get; set; }
     [Display(Name = "SCIM")]
     public bool UseScim { get; set; }
+    [Display(Name = "Secrets Manager")]
+    public bool UseSecretsManager { get; set; }
     [Display(Name = "Self Host")]
     public bool SelfHost { get; set; }
     [Display(Name = "Users Get Premium")]
@@ -120,6 +135,13 @@ public class OrganizationEditModel : OrganizationViewModel
     public DateTime? ExpirationDate { get; set; }
     public bool SalesAssistedTrialStarted { get; set; }
 
+    public Organization CreateOrganization(Provider provider)
+    {
+        BillingEmail = provider.BillingEmail;
+
+        return ToOrganization(new Organization());
+    }
+
     public Organization ToOrganization(Organization existingOrganization)
     {
         existingOrganization.Name = Name;
@@ -139,6 +161,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.UseTotp = UseTotp;
         existingOrganization.Use2fa = Use2fa;
         existingOrganization.UseApi = UseApi;
+        existingOrganization.UseSecretsManager = UseSecretsManager;
         existingOrganization.UseResetPassword = UseResetPassword;
         existingOrganization.SelfHost = SelfHost;
         existingOrganization.UsersGetPremium = UsersGetPremium;

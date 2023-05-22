@@ -20,6 +20,7 @@ SELECT
     O.[SelfHost],
     O.[UsersGetPremium],
     O.[UseCustomPermissions],
+    O.[UseSecretsManager],
     O.[Seats],
     O.[MaxCollections],
     O.[MaxStorageGb],
@@ -34,11 +35,13 @@ SELECT
     OU.[Permissions],
     PO.[ProviderId],
     P.[Name] ProviderName,
+    P.[Type] ProviderType,
     SS.[Data] SsoConfig,
     OS.[FriendlyName] FamilySponsorshipFriendlyName,
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
     OS.[ToDelete] FamilySponsorshipToDelete,
-    OS.[ValidUntil] FamilySponsorshipValidUntil
+    OS.[ValidUntil] FamilySponsorshipValidUntil,
+    OU.[AccessSecretsManager]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

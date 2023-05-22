@@ -1,6 +1,9 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Api.OrganizationLicenses;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -14,26 +17,26 @@ namespace Bit.Api.Controllers;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class LicensesController : Controller
 {
-    private readonly ILicensingService _licensingService;
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
+    private readonly IValidateBillingSyncKeyCommand _validateBillingSyncKeyCommand;
     private readonly ICurrentContext _currentContext;
 
     public LicensesController(
-        ILicensingService licensingService,
         IUserRepository userRepository,
         IUserService userService,
         IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
+        ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
+        IValidateBillingSyncKeyCommand validateBillingSyncKeyCommand,
         ICurrentContext currentContext)
     {
-        _licensingService = licensingService;
         _userRepository = userRepository;
         _userService = userService;
         _organizationRepository = organizationRepository;
-        _organizationService = organizationService;
+        _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
+        _validateBillingSyncKeyCommand = validateBillingSyncKeyCommand;
         _currentContext = currentContext;
     }
 
@@ -55,21 +58,30 @@ public class LicensesController : Controller
         return license;
     }
 
+    /// <summary>
+    /// Used by self-hosted installations to get an updated license file
+    /// </summary>
     [HttpGet("organization/{id}")]
-    public async Task<OrganizationLicense> GetOrganization(string id, [FromQuery] string key)
+    public async Task<OrganizationLicense> OrganizationSync(string id, [FromBody] SelfHostedOrganizationLicenseRequestModel model)
     {
-        var org = await _organizationRepository.GetByIdAsync(new Guid(id));
-        if (org == null)
+        var organization = await _organizationRepository.GetByIdAsync(new Guid(id));
+        if (organization == null)
         {
-            return null;
+            throw new NotFoundException("Organization not found.");
         }
-        else if (!org.LicenseKey.Equals(key))
+
+        if (!organization.LicenseKey.Equals(model.LicenseKey))
         {
             await Task.Delay(2000);
             throw new BadRequestException("Invalid license key.");
         }
 
-        var license = await _organizationService.GenerateLicenseAsync(org, _currentContext.InstallationId.Value);
+        if (!await _validateBillingSyncKeyCommand.ValidateBillingSyncKeyAsync(organization, model.BillingSyncKey))
+        {
+            throw new BadRequestException("Invalid Billing Sync Key");
+        }
+
+        var license = await _cloudGetOrganizationLicenseQuery.GetLicenseAsync(organization, _currentContext.InstallationId.Value);
         return license;
     }
 }

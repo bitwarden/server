@@ -1,10 +1,10 @@
 ﻿using System.Data;
-using System.Data.SqlClient;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -17,6 +17,19 @@ public class ProviderRepository : Repository<Provider, Guid>, IProviderRepositor
     public ProviderRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
+
+    public async Task<Provider> GetByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<Provider>(
+                "[dbo].[Provider_ReadByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.FirstOrDefault();
+        }
+    }
 
     public async Task<ICollection<Provider>> SearchAsync(string name, string userEmail, int skip, int take)
     {

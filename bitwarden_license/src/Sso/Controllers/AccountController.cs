@@ -1,11 +1,14 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Business.Tokenables;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -305,8 +308,8 @@ public class AccountController : Controller
             await HttpContext.SignOutAsync();
         }
 
-        // HACK: Temporary workaroud for the time being that doesn't try to sign out of OneLogin schemes,
-        // which doesnt support SLO
+        // HACK: Temporary workaround for the time being that doesn't try to sign out of OneLogin schemes,
+        // which doesn't support SLO
         if (externalAuthenticationScheme != null && !externalAuthenticationScheme.Contains("onelogin"))
         {
             // Build a return URL so the upstream provider will redirect back
@@ -483,7 +486,7 @@ public class AccountController : Controller
         // Before any user creation - if Org User doesn't exist at this point - make sure there are enough seats to add one
         if (orgUser == null && organization.Seats.HasValue)
         {
-            var occupiedSeats = await _organizationService.GetOccupiedSeatCount(organization);
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
             var initialSeatCount = organization.Seats.Value;
             var availableSeats = initialSeatCount - occupiedSeats;
             var prorationDate = DateTime.UtcNow;

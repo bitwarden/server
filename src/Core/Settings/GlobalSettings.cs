@@ -1,4 +1,5 @@
-﻿using Bit.Core.Settings.LoggingSettings;
+﻿using Bit.Core.Auth.Settings;
+using Bit.Core.Settings.LoggingSettings;
 
 namespace Bit.Core.Settings;
 
@@ -73,10 +74,11 @@ public class GlobalSettings : IGlobalSettings
     public virtual AppleIapSettings AppleIap { get; set; } = new AppleIapSettings();
     public virtual ISsoSettings Sso { get; set; } = new SsoSettings();
     public virtual StripeSettings Stripe { get; set; } = new StripeSettings();
-    public virtual ITwoFactorAuthSettings TwoFactorAuth { get; set; } = new TwoFactorAuthSettings();
     public virtual DistributedIpRateLimitingSettings DistributedIpRateLimiting { get; set; } =
         new DistributedIpRateLimitingSettings();
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
+    public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
+    public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -388,7 +390,7 @@ public class GlobalSettings : IGlobalSettings
         /// </summary>
         /// <remarks>
         /// The certificate path and <see cref="CertificatePassword"/> are passed into the <see cref="System.Security.Cryptography.X509Certificates.X509Certificate2.X509Certificate2(string, string)" />.
-        /// The file format of the certificate may be binary encded (DER) or base64. If the private key is encrypted, provide the password in <see cref="CertificatePassword"/>,
+        /// The file format of the certificate may be binary encoded (DER) or base64. If the private key is encrypted, provide the password in <see cref="CertificatePassword"/>,
         /// </remarks>
         public string CertificatePath { get; set; }
         /// <summary>
@@ -510,11 +512,6 @@ public class GlobalSettings : IGlobalSettings
         public int MaxNetworkRetries { get; set; } = 2;
     }
 
-    public class TwoFactorAuthSettings : ITwoFactorAuthSettings
-    {
-        public bool EmailOnNewDeviceLogin { get; set; } = false;
-    }
-
     public class DistributedIpRateLimitingSettings
     {
         public bool Enabled { get; set; } = true;
@@ -536,5 +533,17 @@ public class GlobalSettings : IGlobalSettings
     public class PasswordlessAuthSettings : IPasswordlessAuthSettings
     {
         public bool KnownDevicesOnly { get; set; } = true;
+    }
+
+    public class DomainVerificationSettings : IDomainVerificationSettings
+    {
+        public int VerificationInterval { get; set; } = 12;
+        public int ExpirationPeriod { get; set; } = 7;
+    }
+
+    public class LaunchDarklySettings : ILaunchDarklySettings
+    {
+        public string SdkKey { get; set; }
+        public string FlagDataFilePath { get; set; } = "flags.json";
     }
 }

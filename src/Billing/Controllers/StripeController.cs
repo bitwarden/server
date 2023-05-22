@@ -1,14 +1,17 @@
-﻿using System.Data.SqlClient;
-using Bit.Billing.Constants;
+﻿using Bit.Billing.Constants;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Stripe;
 using TaxRate = Bit.Core.Entities.TaxRate;
@@ -37,6 +40,7 @@ public class StripeController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ICurrentContext _currentContext;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -53,7 +57,8 @@ public class StripeController : Controller
         IReferenceEventService referenceEventService,
         ILogger<StripeController> logger,
         ITaxRateRepository taxRateRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICurrentContext currentContext)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -77,6 +82,7 @@ public class StripeController : Controller
             PublicKey = globalSettings.Braintree.PublicKey,
             PrivateKey = globalSettings.Braintree.PrivateKey
         };
+        _currentContext = currentContext;
     }
 
     [HttpPost("webhook")]
@@ -115,41 +121,57 @@ public class StripeController : Controller
         {
             var subscription = await GetSubscriptionAsync(parsedEvent, true);
             var ids = GetIdsFromMetaData(subscription.Metadata);
-
+            var organizationId = ids.Item1 ?? Guid.Empty;
+            var userId = ids.Item2 ?? Guid.Empty;
             var subCanceled = subDeleted && subscription.Status == "canceled";
             var subUnpaid = subUpdated && subscription.Status == "unpaid";
+            var subActive = subUpdated && subscription.Status == "active";
             var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
 
             if (subCanceled || subUnpaid || subIncompleteExpired)
             {
                 // org
-                if (ids.Item1.HasValue)
+                if (organizationId != null && organizationId != Guid.Empty)
                 {
-                    await _organizationService.DisableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                    await _organizationService.DisableAsync(organizationId, subscription.CurrentPeriodEnd);
                 }
                 // user
-                else if (ids.Item2.HasValue)
+                else if (userId != null && userId != Guid.Empty)
                 {
-                    await _userService.DisablePremiumAsync(ids.Item2.Value, subscription.CurrentPeriodEnd);
+                    await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+                }
+            }
+
+            if (subActive)
+            {
+
+                if (organizationId != null && organizationId != Guid.Empty)
+                {
+                    await _organizationService.EnableAsync(organizationId);
+                }
+                else if (userId != null && userId != Guid.Empty)
+                {
+                    await _userService.EnablePremiumAsync(userId,
+                        subscription.CurrentPeriodEnd);
                 }
             }
 
             if (subUpdated)
             {
                 // org
-                if (ids.Item1.HasValue)
+                if (organizationId != null && organizationId != Guid.Empty)
                 {
-                    await _organizationService.UpdateExpirationDateAsync(ids.Item1.Value,
+                    await _organizationService.UpdateExpirationDateAsync(organizationId,
                         subscription.CurrentPeriodEnd);
                     if (IsSponsoredSubscription(subscription))
                     {
-                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
+                        await _organizationSponsorshipRenewCommand.UpdateExpirationDateAsync(organizationId, subscription.CurrentPeriodEnd);
                     }
                 }
                 // user
-                else if (ids.Item2.HasValue)
+                else if (userId != null && userId != Guid.Empty)
                 {
-                    await _userService.UpdatePremiumExpirationAsync(ids.Item2.Value,
+                    await _userService.UpdatePremiumExpirationAsync(userId,
                         subscription.CurrentPeriodEnd);
                 }
             }
@@ -401,7 +423,7 @@ public class StripeController : Controller
 
                             var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
                             await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, organization)
+                                new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
                                 {
                                     PlanName = organization?.Plan,
                                     PlanType = organization?.PlanType,
@@ -419,7 +441,7 @@ public class StripeController : Controller
 
                             var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
                             await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, user)
+                                new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
                                 {
                                     PlanName = PremiumPlanId,
                                     Storage = user?.MaxStorageGb,

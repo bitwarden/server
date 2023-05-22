@@ -1,12 +1,14 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
@@ -31,7 +33,7 @@ public class CreateGroupCommandTests
     }
 
     [Theory, OrganizationCustomize(UseGroups = true), BitAutoData]
-    public async Task CreateGroup_WithCollections_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, List<SelectionReadOnly> collections)
+    public async Task CreateGroup_WithCollections_Success(SutProvider<CreateGroupCommand> sutProvider, Organization organization, Group group, List<CollectionAccessSelection> collections)
     {
         await sutProvider.Sut.CreateGroupAsync(group, organization, collections);
 

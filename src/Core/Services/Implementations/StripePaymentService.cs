@@ -16,6 +16,7 @@ public class StripePaymentService : IPaymentService
     private const string PremiumPlanAppleIapId = "premium-annually-appleiap";
     private const decimal PremiumPlanAppleIapPrice = 14.99M;
     private const string StoragePlanId = "storage-gb-annually";
+    private const string ProviderDiscountId = "msp-discount-35";
 
     private readonly ITransactionRepository _transactionRepository;
     private readonly IUserRepository _userRepository;
@@ -45,7 +46,7 @@ public class StripePaymentService : IPaymentService
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
+        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -124,13 +125,22 @@ public class StripePaymentService : IPaymentService
                 Metadata = stripeCustomerMetadata,
                 InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                 {
-                    DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = org.SubscriberType(),
+                            Value = GetFirstThirtyCharacters(org.SubscriberName()),
+                        },
+                    },
                 },
+                Coupon = provider ? ProviderDiscountId : null,
                 Address = new Stripe.AddressOptions
                 {
                     Country = taxInfo.BillingAddressCountry,
                     PostalCode = taxInfo.BillingAddressPostalCode,
-                    // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name intead.
+                    // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name instead.
                     Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
                     Line2 = taxInfo.BillingAddressLine2,
                     City = taxInfo.BillingAddressCity,
@@ -427,7 +437,15 @@ public class StripePaymentService : IPaymentService
                 Source = stipeCustomerSourceToken,
                 InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                 {
-                    DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = user.SubscriberType(),
+                            Value = GetFirstThirtyCharacters(user.SubscriberName()),
+                        },
+                    }
                 },
                 Address = new Stripe.AddressOptions
                 {
@@ -509,7 +527,7 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    private async Task<Stripe.Subscription> ChargeForNewSubscriptionAsync(ISubscriber subcriber, Stripe.Customer customer,
+    private async Task<Stripe.Subscription> ChargeForNewSubscriptionAsync(ISubscriber subscriber, Stripe.Customer customer,
         bool createdStripeCustomer, bool stripePaymentMethod, PaymentMethodType paymentMethodType,
         Stripe.SubscriptionCreateOptions subCreateOptions, Braintree.Customer braintreeCustomer)
     {
@@ -538,7 +556,7 @@ public class StripePaymentService : IPaymentService
                         customer.Metadata.ContainsKey("btCustomerId") ? customer.Metadata["btCustomerId"] : null;
                     if (!string.IsNullOrWhiteSpace(appleReceiptOrigTransactionId))
                     {
-                        if (!subcriber.IsUser())
+                        if (!subscriber.IsUser())
                         {
                             throw new GatewayException("In-app purchase is only allowed for users.");
                         }
@@ -559,7 +577,7 @@ public class StripePaymentService : IPaymentService
                         if (existingTransaction == null)
                         {
                             appleTransaction = verifiedAppleReceipt.BuildTransactionFromLastTransaction(
-                                PremiumPlanAppleIapPrice, subcriber.Id);
+                                PremiumPlanAppleIapPrice, subscriber.Id);
                             appleTransaction.Type = TransactionType.Charge;
                             await _transactionRepository.CreateAsync(appleTransaction);
                         }
@@ -577,12 +595,12 @@ public class StripePaymentService : IPaymentService
                                     SubmitForSettlement = true,
                                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                                     {
-                                        CustomField = $"{subcriber.BraintreeIdField()}:{subcriber.Id}"
+                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
                                     }
                                 },
                                 CustomFields = new Dictionary<string, string>
                                 {
-                                    [subcriber.BraintreeIdField()] = subcriber.Id.ToString()
+                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
                                 }
                             });
 
@@ -1334,7 +1352,15 @@ public class StripePaymentService : IPaymentService
                     PaymentMethod = stipeCustomerPaymentMethodId,
                     InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethod = stipeCustomerPaymentMethodId
+                        DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                        CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                        {
+                            new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                            {
+                                Name = subscriber.SubscriberType(),
+                                Value = GetFirstThirtyCharacters(subscriber.SubscriberName()),
+                            },
+                        }
                     },
                     Address = taxInfo == null ? null : new Stripe.AddressOptions
                     {
@@ -1406,7 +1432,15 @@ public class StripePaymentService : IPaymentService
                     DefaultSource = defaultSourceId,
                     InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
                     {
-                        DefaultPaymentMethod = defaultPaymentMethodId
+                        DefaultPaymentMethod = defaultPaymentMethodId,
+                        CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                        {
+                            new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                            {
+                                Name = subscriber.SubscriberType(),
+                                Value = GetFirstThirtyCharacters(subscriber.SubscriberName())
+                            },
+                        }
                     },
                     Address = taxInfo == null ? null : new Stripe.AddressOptions
                     {
@@ -1783,4 +1817,9 @@ public class StripePaymentService : IPaymentService
             .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
 
     }
+
+    // We are taking only first 30 characters of the SubscriberName because stripe provide
+    // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create
+    private static string GetFirstThirtyCharacters(string subscriberName) => string.IsNullOrWhiteSpace(subscriberName) ? "" : subscriberName.Substring(0, 30);
+
 }

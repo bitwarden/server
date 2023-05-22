@@ -128,7 +128,9 @@ public abstract class BaseEntityFrameworkRepository
             entity.SecurityStamp = user.SecurityStamp;
             entity.Key = user.Key;
             entity.PrivateKey = user.PrivateKey;
-            entity.RevisionDate = DateTime.UtcNow;
+            entity.LastKeyRotationDate = user.LastKeyRotationDate;
+            entity.AccountRevisionDate = user.AccountRevisionDate;
+            entity.RevisionDate = user.RevisionDate;
             await dbContext.SaveChangesAsync();
         }
     }

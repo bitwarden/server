@@ -42,7 +42,9 @@
     @MaxAutoscaleSeats INT,
     @UseKeyConnector BIT = 0,
     @UseScim BIT = 0,
-    @UseCustomPermissions BIT = 0
+    @UseCustomPermissions BIT = 0,
+    @UseSecretsManager BIT = 0,
+    @Status TINYINT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -92,7 +94,9 @@ BEGIN
         [MaxAutoscaleSeats] = @MaxAutoscaleSeats,
         [UseKeyConnector] = @UseKeyConnector,
         [UseScim] = @UseScim,
-        [UseCustomPermissions] = @UseCustomPermissions
+        [UseCustomPermissions] = @UseCustomPermissions,
+        [UseSecretsManager] = @UseSecretsManager,
+        [Status] = @Status
     WHERE
         [Id] = @Id
 END

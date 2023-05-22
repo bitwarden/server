@@ -1,8 +1,13 @@
-﻿using Bit.Admin.Models;
+﻿using Bit.Admin.Enums;
+using Bit.Admin.Models;
+using Bit.Admin.Utilities;
 using Bit.Core.Entities.Provider;
+using Bit.Core.Enums.Provider;
+using Bit.Core.Providers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,25 +18,45 @@ namespace Bit.Admin.Controllers;
 [SelfHosted(NotSelfHostedOnly = true)]
 public class ProvidersController : Controller
 {
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationService _organizationService;
     private readonly IProviderRepository _providerRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IProviderService _providerService;
+    private readonly IReferenceEventService _referenceEventService;
+    private readonly IUserService _userService;
+    private readonly ICreateProviderCommand _createProviderCommand;
 
-    public ProvidersController(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
-        IProviderOrganizationRepository providerOrganizationRepository, IProviderService providerService,
-        GlobalSettings globalSettings, IApplicationCacheService applicationCacheService)
+    public ProvidersController(
+        IOrganizationRepository organizationRepository,
+        IOrganizationService organizationService,
+        IProviderRepository providerRepository,
+        IProviderUserRepository providerUserRepository,
+        IProviderOrganizationRepository providerOrganizationRepository,
+        IProviderService providerService,
+        GlobalSettings globalSettings,
+        IApplicationCacheService applicationCacheService,
+        IReferenceEventService referenceEventService,
+        IUserService userService,
+        ICreateProviderCommand createProviderCommand)
     {
+        _organizationRepository = organizationRepository;
+        _organizationService = organizationService;
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _globalSettings = globalSettings;
         _applicationCacheService = applicationCacheService;
+        _referenceEventService = referenceEventService;
+        _userService = userService;
+        _createProviderCommand = createProviderCommand;
     }
 
+    [RequirePermission(Permission.Provider_List_View)]
     public async Task<IActionResult> Index(string name = null, string userEmail = null, int page = 1, int count = 25)
     {
         if (page < 1)
@@ -68,6 +93,7 @@ public class ProvidersController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Provider_Create)]
     public async Task<IActionResult> Create(CreateProviderModel model)
     {
         if (!ModelState.IsValid)
@@ -75,11 +101,21 @@ public class ProvidersController : Controller
             return View(model);
         }
 
-        await _providerService.CreateAsync(model.OwnerEmail);
+        var provider = model.ToProvider();
+        switch (provider.Type)
+        {
+            case ProviderType.Msp:
+                await _createProviderCommand.CreateMspAsync(provider, model.OwnerEmail);
+                break;
+            case ProviderType.Reseller:
+                await _createProviderCommand.CreateResellerAsync(provider);
+                break;
+        }
 
-        return RedirectToAction("Index");
+        return RedirectToAction("Edit", new { id = provider.Id });
     }
 
+    [RequirePermission(Permission.Provider_View)]
     public async Task<IActionResult> View(Guid id)
     {
         var provider = await _providerRepository.GetByIdAsync(id);
@@ -110,6 +146,7 @@ public class ProvidersController : Controller
     [HttpPost]
     [ValidateAntiForgeryToken]
     [SelfHosted(NotSelfHostedOnly = true)]
+    [RequirePermission(Permission.Provider_Edit)]
     public async Task<IActionResult> Edit(Guid id, ProviderEditModel model)
     {
         var provider = await _providerRepository.GetByIdAsync(id);
@@ -124,10 +161,83 @@ public class ProvidersController : Controller
         return RedirectToAction("Edit", new { id });
     }
 
+    [RequirePermission(Permission.Provider_ResendEmailInvite)]
     public async Task<IActionResult> ResendInvite(Guid ownerId, Guid providerId)
     {
         await _providerService.ResendProviderSetupInviteEmailAsync(providerId, ownerId);
         TempData["InviteResentTo"] = ownerId;
         return RedirectToAction("Edit", new { id = providerId });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> AddExistingOrganization(Guid id, string name = null, string ownerEmail = null, int page = 1, int count = 25)
+    {
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (count < 1)
+        {
+            count = 1;
+        }
+
+        var skip = (page - 1) * count;
+        var unassignedOrganizations = await _organizationRepository.SearchUnassignedToProviderAsync(name, ownerEmail, skip, count);
+        var viewModel = new OrganizationUnassignedToProviderSearchViewModel
+        {
+            OrganizationName = string.IsNullOrWhiteSpace(name) ? null : name,
+            OrganizationOwnerEmail = string.IsNullOrWhiteSpace(ownerEmail) ? null : ownerEmail,
+            Page = page,
+            Count = count,
+            Items = unassignedOrganizations.Select(uo => new OrganizationSelectableViewModel
+            {
+                Id = uo.Id,
+                Name = uo.Name,
+                PlanType = uo.PlanType
+            }).ToList()
+        };
+
+        return View(viewModel);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> AddExistingOrganization(Guid id, OrganizationUnassignedToProviderSearchViewModel model)
+    {
+        var organizationIds = model.Items.Where(o => o.Selected).Select(o => o.Id).ToArray();
+        if (organizationIds.Any())
+        {
+            await _providerService.AddOrganizationsToReseller(id, organizationIds);
+        }
+
+        return RedirectToAction("Edit", "Providers", new { id = id });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> CreateOrganization(Guid providerId)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider is not { Type: ProviderType.Reseller })
+        {
+            return RedirectToAction("Index");
+        }
+
+        return View(new OrganizationEditModel(provider));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateOrganization(Guid providerId, OrganizationEditModel model)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider is not { Type: ProviderType.Reseller })
+        {
+            return RedirectToAction("Index");
+        }
+
+        var organization = model.CreateOrganization(provider);
+        await _organizationService.CreatePendingOrganization(organization, model.Owners, User, _userService, model.SalesAssistedTrialStarted);
+        await _providerService.AddOrganization(providerId, organization.Id, null);
+
+        return RedirectToAction("Edit", "Providers", new { id = providerId });
     }
 }

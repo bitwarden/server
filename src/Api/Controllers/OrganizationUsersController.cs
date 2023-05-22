@@ -49,7 +49,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("{id}")]
-    public async Task<OrganizationUserDetailsResponseModel> Get(string orgId, string id)
+    public async Task<OrganizationUserDetailsResponseModel> Get(string id, bool includeGroups = false)
     {
         var organizationUser = await _organizationUserRepository.GetByIdWithCollectionsAsync(new Guid(id));
         if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
@@ -57,11 +57,18 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        return new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+        var response = new OrganizationUserDetailsResponseModel(organizationUser.Item1, organizationUser.Item2);
+
+        if (includeGroups)
+        {
+            response.Groups = await _groupRepository.GetManyIdsByUserIdAsync(organizationUser.Item1.Id);
+        }
+
+        return response;
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId)
+    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var orgGuidId = new Guid(orgId);
         if (!await _currentContext.ViewAllCollections(orgGuidId) &&
@@ -72,7 +79,7 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId);
+        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId, includeGroups, includeCollections);
         var responseTasks = organizationUsers.Select(async o => new OrganizationUserUserDetailsResponseModel(o,
             await _userService.TwoFactorIsEnabledAsync(o)));
         var responses = await Task.WhenAll(responseTasks);
@@ -170,6 +177,20 @@ public class OrganizationUsersController : Controller
         await _organizationService.ResendInviteAsync(orgGuidId, userId.Value, new Guid(id));
     }
 
+    [HttpPost("{organizationUserId}/accept-init")]
+    public async Task AcceptInit(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptInitRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        await _organizationService.InitPendingOrganization(user.Id, orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
+        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+        await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
+    }
+
     [HttpPost("{organizationUserId}/accept")]
     public async Task Accept(Guid orgId, Guid organizationUserId, [FromBody] OrganizationUserAcceptRequestModel model)
     {
@@ -181,11 +202,9 @@ public class OrganizationUsersController : Controller
 
         var masterPasswordPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.ResetPassword);
         var useMasterPasswordPolicy = masterPasswordPolicy != null &&
-            masterPasswordPolicy.Enabled &&
-            masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
-
-        if (useMasterPasswordPolicy &&
-            string.IsNullOrWhiteSpace(model.ResetPasswordKey))
+                                          masterPasswordPolicy.Enabled &&
+                                          masterPasswordPolicy.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled;
+        if (useMasterPasswordPolicy && string.IsNullOrWhiteSpace(model.ResetPasswordKey))
         {
             throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
         }
@@ -262,7 +281,7 @@ public class OrganizationUsersController : Controller
 
         var userId = _userService.GetProperUserId(User);
         await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()));
+            model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
     }
 
     [HttpPut("{id}/groups")]

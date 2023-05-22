@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.Auth.Enums;
 using Microsoft.AspNetCore.Authentication;
 
 namespace Bit.Sso.Utilities;

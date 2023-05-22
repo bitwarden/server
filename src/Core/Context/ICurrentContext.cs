@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
@@ -18,6 +19,7 @@ public interface ICurrentContext
     List<CurrentContentOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
+    ClientType ClientType { get; set; }
     bool IsBot { get; set; }
     bool MaybeBot { get; set; }
     int? BotScore { get; set; }
@@ -50,7 +52,10 @@ public interface ICurrentContext
     Task<bool> ManageUsers(Guid orgId);
     Task<bool> ManageScim(Guid orgId);
     Task<bool> ManageResetPassword(Guid orgId);
-    Task<bool> ManageBilling(Guid orgId);
+    Task<bool> ViewSubscription(Guid orgId);
+    Task<bool> EditSubscription(Guid orgId);
+    Task<bool> EditPaymentMethods(Guid orgId);
+    Task<bool> ViewBillingHistory(Guid orgId);
     Task<bool> ProviderUserForOrgAsync(Guid orgId);
     bool ProviderProviderAdmin(Guid providerId);
     bool ProviderUser(Guid providerId);
@@ -66,4 +71,5 @@ public interface ICurrentContext
         IProviderUserRepository providerUserRepository, Guid userId);
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
+    bool AccessSecretsManager(Guid organizationId);
 }

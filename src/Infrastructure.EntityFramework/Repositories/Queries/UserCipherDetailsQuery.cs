@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.Enums;
-using Core.Models.Data;
+using Bit.Core.Vault.Models.Data;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
@@ -66,7 +67,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             CreationDate = c.CreationDate,
             RevisionDate = c.RevisionDate,
             DeletedDate = c.DeletedDate,
-            Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.Contains($"\"{_userId}\":true"),
+            Favorite = _userId.HasValue && c.Favorites != null && c.Favorites.ToLowerInvariant().Contains($"\"{_userId}\":true"),
             FolderId = GetFolderId(_userId, c),
             Edit = true,
             Reprompt = c.Reprompt,
@@ -76,7 +77,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
         return union;
     }
 
-    private static Guid? GetFolderId(Guid? userId, Models.Cipher cipher)
+    private static Guid? GetFolderId(Guid? userId, Cipher cipher)
     {
         if (userId.HasValue && !string.IsNullOrWhiteSpace(cipher.Folders))
         {

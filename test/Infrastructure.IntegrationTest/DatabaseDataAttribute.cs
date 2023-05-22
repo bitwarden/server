@@ -67,7 +67,8 @@ public class DatabaseDataAttribute : DataAttribute
         {
             var efPostgresCollection = new ServiceCollection();
             efPostgresCollection.AddLogging(configureLogging);
-            efPostgresCollection.AddEFRepositories(SelfHosted, efPostgresConnectionString, SupportedDatabaseProviders.Postgres);
+            efPostgresCollection.SetupEntityFramework(efPostgresConnectionString, SupportedDatabaseProviders.Postgres);
+            efPostgresCollection.AddPasswordManagerEFRepositories(SelfHosted);
             efPostgresCollection.AddTransient<ITestDatabaseHelper, EfTestDatabaseHelper>();
             yield return efPostgresCollection.BuildServiceProvider();
         }
@@ -76,7 +77,8 @@ public class DatabaseDataAttribute : DataAttribute
         {
             var efMySqlCollection = new ServiceCollection();
             efMySqlCollection.AddLogging(configureLogging);
-            efMySqlCollection.AddEFRepositories(SelfHosted, efMySqlConnectionString, SupportedDatabaseProviders.MySql);
+            efMySqlCollection.SetupEntityFramework(efMySqlConnectionString, SupportedDatabaseProviders.MySql);
+            efMySqlCollection.AddPasswordManagerEFRepositories(SelfHosted);
             efMySqlCollection.AddTransient<ITestDatabaseHelper, EfTestDatabaseHelper>();
             yield return efMySqlCollection.BuildServiceProvider();
         }

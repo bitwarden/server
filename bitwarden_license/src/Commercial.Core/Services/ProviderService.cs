@@ -17,7 +17,7 @@ namespace Bit.Commercial.Core.Services;
 
 public class ProviderService : IProviderService
 {
-    public static PlanType[] ProviderDisllowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
+    public static PlanType[] ProviderDisallowedOrganizationTypes = new[] { PlanType.Free, PlanType.FamiliesAnnually, PlanType.FamiliesAnnually2019 };
 
     private readonly IDataProtector _dataProtector;
     private readonly IMailService _mailService;
@@ -51,33 +51,6 @@ public class ProviderService : IProviderService
         _globalSettings = globalSettings;
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
-    }
-
-    public async Task CreateAsync(string ownerEmail)
-    {
-        var owner = await _userRepository.GetByEmailAsync(ownerEmail);
-        if (owner == null)
-        {
-            throw new BadRequestException("Invalid owner. Owner must be an existing Bitwarden user.");
-        }
-
-        var provider = new Provider
-        {
-            Status = ProviderStatusType.Pending,
-            Enabled = true,
-            UseEvents = true,
-        };
-        await _providerRepository.CreateAsync(provider);
-
-        var providerUser = new ProviderUser
-        {
-            ProviderId = provider.Id,
-            UserId = owner.Id,
-            Type = ProviderUserType.ProviderAdmin,
-            Status = ProviderUserStatusType.Confirmed,
-        };
-        await _providerUserRepository.CreateAsync(providerUser);
-        await SendProviderSetupInviteEmailAsync(provider, owner.Email);
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
@@ -370,7 +343,7 @@ public class ProviderService : IProviderService
         return result;
     }
 
-    public async Task AddOrganization(Guid providerId, Guid organizationId, Guid addingUserId, string key)
+    public async Task AddOrganization(Guid providerId, Guid organizationId, string key)
     {
         var po = await _providerOrganizationRepository.GetByOrganizationId(organizationId);
         if (po != null)
@@ -390,6 +363,26 @@ public class ProviderService : IProviderService
 
         await _providerOrganizationRepository.CreateAsync(providerOrganization);
         await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Added);
+    }
+
+    public async Task AddOrganizationsToReseller(Guid providerId, IEnumerable<Guid> organizationIds)
+    {
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+        if (provider.Type != ProviderType.Reseller)
+        {
+            throw new BadRequestException("Provider must be of type Reseller in order to assign Organizations to it.");
+        }
+
+        var existingProviderOrganizationsCount = await _providerOrganizationRepository.GetCountByOrganizationIdsAsync(organizationIds);
+        if (existingProviderOrganizationsCount > 0)
+        {
+            throw new BadRequestException("Organizations must not be assigned to any Provider.");
+        }
+
+        var providerOrganizationsToInsert = organizationIds.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
+        var insertedProviderOrganizations = await _providerOrganizationRepository.CreateManyAsync(providerOrganizationsToInsert);
+
+        await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,
@@ -419,7 +412,7 @@ public class ProviderService : IProviderService
                         AccessAll = true,
                         Type = OrganizationUserType.Owner,
                         Permissions = null,
-                        Collections = Array.Empty<SelectionReadOnly>(),
+                        Collections = Array.Empty<CollectionAccessSelection>(),
                     },
                     null
                 )
@@ -456,7 +449,7 @@ public class ProviderService : IProviderService
         await SendProviderSetupInviteEmailAsync(provider, owner.Email);
     }
 
-    private async Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail)
+    public async Task SendProviderSetupInviteEmailAsync(Provider provider, string ownerEmail)
     {
         var token = _dataProtector.Protect($"ProviderSetupInvite {provider.Id} {ownerEmail} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
         await _mailService.SendProviderSetupInviteEmailAsync(provider, token, ownerEmail);
@@ -500,7 +493,7 @@ public class ProviderService : IProviderService
 
     private void ThrowOnInvalidPlanType(PlanType requestedType)
     {
-        if (ProviderDisllowedOrganizationTypes.Contains(requestedType))
+        if (ProviderDisallowedOrganizationTypes.Contains(requestedType))
         {
             throw new BadRequestException($"Providers cannot manage organizations with the requested plan type ({requestedType}). Only Teams and Enterprise accounts are allowed.");
         }

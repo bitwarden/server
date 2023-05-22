@@ -1,10 +1,10 @@
 ﻿using System.Data;
-using System.Data.SqlClient;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
@@ -54,34 +54,6 @@ public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
-        }
-    }
-
-    public async Task<ICollection<Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-        OrganizationUserStatusType minStatus)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<Policy>(
-                $"[{Schema}].[{Table}_ReadByTypeApplicableToUser]",
-                new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
-                commandType: CommandType.StoredProcedure);
-
-            return results.ToList();
-        }
-    }
-
-    public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-        OrganizationUserStatusType minStatus)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var result = await connection.ExecuteScalarAsync<int>(
-                $"[{Schema}].[{Table}_CountByTypeApplicableToUser]",
-                new { UserId = userId, PolicyType = policyType, MinimumStatus = minStatus },
-                commandType: CommandType.StoredProcedure);
-
-            return result;
         }
     }
 }

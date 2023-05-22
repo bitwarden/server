@@ -10,9 +10,8 @@ public class GroupRequestModel
     public string Name { get; set; }
     [Required]
     public bool? AccessAll { get; set; }
-    [StringLength(300)]
-    public string ExternalId { get; set; }
     public IEnumerable<SelectionReadOnlyRequestModel> Collections { get; set; }
+    public IEnumerable<Guid> Users { get; set; }
 
     public Group ToGroup(Guid orgId)
     {
@@ -26,7 +25,12 @@ public class GroupRequestModel
     {
         existingGroup.Name = Name;
         existingGroup.AccessAll = AccessAll.Value;
-        existingGroup.ExternalId = ExternalId;
         return existingGroup;
     }
+}
+
+public class GroupBulkRequestModel
+{
+    [Required]
+    public IEnumerable<Guid> Ids { get; set; }
 }
