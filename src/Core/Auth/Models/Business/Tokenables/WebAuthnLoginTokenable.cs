@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
+using Bit.Core.Auth.Entities;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
@@ -14,6 +15,7 @@ public class WebAuthnLoginTokenable : ExpiringTokenable
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid Id { get; set; }
     public string Email { get; set; }
+    public WebAuthnCredential Credential { get; set; }
 
     [JsonConstructor]
     public WebAuthnLoginTokenable()
@@ -21,10 +23,11 @@ public class WebAuthnLoginTokenable : ExpiringTokenable
         ExpirationDate = DateTime.UtcNow.AddHours(_tokenLifetimeInHours);
     }
 
-    public WebAuthnLoginTokenable(User user) : this()
+    public WebAuthnLoginTokenable(User user, WebAuthnCredential credential) : this()
     {
         Id = user?.Id ?? default;
         Email = user?.Email;
+        Credential = credential;
     }
 
     public bool TokenIsValid(User user)

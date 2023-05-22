@@ -627,7 +627,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (assertionVerificationResult.Status == "ok")
         {
             var user = await GetUserByIdAsync(userId);
-            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user));
+            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user, credential));
             return token;
         }
         else

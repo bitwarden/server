@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -17,6 +18,7 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
 {
     private UserManager<User> _userManager;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
+    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
 
     public ExtensionGrantValidator(
         UserManager<User> userManager,
@@ -35,6 +37,7 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         IPolicyRepository policyRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
+        IWebAuthnCredentialRepository webAuthnCredentialRepository,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
@@ -44,22 +47,27 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
     {
         _userManager = userManager;
         _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
+        _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
     public string GrantType => "extension";
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
-        var email = context.Request.Raw.Get("email");
+        //var email = context.Request.Raw.Get("email");
         var token = context.Request.Raw.Get("token");
-        var type = context.Request.Raw.Get("type");
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(type))
+        //var type = context.Request.Raw.Get("type");
+        //if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(type))
+        if (string.IsNullOrWhiteSpace(token))
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
             return;
         }
 
-        var user = await _userManager.FindByEmailAsync(email.ToLowerInvariant());
+        var verified = _webAuthnLoginTokenizer.TryUnprotect(token, out var tokenData);
+
+        //var user = await _userManager.FindByEmailAsync(email.ToLowerInvariant());
+        var user = await _userManager.FindByIdAsync(tokenData.Id.ToString());
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
@@ -73,8 +81,7 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         CustomValidatorRequestContext validatorContext)
     {
         var token = context.Request.Raw.Get("token");
-        var type = context.Request.Raw.Get("type");
-        if (validatorContext.User == null || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(type))
+        if (validatorContext.User == null || string.IsNullOrWhiteSpace(token))
         {
             return false;
         }
@@ -86,10 +93,19 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
     protected override Task SetSuccessResult(ExtensionGrantValidationContext context, User user,
         List<Claim> claims, Dictionary<string, object> customResponse)
     {
+        var token = context.Request.Raw.Get("token");
+        var tokenData = _webAuthnLoginTokenizer.Unprotect(token);
+
+        var extendedCustomResponse = new Dictionary<string, object>(customResponse);
+
+        extendedCustomResponse["PrfPublicKey"] = tokenData.Credential.PrfPublicKey;
+        extendedCustomResponse["PrfPrivateKey"] = tokenData.Credential.PrfPrivateKey;
+        extendedCustomResponse["UserKey"] = tokenData.Credential.UserKey;
+
         context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
             identityProvider: "bitwarden",
             claims: claims.Count > 0 ? claims : null,
-            customResponse: customResponse);
+            customResponse: extendedCustomResponse);
         return Task.CompletedTask;
     }
 
