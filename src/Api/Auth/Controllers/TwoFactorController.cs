@@ -410,14 +410,14 @@ public class TwoFactorController : Controller
         }
     }
 
-    [Obsolete("Leaving this for backwards compatibilty on clients")]
+    [Obsolete("Leaving this for backwards compatibility on clients")]
     [HttpGet("get-device-verification-settings")]
     public Task<DeviceVerificationResponseModel> GetDeviceVerificationSettings()
     {
         return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
-    [Obsolete("Leaving this for backwards compatibilty on clients")]
+    [Obsolete("Leaving this for backwards compatibility on clients")]
     [HttpPut("device-verification-settings")]
     public Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings(
         [FromBody] DeviceVerificationRequestModel model)

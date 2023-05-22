@@ -3,8 +3,10 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 
 namespace Bit.Core.Services;
 
@@ -16,6 +18,7 @@ public class PolicyService : IPolicyService
     private readonly IPolicyRepository _policyRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IMailService _mailService;
+    private readonly GlobalSettings _globalSettings;
 
     public PolicyService(
         IEventService eventService,
@@ -23,7 +26,8 @@ public class PolicyService : IPolicyService
         IOrganizationUserRepository organizationUserRepository,
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
-        IMailService mailService)
+        IMailService mailService,
+        GlobalSettings globalSettings)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
@@ -31,6 +35,7 @@ public class PolicyService : IPolicyService
         _policyRepository = policyRepository;
         _ssoConfigRepository = ssoConfigRepository;
         _mailService = mailService;
+        _globalSettings = globalSettings;
     }
 
     public async Task SaveAsync(Policy policy, IUserService userService, IOrganizationService organizationService,
@@ -162,6 +167,47 @@ public class PolicyService : IPolicyService
         }
 
         return enforcedOptions;
+    }
+
+    public async Task<ICollection<OrganizationUserPolicyDetails>> GetPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    {
+        var result = await QueryOrganizationUserPolicyDetailsAsync(userId, policyType, minStatus);
+        return result.ToList();
+    }
+
+    public async Task<bool> AnyPoliciesApplicableToUserAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    {
+        var result = await QueryOrganizationUserPolicyDetailsAsync(userId, policyType, minStatus);
+        return result.Any();
+    }
+
+    private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    {
+        var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
+        var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
+        return organizationUserPolicyDetails.Where(o =>
+            o.PolicyEnabled &&
+            !excludedUserTypes.Contains(o.OrganizationUserType) &&
+            o.OrganizationUserStatus >= minStatus &&
+            !o.IsProvider);
+    }
+
+    private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)
+    {
+        switch (policyType)
+        {
+            case PolicyType.MasterPassword:
+                return Array.Empty<OrganizationUserType>();
+            case PolicyType.RequireSso:
+                // If 'EnforceSsoPolicyForAllUsers' is set to true then SSO policy applies to all user types otherwise it does not apply to Owner or Admin
+                if (_globalSettings.Sso.EnforceSsoPolicyForAllUsers)
+                {
+                    return Array.Empty<OrganizationUserType>();
+                }
+                break;
+        }
+
+        return new[] { OrganizationUserType.Owner, OrganizationUserType.Admin };
     }
 
     private async Task DependsOnSingleOrgAsync(Organization org)
