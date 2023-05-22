@@ -63,7 +63,7 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
         apiKey.HashedClientSecret = GetHash(clientSecret);
         var result = await _apiKeyRepository.CreateAsync(apiKey);
 
-        // Return the plain text client secret to the client to generate the access token.
+        // Return the plain text client secret so the client can generate the access token.
         result.HashedClientSecret = clientSecret;
         return result;
     }
