@@ -152,26 +152,6 @@ public class SecretsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateSecret_MultipleProjects_Throws(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Guid userId)
-    {
-        data.ProjectIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() };
-
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToSecret(organizationId),
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
-
-        var resultSecret = data.ToSecret(organizationId);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-
-        sutProvider.GetDependency<ICreateSecretCommand>().CreateAsync(default).ReturnsForAnyArgs(resultSecret);
-
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
-        await sutProvider.GetDependency<ICreateSecretCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<Secret>());
-    }
-
-    [Theory]
-    [BitAutoData]
     public async void CreateSecret_Success(SutProvider<SecretsController> sutProvider, SecretCreateRequestModel data, Guid organizationId, Guid userId)
     {
         // We currently only allow a secret to be in one project at a time
@@ -193,24 +173,6 @@ public class SecretsControllerTests
 
         await sutProvider.GetDependency<ICreateSecretCommand>().Received(1)
             .CreateAsync(Arg.Any<Secret>());
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async void UpdateSecret_MultipleProjects_Throws(SutProvider<SecretsController> sutProvider, SecretUpdateRequestModel data, Guid secretId, Guid organizationId, Secret mockSecret)
-    {
-        data.ProjectIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid() };
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToSecret(secretId, organizationId),
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
-        sutProvider.GetDependency<ISecretRepository>().GetByIdAsync(secretId).ReturnsForAnyArgs(mockSecret);
-
-        var resultSecret = data.ToSecret(secretId, organizationId);
-        sutProvider.GetDependency<IUpdateSecretCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultSecret);
-
-        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretAsync(secretId, data));
-        await sutProvider.GetDependency<IUpdateSecretCommand>().DidNotReceiveWithAnyArgs()
-            .UpdateAsync(Arg.Any<Secret>());
     }
 
     [Theory]

@@ -81,11 +81,6 @@ public class SecretsController : Controller
     [HttpPost("organizations/{organizationId}/secrets")]
     public async Task<SecretResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] SecretCreateRequestModel createRequest)
     {
-        if (createRequest.ProjectIds != null && createRequest.ProjectIds.Length > 1)
-        {
-            throw new BadRequestException();
-        }
-
         var secret = createRequest.ToSecret(organizationId);
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Create);
         if (!authorizationResult.Succeeded)
@@ -152,11 +147,6 @@ public class SecretsController : Controller
     [HttpPut("secrets/{id}")]
     public async Task<SecretResponseModel> UpdateSecretAsync([FromRoute] Guid id, [FromBody] SecretUpdateRequestModel updateRequest)
     {
-        if (updateRequest.ProjectIds != null && updateRequest.ProjectIds.Length > 1)
-        {
-            throw new BadRequestException();
-        }
-
         var secret = await _secretRepository.GetByIdAsync(id);
         if (secret == null)
         {

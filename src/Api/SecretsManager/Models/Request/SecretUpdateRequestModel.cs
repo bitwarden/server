@@ -4,7 +4,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.SecretsManager.Models.Request;
 
-public class SecretUpdateRequestModel
+public class SecretUpdateRequestModel : IValidatableObject
 {
     [Required]
     [EncryptedString]
@@ -32,5 +32,15 @@ public class SecretUpdateRequestModel
             DeletedDate = null,
             Projects = ProjectIds != null && ProjectIds.Any() ? ProjectIds.Select(x => new Project() { Id = x }).ToList() : null,
         };
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (ProjectIds != null && ProjectIds.Length > 1)
+        {
+            yield return new ValidationResult(
+                $"Only one project assignment is supported.",
+                new[] { nameof(ProjectIds) });
+        }
     }
 }
