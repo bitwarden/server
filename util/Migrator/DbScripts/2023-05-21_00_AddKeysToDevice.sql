@@ -1,30 +1,30 @@
--- Add PublicKeyEncryptedSymmetricKey column to Device table
-IF COL_LENGTH('[dbo].[Device]', 'PublicKeyEncryptedSymmetricKey') IS NULL
+-- Add EncryptedUserKey column to Device table
+IF COL_LENGTH('[dbo].[Device]', 'EncryptedUserKey') IS NULL
     BEGIN
         ALTER TABLE
             [dbo].[Device]
         ADD
-            [PublicKeyEncryptedSymmetricKey] VARCHAR(MAX) NULL;
+            [EncryptedUserKey] VARCHAR(MAX) NULL;
     END
 GO
 
--- Add EncryptionKeyEncryptedPublicKey column to Device table
-IF COL_LENGTH('[dbo].[Device]', 'EncryptionKeyEncryptedPublicKey') IS NULL
+-- Add EncryptedPublicKey column to Device table
+IF COL_LENGTH('[dbo].[Device]', 'EncryptedPublicKey') IS NULL
     BEGIN
         ALTER TABLE
             [dbo].[Device]
         ADD
-            [EncryptionKeyEncryptedPublicKey] VARCHAR(MAX) NULL;
+            [EncryptedPublicKey] VARCHAR(MAX) NULL;
     END
 GO
 
--- Add DeviceKeyEncryptedPrivateKey column to Device table
-IF COL_LENGTH('[dbo].[Device]', 'DeviceKeyEncryptedPrivateKey') IS NULL
+-- Add EncryptedPrivateKey column to Device table
+IF COL_LENGTH('[dbo].[Device]', 'EncryptedPrivateKey') IS NULL
     BEGIN
         ALTER TABLE
             [dbo].[Device]
         ADD
-            [DeviceKeyEncryptedPrivateKey] VARCHAR(MAX) NULL;
+            [EncryptedPrivateKey] VARCHAR(MAX) NULL;
     END
 GO
 
@@ -37,9 +37,9 @@ CREATE OR ALTER PROCEDURE [dbo].[Device_Create]
     @PushToken NVARCHAR(255),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @PublicKeyEncryptedSymmetricKey VARCHAR(MAX) = NULL,
-    @EncryptionKeyEncryptedPublicKey VARCHAR(MAX) = NULL,
-    @DeviceKeyEncryptedPrivateKey VARCHAR(MAX) = NULL
+    @EncryptedUserKey VARCHAR(MAX) = NULL,
+    @EncryptedPublicKey VARCHAR(MAX) = NULL,
+    @EncryptedPrivateKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -54,9 +54,9 @@ BEGIN
         [PushToken],
         [CreationDate],
         [RevisionDate],
-        [PublicKeyEncryptedSymmetricKey],
-        [EncryptionKeyEncryptedPublicKey],
-        [DeviceKeyEncryptedPrivateKey]
+        [EncryptedUserKey],
+        [EncryptedPublicKey],
+        [EncryptedPrivateKey]
     )
     VALUES
     (
@@ -68,9 +68,9 @@ BEGIN
         @PushToken,
         @CreationDate,
         @RevisionDate,
-        @PublicKeyEncryptedSymmetricKey,
-        @EncryptionKeyEncryptedPublicKey,
-        @DeviceKeyEncryptedPrivateKey
+        @EncryptedUserKey,
+        @EncryptedPublicKey,
+        @EncryptedPrivateKey
     )
 END
 GO
@@ -84,9 +84,9 @@ CREATE OR ALTER PROCEDURE [dbo].[Device_Update]
     @PushToken NVARCHAR(255),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @PublicKeyEncryptedSymmetricKey VARCHAR(MAX) = NULL,
-    @EncryptionKeyEncryptedPublicKey VARCHAR(MAX) = NULL,
-    @DeviceKeyEncryptedPrivateKey VARCHAR(MAX) = NULL
+    @EncryptedUserKey VARCHAR(MAX) = NULL,
+    @EncryptedPublicKey VARCHAR(MAX) = NULL,
+    @EncryptedPrivateKey VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -101,9 +101,9 @@ BEGIN
         [PushToken] = @PushToken,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
-        [PublicKeyEncryptedSymmetricKey] = @PublicKeyEncryptedSymmetricKey,
-        [EncryptionKeyEncryptedPublicKey] = @EncryptionKeyEncryptedPublicKey,
-        [DeviceKeyEncryptedPrivateKey] = @DeviceKeyEncryptedPrivateKey
+        [EncryptedUserKey] = @EncryptedUserKey,
+        [EncryptedPublicKey] = @EncryptedPublicKey,
+        [EncryptedPrivateKey] = @EncryptedPrivateKey
     WHERE
         [Id] = @Id
 END
