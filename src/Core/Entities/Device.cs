@@ -18,19 +18,23 @@ public class Device : ITableObject<Guid>
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 
     /// <summary>
-    /// 1
+    /// Intended to be the users symmetric key that is encrypted in some form, the current way to encrypt this is with
+    /// the devices public key.
     /// </summary>
-    public string PublicKeyEncryptedSymmetricKey { get; set; }
+    public string EncryptedUserKey { get; set; }
 
     /// <summary>
-    /// 2
+    /// Intended to be the public key that was generated for a device upon trust and encrypted. Currenly encrypted using
+    /// a users symmetric key so that when trusted and unlocked a user can decrypt the public key for all their devices.
+    /// This enabled a user to rotate the keys for all of their devices.
     /// </summary>
-    public string EncryptionKeyEncryptedPublicKey { get; set; }
+    public string EncryptedPublicKey { get; set; }
 
     /// <summary>
-    /// 3
+    /// Intended to be the public key that was generated for a device upon trust and encrypted. Currenly encrypted with
+    /// the devices key, that upon successful login a user can decrypt this value and therefor decrypt their vault.
     /// </summary>
-    public string DeviceKeyEncryptedPrivateKey { get; set; }
+    public string EncryptedPrivateKey { get; set; }
 
 
     public void SetNewId()

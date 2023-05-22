@@ -51,26 +51,26 @@ public class DeviceTokenRequestModel
 
 public class DeviceKeysRequestModel
 {
-    /// <inheritdoc cref="Device.PublicKeyEncryptedSymmetricKey" />
+    /// <inheritdoc cref="Device.EncryptedUserKey" />
     [Required]
     [EncryptedString]
-    public string PublicKeyEncryptedSymmetricKey { get; set; }
+    public string EncryptedUserKey { get; set; }
 
-    /// <inheritdoc cref="Device.EncryptionKeyEncryptedPublicKey" />
+    /// <inheritdoc cref="Device.EncryptedPublicKey" />
     [Required]
     [EncryptedString]
-    public string EncryptionKeyEncryptedPublicKey { get; set; }
+    public string EncryptedPublicKey { get; set; }
 
-    /// <inheritdoc cref="Device.DeviceKeyEncryptedPrivateKey" />
+    /// <inheritdoc cref="Device.EncryptedPrivateKey" />
     [Required]
     [EncryptedString]
-    public string DeviceKeyEncryptedPrivateKey { get; set; }
+    public string EncryptedPrivateKey { get; set; }
 
     public Device ToDevice(Device existingDevice)
     {
-        existingDevice.PublicKeyEncryptedSymmetricKey = PublicKeyEncryptedSymmetricKey;
-        existingDevice.EncryptionKeyEncryptedPublicKey = EncryptionKeyEncryptedPublicKey;
-        existingDevice.DeviceKeyEncryptedPrivateKey = DeviceKeyEncryptedPrivateKey;
+        existingDevice.EncryptedUserKey = EncryptedUserKey;
+        existingDevice.EncryptedPublicKey = EncryptedPublicKey;
+        existingDevice.EncryptedPrivateKey = EncryptedPrivateKey;
 
         return existingDevice;
     }
