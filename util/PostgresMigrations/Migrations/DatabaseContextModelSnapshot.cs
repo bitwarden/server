@@ -328,6 +328,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("text");
+
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
