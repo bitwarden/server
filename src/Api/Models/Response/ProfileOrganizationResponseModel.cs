@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Data;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Api;
@@ -62,7 +63,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         if (organization.SsoConfig != null)
         {
             var ssoConfigData = SsoConfigurationData.Deserialize(organization.SsoConfig);
-            KeyConnectorEnabled = ssoConfigData.KeyConnectorEnabled && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
+            KeyConnectorEnabled = ssoConfigData.MemberDecryptionType == MemberDecryptionType.KeyConnector && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl);
             KeyConnectorUrl = ssoConfigData.KeyConnectorUrl;
         }
     }

@@ -27,7 +27,7 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
         GlobalSettings globalSettings)
     {
         _topicName = globalSettings.ServiceBus.ApplicationCacheTopicName;
-        _subName = CoreHelpers.GetApplicationCacheServiceBusSubcriptionName(globalSettings);
+        _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
         _applicationCacheService = applicationCacheService as InMemoryServiceBusApplicationCacheService;
         _organizationRepository = organizationRepository;
         _logger = logger;

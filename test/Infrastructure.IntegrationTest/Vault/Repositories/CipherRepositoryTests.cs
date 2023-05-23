@@ -43,7 +43,7 @@ public class CipherRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task CreateAsync_UpdateWithCollecitons_Works(
+    public async Task CreateAsync_UpdateWithCollections_Works(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,

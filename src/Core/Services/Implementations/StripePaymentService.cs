@@ -527,7 +527,7 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    private async Task<Stripe.Subscription> ChargeForNewSubscriptionAsync(ISubscriber subcriber, Stripe.Customer customer,
+    private async Task<Stripe.Subscription> ChargeForNewSubscriptionAsync(ISubscriber subscriber, Stripe.Customer customer,
         bool createdStripeCustomer, bool stripePaymentMethod, PaymentMethodType paymentMethodType,
         Stripe.SubscriptionCreateOptions subCreateOptions, Braintree.Customer braintreeCustomer)
     {
@@ -556,7 +556,7 @@ public class StripePaymentService : IPaymentService
                         customer.Metadata.ContainsKey("btCustomerId") ? customer.Metadata["btCustomerId"] : null;
                     if (!string.IsNullOrWhiteSpace(appleReceiptOrigTransactionId))
                     {
-                        if (!subcriber.IsUser())
+                        if (!subscriber.IsUser())
                         {
                             throw new GatewayException("In-app purchase is only allowed for users.");
                         }
@@ -577,7 +577,7 @@ public class StripePaymentService : IPaymentService
                         if (existingTransaction == null)
                         {
                             appleTransaction = verifiedAppleReceipt.BuildTransactionFromLastTransaction(
-                                PremiumPlanAppleIapPrice, subcriber.Id);
+                                PremiumPlanAppleIapPrice, subscriber.Id);
                             appleTransaction.Type = TransactionType.Charge;
                             await _transactionRepository.CreateAsync(appleTransaction);
                         }
@@ -595,12 +595,12 @@ public class StripePaymentService : IPaymentService
                                     SubmitForSettlement = true,
                                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                                     {
-                                        CustomField = $"{subcriber.BraintreeIdField()}:{subcriber.Id}"
+                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
                                     }
                                 },
                                 CustomFields = new Dictionary<string, string>
                                 {
-                                    [subcriber.BraintreeIdField()] = subcriber.Id.ToString()
+                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
                                 }
                             });
 
