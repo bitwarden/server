@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -107,12 +108,14 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider, AccessTokenCreateRequestModel data, Guid serviceAccountId)
+    public async void CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider, AccessTokenCreateRequestModel data, Guid serviceAccountId, string mockClientSecret)
     {
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         var resultAccessToken = data.ToApiKey(serviceAccountId);
 
-        sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultAccessToken);
+        sutProvider.GetDependency<ICreateAccessTokenCommand>()
+            .CreateAsync(default, default)
+            .ReturnsForAnyArgs(new ApiKeyClientSecretDetails { ApiKey = resultAccessToken, ClientSecret = mockClientSecret });
 
         var result = await sutProvider.Sut.CreateAccessTokenAsync(serviceAccountId, data);
         await sutProvider.GetDependency<ICreateAccessTokenCommand>().Received(1)
