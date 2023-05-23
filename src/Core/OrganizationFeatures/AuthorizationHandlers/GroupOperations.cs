@@ -14,7 +14,7 @@ public static class GroupOperations
     public static readonly GroupOperationRequirement Update = new() { Name = nameof(Update) };
     public static readonly GroupOperationRequirement Delete = new() { Name = nameof(Delete) };
 
-    public static readonly Func<Guid, GroupOperationRequirement> ReadAllForOrganization = organizationId => new()
+    public static GroupOperationRequirement ReadAllForOrganization(Guid organizationId) => new()
     {
         Name = nameof(ReadAllForOrganization),
         OrganizationId = organizationId
