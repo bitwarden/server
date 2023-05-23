@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Models.Response;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
