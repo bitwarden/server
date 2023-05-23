@@ -4,6 +4,8 @@ namespace Bit.Core.SecretsManager.Models.Data;
 
 public class ApiKeyDetails : ApiKey
 {
+    public string ClientSecret { get; set; }
+
     protected ApiKeyDetails() { }
 
     protected ApiKeyDetails(ApiKey apiKey)
@@ -11,7 +13,7 @@ public class ApiKeyDetails : ApiKey
         Id = apiKey.Id;
         ServiceAccountId = apiKey.ServiceAccountId;
         Name = apiKey.Name;
-        HashedClientSecret = apiKey.HashedClientSecret;
+        ClientSecretHash = apiKey.ClientSecretHash;
         Scope = apiKey.Scope;
         EncryptedPayload = apiKey.EncryptedPayload;
         Key = apiKey.Key;

@@ -1,6 +1,6 @@
 ﻿#nullable enable
 using Bit.Core.Models.Api;
-using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
@@ -8,14 +8,14 @@ public class AccessTokenCreationResponseModel : ResponseModel
 {
     private const string _objectName = "accessTokenCreation";
 
-    public AccessTokenCreationResponseModel(ApiKey apiKey) : base(_objectName)
+    public AccessTokenCreationResponseModel(ApiKeyClientSecretDetails details) : base(_objectName)
     {
-        Id = apiKey.Id;
-        Name = apiKey.Name;
-        ClientSecret = apiKey.HashedClientSecret;
-        ExpireAt = apiKey.ExpireAt;
-        CreationDate = apiKey.CreationDate;
-        RevisionDate = apiKey.RevisionDate;
+        Id = details.ApiKey.Id;
+        Name = details.ApiKey.Name;
+        ExpireAt = details.ApiKey.ExpireAt;
+        CreationDate = details.ApiKey.CreationDate;
+        RevisionDate = details.ApiKey.RevisionDate;
+        ClientSecret = details.ClientSecret;
     }
 
     public AccessTokenCreationResponseModel() : base(_objectName)

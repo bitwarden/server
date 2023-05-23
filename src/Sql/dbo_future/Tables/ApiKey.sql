@@ -2,7 +2,7 @@
     [Id]               UNIQUEIDENTIFIER,
     [ServiceAccountId] UNIQUEIDENTIFIER NULL,
     [Name]             VARCHAR(200) NOT NULL,
-    [HashedClientSecret]    VARCHAR(128) NULL,
+    [ClientSecretHash] VARCHAR(128) NULL,
     [Scope]            NVARCHAR (4000) NOT NULL,
     [EncryptedPayload] NVARCHAR (4000) NOT NULL,
     [Key]              VARCHAR (MAX) NOT NULL,

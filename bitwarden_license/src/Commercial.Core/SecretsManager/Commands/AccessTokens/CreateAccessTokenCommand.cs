@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Utilities;
 
@@ -27,7 +28,7 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    public async Task<ApiKey> CreateAsync(ApiKey apiKey, Guid userId)
+    public async Task<ApiKeyClientSecretDetails> CreateAsync(ApiKey apiKey, Guid userId)
     {
         if (apiKey.ServiceAccountId == null)
         {
@@ -58,14 +59,9 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
         }
 
         var clientSecret = CoreHelpers.SecureRandomString(_clientSecretMaxLength);
-
-        // Store the hash of the client secret in the database.
-        apiKey.HashedClientSecret = GetHash(clientSecret);
+        apiKey.ClientSecretHash = GetHash(clientSecret);
         var result = await _apiKeyRepository.CreateAsync(apiKey);
-
-        // Return the plain text client secret so the client can generate the access token.
-        result.HashedClientSecret = clientSecret;
-        return result;
+        return new ApiKeyClientSecretDetails { ApiKey = result, ClientSecret = clientSecret };
     }
 
     private static string GetHash(string input)
