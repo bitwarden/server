@@ -23,6 +23,10 @@ public class BillingSettings
     {
         public virtual string ApiKey { get; set; }
         public virtual string WebhookKey { get; set; }
+        /// <summary>
+        /// Indicates the data center region. Valid values are "US" and "EU"
+        /// </summary>
+        public virtual string Region { get; set; }
         public virtual string UserFieldName { get; set; }
         public virtual string OrgFieldName { get; set; }
     }

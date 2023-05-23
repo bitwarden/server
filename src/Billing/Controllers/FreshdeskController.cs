@@ -60,6 +60,7 @@ public class FreshdeskController : Controller
 
             var updateBody = new Dictionary<string, object>();
             var note = string.Empty;
+            note += $"<li>Region: {_billingSettings.FreshDesk.Region}</li>";
             var customFields = new Dictionary<string, object>();
             var user = await _userRepository.GetByEmailAsync(ticketContactEmail);
             if (user != null)
