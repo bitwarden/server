@@ -1,6 +1,6 @@
-﻿using Bit.Core.Models.StaticStore;
+﻿using Bit.Core.Enums;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Utilities;
-using Bit.Core.Enums;
 using Xunit;
 
 namespace Bit.Core.Test.Utilities;
