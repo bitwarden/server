@@ -1,5 +1,6 @@
-﻿namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
+
+namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
 /// <summary>
 /// Combines the default <see cref="AuthorizationHandler{TRequirement}"/> and <see cref="AuthorizationHandler{TRequirement, TResource}"/>
