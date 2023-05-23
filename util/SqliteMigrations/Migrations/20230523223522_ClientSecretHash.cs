@@ -2,9 +2,9 @@
 
 #nullable disable
 
-namespace Bit.PostgresMigrations.Migrations;
+namespace Bit.SqliteMigrations.Migrations;
 
-public partial class HashClientSecret : Migration
+public partial class ClientSecretHash : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -13,9 +13,9 @@ public partial class HashClientSecret : Migration
             table: "ApiKey");
 
         migrationBuilder.AddColumn<string>(
-            name: "HashedClientSecret",
+            name: "ClientSecretHash",
             table: "ApiKey",
-            type: "character varying(128)",
+            type: "TEXT",
             maxLength: 128,
             nullable: true);
     }
@@ -23,13 +23,13 @@ public partial class HashClientSecret : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "HashedClientSecret",
+            name: "ClientSecretHash",
             table: "ApiKey");
 
         migrationBuilder.AddColumn<string>(
             name: "ClientSecret",
             table: "ApiKey",
-            type: "character varying(30)",
+            type: "TEXT",
             maxLength: 30,
             nullable: true);
     }

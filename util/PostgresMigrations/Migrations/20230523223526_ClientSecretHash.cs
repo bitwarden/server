@@ -2,9 +2,9 @@
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations;
+namespace Bit.PostgresMigrations.Migrations;
 
-public partial class HashClientSecret : Migration
+public partial class ClientSecretHash : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -13,26 +13,24 @@ public partial class HashClientSecret : Migration
             table: "ApiKey");
 
         migrationBuilder.AddColumn<string>(
-            name: "HashedClientSecret",
+            name: "ClientSecretHash",
             table: "ApiKey",
-            type: "varchar(128)",
+            type: "character varying(128)",
             maxLength: 128,
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+            nullable: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "HashedClientSecret",
+            name: "ClientSecretHash",
             table: "ApiKey");
 
         migrationBuilder.AddColumn<string>(
             name: "ClientSecret",
             table: "ApiKey",
-            type: "varchar(30)",
+            type: "character varying(30)",
             maxLength: 30,
-            nullable: true)
-            .Annotation("MySql:CharSet", "utf8mb4");
+            nullable: true);
     }
 }

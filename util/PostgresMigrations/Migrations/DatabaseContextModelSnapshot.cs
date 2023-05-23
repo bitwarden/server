@@ -1317,6 +1317,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ClientSecretHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -1326,10 +1330,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime?>("ExpireAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("HashedClientSecret")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("Key")
                         .HasColumnType("text");

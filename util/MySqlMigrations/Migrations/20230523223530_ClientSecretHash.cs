@@ -2,9 +2,9 @@
 
 #nullable disable
 
-namespace Bit.SqliteMigrations.Migrations;
+namespace Bit.MySqlMigrations.Migrations;
 
-public partial class HashClientSecret : Migration
+public partial class ClientSecretHash : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
     {
@@ -13,24 +13,26 @@ public partial class HashClientSecret : Migration
             table: "ApiKey");
 
         migrationBuilder.AddColumn<string>(
-            name: "HashedClientSecret",
+            name: "ClientSecretHash",
             table: "ApiKey",
-            type: "TEXT",
+            type: "varchar(128)",
             maxLength: 128,
-            nullable: true);
+            nullable: true)
+            .Annotation("MySql:CharSet", "utf8mb4");
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "HashedClientSecret",
+            name: "ClientSecretHash",
             table: "ApiKey");
 
         migrationBuilder.AddColumn<string>(
             name: "ClientSecret",
             table: "ApiKey",
-            type: "TEXT",
+            type: "varchar(30)",
             maxLength: 30,
-            nullable: true);
+            nullable: true)
+            .Annotation("MySql:CharSet", "utf8mb4");
     }
 }

@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20230523151421_HashClientSecret")]
-    partial class HashClientSecret
+    [Migration("20230523223526_ClientSecretHash")]
+    partial class ClientSecretHash
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -1319,6 +1319,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ClientSecretHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -1328,10 +1332,6 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<DateTime?>("ExpireAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("HashedClientSecret")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("Key")
                         .HasColumnType("text");
