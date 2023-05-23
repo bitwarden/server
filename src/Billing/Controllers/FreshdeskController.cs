@@ -80,7 +80,7 @@ public class FreshdeskController : Controller
                     var orgNote = $"{org.Name} ({org.Seats.GetValueOrDefault()}): " +
                         $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
                     note += $"<li>Org, {orgNote}</li>";
-                    if (!customFields.Any(kvp => kvp.Key == "cf_org"))
+                    if (!customFields.Any(kvp => kvp.Key == _billingSettings.FreshDesk.OrgFieldName))
                     {
                         customFields.Add(_billingSettings.FreshDesk.OrgFieldName, orgNote);
                     }
