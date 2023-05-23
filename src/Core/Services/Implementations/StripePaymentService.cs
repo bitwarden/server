@@ -201,7 +201,7 @@ public class StripePaymentService : IPaymentService
 
     private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
     {
-        var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
+        var existingPlan = Utilities.StaticStore.GetPasswordManagerPlan(org.PlanType);
         var sponsoredPlan = sponsorship != null ?
             Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
             null;

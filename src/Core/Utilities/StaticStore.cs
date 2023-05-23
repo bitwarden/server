@@ -116,9 +116,9 @@ public class StaticStore
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
-    public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
-    public static IEnumerable<Plan> SecretManagerPlans { get; set; }
     public static IEnumerable<Plan> Plans { get; set; }
+    public static IEnumerable<Plan> SecretManagerPlans { get; set; }
+    public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {
             new SponsoredPlan
@@ -128,11 +128,15 @@ public class StaticStore
                 SponsoringProductType = ProductType.Enterprise,
                 StripePlanId = "2021-family-for-enterprise-annually",
                 UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPlan(org.PlanType).Product == ProductType.Enterprise,
+                    GetPasswordManagerPlan(org.PlanType).Product == ProductType.Enterprise,
             }
         };
-    public static Plan GetPlan(PlanType planType, BitwardenProductType bitwardenProduct = BitwardenProductType.PasswordManager) =>
-        Plans.SingleOrDefault(p => p.Type == planType && p.BitwardenProduct == bitwardenProduct);
+    public static Plan GetPasswordManagerPlan(PlanType planType) =>
+        PasswordManagerPlans.SingleOrDefault(p => p.Type == planType);
+    
+    public static Plan GetSecretsManagerPlan(PlanType planType) =>
+        SecretManagerPlans.SingleOrDefault(p => p.Type == planType);
+    
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
 }

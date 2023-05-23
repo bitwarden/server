@@ -34,6 +34,15 @@ public class PlansController : Controller
         var responses = data.Select(plan => new PlanResponseModel(plan));
         return new ListResponseModel<PlanResponseModel>(responses);
     }
+    
+    [HttpGet("sm-plans")]
+    [AllowAnonymous]
+    public ListResponseModel<PlanResponseModel> GetSecretsManagerPlans()
+    {
+        var data = StaticStore.SecretManagerPlans;
+        var responses = data.Select(plan => new PlanResponseModel(plan));
+        return new ListResponseModel<PlanResponseModel>(responses);
+    }
 
     [HttpGet("sales-tax-rates")]
     public async Task<ListResponseModel<TaxRateResponseModel>> GetTaxRates()

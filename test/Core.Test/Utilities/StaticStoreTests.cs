@@ -18,30 +18,40 @@ public class StaticStoreTests
 
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually)]
-    public void StaticStore_GetPlanByPlanType_Success(PlanType planType)
+    public void StaticStore_GetPasswordManagerPlanByPlanType_Success(PlanType planType)
     {
-        var plan = StaticStore.GetPlan(planType);
-
+        var plan = StaticStore.GetPasswordManagerPlan(planType);
+    
         Assert.NotNull(plan);
         Assert.Equal(planType, plan.Type);
     }
-
+    
     [Theory]
-    [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
-    public void StaticStore_GetPlanPlanTypeOnly_ReturnsPasswordManagerPlans(PlanType planType, BitwardenProductType bitwardenProductType)
+    [InlineData(PlanType.EnterpriseAnnually)]
+    public void StaticStore_GetSecretsManagerPlanByPlanType_Success(PlanType planType)
     {
-        var plan = StaticStore.GetPlan(planType);
+        var plan = StaticStore.GetSecretsManagerPlan(planType);
+    
         Assert.NotNull(plan);
-        Assert.Equal(bitwardenProductType, plan.BitwardenProduct);
+        Assert.Equal(planType, plan.Type);
     }
-
+    
     [Theory]
-    [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
-    public void StaticStore_GetPlanPlanTypBitwardenProductType_ReturnsSecretManagerPlans(PlanType planType, BitwardenProductType bitwardenProductType)
+    [InlineData(PlanType.EnterpriseAnnually)]
+    public void StaticStore_GetPasswordManagerPlan_ReturnsPasswordManagerPlans(PlanType planType)
     {
-        var plan = StaticStore.GetPlan(planType, bitwardenProductType);
+        var plan = StaticStore.GetPasswordManagerPlan(planType);
         Assert.NotNull(plan);
-        Assert.Equal(bitwardenProductType, plan.BitwardenProduct);
+        Assert.Equal(BitwardenProductType.PasswordManager, plan.BitwardenProduct);
+    }
+    
+    [Theory]
+    [InlineData(PlanType.EnterpriseAnnually)]
+    public void StaticStore_GetSecretsManagerPlan_ReturnsSecretManagerPlans(PlanType planType)
+    {
+        var plan = StaticStore.GetSecretsManagerPlan(planType);
+        Assert.NotNull(plan);
+        Assert.Equal(BitwardenProductType.SecretsManager, plan.BitwardenProduct);
     }
 
     [Theory]
