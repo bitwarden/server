@@ -1,9 +1,10 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Core.Models.StaticStore;
+using Xunit;
 
 namespace Bit.Core.Test.Utilities;
-using Xunit;
+
 
 public class StaticStoreTests
 {
