@@ -418,11 +418,11 @@ public class EmergencyAccessService : IEmergencyAccessService
         return string.IsNullOrWhiteSpace(user.Name) ? user.Email : user.Name;
     }
 
-    private bool IsValidRequest(EmergencyAccess availibleAccess, User requestingUser, EmergencyAccessType requestedAccessType)
+    private bool IsValidRequest(EmergencyAccess availableAccess, User requestingUser, EmergencyAccessType requestedAccessType)
     {
-        return availibleAccess != null &&
-           availibleAccess.GranteeId == requestingUser.Id &&
-           availibleAccess.Status == EmergencyAccessStatusType.RecoveryApproved &&
-           availibleAccess.Type == requestedAccessType;
+        return availableAccess != null &&
+           availableAccess.GranteeId == requestingUser.Id &&
+           availableAccess.Status == EmergencyAccessStatusType.RecoveryApproved &&
+           availableAccess.Type == requestedAccessType;
     }
 }

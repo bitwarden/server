@@ -5,7 +5,7 @@ namespace Bit.Core.Auth.IdentityServer;
 public static class TokenRetrieval
 {
     private static string _headerScheme = "Bearer ";
-    private static string _queuryScheme = "access_token";
+    private static string _queryScheme = "access_token";
     private static string _authHeader = "Authorization";
 
     public static Func<HttpRequest, string> FromAuthorizationHeaderOrQueryString()
@@ -15,7 +15,7 @@ public static class TokenRetrieval
             var authorization = request.Headers[_authHeader].FirstOrDefault();
             if (string.IsNullOrWhiteSpace(authorization))
             {
-                return request.Query[_queuryScheme].FirstOrDefault();
+                return request.Query[_queryScheme].FirstOrDefault();
             }
 
             if (authorization.StartsWith(_headerScheme, StringComparison.OrdinalIgnoreCase))

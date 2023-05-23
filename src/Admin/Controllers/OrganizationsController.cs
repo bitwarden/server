@@ -2,6 +2,7 @@
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
@@ -40,6 +41,7 @@ public class OrganizationsController : Controller
     private readonly IProviderRepository _providerRepository;
     private readonly ILogger<OrganizationsController> _logger;
     private readonly IAccessControlService _accessControlService;
+    private readonly ICurrentContext _currentContext;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -59,7 +61,8 @@ public class OrganizationsController : Controller
         IUserService userService,
         IProviderRepository providerRepository,
         ILogger<OrganizationsController> logger,
-        IAccessControlService accessControlService)
+        IAccessControlService accessControlService,
+        ICurrentContext currentContext)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -79,6 +82,7 @@ public class OrganizationsController : Controller
         _providerRepository = providerRepository;
         _logger = logger;
         _accessControlService = accessControlService;
+        _currentContext = currentContext;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -174,7 +178,7 @@ public class OrganizationsController : Controller
 
         await _organizationRepository.ReplaceAsync(organization);
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization)
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
         {
             EventRaisedByUser = _userService.GetUserName(User),
             SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
