@@ -3,6 +3,7 @@ using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -83,15 +84,20 @@ public class AccountsController : Controller
     // TODO: Create proper models for this call
     public async Task<WebAuthnCredentialAssertionOptionsResponseModel> PostWebAuthnAssertionOptions([FromBody] WebauthnCredentialAssertionOptionsRequestModel model)
     {
-        //var user = await _userRepository.GetByEmailAsync(model.Email);
-        //if (user == null)
-        //{
-        //    // TODO: return something? possible enumeration attacks with this response
-        //    return new AssertionOptions();
-        //}
-        var options = await _userService.StartWebAuthnLoginAssertionAsync(null);
+        User user = null;
+        if (model.Email != null)
+        {
+            user = await _userRepository.GetByEmailAsync(model.Email);
+            if (user == null)
+            {
+                // TODO: return something? possible enumeration attacks with this response
+                throw new UnauthorizedAccessException();
+            }
+        }
 
-        var tokenable = new WebAuthnCredentialAssertionOptionsTokenable(null, options);
+        var options = await _userService.StartWebAuthnLoginAssertionAsync(user);
+
+        var tokenable = new WebAuthnCredentialAssertionOptionsTokenable(user, options);
         var token = _assertionOptionsDataProtector.Protect(tokenable);
 
         return new WebAuthnCredentialAssertionOptionsResponseModel

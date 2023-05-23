@@ -527,7 +527,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var authenticatorSelection = new AuthenticatorSelection
         {
             AuthenticatorAttachment = null,
-            RequireResidentKey = true, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred 
+            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred 
             UserVerification = UserVerificationRequirement.Preferred
         };
 
@@ -575,32 +575,22 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
     {
+        List<PublicKeyCredentialDescriptor> existingCredentials;
+
         if (user != null)
         {
-            throw new NotImplementedException();
+            var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+            existingCredentials = existingKeys
+                .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
+                .ToList();
         }
-
-        //var extensions = new AuthenticationExtensionsClientInputs { };
-
-        //var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
-        //    AttestationConveyancePreference.None, extensions);
-        //var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        //var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        //var existingCredentials = existingKeys
-        //    .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
-        //    .ToList();
-        var existingCredentials = new List<PublicKeyCredentialDescriptor>();
-
-        //if (existingCredentials.Count == 0)
-        //{
-        //    return null;
-        //}
+        else
+        {
+            existingCredentials = new List<PublicKeyCredentialDescriptor>();
+        }
 
         var exts = new AuthenticationExtensionsClientInputs();
         var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Preferred, exts);
-
-        // TODO: temp save options to user record somehow
-
         return options;
     }
 
