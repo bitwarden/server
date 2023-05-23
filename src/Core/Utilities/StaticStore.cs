@@ -132,7 +132,7 @@ public class StaticStore
             }
         };
     public static Plan GetPlan(PlanType planType, BitwardenProductType bitwardenProduct = BitwardenProductType.PasswordManager) =>
-        Plans.FirstOrDefault(p => p.Type == planType && p.BitwardenProduct == bitwardenProduct);
+        Plans.SingleOrDefault(p => p.Type == planType && p.BitwardenProduct == bitwardenProduct);
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
 }

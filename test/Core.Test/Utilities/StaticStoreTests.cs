@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
+using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.Test.Utilities;
 using Xunit;
@@ -41,5 +42,18 @@ public class StaticStoreTests
         var plan = StaticStore.GetPlan(planType, bitwardenProductType);
         Assert.NotNull(plan);
         Assert.Equal(bitwardenProductType, plan.BitwardenProduct);
+    }
+    
+    [Theory]
+    [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
+    public void StaticStore_AddDuplicatePlans_SingleOrDefaultThrowsException(PlanType planType, BitwardenProductType bitwardenProductType)
+    {
+        var plansStore = new List<Plan>
+        {
+            new Plan { Type = PlanType.EnterpriseAnnually, BitwardenProduct = BitwardenProductType.PasswordManager },
+            new Plan { Type = PlanType.EnterpriseAnnually, BitwardenProduct = BitwardenProductType.PasswordManager }
+        };
+       
+        Assert.Throws<InvalidOperationException>(() => plansStore.SingleOrDefault(p=>p.Type == planType && p.BitwardenProduct ==bitwardenProductType));
     }
 }
