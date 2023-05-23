@@ -30,6 +30,7 @@ public static class FeatureFlagKeys
     public const string SecretsManager = "secrets-manager";
     public const string DisplayEuEnvironment = "display-eu-environment";
     public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
+    public const string Fido2VaultCredentials = "fido2-vault-credentials";
 
     public static List<string> GetAllKeys()
     {
