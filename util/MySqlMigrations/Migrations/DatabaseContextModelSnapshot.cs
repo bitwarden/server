@@ -1306,10 +1306,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("ClientSecret")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
-
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
@@ -1319,6 +1315,10 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime?>("ExpireAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("HashedClientSecret")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
                     b.Property<string>("Key")
                         .HasColumnType("longtext");
