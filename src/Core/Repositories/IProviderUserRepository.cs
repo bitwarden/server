@@ -11,6 +11,7 @@ public interface IProviderUserRepository : IRepository<ProviderUser, Guid>
     Task<ICollection<ProviderUser>> GetManyByUserAsync(Guid userId);
     Task<ProviderUser> GetByProviderUserAsync(Guid providerId, Guid userId);
     Task<ICollection<ProviderUser>> GetManyByProviderAsync(Guid providerId, ProviderUserType? type = null);
+    Task<ProviderUserUserDetails> GetDetailsByIdAsync(Guid id);
     Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId, ProviderUserStatusType? status = null);
     Task<ICollection<ProviderUserProviderDetails>> GetManyDetailsByUserAsync(Guid userId,
         ProviderUserStatusType? status = null);

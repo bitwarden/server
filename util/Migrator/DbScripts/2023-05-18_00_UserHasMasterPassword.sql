@@ -68,3 +68,18 @@ BEGIN
     EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserUserDetails_ReadByProviderId]';
 END
 GO
+
+CREATE OR ALTER PROCEDURE [dbo].[ProviderUserUserDetails_ReadById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        *
+    FROM
+        [dbo].[ProviderUserUserDetailsView]
+    WHERE
+        [Id] = @Id
+END
+GO
