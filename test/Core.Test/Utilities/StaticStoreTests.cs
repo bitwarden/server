@@ -43,7 +43,7 @@ public class StaticStoreTests
         Assert.NotNull(plan);
         Assert.Equal(bitwardenProductType, plan.BitwardenProduct);
     }
-    
+
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
     public void StaticStore_AddDuplicatePlans_SingleOrDefaultThrowsException(PlanType planType, BitwardenProductType bitwardenProductType)
@@ -53,7 +53,7 @@ public class StaticStoreTests
             new Plan { Type = PlanType.EnterpriseAnnually, BitwardenProduct = BitwardenProductType.PasswordManager },
             new Plan { Type = PlanType.EnterpriseAnnually, BitwardenProduct = BitwardenProductType.PasswordManager }
         };
-       
-        Assert.Throws<InvalidOperationException>(() => plansStore.SingleOrDefault(p=>p.Type == planType && p.BitwardenProduct ==bitwardenProductType));
+
+        Assert.Throws<InvalidOperationException>(() => plansStore.SingleOrDefault(p => p.Type == planType && p.BitwardenProduct == bitwardenProductType));
     }
 }

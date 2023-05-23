@@ -25,7 +25,7 @@ public class PlansController : Controller
         var responses = data.Select(plan => new PlanResponseModel(plan));
         return new ListResponseModel<PlanResponseModel>(responses);
     }
-    
+
     [HttpGet("all")]
     [AllowAnonymous]
     public ListResponseModel<PlanResponseModel> GetAllPlans()
