@@ -106,16 +106,18 @@ public class StaticStore
 
         #region Plans
 
-        var passwordManagerPlans = PasswordManagerPlanStore.CreatePlan();
-        var secretManagerPlans = SecretsManagerPlanStore.CreatePlan();
+        PasswordManagerPlans = PasswordManagerPlanStore.CreatePlan();
+        SecretManagerPlans = SecretsManagerPlanStore.CreatePlan();
 
-        Plans = passwordManagerPlans.Concat(secretManagerPlans);
+        Plans = PasswordManagerPlans.Concat(SecretManagerPlans);
 
 
         #endregion
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
+    public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
+    public static IEnumerable<Plan> SecretManagerPlans { get; set; }
     public static IEnumerable<Plan> Plans { get; set; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {

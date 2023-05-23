@@ -17,7 +17,6 @@
     <EmbeddedResource Include="licensing.cer" />
     <EmbeddedResource Include="licensing_dev.cer" />
     <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
-    <EmbeddedResource Remove="Utilities\PlanCreation\**" />
   </ItemGroup>
 
   <ItemGroup>
@@ -63,13 +62,5 @@
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="Utilities\PlanCreation\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="Utilities\PlanCreation\**" />
   </ItemGroup>
 </Project>

@@ -21,7 +21,16 @@ public class PlansController : Controller
     [AllowAnonymous]
     public ListResponseModel<PlanResponseModel> Get()
     {
-        var data = StaticStore.Plans.Where(x => x.BitwardenProduct == BitwardenProductType.PasswordManager);
+        var data = StaticStore.PasswordManagerPlans;
+        var responses = data.Select(plan => new PlanResponseModel(plan));
+        return new ListResponseModel<PlanResponseModel>(responses);
+    }
+    
+    [HttpGet("all")]
+    [AllowAnonymous]
+    public ListResponseModel<PlanResponseModel> GetAllPlans()
+    {
+        var data = StaticStore.Plans;
         var responses = data.Select(plan => new PlanResponseModel(plan));
         return new ListResponseModel<PlanResponseModel>(responses);
     }
