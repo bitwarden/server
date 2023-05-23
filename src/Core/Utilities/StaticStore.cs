@@ -133,10 +133,10 @@ public class StaticStore
         };
     public static Plan GetPasswordManagerPlan(PlanType planType) =>
         PasswordManagerPlans.SingleOrDefault(p => p.Type == planType);
-    
+
     public static Plan GetSecretsManagerPlan(PlanType planType) =>
         SecretManagerPlans.SingleOrDefault(p => p.Type == planType);
-    
+
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
 }

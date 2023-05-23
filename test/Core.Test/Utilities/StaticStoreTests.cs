@@ -21,21 +21,21 @@ public class StaticStoreTests
     public void StaticStore_GetPasswordManagerPlanByPlanType_Success(PlanType planType)
     {
         var plan = StaticStore.GetPasswordManagerPlan(planType);
-    
+
         Assert.NotNull(plan);
         Assert.Equal(planType, plan.Type);
     }
-    
+
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually)]
     public void StaticStore_GetSecretsManagerPlanByPlanType_Success(PlanType planType)
     {
         var plan = StaticStore.GetSecretsManagerPlan(planType);
-    
+
         Assert.NotNull(plan);
         Assert.Equal(planType, plan.Type);
     }
-    
+
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually)]
     public void StaticStore_GetPasswordManagerPlan_ReturnsPasswordManagerPlans(PlanType planType)
@@ -44,7 +44,7 @@ public class StaticStoreTests
         Assert.NotNull(plan);
         Assert.Equal(BitwardenProductType.PasswordManager, plan.BitwardenProduct);
     }
-    
+
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually)]
     public void StaticStore_GetSecretsManagerPlan_ReturnsSecretManagerPlans(PlanType planType)
