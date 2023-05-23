@@ -19,6 +19,9 @@ public class FreshdeskControllerTests
     private const string ApiKey = "TESTFRESHDESKAPIKEY";
     private const string WebhookKey = "TESTKEY";
 
+    private const string UserFieldName = "cf_user";
+    private const string OrgFieldName = "cf_org";
+
     [Theory]
     [BitAutoData((string)null, null)]
     [BitAutoData((string)null)]
@@ -26,7 +29,7 @@ public class FreshdeskControllerTests
     public async Task PostWebhook_NullRequiredParameters_BadRequest(string freshdeskWebhookKey, FreshdeskWebhookModel model,
         BillingSettings billingSettings, SutProvider<FreshdeskController> sutProvider)
     {
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskWebhookKey.Returns(billingSettings.FreshdeskWebhookKey);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(billingSettings.FreshDesk.WebhookKey);
 
         var response = await sutProvider.Sut.PostWebhook(freshdeskWebhookKey, model);
 
@@ -52,8 +55,10 @@ public class FreshdeskControllerTests
 
         sutProvider.GetDependency<IHttpClientFactory>().CreateClient("FreshdeskApi").Returns(httpClient);
 
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskWebhookKey.Returns(WebhookKey);
-        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshdeskApiKey.Returns(ApiKey);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.WebhookKey.Returns(WebhookKey);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.ApiKey.Returns(ApiKey);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.UserFieldName.Returns(UserFieldName);
+        sutProvider.GetDependency<IOptions<BillingSettings>>().Value.FreshDesk.OrgFieldName.Returns(OrgFieldName);
 
         var response = await sutProvider.Sut.PostWebhook(WebhookKey, model);
 
