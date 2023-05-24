@@ -103,7 +103,6 @@ public class ProviderUserRepository :
             return await query.FirstOrDefaultAsync();
         }
     }
-
     public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId, ProviderUserStatusType? status)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
