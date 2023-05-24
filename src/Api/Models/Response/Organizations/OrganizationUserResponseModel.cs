@@ -47,6 +47,7 @@ public class OrganizationUserResponseModel : ResponseModel
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
+        HasMasterPassword = organizationUser.HasMasterPassword;
     }
 
     public string Id { get; set; }
@@ -59,11 +60,19 @@ public class OrganizationUserResponseModel : ResponseModel
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }
+    public bool HasMasterPassword { get; set; }
 }
 
 public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserDetailsResponseModel(OrganizationUser organizationUser,
+        IEnumerable<CollectionAccessSelection> collections)
+        : base(organizationUser, "organizationUserDetails")
+    {
+        Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
+    }
+
+    public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {
@@ -96,7 +105,6 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
         Groups = organizationUser.Groups;
         // Prevent reset password when using key connector.
         ResetPasswordEnrolled = ResetPasswordEnrolled && !organizationUser.UsesKeyConnector;
-        HasMasterPassword = organizationUser.HasMasterPassword;
     }
 
 
@@ -105,7 +113,6 @@ public class OrganizationUserUserDetailsResponseModel : OrganizationUserResponse
     public string AvatarColor { get; set; }
     public bool TwoFactorEnabled { get; set; }
     public bool SsoBound { get; set; }
-    public bool HasMasterPassword { get; set; }
     public IEnumerable<SelectionReadOnlyResponseModel> Collections { get; set; }
     public IEnumerable<Guid> Groups { get; set; }
 }
