@@ -13,7 +13,7 @@
   ],
   "packageRules": [
     {
-      "matchManagers": ["nuget"],
+      "matchManagers": ["nuget", "github-actions"],
       "groupName": "Nuget updates",
       "groupSlug": "nuget",
       "matchUpdateTypes": [
