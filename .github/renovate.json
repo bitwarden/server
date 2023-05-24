@@ -2,29 +2,36 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base",
-    "schedule:monthly",
-    ":maintainLockFilesMonthly",
-    ":preserveSemverRanges",
+    ":combinePatchMinorReleases",
+    ":dependencyDashboard",
+    ":maintainLockFilesWeekly",
+    ":pinAllExceptPeerDependencies",
+    ":prConcurrentLimit10",
     ":rebaseStalePrs",
-    ":disableMajorUpdates"
+    "schedule:weekends",
+    ":separateMajorReleases"
   ],
-  "enabledManagers": [
-    "nuget"
-  ],
+  "enabledManagers": ["cargo", "github-actions", "npm", "nuget"],
   "packageRules": [
     {
-      "matchManagers": ["nuget", "github-actions"],
-      "groupName": "Nuget updates",
-      "groupSlug": "nuget",
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ]
+      "groupName": "cargo minor",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["minor", "patch"]
     },
     {
       "groupName": "gh minor",
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["minor", "patch"]
-    }
+    },
+    {
+      "groupName": "npm minor",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "groupName": "nuget minor",
+      "matchManagers": ["nuget"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
   ]
 }
