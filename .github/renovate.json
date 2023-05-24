@@ -20,6 +20,11 @@
         "minor",
         "patch"
       ]
+    },
+    {
+      "groupName": "gh minor",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"]
     }
   ]
 }
