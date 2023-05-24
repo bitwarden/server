@@ -104,34 +104,6 @@ public class ProviderUserRepository :
         }
     }
 
-    public async Task<ProviderUserUserDetails> GetDetailsByIdAsync(Guid id)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            var view = from pu in dbContext.ProviderUsers
-                       join u in dbContext.Users
-                           on pu.UserId equals u.Id into u_g
-                       from u in u_g.DefaultIfEmpty()
-                       select new { pu, u };
-            var data = await view
-                .Where(e => e.pu.Id == id)
-                .Select(e => new ProviderUserUserDetails
-                {
-                    Id = e.pu.Id,
-                    UserId = e.pu.UserId,
-                    ProviderId = e.pu.ProviderId,
-                    Name = e.u.Name,
-                    Email = e.u.Email ?? e.pu.Email,
-                    Status = e.pu.Status,
-                    Type = e.pu.Type,
-                    Permissions = e.pu.Permissions,
-                    HasMasterPassword = e.u != null && !string.IsNullOrWhiteSpace(e.u.MasterPassword)
-                }).FirstOrDefaultAsync();
-            return data;
-        }
-    }
-
     public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId, ProviderUserStatusType? status)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -154,7 +126,6 @@ public class ProviderUserRepository :
                     Status = e.pu.Status,
                     Type = e.pu.Type,
                     Permissions = e.pu.Permissions,
-                    HasMasterPassword = e.u != null && !string.IsNullOrWhiteSpace(e.u.MasterPassword)
                 }).ToArrayAsync();
             return data;
         }

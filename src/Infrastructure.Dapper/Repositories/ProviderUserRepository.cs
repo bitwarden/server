@@ -84,19 +84,6 @@ public class ProviderUserRepository : Repository<ProviderUser, Guid>, IProviderU
         }
     }
 
-    public async Task<ProviderUserUserDetails> GetDetailsByIdAsync(Guid id)
-    {
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.QueryAsync<ProviderUserUserDetails>(
-                "[dbo].[ProviderUserUserDetails_ReadById]",
-                new { Id = id },
-                commandType: CommandType.StoredProcedure);
-
-            return results.SingleOrDefault();
-        }
-    }
-
     public async Task<ICollection<ProviderUserUserDetails>> GetManyDetailsByProviderAsync(Guid providerId, ProviderUserStatusType? status)
     {
         using (var connection = new SqlConnection(ConnectionString))

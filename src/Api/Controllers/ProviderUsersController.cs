@@ -35,7 +35,7 @@ public class ProviderUsersController : Controller
     [HttpGet("{id:guid}")]
     public async Task<ProviderUserResponseModel> Get(Guid providerId, Guid id)
     {
-        var providerUser = await _providerUserRepository.GetDetailsByIdAsync(id);
+        var providerUser = await _providerUserRepository.GetByIdAsync(id);
         if (providerUser == null || !_currentContext.ProviderManageUsers(providerUser.ProviderId))
         {
             throw new NotFoundException();

@@ -36,7 +36,6 @@ public class ProviderUserResponseModel : ResponseModel
         Type = providerUser.Type;
         Status = providerUser.Status;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(providerUser.Permissions);
-        HasMasterPassword = providerUser.HasMasterPassword;
     }
 
     public string Id { get; set; }
@@ -44,7 +43,6 @@ public class ProviderUserResponseModel : ResponseModel
     public ProviderUserType Type { get; set; }
     public ProviderUserStatusType Status { get; set; }
     public Permissions Permissions { get; set; }
-    public bool HasMasterPassword { get; set; }
 }
 
 public class ProviderUserUserDetailsResponseModel : ProviderUserResponseModel
