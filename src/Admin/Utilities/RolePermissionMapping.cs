@@ -114,6 +114,7 @@ public static class RolePermissionMapping
                 Permission.Org_BillingInformation_View,
                 Permission.Org_BillingInformation_DownloadInvoice,
                 Permission.Org_Plan_View,
+                Permission.Org_Plan_Edit,
                 Permission.Org_Licensing_View,
                 Permission.Org_Billing_View,
                 Permission.Org_Billing_LaunchGateway,
