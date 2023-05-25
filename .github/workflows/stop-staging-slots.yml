@@ -29,9 +29,9 @@ jobs:
           echo "name_lower=$NAME_LOWER" >> $GITHUB_OUTPUT
 
       - name: Login to Azure - CI Subscription
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
         with:
-          creds: ${{ secrets.AZURE_KV_CI_SERRVICE_PRINCIPAL }}
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
@@ -47,7 +47,7 @@ jobs:
           echo "webapp-name=$webapp_name" >> $GITHUB_OUTPUT
 
       - name: Login to Azure
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 

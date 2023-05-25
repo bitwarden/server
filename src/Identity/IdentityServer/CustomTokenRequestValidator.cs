@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -7,6 +9,7 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Validation;
@@ -37,11 +40,12 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
-        IPolicyService policyService)
+        IPolicyService policyService,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
-              organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, policyService)
+            organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+            applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
+            userRepository, policyService, tokenDataFactory)
     {
         _userManager = userManager;
         _ssoConfigRepository = ssoConfigRepository;
@@ -73,11 +77,13 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         CustomValidatorRequestContext validatorContext)
     {
         var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
-            ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
+                    ?? context.Result.ValidatedRequest.ClientClaims
+                        ?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
         if (!string.IsNullOrWhiteSpace(email))
         {
             validatorContext.User = await _userManager.FindByEmailAsync(email);
         }
+
         return validatorContext.User != null;
     }
 
@@ -111,6 +117,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse["ApiUseKeyConnector"] = true;
                 context.Result.CustomResponse["ResetMasterPassword"] = false;
             }
+
             return;
         }
 
@@ -123,7 +130,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
             var ssoConfigData = ssoConfig.GetData();
 
-            if (ssoConfigData is { KeyConnectorEnabled: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
+            if (ssoConfigData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
             {
                 context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
                 // Prevent clients redirecting to set-password
