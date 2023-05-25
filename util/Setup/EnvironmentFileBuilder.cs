@@ -106,6 +106,11 @@ public class EnvironmentFileBuilder
             ["SA_PASSWORD"] = dbPassword,
         };
 
+        if (!string.IsNullOrEmpty(_context.Install?.Database))
+        {
+            _mssqlOverrideValues.Add("DATABASE", _context.Install.Database);
+        }
+
         _keyConnectorOverrideValues = new Dictionary<string, string>
         {
             ["keyConnectorSettings__webVaultUri"] = _context.Config.Url,
