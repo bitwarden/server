@@ -878,7 +878,7 @@ public class CipherService : ICipherService
         }
 
         IEnumerable<CipherOrganizationDetails> orgCiphers;
-        if (await _currentContext.OrganizationAdmin(organizationId) || await _currentContext.AccessImportExport(organizationId))
+        if (await _currentContext.AccessImportExport(organizationId))
         {
             // Admins, Owners, Providers and Custom (with import/export permission) can access all items even if not assigned to them
             orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);

@@ -104,7 +104,7 @@ public class CollectionService : ICollectionService
         }
 
         IEnumerable<Collection> orgCollections;
-        if (await _currentContext.OrganizationAdmin(organizationId) || await _currentContext.ViewAllCollections(organizationId) || await _currentContext.AccessImportExport(organizationId))
+        if (await _currentContext.ViewAllCollections(organizationId) || await _currentContext.AccessImportExport(organizationId))
         {
             // Admins, Owners, Providers and Custom (with collection management or import/export permissions) can access all items even if not assigned to them
             orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
