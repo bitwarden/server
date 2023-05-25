@@ -28,6 +28,11 @@ public class EnvironmentFileBuilder
             ["MSSQL_PID"] = "Express",
             ["SA_PASSWORD"] = "SECRET",
         };
+
+        if (!string.IsNullOrEmpty(context.Install?.Database))
+        {
+            _mssqlValues["DATABASE"] = context.Install.Database;
+        }
     }
 
     public void BuildForInstaller()
@@ -105,11 +110,6 @@ public class EnvironmentFileBuilder
         {
             ["SA_PASSWORD"] = dbPassword,
         };
-
-        if (!string.IsNullOrEmpty(_context.Install?.Database))
-        {
-            _mssqlOverrideValues.Add("DATABASE", _context.Install.Database);
-        }
 
         _keyConnectorOverrideValues = new Dictionary<string, string>
         {
