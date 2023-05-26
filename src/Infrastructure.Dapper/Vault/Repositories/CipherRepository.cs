@@ -391,7 +391,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                                 SET
                                     [Data] = TC.[Data],
                                     [Attachments] = TC.[Attachments],
-                                    [RevisionDate] = TC.[RevisionDate]
+                                    [RevisionDate] = TC.[RevisionDate],
+                                    [Key] = TC.[Key]
                                 FROM
                                     [dbo].[Cipher] C
                                 INNER JOIN
