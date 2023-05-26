@@ -42,7 +42,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
                     }
                     else
                     {
-                        source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(kvp.Value.ToString())));
+                        source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(kvp.Value)));
                     }
                 }
 
