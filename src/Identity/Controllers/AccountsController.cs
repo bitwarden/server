@@ -1,6 +1,4 @@
-﻿using Bit.Core.Auth.Enums;
-using System.Text.Json;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
@@ -12,7 +10,6 @@ using Bit.Core.Services;
 using Bit.SharedWeb.Utilities;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Mvc;
-using Bit.Identity.IdentityServer;
 
 namespace Bit.Identity.Controllers;
 

@@ -26,8 +26,6 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
-using static IdentityServer4.Models.IdentityResources;
 using File = System.IO.File;
 
 namespace Bit.Core.Services;
@@ -61,7 +59,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IOrganizationService _organizationService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IWebAuthnRepository _webAuthnRepository;
+    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
 
     public UserService(
@@ -94,7 +92,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IOrganizationService organizationService,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
-        IWebAuthnRepository webAuthnRepository,
+        IWebAuthnCredentialRepository webAuthnRepository,
         IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
         : base(
               store,
@@ -132,7 +130,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _organizationService = organizationService;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
-        _webAuthnRepository = webAuthnRepository;
+        _webAuthnCredentialRepository = webAuthnRepository;
         _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
     }
 
@@ -524,7 +522,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         };
 
         // Get existing keys to exclude
-        var existingKeys = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var excludeCredentials = existingKeys
             .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
             .ToList();
@@ -532,29 +530,30 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var authenticatorSelection = new AuthenticatorSelection
         {
             AuthenticatorAttachment = null,
-            RequireResidentKey = false,
+            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred 
             UserVerification = UserVerificationRequirement.Preferred
         };
 
-        // TODO: PRF
         var extensions = new AuthenticationExtensionsClientInputs { };
 
         var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
             AttestationConveyancePreference.None, extensions);
 
-        // TODO: temp save options to user record somehow
-
         return options;
     }
 
     public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name,
+        CredentialCreateOptions options,
         AuthenticatorAttestationRawResponse attestationResponse)
     {
-        // TODO: Get options from user record somehow, then clear them
-        var options = CredentialCreateOptions.FromJson("");
+        var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+        if (existingCredentials.Count >= 5)
+        {
+            return false;
+        }
 
-        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
-        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(true);
+        var existingCredentialIds = existingCredentials.Select(c => c.DescriptorId);
+        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
 
         var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
 
@@ -569,14 +568,14 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             UserId = user.Id
         };
 
-        await _webAuthnRepository.CreateAsync(credential);
+        await _webAuthnCredentialRepository.CreateAsync(credential);
         return true;
     }
 
     public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
     {
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        var existingKeys = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var existingCredentials = existingKeys
             .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
             .ToList();
@@ -603,7 +602,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         // TODO: Get options from user record somehow, then clear them
         var options = AssertionOptions.FromJson("");
 
-        var userCredentials = await _webAuthnRepository.GetManyByUserIdAsync(user.Id);
+        var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
         var credential = userCredentials.FirstOrDefault(c => c.DescriptorId == assertionId);
         if (credential == null)
@@ -619,7 +618,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         // Update SignatureCounter
         credential.Counter = (int)assertionVerificationResult.Counter;
-        await _webAuthnRepository.ReplaceAsync(credential);
+        await _webAuthnCredentialRepository.ReplaceAsync(credential);
 
         if (assertionVerificationResult.Status == "ok")
         {

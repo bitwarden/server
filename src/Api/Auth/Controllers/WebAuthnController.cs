@@ -1,9 +1,13 @@
-﻿using Bit.Api.Auth.Models.Request;
-using Bit.Api.Auth.Models.Response.TwoFactor;
+﻿using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Models.Request.Webauthn;
+using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
+using Bit.Core;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
-using Fido2NetLib;
+using Bit.Core.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,67 +18,93 @@ namespace Bit.Api.Auth.Controllers;
 public class WebAuthnController : Controller
 {
     private readonly IUserService _userService;
+    private readonly IWebAuthnCredentialRepository _credentialRepository;
+    private readonly IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> _createOptionsDataProtector;
 
     public WebAuthnController(
-        IUserService userService)
+        IUserService userService,
+        IWebAuthnCredentialRepository credentialRepository,
+        IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> createOptionsDataProtector)
     {
         _userService = userService;
+        _credentialRepository = credentialRepository;
+        _createOptionsDataProtector = createOptionsDataProtector;
     }
 
     [HttpGet("")]
-    // TODO: Create proper models for this call
-    public async Task<ListResponseModel<TwoFactorWebAuthnResponseModel>> Get()
+    public async Task<ListResponseModel<WebAuthnCredentialResponseModel>> Get()
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-        return new ListResponseModel<TwoFactorWebAuthnResponseModel>(new List<TwoFactorWebAuthnResponseModel> { });
+        var user = await GetUserAsync();
+        var credentials = await _credentialRepository.GetManyByUserIdAsync(user.Id);
+
+        return new ListResponseModel<WebAuthnCredentialResponseModel>(credentials.Select(c => new WebAuthnCredentialResponseModel(c)));
     }
 
     [HttpPost("options")]
-    [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
-    public async Task<CredentialCreateOptions> PostOptions()
+    public async Task<WebAuthnCredentialCreateOptionsResponseModel> PostOptions([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
+        var user = await VerifyUserAsync(model);
+        var options = await _userService.StartWebAuthnLoginRegistrationAsync(user);
 
-        var reg = await _userService.StartWebAuthnLoginRegistrationAsync(user);
-        return reg;
+        var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
+        var token = _createOptionsDataProtector.Protect(tokenable);
+
+        return new WebAuthnCredentialCreateOptionsResponseModel
+        {
+            Options = options,
+            Token = token
+        };
     }
 
     [HttpPost("")]
-    // TODO: Create proper models for this call
-    public async Task<TwoFactorWebAuthnResponseModel> Post([FromBody] TwoFactorWebAuthnRequestModel model)
+    public async Task Post([FromBody] WebAuthnCredentialRequestModel model)
     {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
+        var user = await GetUserAsync();
+        var tokenable = _createOptionsDataProtector.Unprotect(model.Token);
+        if (!tokenable.TokenIsValid(user))
         {
-            throw new UnauthorizedAccessException();
+            throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
         }
 
-        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, model.DeviceResponse);
+        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, tokenable.Options, model.DeviceResponse);
         if (!success)
         {
             throw new BadRequestException("Unable to complete WebAuthn registration.");
         }
-        var response = new TwoFactorWebAuthnResponseModel(user);
-        return response;
     }
 
-    [HttpDelete("{id}")]
     [HttpPost("{id}/delete")]
-    public async Task Delete(string id)
+    public async Task Delete(Guid id, [FromBody] SecretVerificationRequestModel model)
+    {
+        var user = await VerifyUserAsync(model);
+        var credential = await _credentialRepository.GetByIdAsync(id, user.Id);
+        if (credential == null)
+        {
+            throw new NotFoundException("Credential not found.");
+        }
+
+        await _credentialRepository.DeleteAsync(credential);
+    }
+
+    private async Task<Core.Entities.User> GetUserAsync()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {
             throw new UnauthorizedAccessException();
         }
-        // TODO: Delete
+        return user;
+    }
+
+    private async Task<Core.Entities.User> VerifyUserAsync(SecretVerificationRequestModel model)
+    {
+        var user = await GetUserAsync();
+        if (!await _userService.VerifySecretAsync(user, model.Secret))
+        {
+            await Task.Delay(Constants.FailedSecretVerificationDelay);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        return user;
     }
 }

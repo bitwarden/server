@@ -5,6 +5,7 @@ namespace Bit.Core;
 public static class Constants
 {
     public const int BypassFiltersEventId = 12482444;
+    public const int FailedSecretVerificationDelay = 2000;
 
     // File size limits - give 1 MB extra for cushion.
     // Note: if request size limits are changed, 'client_max_body_size'
@@ -35,6 +36,7 @@ public static class FeatureFlagKeys
 {
     public const string DisplayEuEnvironment = "display-eu-environment";
     public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
+    public const string PasswordlessLogin = "passwordless-login";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
 
     public static List<string> GetAllKeys()

@@ -26,4 +26,8 @@
     <ProjectReference Include="..\Core.Test\Core.Test.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Auth\" />
+    <Folder Include="Auth\Controllers\" />
+  </ItemGroup>
 </Project>
