@@ -38,11 +38,11 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IMailService _mailService;
     private readonly ILogger _logger;
     private readonly GlobalSettings _globalSettings;
-    private readonly IPolicyService _policyService;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
 
     protected ICurrentContext CurrentContext { get; }
+    protected IPolicyService PolicyService { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -76,9 +76,8 @@ public abstract class BaseRequestValidator<T> where T : class
         _logger = logger;
         CurrentContext = currentContext;
         _globalSettings = globalSettings;
-        _policyService = policyService;
+        PolicyService = policyService;
         _userRepository = userRepository;
-        _policyService = policyService;
         _tokenDataFactory = tokenDataFactory;
     }
 
@@ -342,7 +341,7 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // Check if user belongs to any organization with an active SSO policy 
-        var anySsoPoliciesApplicableToUser = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
         {
             return false;
@@ -571,6 +570,6 @@ public abstract class BaseRequestValidator<T> where T : class
             return null;
         }
 
-        return new MasterPasswordPolicyResponseModel(await _policyService.GetMasterPasswordPolicyForUserAsync(user));
+        return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
     }
 }

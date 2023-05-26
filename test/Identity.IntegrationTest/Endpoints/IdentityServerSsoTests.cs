@@ -8,6 +8,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -16,6 +17,7 @@ using Bit.Test.Common.Helpers;
 using IdentityModel;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
+using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
 
@@ -118,7 +120,8 @@ public class IdentityServerSsoTests
 
             return true;
         });
-        Assert.Single(userDecryptionOptions, o =>
+
+        var trustedDeviceOption = Assert.Single(userDecryptionOptions, o =>
         {
             if (!o.TryGetProperty("Object", out var objectType))
             {
@@ -130,13 +133,90 @@ public class IdentityServerSsoTests
                 return false;
             }
 
-            if (!o.TryGetProperty("HasAdminApproval", out var hasAdminApproval))
+            return true;
+        });
+    }
+
+    [Fact]
+    public async Task SsoLogin_TrustedDeviceEncryption_WithAdminResetPolicy_ReturnsOptions()
+    {
+        // Arrange
+        var challenge = new string('c', 50);
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+        }, challenge);
+
+        var database = factory.GetDatabaseContext();
+
+        var organization = await database.Organizations.SingleAsync();
+
+        var policyRepository = factory.Services.GetRequiredService<IPolicyRepository>();
+        await policyRepository.CreateAsync(new Policy
+        {
+            Type = PolicyType.ResetPassword,
+            Enabled = true,
+            Data = "{\"autoEnrollEnabled\": false }",
+            OrganizationId = organization.Id,
+        });
+
+        // Act
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "10" },
+            { "deviceIdentifier", "test_id" },
+            { "deviceName", "firefox" },
+            { "twoFactorToken", "TEST"},
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }));
+
+        // Assert
+        // If the organization has selected TrustedDeviceEncryption but the user still has their master password
+        // they can decrypt with either option
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = responseBody.RootElement;
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Array).EnumerateArray();
+
+        // Should have one item for master password & one for trusted device with admin approval
+        Assert.Single(userDecryptionOptions, o =>
+        {
+            if (!o.TryGetProperty("Object", out var objectType))
             {
                 return false;
             }
 
-            return hasAdminApproval.ValueKind == JsonValueKind.True;
+            if (objectType.GetString() != "masterPasswordOption")
+            {
+                return false;
+            }
+
+            return true;
         });
+
+        var trustedDeviceOption = Assert.Single(userDecryptionOptions, o =>
+        {
+            if (!o.TryGetProperty("Object", out var objectType))
+            {
+                return false;
+            }
+
+            if (objectType.GetString() != "trustedDeviceOption")
+            {
+                return false;
+            }
+
+            return true;
+        });
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.True);
     }
 
     [Fact]
@@ -189,18 +269,11 @@ public class IdentityServerSsoTests
             {
                 return false;
             }
-
-            if (!o.TryGetProperty("HasAdminApproval", out var hasAdminApproval))
-            {
-                return false;
-            }
-
-            return hasAdminApproval.ValueKind == JsonValueKind.True;
+            
+            return true;
         });
 
-        var objectType = AssertHelper.AssertJsonProperty(userDecryptionOption, "Object", JsonValueKind.String).GetString();
-        Assert.Equal("trustedDeviceOption", objectType);
-        AssertHelper.AssertJsonProperty(userDecryptionOption, "HasAdminApproval", JsonValueKind.True);
+        AssertHelper.AssertJsonProperty(userDecryptionOption, "HasAdminApproval", JsonValueKind.False);
     }
 
     [Fact]
@@ -303,6 +376,8 @@ public class IdentityServerSsoTests
         {
             UserId = user.Id,
             OrganizationId = organization.Id,
+            Status = OrganizationUserStatusType.Confirmed,
+            Type = OrganizationUserType.User,
         });
 
         var ssoConfigRepository = factory.Services.GetRequiredService<ISsoConfigRepository>();

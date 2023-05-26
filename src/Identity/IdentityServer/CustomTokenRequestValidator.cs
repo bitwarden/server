@@ -8,6 +8,7 @@ using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -120,7 +121,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         // organization at a time.
         if (ssoConfigData != null && _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext))
         {
-            context.Result.CustomResponse["UserDecryptionOptions"] = CreateUserDecryptionOptions(ssoConfigData, user).ToList();
+            context.Result.CustomResponse["UserDecryptionOptions"] = await CreateUserDecryptionOptionsAsync(ssoConfigData, user);
         }
 
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
@@ -201,24 +202,28 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     /// <summary>
     /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
     /// </summary>
-    private static IEnumerable<UserDecryptionOption> CreateUserDecryptionOptions(SsoConfigurationData ssoConfigurationData, User user)
+    private async Task<IEnumerable<UserDecryptionOption>> CreateUserDecryptionOptionsAsync(SsoConfigurationData ssoConfigurationData, User user)
     {
+        var options = new List<UserDecryptionOption>();
         if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
         {
             // KeyConnector makes it mutually exclusive
-            yield return new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
-            yield break;
+            options.Add(new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl));
+            return options;
         }
 
         if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
         {
+            var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
-            yield return new TrustedDeviceUserDecryptionOption(hasAdminApproval: true);
+            options.Add(new TrustedDeviceUserDecryptionOption(hasAdminApproval));
         }
 
         if (!string.IsNullOrEmpty(user.MasterPassword))
         {
-            yield return new MasterPasswordUserDecryptionOption();
+            options.Add(new MasterPasswordUserDecryptionOption());
         }
+
+        return options;
     }
 }
