@@ -133,8 +133,7 @@ services:
       - global.env
       - ../env/uid.env
     networks:
-      - default
-      - public
+      - icons_network
 
   notifications:
     image: bitwarden/notifications:{{{CoreVersion}}}
@@ -194,6 +193,7 @@ services:
     networks:
       - default
       - public
+      - icons_network
 
 {{#if EnableKeyConnector}}
   key-connector:
@@ -242,3 +242,4 @@ networks:
     internal: true
   public:
     internal: false
+  icons_network:
