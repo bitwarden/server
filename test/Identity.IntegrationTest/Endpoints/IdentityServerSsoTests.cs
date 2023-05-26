@@ -269,7 +269,7 @@ public class IdentityServerSsoTests
             {
                 return false;
             }
-            
+
             return true;
         });
 
