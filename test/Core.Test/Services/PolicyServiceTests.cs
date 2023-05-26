@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -394,6 +395,56 @@ public class PolicyServiceTests
 
         Assert.True(policy.CreationDate - utcNow < TimeSpan.FromSeconds(1));
         Assert.True(policy.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
+    }
+
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(false, false)]
+    public async Task SaveAsync_PolicyRequiredByTrustedDeviceEncryption_DisablePolicyOrDisableAutomaticEnrollment_ThrowsBadRequest(
+        bool policyEnabled,
+        bool autoEnrollEnabled,
+        [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy,
+        SutProvider<PolicyService> sutProvider)
+    {
+        policy.Enabled = policyEnabled;
+        policy.SetDataModel(new ResetPasswordDataModel
+        {
+            AutoEnrollEnabled = autoEnrollEnabled
+        });
+
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
+        {
+            Id = policy.OrganizationId,
+            UsePolicies = true,
+        });
+
+        var ssoConfig = new SsoConfig { Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption });
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policy.OrganizationId)
+            .Returns(ssoConfig);
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.ResetPassword)
+            .Returns(Task.FromResult(new Policy { Enabled = true }));
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Trusted device encryption is on and requires this policy.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogPolicyEventAsync(default, default, default);
     }
 
     [Theory, BitAutoData]
