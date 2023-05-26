@@ -545,6 +545,6 @@ public class GlobalSettings : IGlobalSettings
     {
         public string SdkKey { get; set; }
         public string FlagDataFilePath { get; set; } = "flags.json";
-        public Dictionary<string, dynamic> FlagValues { get; set; } = new Dictionary<string, dynamic>();
+        public Dictionary<string, string> FlagValues { get; set; } = new Dictionary<string, string>();
     }
 }
