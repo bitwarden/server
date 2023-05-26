@@ -209,6 +209,7 @@ public class PolicyServiceTests
         [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Id = default;
+        policy.Data = null;
 
         SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
