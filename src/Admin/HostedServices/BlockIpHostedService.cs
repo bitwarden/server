@@ -7,7 +7,7 @@ public abstract class BlockIpHostedService : IHostedService, IDisposable
 {
     protected readonly ILogger<BlockIpHostedService> _logger;
     protected readonly GlobalSettings _globalSettings;
-    private readonly AdminSettings _adminSettings;
+    private readonly AdminSettingsOptions _adminSettings;
 
     private Task _executingTask;
     private CancellationTokenSource _cts;
@@ -15,7 +15,7 @@ public abstract class BlockIpHostedService : IHostedService, IDisposable
 
     public BlockIpHostedService(
         ILogger<BlockIpHostedService> logger,
-        IOptions<AdminSettings> adminSettings,
+        IOptions<AdminSettingsOptions> adminSettings,
         GlobalSettings globalSettings)
     {
         _logger = logger;

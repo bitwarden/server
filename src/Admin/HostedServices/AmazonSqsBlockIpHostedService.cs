@@ -12,7 +12,7 @@ public class AmazonSqsBlockIpHostedService : BlockIpHostedService
 
     public AmazonSqsBlockIpHostedService(
         ILogger<AmazonSqsBlockIpHostedService> logger,
-        IOptions<AdminSettings> adminSettings,
+        IOptions<AdminSettingsOptions> adminSettings,
         GlobalSettings globalSettings)
         : base(logger, adminSettings, globalSettings)
     { }

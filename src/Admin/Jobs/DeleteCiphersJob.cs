@@ -9,11 +9,11 @@ namespace Bit.Admin.Jobs;
 public class DeleteCiphersJob : BaseJob
 {
     private readonly ICipherRepository _cipherRepository;
-    private readonly AdminSettings _adminSettings;
+    private readonly AdminSettingsOptions _adminSettings;
 
     public DeleteCiphersJob(
         ICipherRepository cipherRepository,
-        IOptions<AdminSettings> adminSettings,
+        IOptions<AdminSettingsOptions> adminSettings,
         ILogger<DeleteCiphersJob> logger)
         : base(logger)
     {

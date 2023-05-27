@@ -11,7 +11,7 @@ public class AzureQueueBlockIpHostedService : BlockIpHostedService
 
     public AzureQueueBlockIpHostedService(
         ILogger<AzureQueueBlockIpHostedService> logger,
-        IOptions<AdminSettings> adminSettings,
+        IOptions<AdminSettingsOptions> adminSettings,
         GlobalSettings globalSettings)
         : base(logger, adminSettings, globalSettings)
     { }

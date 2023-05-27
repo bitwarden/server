@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using Microsoft.Extensions.Options;
+using System.Security.Claims;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
 using Bit.Core.Settings;
@@ -8,16 +9,16 @@ namespace Bit.Admin.Services;
 public class AccessControlService : IAccessControlService
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IConfiguration _configuration;
+    private readonly IOptionsMonitor<AdminSettingsOptions> _adminSettingsOptionsDelegate;
     private readonly IGlobalSettings _globalSettings;
 
     public AccessControlService(
         IHttpContextAccessor httpContextAccessor,
-        IConfiguration configuration,
+        IOptionsMonitor<AdminSettingsOptions> adminSettingsOptionsDelegate,
         IGlobalSettings globalSettings)
     {
         _httpContextAccessor = httpContextAccessor;
-        _configuration = configuration;
+        _adminSettingsOptionsDelegate = adminSettingsOptionsDelegate;
         _globalSettings = globalSettings;
     }
 
@@ -39,7 +40,7 @@ public class AccessControlService : IAccessControlService
 
     public string GetUserRole(string userEmail)
     {
-        var roles = _configuration.GetSection("adminSettings:role").GetChildren();
+        var roles = _adminSettingsOptionsDelegate.CurrentValue?.Role;
 
         if (roles == null || !roles.Any())
         {
@@ -50,7 +51,7 @@ public class AccessControlService : IAccessControlService
 
         var userRole = roles.FirstOrDefault(s => (s.Value != null ? s.Value.ToLowerInvariant().Split(',').Contains(userEmail) : false));
 
-        if (userRole == null)
+        if (userRole.Equals(default(KeyValuePair<string, string>)))
         {
             return null;
         }
