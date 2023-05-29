@@ -19,7 +19,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<(Group group, ICollection<CollectionAccessSelection> accessSelection)> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<(Group Group, ICollection<CollectionAccessSelection> AccessSelection)> GetByIdWithCollectionsAsync(Guid id)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
