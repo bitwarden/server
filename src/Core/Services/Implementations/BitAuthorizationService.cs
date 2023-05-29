@@ -34,6 +34,7 @@ public class BitAuthorizationService : IBitAuthorizationService
         var result = await AuthorizeAsync(user, resource, requirements);
         if (!result.Succeeded)
         {
+            // Use NotFoundException to prevent enumeration of resources by an unauthorized user
             throw new NotFoundException();
         }
     }
