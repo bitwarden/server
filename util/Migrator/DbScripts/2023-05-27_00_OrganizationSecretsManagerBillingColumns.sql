@@ -366,7 +366,7 @@ SELECT
     OU.[AccessSecretsManager],
     O.[UsePasswordManager],
     O.[SmSeats],
-    O.[SmServiceAccounts],
+    O.[SmServiceAccounts]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
