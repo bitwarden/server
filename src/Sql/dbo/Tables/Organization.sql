@@ -49,7 +49,7 @@
     [SmSeats]                       INT              NULL,
     [SmServiceAccounts]             INT              NULL,
     [MaxAutoscaleSmSeats]           INT              NULL,
-    [MaxAutoscaleSmServiceAccounts] INT              NULL,
+    [MaxAutoscaleSmServiceAccounts] INT              NULL
 
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );

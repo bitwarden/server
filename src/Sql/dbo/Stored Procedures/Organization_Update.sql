@@ -49,7 +49,7 @@
     @SmSeats INT,
     @SmServiceAccounts INT,
     @MaxAutoscaleSmSeats INT,
-    @MaxAutoscaleSmServiceAccounts INT,
+    @MaxAutoscaleSmServiceAccounts INT
 AS
 BEGIN
     SET NOCOUNT ON
