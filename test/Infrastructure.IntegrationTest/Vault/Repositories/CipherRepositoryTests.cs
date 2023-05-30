@@ -180,6 +180,7 @@ public class CipherRepositoryTests
             UserId = user.Id,
             OrganizationId = organization.Id,
             FolderId = folder.Id,
+            Data = "", // TODO: EF does not enforce this as NOT NULL
         });
 
         var updatedCipher = await cipherRepository.GetByIdAsync(createdCipher.Id);
