@@ -551,6 +551,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("MaxAutoscaleSmSeats")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("MaxAutoscaleSmServiceAccounts")
+                        .HasColumnType("INTEGER");
+
                     b.Property<short?>("MaxCollections")
                         .HasColumnType("INTEGER");
 
@@ -589,6 +595,12 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("SmSeats")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SmServiceAccounts")
+                        .HasColumnType("INTEGER");
+
                     b.Property<byte>("Status")
                         .HasColumnType("INTEGER");
 
@@ -617,6 +629,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("UsePasswordManager")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("UsePolicies")
