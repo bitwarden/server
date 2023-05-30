@@ -189,8 +189,17 @@ public class CipherRepositoryTests
         Assert.Equal(organization.Id, updatedCipher.OrganizationId);
         Assert.NotNull(updatedCipher.Folders);
 
-        using var foldersJson = JsonDocument.Parse(updatedCipher.Folders);
-        Assert.True(foldersJson.RootElement.TryGetProperty(user.Id.ToString(), out var folderProperty));
-        Assert.Equal(folder.Id, folderProperty.GetGuid());
+        using var foldersJsonDocument = JsonDocument.Parse(updatedCipher.Folders);
+        var foldersJsonElement = foldersJsonDocument.RootElement;
+        Assert.Equal(JsonValueKind.Object, foldersJsonElement.ValueKind);
+
+        // TODO: Should we force similar casing for guids across DB's
+        // I'd rather we only interact with them as the actual Guid type
+        var userProperty = foldersJsonElement
+            .EnumerateObject()
+            .FirstOrDefault(jp => string.Equals(jp.Name, user.Id.ToString(), StringComparison.OrdinalIgnoreCase));
+
+        Assert.NotEqual(default, userProperty);
+        Assert.Equal(folder.Id, userProperty.Value.GetGuid());
     }
 }
