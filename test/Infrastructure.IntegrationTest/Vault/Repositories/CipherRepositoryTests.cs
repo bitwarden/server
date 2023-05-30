@@ -147,6 +147,7 @@ public class CipherRepositoryTests
         var createdCipher = await cipherRepository.CreateAsync(new Cipher
         {
             UserId = user.Id,
+            Data = "", // TODO: EF does not enforce this as NOT NULL
         });
 
         var organization = await organizationRepository.CreateAsync(new Organization
