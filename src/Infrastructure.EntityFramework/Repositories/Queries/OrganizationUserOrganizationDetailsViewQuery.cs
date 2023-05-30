@@ -64,9 +64,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         AccessSecretsManager = ou.AccessSecretsManager,
                         UsePasswordManager = o.UsePasswordManager,
                         SmSeats = o.SmSeats,
-                        SmServiceAccounts = o.SmServiceAccounts,
-                        MaxAutoscaleSmSeats = o.MaxAutoscaleSmSeats,
-                        MaxAutoscaleSmServiceAccounts = o.MaxAutoscaleSmServiceAccounts
+                        SmServiceAccounts = o.SmServiceAccounts
 
                     };
         return query;

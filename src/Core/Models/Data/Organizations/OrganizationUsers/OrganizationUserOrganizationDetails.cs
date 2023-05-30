@@ -48,6 +48,4 @@ public class OrganizationUserOrganizationDetails
     public bool UsePasswordManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
-    public int? MaxAutoscaleSmSeats { get; set; }
-    public int? MaxAutoscaleSmServiceAccounts { get; set; }
 }
