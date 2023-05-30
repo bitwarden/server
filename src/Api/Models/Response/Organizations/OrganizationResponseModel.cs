@@ -48,6 +48,11 @@ public class OrganizationResponseModel : ResponseModel
         UseCustomPermissions = organization.UseCustomPermissions;
         SelfHost = organization.SelfHost;
         HasPublicAndPrivateKeys = organization.PublicKey != null && organization.PrivateKey != null;
+        UsePasswordManager = organization.UsePasswordManager;
+        SmSeats = organization.SmSeats;
+        SmServiceAccounts = organization.SmServiceAccounts;
+        SmMaxAutoscaleSeats = organization.SmMaxAutoscaleSeats;
+        SmMaxAutoscaleServiceAccounts = organization.SmMaxAutoscaleServiceAccounts;
     }
 
     public string Id { get; set; }
@@ -81,6 +86,11 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseCustomPermissions { get; set; }
     public bool SelfHost { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
+    public bool UsePasswordManager { get; set; } = true;
+    public int? SmSeats { get; set; }
+    public int? SmServiceAccounts { get; set; }
+    public int? SmMaxAutoscaleSeats { get; set; } = null;
+    public int? SmMaxAutoscaleServiceAccounts { get; set; } = null;
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
