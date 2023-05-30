@@ -87,7 +87,7 @@ public class CollectionsController : Controller
         // We always need to know which collections the current user is assigned to
         var assignedOrgCollections = await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
 
-        if (await _currentContext.ViewAllCollections(orgId))
+        if (await _currentContext.ViewAllCollections(orgId) || await _currentContext.ManageUsers(orgId))
         {
             // The user can view all collections, but they may not always be assigned to all of them
             var allOrgCollections = await _collectionRepository.GetManyByOrganizationIdWithAccessAsync(orgId);
