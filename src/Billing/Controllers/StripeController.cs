@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -39,6 +40,7 @@ public class StripeController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ICurrentContext _currentContext;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -55,7 +57,8 @@ public class StripeController : Controller
         IReferenceEventService referenceEventService,
         ILogger<StripeController> logger,
         ITaxRateRepository taxRateRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICurrentContext currentContext)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -79,6 +82,7 @@ public class StripeController : Controller
             PublicKey = globalSettings.Braintree.PublicKey,
             PrivateKey = globalSettings.Braintree.PrivateKey
         };
+        _currentContext = currentContext;
     }
 
     [HttpPost("webhook")]
@@ -419,7 +423,7 @@ public class StripeController : Controller
 
                             var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
                             await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, organization)
+                                new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
                                 {
                                     PlanName = organization?.Plan,
                                     PlanType = organization?.PlanType,
@@ -437,7 +441,7 @@ public class StripeController : Controller
 
                             var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
                             await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, user)
+                                new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
                                 {
                                     PlanName = PremiumPlanId,
                                     Storage = user?.MaxStorageGb,

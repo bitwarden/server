@@ -39,7 +39,7 @@ public class HandlebarsMailServiceTests
         // This will send all emails to the test email address so that they can be viewed.
         var namedParameters = new Dictionary<(string, Type), object>
         {
-            // TODO: Swith to use env variable
+            // TODO: Switch to use env variable
             { ("email", typeof(string)), "test@bitwarden.com" },
             { ("user", typeof(User)), new User
             {

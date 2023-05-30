@@ -308,8 +308,8 @@ public class AccountController : Controller
             await HttpContext.SignOutAsync();
         }
 
-        // HACK: Temporary workaroud for the time being that doesn't try to sign out of OneLogin schemes,
-        // which doesnt support SLO
+        // HACK: Temporary workaround for the time being that doesn't try to sign out of OneLogin schemes,
+        // which doesn't support SLO
         if (externalAuthenticationScheme != null && !externalAuthenticationScheme.Contains("onelogin"))
         {
             // Build a return URL so the upstream provider will redirect back
