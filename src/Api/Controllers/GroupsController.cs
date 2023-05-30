@@ -55,9 +55,9 @@ public class GroupsController : Controller
     {
         var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
 
-        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, groupDetails.group, GroupOperations.Read);
+        await _bitAuthorizationService.AuthorizeOrThrowAsync(User, groupDetails.Group, GroupOperations.Read);
 
-        return new GroupDetailsResponseModel(groupDetails.group, groupDetails.accessSelection);
+        return new GroupDetailsResponseModel(groupDetails.Group, groupDetails.AccessSelection);
     }
 
     [HttpGet("")]

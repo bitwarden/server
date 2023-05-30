@@ -47,12 +47,12 @@ public class GroupsController : Controller
     public async Task<IActionResult> Get(Guid id)
     {
         var groupDetails = await _groupRepository.GetByIdWithCollectionsAsync(id);
-        var group = groupDetails.group;
+        var group = groupDetails.Group;
         if (group == null || group.OrganizationId != _currentContext.OrganizationId)
         {
             return new NotFoundResult();
         }
-        var response = new GroupResponseModel(group, groupDetails.accessSelection);
+        var response = new GroupResponseModel(group, groupDetails.AccessSelection);
         return new JsonResult(response);
     }
 
