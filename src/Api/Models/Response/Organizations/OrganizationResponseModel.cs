@@ -51,8 +51,8 @@ public class OrganizationResponseModel : ResponseModel
         UsePasswordManager = organization.UsePasswordManager;
         SmSeats = organization.SmSeats;
         SmServiceAccounts = organization.SmServiceAccounts;
-        SmMaxAutoscaleSeats = organization.SmMaxAutoscaleSeats;
-        SmMaxAutoscaleServiceAccounts = organization.SmMaxAutoscaleServiceAccounts;
+        MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
+        MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
     }
 
     public string Id { get; set; }
@@ -89,8 +89,8 @@ public class OrganizationResponseModel : ResponseModel
     public bool UsePasswordManager { get; set; } = true;
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
-    public int? SmMaxAutoscaleSeats { get; set; } = null;
-    public int? SmMaxAutoscaleServiceAccounts { get; set; } = null;
+    public int? MaxAutoscaleSmSeats { get; set; } = null;
+    public int? MaxAutoscaleSmServiceAccounts { get; set; } = null;
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

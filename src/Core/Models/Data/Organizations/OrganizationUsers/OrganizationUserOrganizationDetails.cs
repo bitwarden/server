@@ -45,4 +45,9 @@ public class OrganizationUserOrganizationDetails
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool UsePasswordManager { get; set; } 
+    public int? SmSeats { get; set; }
+    public int? SmServiceAccounts { get; set; }
+    public int? MaxAutoscaleSmSeats { get; set; } 
+    public int? MaxAutoscaleSmServiceAccounts { get; set; } 
 }

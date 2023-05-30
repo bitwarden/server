@@ -62,6 +62,12 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         FamilySponsorshipToDelete = os.ToDelete,
                         FamilySponsorshipValidUntil = os.ValidUntil,
                         AccessSecretsManager = ou.AccessSecretsManager,
+                        UsePasswordManager = o.UsePasswordManager,
+                        SmSeats = o.SmSeats,
+                        SmServiceAccounts = o.SmServiceAccounts,
+                        MaxAutoscaleSmSeats = o.MaxAutoscaleSmSeats,
+                        MaxAutoscaleSmServiceAccounts = o.MaxAutoscaleSmServiceAccounts
+                        
                     };
         return query;
     }
