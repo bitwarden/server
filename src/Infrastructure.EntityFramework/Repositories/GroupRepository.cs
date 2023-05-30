@@ -51,7 +51,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
-    public async Task<(Bit.Core.Entities.Group group, ICollection<CollectionAccessSelection> accessSelection)> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<(Bit.Core.Entities.Group Group, ICollection<CollectionAccessSelection> AccessSelection)> GetByIdWithCollectionsAsync(Guid id)
     {
         var grp = await base.GetByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
