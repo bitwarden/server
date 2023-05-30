@@ -4,16 +4,18 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
-[SecretsManager]
 [Authorize("secrets")]
+[SelfHosted(NotSelfHostedOnly = true)]
 public class ProjectsController : Controller
 {
     private readonly ICurrentContext _currentContext;
@@ -22,6 +24,7 @@ public class ProjectsController : Controller
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
+    private readonly IAuthorizationService _authorizationService;
 
     public ProjectsController(
         ICurrentContext currentContext,
@@ -29,7 +32,8 @@ public class ProjectsController : Controller
         IProjectRepository projectRepository,
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
-        IDeleteProjectCommand deleteProjectCommand)
+        IDeleteProjectCommand deleteProjectCommand,
+        IAuthorizationService authorizationService)
     {
         _currentContext = currentContext;
         _userService = userService;
@@ -37,6 +41,7 @@ public class ProjectsController : Controller
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
         _deleteProjectCommand = deleteProjectCommand;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet("organizations/{organizationId}/projects")]
@@ -58,29 +63,44 @@ public class ProjectsController : Controller
     }
 
     [HttpPost("organizations/{organizationId}/projects")]
-    public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId, [FromBody] ProjectCreateRequestModel createRequest)
+    public async Task<ProjectResponseModel> CreateAsync([FromRoute] Guid organizationId,
+        [FromBody] ProjectCreateRequestModel createRequest)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        var project = createRequest.ToProject(organizationId);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, project, ProjectOperations.Create);
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createProjectCommand.CreateAsync(createRequest.ToProject(organizationId), userId);
-        return new ProjectResponseModel(result);
+        var result = await _createProjectCommand.CreateAsync(project, userId);
+
+        // Creating a project means you have read & write permission.
+        return new ProjectResponseModel(result, true, true);
     }
 
     [HttpPut("projects/{id}")]
-    public async Task<ProjectResponseModel> UpdateAsync([FromRoute] Guid id, [FromBody] ProjectUpdateRequestModel updateRequest)
+    public async Task<ProjectResponseModel> UpdateAsync([FromRoute] Guid id,
+        [FromBody] ProjectUpdateRequestModel updateRequest)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var project = await _projectRepository.GetByIdAsync(id);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, project, ProjectOperations.Update);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
 
-        var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id), userId);
-        return new ProjectResponseModel(result);
+        var result = await _updateProjectCommand.UpdateAsync(updateRequest.ToProject(id));
+
+        // Updating a project means you have read & write permission.
+        return new ProjectResponseModel(result, true, true);
     }
 
     [HttpGet("projects/{id}")]
-    public async Task<ProjectPermissionDetailsResponseModel> GetAsync([FromRoute] Guid id)
+    public async Task<ProjectResponseModel> GetAsync([FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
         if (project == null)
@@ -104,7 +124,7 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        return new ProjectPermissionDetailsResponseModel(project, access.Read, access.Write);
+        return new ProjectResponseModel(project, access.Read, access.Write);
     }
 
     [HttpPost("projects/delete")]

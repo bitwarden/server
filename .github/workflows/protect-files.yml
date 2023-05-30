@@ -30,7 +30,7 @@ jobs:
             label: "DB-migrations-changed"
     steps:
       - name: Checkout repo
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
         with:
           fetch-depth: 2
 
@@ -50,6 +50,6 @@ jobs:
 
       - name: Add label to pull request
         if: contains(steps.check-changes.outputs.changes_detected, true)
-        uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90
+        uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90 # v1.0.4
         with:
           add-labels: ${{ matrix.label }}

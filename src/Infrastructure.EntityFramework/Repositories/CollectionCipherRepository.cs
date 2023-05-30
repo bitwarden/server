@@ -110,7 +110,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
 
             foreach (var requestedCollectionId in collectionIds)
             {
-                // I don't totally agree with t.CipherId = cipherId here because that should have been guarenteed by
+                // I don't totally agree with t.CipherId = cipherId here because that should have been guaranteed by
                 // the WHERE above but the SQL Server CTE has it
                 var existingCollectionCipher = collectionCiphers
                     .FirstOrDefault(t => t.CollectionId == requestedCollectionId && t.CipherId == cipherId);
@@ -181,7 +181,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availibleCollections = from c in dbContext.Collections
+            var availableCollections = from c in dbContext.Collections
                                        join o in dbContext.Organizations
                                            on c.OrganizationId equals o.Id
                                        join ou in dbContext.OrganizationUsers
@@ -205,15 +205,15 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                        (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed &&
                                        (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
                                        select new { c, o, ou, cu, gu, g, cg };
-            var count = await availibleCollections.CountAsync();
-            if (await availibleCollections.CountAsync() < 1)
+            var count = await availableCollections.CountAsync();
+            if (await availableCollections.CountAsync() < 1)
             {
                 return;
             }
 
             var insertData = from collectionId in collectionIds
                              from cipherId in cipherIds
-                             where availibleCollections.Select(x => x.c.Id).Contains(collectionId)
+                             where availableCollections.Select(x => x.c.Id).Contains(collectionId)
                              select new Models.CollectionCipher
                              {
                                  CollectionId = collectionId,

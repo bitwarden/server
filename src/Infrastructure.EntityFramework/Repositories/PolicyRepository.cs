@@ -48,29 +48,4 @@ public class PolicyRepository : Repository<Core.Entities.Policy, Policy, Guid>, 
             return Mapper.Map<List<Core.Entities.Policy>>(results);
         }
     }
-
-    public async Task<ICollection<Core.Entities.Policy>> GetManyByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-                OrganizationUserStatusType minStatus)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            var query = new PolicyReadByTypeApplicableToUserQuery(userId, policyType, minStatus);
-            var results = await query.Run(dbContext).ToListAsync();
-            return Mapper.Map<List<Core.Entities.Policy>>(results);
-        }
-    }
-
-    public async Task<int> GetCountByTypeApplicableToUserIdAsync(Guid userId, PolicyType policyType,
-                OrganizationUserStatusType minStatus)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-
-            var query = new PolicyReadByTypeApplicableToUserQuery(userId, policyType, minStatus);
-            return await GetCountFromQuery(query);
-        }
-    }
 }

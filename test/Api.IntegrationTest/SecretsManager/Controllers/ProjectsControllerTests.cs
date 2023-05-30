@@ -304,7 +304,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
         var response = await _client.GetAsync($"/projects/{project.Id}");
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ProjectPermissionDetailsResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
         Assert.Equal(project.Name, result!.Name);
         Assert.Equal(project.RevisionDate, result.RevisionDate);
         Assert.Equal(project.CreationDate, result.CreationDate);

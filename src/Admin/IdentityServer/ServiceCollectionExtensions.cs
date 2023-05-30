@@ -21,7 +21,8 @@ public static class ServiceCollectionExtensions
         var passwordlessIdentityBuilder = services.AddIdentity<IdentityUser, Role>()
             .AddUserStore<TUserStore>()
             .AddRoleStore<RoleStore>()
-            .AddDefaultTokenProviders();
+            .AddDefaultTokenProviders()
+            .AddClaimsPrincipalFactory<CustomClaimsPrincipalFactory>();
 
         var regularIdentityBuilder = services.AddIdentityCore<User>()
             .AddUserStore<UserStore>();
