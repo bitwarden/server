@@ -21,10 +21,7 @@ SELECT
     O.[UsersGetPremium],
     O.[UseCustomPermissions],
     O.[UseSecretsManager],
-    O.[UsePasswordManager],
     O.[Seats],
-    O.[SmSeats],
-    O.[SmServiceAccounts],
     O.[MaxCollections],
     O.[MaxStorageGb],
     O.[Identifier],
@@ -44,7 +41,10 @@ SELECT
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
     OS.[ToDelete] FamilySponsorshipToDelete,
     OS.[ValidUntil] FamilySponsorshipValidUntil,
-    OU.[AccessSecretsManager]
+    OU.[AccessSecretsManager],
+    O.[UsePasswordManager],
+    O.[SmSeats],
+    O.[SmServiceAccounts],
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
