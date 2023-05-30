@@ -72,6 +72,13 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public int? MaxAutoscaleSeats { get; set; } = null;
     public DateTime? OwnersNotifiedOfAutoscaling { get; set; } = null;
     public OrganizationStatusType Status { get; set; }
+    public bool UsePasswordManager { get; set; } = true;
+    public int? SmSeats { get; set; }
+    public int? SmServiceAccounts { get; set; }
+    public int? SmMaxAutoscaleSeats { get; set; } = null;
+    public int? SmMaxAutoscaleServiceAccounts { get; set; } = null;
+    
+    
 
     public void SetNewId()
     {
