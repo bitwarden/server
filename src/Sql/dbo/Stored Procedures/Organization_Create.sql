@@ -159,7 +159,7 @@ BEGIN
         @UsePasswordManager,
         @SmSeats,
         @SmServiceAccounts,
-        @MaxAutoscaleSmSeat,
+        @MaxAutoscaleSmSeats,
         @MaxAutoscaleSmServiceAccounts
     )
 END
