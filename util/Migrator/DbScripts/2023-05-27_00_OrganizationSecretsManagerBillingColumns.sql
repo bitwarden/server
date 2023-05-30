@@ -88,7 +88,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @SmSeats INT,
     @SmServiceAccounts INT,
     @MaxAutoscaleSmSeats INT,
-    @MaxAutoscaleSmServiceAccounts INT,
+    @MaxAutoscaleSmServiceAccounts INT
 AS
 BEGIN
     SET NOCOUNT ON
@@ -145,7 +145,7 @@ BEGIN
         [SmSeats],
         [SmServiceAccounts],
         [MaxAutoscaleSmSeats],
-        [MaxAutoscaleSmServiceAccounts],
+        [MaxAutoscaleSmServiceAccounts]
     )
     VALUES
     (
@@ -199,7 +199,7 @@ BEGIN
         @SmSeats,
         @SmServiceAccounts,
         @MaxAutoscaleSmSeats,
-        @MaxAutoscaleSmServiceAccounts,
+        @MaxAutoscaleSmServiceAccounts
     )
 END
 GO
@@ -256,7 +256,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @SmSeats INT,
     @SmServiceAccounts INT,
     @MaxAutoscaleSmSeats INT,
-    @MaxAutoscaleSmServiceAccounts INT,
+    @MaxAutoscaleSmServiceAccounts INT
 AS
 BEGIN
     SET NOCOUNT ON
