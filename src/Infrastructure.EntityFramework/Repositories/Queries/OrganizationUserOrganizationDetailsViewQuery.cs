@@ -67,7 +67,7 @@ public class OrganizationUserOrganizationDetailsViewQuery : IQuery<OrganizationU
                         SmServiceAccounts = o.SmServiceAccounts,
                         MaxAutoscaleSmSeats = o.MaxAutoscaleSmSeats,
                         MaxAutoscaleSmServiceAccounts = o.MaxAutoscaleSmServiceAccounts
-                        
+
                     };
         return query;
     }

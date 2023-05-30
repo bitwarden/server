@@ -77,8 +77,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; } = null;
     public int? MaxAutoscaleSmServiceAccounts { get; set; } = null;
-    
-    
+
+
 
     public void SetNewId()
     {
