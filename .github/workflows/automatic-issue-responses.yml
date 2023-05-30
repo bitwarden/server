@@ -25,7 +25,7 @@ jobs:
       # Intended behavior
       - if: github.event.label.name == 'intended-behavior'
         name: Intended behaviour
-        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515 # v2.0.0
         with:
           comment: |
             Your issue appears to be describing the intended behavior of the software. If you want this to be changed, it would be a feature request.
@@ -38,7 +38,7 @@ jobs:
       # Customer support request
       - if: github.event.label.name == 'customer-support'
         name: Customer Support request
-        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515 # v2.0.0
         with:
           comment: |
             We use GitHub issues as a place to track bugs and other development related issues. Your issue appears to be a support request, or would otherwise be better handled by our dedicated Customer Success team.
@@ -49,14 +49,14 @@ jobs:
       # Resolved
       - if: github.event.label.name == 'resolved'
         name: Resolved
-        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515 # v2.0.0
         with:
           comment: |
             We’ve closed this issue, as it appears the original problem has been resolved. If this happens again or continues to be an problem, please respond to this issue with any additional detail to assist with reproduction and root cause analysis.
       # Stale
       - if: github.event.label.name == 'stale'
         name: Stale
-        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515  # v2.0.0
+        uses: peter-evans/close-issue@849549ba7c3a595a064c4b2c56f206ee78f93515 # v2.0.0
         with:
           comment: |
             As we haven’t heard from you about this problem in some time, this issue will now be closed.

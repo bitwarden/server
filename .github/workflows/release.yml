@@ -34,11 +34,11 @@ jobs:
           fi
 
       - name: Checkout repo
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
 
       - name: Check Release Version
         id: version
-        uses: bitwarden/gh-actions/release-version-check@4cf17a5ff15a995a2daf2b60ba371e5c9907c068
+        uses: bitwarden/gh-actions/release-version-check@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         with:
           release-type: ${{ github.event.inputs.release_type }}
           project-type: dotnet
@@ -76,7 +76,7 @@ jobs:
 
       - name: Create GitHub deployment for ${{ matrix.name }}
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: chrnorm/deployment-action@1b599fe41a0ef1f95191e7f2eec4743f2d7dfc48
+        uses: chrnorm/deployment-action@d42cde7132fcec920de534fffc3be83794335c00 # v2.0.5
         id: deployment
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
@@ -87,7 +87,7 @@ jobs:
 
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
+        uses: bitwarden/gh-actions/download-artifacts@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -96,22 +96,22 @@ jobs:
 
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
+        uses: bitwarden/gh-actions/download-artifacts@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         with:
           workflow: build.yml
           workflow_conclusion: success
           branch: master
           artifacts: ${{ matrix.name }}.zip
 
-      - name: Login to Azure
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf
+      - name: Login to Azure - CI subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
         with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
       - name: Retrieve secrets
         id: retrieve-secrets
         env:
-          VAULT_NAME: "bitwarden-prod-kv"
+          VAULT_NAME: "bitwarden-ci"
         run: |
           webapp_name=$(
             az keyvault secret show --vault-name $VAULT_NAME \
@@ -128,8 +128,13 @@ jobs:
           echo "::add-mask::$publish_profile"
           echo "publish-profile=$publish_profile" >> $GITHUB_OUTPUT
 
+      - name: Login to Azure
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
       - name: Deploy App
-        uses: azure/webapps-deploy@0b651ed7546ecfc75024011f76944cb9b381ef1e
+        uses: azure/webapps-deploy@016bdd3f9b7cec60310bcf9da98f671628795644 # v2.2.4
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
           publish-profile: ${{ steps.retrieve-secrets.outputs.publish-profile }}
@@ -151,7 +156,7 @@ jobs:
 
       - name: Update ${{ matrix.name }} deployment status to Success
         if: ${{ github.event.inputs.release_type != 'Dry Run' && success() }}
-        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        uses: chrnorm/deployment-status@2afb7d27101260f4a764219439564d954d10b5b0 # v2.0.1
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
           state: "success"
@@ -159,7 +164,7 @@ jobs:
 
       - name: Update ${{ matrix.name }} deployment status to Failure
         if: ${{ github.event.inputs.release_type != 'Dry Run' && failure() }}
-        uses: chrnorm/deployment-status@07b3930847f65e71c9c6802ff5a402f6dfb46b86
+        uses: chrnorm/deployment-status@2afb7d27101260f4a764219439564d954d10b5b0 # v2.0.1
         with:
           token: "${{ secrets.GITHUB_TOKEN }}"
           state: "failure"
@@ -222,7 +227,7 @@ jobs:
           echo "Github Release Option: $RELEASE_OPTION"
 
       - name: Checkout repo
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
+        uses: actions/checkout@93ea575cb5d8a053eaa0ac8fa3b40d7e05a33cc8 # v3.1.0
 
       - name: Setup project name
         id: setup
@@ -236,10 +241,10 @@ jobs:
       - name: Setup DCT
         id: setup-dct
         if: matrix.origin_docker_repo == 'bitwarden'
-        uses: bitwarden/gh-actions/setup-docker-trust@a8c384a05a974c05c48374c818b004be221d43ff
+        uses: bitwarden/gh-actions/setup-docker-trust@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         with:
-          azure-creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-          azure-keyvault-name: "bitwarden-prod-kv"
+          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          azure-keyvault-name: "bitwarden-ci"
 
       - name: Pull latest project image
         if: matrix.origin_docker_repo == 'bitwarden'
@@ -279,21 +284,34 @@ jobs:
 
       ########## ACR PROD ##########
       - name: Login to Azure - PROD Subscription
-        uses: Azure/login@77f1b2e3fb80c0e8645114159d17008b8a2e475a
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
         with:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to Azure ACR
         run: az acr login -n bitwardenprod
 
+      - name: Pull latest project image
+        if: matrix.origin_docker_repo == 'bitwardenprod.azurecr.io'
+        env:
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+          ORIGIN_REGISTRY: ${{ matrix.origin_docker_repo }}
+        run: |
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker pull $ORIGIN_REGISTRY/$PROJECT_NAME:dev
+          else
+            docker pull $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME
+          fi
+
       - name: Tag version and latest
+        if: matrix.origin_docker_repo == 'bitwardenprod.azurecr.io'
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
           ORIGIN_REGISTRY: ${{ matrix.origin_docker_repo }}
         run: |
           if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
-            docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:latest $REGISTRY/$PROJECT_NAME:dryrun
+            docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:dev $REGISTRY/$PROJECT_NAME:dryrun
           else
             docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
             docker tag $ORIGIN_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $REGISTRY/$PROJECT_NAME:latest
@@ -320,7 +338,7 @@ jobs:
     steps:
       - name: Download latest Release docker-stub
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
+        uses: bitwarden/gh-actions/download-artifacts@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -331,7 +349,7 @@ jobs:
 
       - name: Download latest Release docker-stub
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@850faad0cf6c02a8c0dc46eddde2363fbd6c373a
+        uses: bitwarden/gh-actions/download-artifacts@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -342,7 +360,7 @@ jobs:
 
       - name: Create release
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: ncipollo/release-action@40bb172bd05f266cf9ba4ff965cb61e9ee5f6d01
+        uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e # v1.12.0
         with:
           artifacts: "docker-stub.zip,
             docker-stub-sha256.txt,

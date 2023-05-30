@@ -526,7 +526,7 @@ public static class CoreHelpers
         return !invalid;
     }
 
-    public static string GetApplicationCacheServiceBusSubcriptionName(GlobalSettings globalSettings)
+    public static string GetApplicationCacheServiceBusSubscriptionName(GlobalSettings globalSettings)
     {
         var subName = globalSettings.ServiceBus.ApplicationCacheSubscriptionName;
         if (string.IsNullOrWhiteSpace(subName))
