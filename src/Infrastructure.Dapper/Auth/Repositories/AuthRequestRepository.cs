@@ -1,5 +1,7 @@
 ﻿using System.Data;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper.Repositories;
@@ -36,6 +38,19 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
             var results = await connection.QueryAsync<AuthRequest>(
                 $"[{Schema}].[AuthRequest_ReadByUserId]",
                 new { UserId = userId },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
+    public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyPendingByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationAdminAuthRequest>(
+                $"[{Schema}].[AuthRequest_ReadPendingByOrganizationId]",
+                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
