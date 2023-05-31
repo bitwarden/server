@@ -134,6 +134,13 @@ server {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection $http_connection;
   }
+
+  location /notifications/anonymous-hub {
+    proxy_pass http://localhost:5006/anonymous-hub;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+  }
+  
 {{/if}}
 {{#if (String.Equal env.BW_ENABLE_EVENTS "true")}}
 

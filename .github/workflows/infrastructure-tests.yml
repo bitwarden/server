@@ -1,0 +1,117 @@
+---
+name: Run Database Infrastructure Tests
+on:
+  pull_request:
+    branches-ignore:
+      - 'l10n_master'
+      - 'gh-pages'
+    paths:
+      - '.github/workflows/infrastructure-tests.yml' # This file
+      - 'src/Sql/**' # SQL Server Database Changes
+      - 'util/Migrator/**' # New SQL Server Migrations
+      - 'util/MySqlMigrations/**' # Changes to MySQL
+      - 'util/PostgresMigrations/**' # Changes to Postgres
+      - 'util/SqliteMigrations/**' # Changes to Sqlite
+      - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
+      - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
+      - 'test/Infrastructure.IntegrationTest/**' # Any changes to the tests
+  push:
+    branches:
+      - 'master'
+      - 'rc'
+    paths:
+      - '.github/workflows/infrastructure-tests.yml' # This file
+      - 'src/Sql/**' # SQL Server Database Changes
+      - 'util/Migrator/**' # New SQL Server Migrations
+      - 'util/MySqlMigrations/**' # Changes to MySQL
+      - 'util/PostgresMigrations/**' # Changes to Postgres
+      - 'util/SqliteMigrations/**' # Changes to Sqlite
+      - 'src/Infrastructure.Dapper/**' # Changes to SQL Server Dapper Repository Layer
+      - 'src/Infrastructure.EntityFramework/**' # Changes to Entity Framework Repository Layer
+      - 'test/Infrastructure.IntegrationTest/**' # Any changes to the tests
+  workflow_dispatch:
+    inputs: {}
+
+jobs:
+  test:
+    name: 'Run Infrastructure.IntegrationTest'
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3 # v3.5.0
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@607fce577a46308457984d59e4954e075820f10a # v3.0.3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Restore Tools
+        run: dotnet tool restore
+
+      - name: Compose Databases
+        working-directory: 'dev'
+        # We could think about not using profiles and pulling images directly to cover multiple versions
+        run: |
+          cp .env.example .env
+          docker compose --profile mssql --profile postgres --profile mysql up -d
+        shell: pwsh
+      
+      # I've seen the SQL Server container not be ready for commands right after starting up and just needing a bit longer to be ready
+      - name: Sleep
+        run: sleep 15s
+
+      - name: Migrate SQL Server
+        working-directory: 'dev'
+        run: "pwsh ./migrate.ps1"
+        shell: pwsh
+
+      - name: Migrate MySQL
+        working-directory: 'util/MySqlMigrations'
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev;Allow User Variables=true"
+
+      - name: Migrate Postgres
+        working-directory: 'util/PostgresMigrations'
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:PostgreSql:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
+      
+      - name: Migrate Sqlite
+        working-directory: 'util/SqliteMigrations'
+        run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:Sqlite:ConnectionString="$CONN_STR"'
+        env:
+          CONN_STR: "Data Source=${{ runner.temp }}/test.db"
+        
+      - name: Run Tests
+        working-directory: 'test/Infrastructure.IntegrationTest'
+        env:
+          # Default Postgres:
+          BW_TEST_DATABASES__0__TYPE: "Postgres"
+          BW_TEST_DATABASES__0__CONNECTIONSTRING: "Host=localhost;Username=postgres;Password=SET_A_PASSWORD_HERE_123;Database=vault_dev"
+          # Default MySql
+          BW_TEST_DATABASES__1__TYPE: "MySql"
+          BW_TEST_DATABASES__1__CONNECTIONSTRING: "server=localhost;uid=root;pwd=SET_A_PASSWORD_HERE_123;database=vault_dev"
+          # Default Dapper SqlServer
+          BW_TEST_DATABASES__2__TYPE: "SqlServer"
+          BW_TEST_DATABASES__2__CONNECTIONSTRING: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
+          # Default Sqlite
+          BW_TEST_DATABASES__3__TYPE: "Sqlite"
+          BW_TEST_DATABASES__3__CONNECTIONSTRING: "Data Source=${{ runner.temp }}/test.db"
+        run: dotnet test --logger "trx;LogFileName=infrastructure-test-results.trx"
+        shell: pwsh
+
+      - name: Report test results
+        uses: dorny/test-reporter@c9b3d0e2bd2a4e96aaf424dbaa31c46b42318226 # v1.6.0
+        if: always()
+        with:
+          name: Test Results
+          path: "**/*-test-results.trx"
+          reporter: dotnet-trx
+          fail-on-error: true
+      
+      - name: Docker compose down
+        if: always()
+        working-directory: "dev"
+        run: docker compose down
+        shell: pwsh
