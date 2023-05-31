@@ -56,4 +56,27 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
             }).ToList();
         }
     }
+
+    public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(
+        Guid organizationId,
+        IEnumerable<Guid> ids)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var orgUserAuthRequests = await (from ar in dbContext.AuthRequests
+                                             join ou in dbContext.OrganizationUsers on ar.UserId equals ou.UserId
+                                             where ou.OrganizationId.Equals(organizationId) && ids.Contains(ar.Id) && ar.Type == AuthRequestType.AdminApproval
+                                             select new { ar, ou }).ToListAsync();
+
+            return orgUserAuthRequests.Select(t =>
+            {
+                var authRequestWithEmail = Mapper.Map<OrganizationAdminAuthRequest>(t.ar);
+                authRequestWithEmail.Email = t.ou.Email;
+                authRequestWithEmail.OrganizationId = t.ou.OrganizationId;
+                authRequestWithEmail.OrganizationUserId = t.ou.Id;
+                return authRequestWithEmail;
+            }).ToList();
+        }
+    }
 }

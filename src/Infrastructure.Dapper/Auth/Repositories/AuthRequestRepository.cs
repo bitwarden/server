@@ -56,4 +56,17 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
             return results.ToList();
         }
     }
+
+    public async Task<ICollection<OrganizationAdminAuthRequest>> GetManyAdminApprovalRequestsByManyIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<OrganizationAdminAuthRequest>(
+                $"[{Schema}].[AuthRequest_ReadAdminApprovalsByIds]",
+                new { OrganizationId = organizationId, Ids = ids.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
 }
