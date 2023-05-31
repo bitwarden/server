@@ -39,6 +39,9 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
             case not null when requirement == ProjectOperations.Update:
                 await CanUpdateProjectAsync(context, requirement, resource);
                 break;
+            case not null when requirement == ProjectOperations.Delete:
+                await CanDeleteProjectAsync(context, requirement, resource);
+                break;
             default:
                 throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement));
         }
@@ -63,6 +66,24 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
     }
 
     private async Task CanUpdateProjectAsync(AuthorizationHandlerContext context,
+        ProjectOperationRequirement requirement, Project resource)
+    {
+        var (accessClient, userId) =
+            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            return;
+        }
+
+        var access = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);
+
+        if (access.Write)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task CanDeleteProjectAsync(AuthorizationHandlerContext context,
         ProjectOperationRequirement requirement, Project resource)
     {
         var (accessClient, userId) =
