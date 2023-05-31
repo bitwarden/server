@@ -104,6 +104,7 @@ public class EnvironmentFileBuilder
         _mssqlOverrideValues = new Dictionary<string, string>
         {
             ["SA_PASSWORD"] = dbPassword,
+            ["DATABASE"] = _context.Install?.Database ?? "vault"
         };
 
         _keyConnectorOverrideValues = new Dictionary<string, string>
