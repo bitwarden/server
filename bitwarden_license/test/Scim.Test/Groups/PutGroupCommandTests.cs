@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
@@ -64,7 +65,7 @@ public class PutGroupCommandTests
 
         sutProvider.GetDependency<IScimContext>()
             .RequestScimProvider
-            .Returns(Core.Enums.ScimProviderType.Okta);
+            .Returns(ScimProviderType.Okta);
 
         var inputModel = new ScimGroupRequestModel
         {

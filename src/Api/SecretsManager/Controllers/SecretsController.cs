@@ -5,18 +5,21 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Enums;
+using Bit.Core.Tools.Models.Business;
+using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
-[SecretsManager]
 [Authorize("secrets")]
+[SelfHosted(NotSelfHostedOnly = true)]
 public class SecretsController : Controller
 {
     private readonly ICurrentContext _currentContext;
@@ -118,7 +121,7 @@ public class SecretsController : Controller
             await _eventService.LogServiceAccountSecretEventAsync(userId, secret, EventType.Secret_Retrieved);
 
             var org = await _organizationRepository.GetByIdAsync(secret.OrganizationId);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org));
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org, _currentContext));
         }
 
         return new SecretResponseModel(secret, access.Read, access.Write);
