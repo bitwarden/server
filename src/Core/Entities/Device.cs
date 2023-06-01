@@ -31,7 +31,7 @@ public class Device : ITableObject<Guid>
     public string EncryptedPublicKey { get; set; }
 
     /// <summary>
-    /// Intended to be the public key that was generated for a device upon trust and encrypted. Currenly encrypted with
+    /// Intended to be the private key that was generated for a device upon trust and encrypted. Currenly encrypted with
     /// the devices key, that upon successful login a user can decrypt this value and therefor decrypt their vault.
     /// </summary>
     public string EncryptedPrivateKey { get; set; }
