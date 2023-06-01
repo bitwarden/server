@@ -4,11 +4,10 @@ using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
 using Bit.Commercial.Core.Test.SecretsManager.Enums;
 using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Identity;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -23,21 +22,22 @@ namespace Bit.Commercial.Core.Test.SecretsManager.AuthorizationHandlers.Projects
 public class ProjectAuthorizationHandlerTests
 {
     private static void SetupPermission(SutProvider<ProjectAuthorizationHandler> sutProvider,
-        PermissionType permissionType, Guid organizationId)
+        PermissionType permissionType, Guid organizationId, Guid userId = new())
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId)
             .Returns(true);
 
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(ClientType.User);
-
         switch (permissionType)
         {
             case PermissionType.RunAsAdmin:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+                    .ReturnsForAnyArgs(
+                        (AccessClientType.NoAccessCheck, userId));
                 break;
             case PermissionType.RunAsUserWithPermission:
-                sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+                    .ReturnsForAnyArgs(
+                        (AccessClientType.User, userId));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
@@ -63,7 +63,6 @@ public class ProjectAuthorizationHandlerTests
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
 
-
         await Assert.ThrowsAsync<ArgumentException>(() => sutProvider.Sut.HandleAsync(authzContext));
     }
 
@@ -74,7 +73,6 @@ public class ProjectAuthorizationHandlerTests
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
 
         var requirements = typeof(ProjectOperations).GetFields(BindingFlags.Public | BindingFlags.Static)
             .Select(i => (ProjectOperationRequirement)i.GetValue(null));
@@ -105,17 +103,16 @@ public class ProjectAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(ClientType.ServiceAccount)]
-    [BitAutoData(ClientType.Organization)]
-    public async Task CanCreateProject_NotSupportedClientTypes_DoesNotSucceed(ClientType clientType,
+    [BitAutoData(AccessClientType.ServiceAccount)]
+    [BitAutoData(AccessClientType.Organization)]
+    public async Task CanCreateProject_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
             .Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId)
-            .Returns(false);
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(clientType);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
+            .ReturnsForAnyArgs(
+                (clientType, new Guid()));
         var requirement = ProjectOperations.Create;
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
@@ -167,7 +164,6 @@ public class ProjectAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
             .Returns(true);
         SetupPermission(sutProvider, PermissionType.RunAsAdmin, project.OrganizationId);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
             .Returns((true, true));
@@ -188,8 +184,9 @@ public class ProjectAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
             .Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(false);
-        sutProvider.GetDependency<ICurrentContext>().ClientType
-            .Returns(ClientType.ServiceAccount);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
+            .ReturnsForAnyArgs(
+                (AccessClientType.ServiceAccount, new Guid()));
         var requirement = ProjectOperations.Update;
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
@@ -206,8 +203,7 @@ public class ProjectAuthorizationHandlerTests
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal,
         Guid userId)
     {
-        SetupPermission(sutProvider, permissionType, project.OrganizationId);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        SetupPermission(sutProvider, permissionType, project.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
             .Returns((read, write));
@@ -229,8 +225,7 @@ public class ProjectAuthorizationHandlerTests
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal,
         Guid userId)
     {
-        SetupPermission(sutProvider, permissionType, project.OrganizationId);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+        SetupPermission(sutProvider, permissionType, project.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
             .Returns((read, write));

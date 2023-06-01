@@ -25,15 +25,37 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
                         .FilePaths(globalSettings.LaunchDarkly?.FlagDataFilePath)
                         .AutoUpdate(true)
                 );
+            }
+            // support configuration directly from settings
+            else if (globalSettings.LaunchDarkly?.FlagValues?.Any() is true)
+            {
+                var source = TestData.DataSource();
+                foreach (var kvp in globalSettings.LaunchDarkly.FlagValues)
+                {
+                    if (bool.TryParse(kvp.Value, out bool boolValue))
+                    {
+                        source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(boolValue)));
+                    }
+                    else if (int.TryParse(kvp.Value, out int intValue))
+                    {
+                        source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(intValue)));
+                    }
+                    else
+                    {
+                        source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(kvp.Value)));
+                    }
+                }
 
-                // do not provide analytics events
-                ldConfig.Events(Components.NoEvents);
+                ldConfig.DataSource(source);
             }
             else
             {
-                // when a file-based fallback isn't available, work offline
+                // when fallbacks aren't available, work offline
                 ldConfig.Offline(true);
             }
+
+            // do not provide analytics events
+            ldConfig.Events(Components.NoEvents);
         }
         else if (globalSettings.SelfHosted)
         {

@@ -428,6 +428,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             // Remove all existing ones that are no longer requested
             var requestedUserIds = requestedUsers.Select(u => u.Id);
             dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId)));
+            // Need to save the new collection users before running the bump revision code
+            await dbContext.SaveChangesAsync();
             await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(id, organizationId);
             await dbContext.SaveChangesAsync();
         }
