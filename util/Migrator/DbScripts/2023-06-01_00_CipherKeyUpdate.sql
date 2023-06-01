@@ -188,14 +188,14 @@ BEGIN
     WHERE
         [Id] = @Id
     
-        IF @OrganizationId IS NOT NULL
-        BEGIN
-            EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
-        END
-        ELSE IF @UserId IS NOT NULL
-        BEGIN
-            EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
-        END
+    IF @OrganizationId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
+    END
+    ELSE IF @UserId IS NOT NULL
+    BEGIN
+        EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
+    END
 END
 GO
 
