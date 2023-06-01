@@ -16,6 +16,7 @@ public class PendingOrganizationAuthRequestResponseModel : ResponseModel
 
         Id = authRequest.Id.ToString();
         UserId = authRequest.UserId.ToString();
+        OrganizationUserId = authRequest.OrganizationUserId.ToString();
         Email = authRequest.Email;
         PublicKey = authRequest.PublicKey;
         RequestDeviceIdentifier = authRequest.RequestDeviceIdentifier;
@@ -27,6 +28,7 @@ public class PendingOrganizationAuthRequestResponseModel : ResponseModel
 
     public string Id { get; set; }
     public string UserId { get; set; }
+    public string OrganizationUserId { get; set; }
     public string Email { get; set; }
     public string PublicKey { get; set; }
     public string RequestDeviceIdentifier { get; set; }
