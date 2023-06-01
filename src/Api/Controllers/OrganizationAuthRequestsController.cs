@@ -42,6 +42,26 @@ public class OrganizationAuthRequestsController : Controller
         return new ListResponseModel<PendingOrganizationAuthRequestResponseModel>(responses);
     }
 
+    [HttpPost("{requestId}")]
+    public async Task UpdateAuthRequest(Guid orgId, Guid requestId, [FromBody] AdminAuthRequestUpdateRequestModel model)
+    {
+        if (!await _currentContext.ManageResetPassword(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var authRequest =
+            (await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(orgId, new[] { requestId })).FirstOrDefault();
+
+        if (authRequest == null || authRequest.OrganizationId != orgId)
+        {
+            throw new NotFoundException();
+        }
+
+        await _authRequestService.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId,
+            new AuthRequestUpdateRequestModel { RequestApproved = model.RequestApproved, Key = model.Key });
+    }
+
     [HttpPost("deny")]
     public async Task BulkDenyRequests(Guid orgId, [FromBody] BulkDenyAdminAuthRequestRequestModel model)
     {
