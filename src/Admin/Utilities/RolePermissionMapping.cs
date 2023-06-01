@@ -94,6 +94,7 @@ public static class RolePermissionMapping
                 Permission.Tools_GenerateLicenseFile,
                 Permission.Tools_ManageTaxRates,
                 Permission.Tools_ManageStripeSubscriptions,
+                Permission.Tools_CreateEditTransaction,
                 Permission.Logs_View
             }
         },
