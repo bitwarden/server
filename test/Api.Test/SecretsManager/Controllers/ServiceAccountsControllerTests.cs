@@ -1,4 +1,5 @@
-﻿using Bit.Api.SecretsManager.Controllers;
+﻿using System.Security.Claims;
+using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -11,6 +12,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -64,11 +66,28 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async void CreateServiceAccount_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organizationId),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var resultServiceAccount = data.ToServiceAccount(organizationId);
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData]
     public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId)
     {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organizationId),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(organizationId).Returns(true);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(true);
         var resultServiceAccount = data.ToServiceAccount(organizationId);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
 
@@ -79,30 +98,33 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccount_NotOrgUser_Throws(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountCreateRequestModel data, Guid organizationId)
+    public async void UpdateServiceAccount_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, ServiceAccount existingServiceAccount)
     {
-        sutProvider.GetDependency<ICurrentContext>().OrganizationUser(default).ReturnsForAnyArgs(false);
-        var resultServiceAccount = data.ToServiceAccount(organizationId);
-        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(existingServiceAccount.Id),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(existingServiceAccount.Id).ReturnsForAnyArgs(existingServiceAccount);
+        var resultServiceAccount = data.ToServiceAccount(existingServiceAccount.Id);
+        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
-
-        await sutProvider.GetDependency<ICreateServiceAccountCommand>()
-            .DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateAsync(existingServiceAccount.Id, data));
+        await sutProvider.GetDependency<IUpdateServiceAccountCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<ServiceAccount>());
     }
 
     [Theory]
     [BitAutoData]
-    public async void UpdateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, Guid serviceAccountId)
+    public async void UpdateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider, ServiceAccountUpdateRequestModel data, ServiceAccount existingServiceAccount)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        var resultServiceAccount = data.ToServiceAccount(serviceAccountId);
-        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default, default).ReturnsForAnyArgs(resultServiceAccount);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(existingServiceAccount.Id),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        var resultServiceAccount = data.ToServiceAccount(existingServiceAccount.Id);
+        sutProvider.GetDependency<IUpdateServiceAccountCommand>().UpdateAsync(default).ReturnsForAnyArgs(resultServiceAccount);
 
-        var result = await sutProvider.Sut.UpdateAsync(serviceAccountId, data);
+        var result = await sutProvider.Sut.UpdateAsync(existingServiceAccount.Id, data);
         await sutProvider.GetDependency<IUpdateServiceAccountCommand>().Received(1)
-                     .UpdateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+                     .UpdateAsync(Arg.Any<ServiceAccount>());
     }
 
     [Theory]
