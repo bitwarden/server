@@ -427,10 +427,6 @@ public class PolicyServiceTests
             .GetByOrganizationIdAsync(policy.OrganizationId)
             .Returns(ssoConfig);
 
-        sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.ResetPassword)
-            .Returns(Task.FromResult(new Policy { Enabled = true }));
-
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveAsync(policy,
                 Substitute.For<IUserService>(),
