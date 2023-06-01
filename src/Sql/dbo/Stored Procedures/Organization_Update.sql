@@ -46,10 +46,10 @@
     @UseSecretsManager BIT = 0,
     @Status TINYINT = 0,
     @UsePasswordManager BIT = 1,
-    @SmSeats INT,
-    @SmServiceAccounts INT,
-    @MaxAutoscaleSmSeats INT,
-    @MaxAutoscaleSmServiceAccounts INT
+    @SmSeats INT = null,
+    @SmServiceAccounts INT = null,
+    @MaxAutoscaleSmSeats INT = null,
+    @MaxAutoscaleSmServiceAccounts INT = null
 AS
 BEGIN
     SET NOCOUNT ON

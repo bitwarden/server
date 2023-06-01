@@ -37,7 +37,7 @@ public partial class AddSecretsManagerBillingFieldToOrganization : Migration
             table: "Organization",
             type: "INTEGER",
             nullable: false,
-            defaultValue: false);
+            defaultValue: true);
     }
 
     protected override void Down(MigrationBuilder migrationBuilder)

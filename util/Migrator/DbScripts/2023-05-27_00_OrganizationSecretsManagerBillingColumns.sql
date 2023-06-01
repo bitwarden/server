@@ -85,10 +85,10 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @UseSecretsManager BIT = 0,
     @Status TINYINT = 0,
     @UsePasswordManager BIT = 1,
-    @SmSeats INT,
-    @SmServiceAccounts INT,
-    @MaxAutoscaleSmSeats INT,
-    @MaxAutoscaleSmServiceAccounts INT
+    @SmSeats INT = null,
+    @SmServiceAccounts INT = null,
+    @MaxAutoscaleSmSeats INT = null,
+    @MaxAutoscaleSmServiceAccounts INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -253,10 +253,10 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @UseSecretsManager BIT = 0,
     @Status TINYINT = 0,
     @UsePasswordManager BIT = 1,
-    @SmSeats INT,
-    @SmServiceAccounts INT,
-    @MaxAutoscaleSmSeats INT,
-    @MaxAutoscaleSmServiceAccounts INT
+    @SmSeats INT = null,
+    @SmServiceAccounts INT = null,
+    @MaxAutoscaleSmSeats INT = null,
+    @MaxAutoscaleSmServiceAccounts INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -382,3 +382,15 @@ LEFT JOIN
 LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
 GO 
+
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]';
+END
+GO
+
+IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]') IS NOT NULL
+BEGIN
+    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]';
+END
+GO
