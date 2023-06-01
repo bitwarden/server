@@ -6,7 +6,7 @@
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX), -- not used
     @Folders NVARCHAR(MAX), -- not used
-    @Attachments NVARCHAR(MAX), -- not used
+    @Attachments NVARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,
