@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -17,17 +18,20 @@ public class CreateGroupCommand : ICreateGroupCommand
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IReferenceEventService _referenceEventService;
+    private readonly ICurrentContext _currentContext;
 
     public CreateGroupCommand(
         IEventService eventService,
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IReferenceEventService referenceEventService)
+        IReferenceEventService referenceEventService,
+        ICurrentContext currentContext)
     {
         _eventService = eventService;
         _groupRepository = groupRepository;
         _organizationUserRepository = organizationUserRepository;
         _referenceEventService = referenceEventService;
+        _currentContext = currentContext;
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization,
@@ -73,7 +77,7 @@ public class CreateGroupCommand : ICreateGroupCommand
             await _groupRepository.CreateAsync(group, collections);
         }
 
-        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, organization));
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.GroupCreated, organization, _currentContext));
     }
 
     private async Task GroupRepositoryUpdateUsersAsync(Group group, IEnumerable<Guid> userIds,

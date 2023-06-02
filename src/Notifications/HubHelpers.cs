@@ -17,7 +17,7 @@ public static class HubHelpers
         CancellationToken cancellationToken = default(CancellationToken)
     )
     {
-        var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson);
+        var notification = JsonSerializer.Deserialize<PushNotificationData<object>>(notificationJson, _deserializerOptions);
         switch (notification.Type)
         {
             case PushType.SyncCipherUpdate:

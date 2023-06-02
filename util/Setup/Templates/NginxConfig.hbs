@@ -132,6 +132,12 @@ server {
     proxy_set_header Connection $http_connection;
   }
 
+  location /notifications/anonymous-hub {
+    proxy_pass http://notifications:5000/anonymous-hub;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+  }
+
   location /events/ {
     proxy_pass http://events:5000/;
   }

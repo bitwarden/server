@@ -15,18 +15,18 @@ public class AppleIapService : IAppleIapService
 
     private readonly GlobalSettings _globalSettings;
     private readonly IWebHostEnvironment _hostingEnvironment;
-    private readonly IMetaDataRepository _metaDataRespository;
+    private readonly IMetaDataRepository _metaDataRepository;
     private readonly ILogger<AppleIapService> _logger;
 
     public AppleIapService(
         GlobalSettings globalSettings,
         IWebHostEnvironment hostingEnvironment,
-        IMetaDataRepository metaDataRespository,
+        IMetaDataRepository metaDataRepository,
         ILogger<AppleIapService> logger)
     {
         _globalSettings = globalSettings;
         _hostingEnvironment = hostingEnvironment;
-        _metaDataRespository = metaDataRespository;
+        _metaDataRepository = metaDataRepository;
         _logger = logger;
     }
 
@@ -61,7 +61,7 @@ public class AppleIapService : IAppleIapService
         {
             throw new Exception("OriginalTransactionId is null");
         }
-        await _metaDataRespository.UpsertAsync("AppleReceipt", originalTransactionId,
+        await _metaDataRepository.UpsertAsync("AppleReceipt", originalTransactionId,
             new Dictionary<string, string>
             {
                 ["Data"] = receiptStatus.GetReceiptData(),
@@ -71,7 +71,7 @@ public class AppleIapService : IAppleIapService
 
     public async Task<Tuple<string, Guid?>> GetReceiptAsync(string originalTransactionId)
     {
-        var receipt = await _metaDataRespository.GetAsync("AppleReceipt", originalTransactionId);
+        var receipt = await _metaDataRepository.GetAsync("AppleReceipt", originalTransactionId);
         if (receipt == null)
         {
             return null;

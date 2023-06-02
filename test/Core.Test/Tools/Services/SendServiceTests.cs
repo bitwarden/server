@@ -429,7 +429,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_HasEnouphStorage_Success(SutProvider<SendService> sutProvider,
+    public async void SaveFileSendAsync_HasEnoughStorage_Success(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
@@ -483,7 +483,7 @@ public class SendServiceTests
 
     [Theory]
     [BitAutoData]
-    public async void SaveFileSendAsync_HasEnouphStorage_SendFileThrows_CleansUp(SutProvider<SendService> sutProvider,
+    public async void SaveFileSendAsync_HasEnoughStorage_SendFileThrows_CleansUp(SutProvider<SendService> sutProvider,
         Send send)
     {
         var user = new User
