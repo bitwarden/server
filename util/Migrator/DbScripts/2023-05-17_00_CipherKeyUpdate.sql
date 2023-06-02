@@ -136,7 +136,7 @@ CREATE OR ALTER PROCEDURE [dbo].[CipherDetails_Update]
     @Data NVARCHAR(MAX),
     @Favorites NVARCHAR(MAX), -- not used
     @Folders NVARCHAR(MAX), -- not used
-    @Attachments NVARCHAR(MAX),
+    @Attachments NVARCHAR(MAX), -- not used
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
     @FolderId UNIQUEIDENTIFIER,
@@ -179,7 +179,6 @@ BEGIN
             ELSE
                 JSON_MODIFY([Favorites], @UserIdPath, NULL)
             END,
-        [Attachments] = @Attachments,
         [Reprompt] = @Reprompt,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate,
@@ -187,7 +186,7 @@ BEGIN
         [Key] = @Key
     WHERE
         [Id] = @Id
-    
+
     IF @OrganizationId IS NOT NULL
     BEGIN
         EXEC [dbo].[User_BumpAccountRevisionDateByCipherId] @Id, @OrganizationId
