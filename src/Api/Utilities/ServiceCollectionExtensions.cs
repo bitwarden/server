@@ -113,7 +113,10 @@ public static class ServiceCollectionExtensions
                 builder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
             }
 
-            builder.AddCheck<AmazonSesHealthCheck>("amazon_ses");
+            if (!string.IsNullOrEmpty(globalSettings.Amazon.AccessKeyId))
+            {
+                builder.AddCheck<AmazonSesHealthCheck>("amazon_ses");   
+            }
         });
     }
 }
