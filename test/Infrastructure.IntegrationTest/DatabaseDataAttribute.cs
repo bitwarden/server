@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -45,42 +46,39 @@ public class DatabaseDataAttribute : DataAttribute
             }
         };
 
-        if (config.TryGetConnectionString(DatabaseTheoryAttribute.DapperSqlServerKey, out var dapperSqlServerConnectionString))
+        var databases = config.GetDatabases();
+
+        foreach (var database in databases)
         {
-            var dapperSqlServerCollection = new ServiceCollection();
-            dapperSqlServerCollection.AddLogging(configureLogging);
-            dapperSqlServerCollection.AddDapperRepositories(SelfHosted);
-            var globalSettings = new GlobalSettings
+            if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
             {
-                DatabaseProvider = "sqlServer",
-                SqlServer = new GlobalSettings.SqlSettings
+                var dapperSqlServerCollection = new ServiceCollection();
+                dapperSqlServerCollection.AddLogging(configureLogging);
+                dapperSqlServerCollection.AddDapperRepositories(SelfHosted);
+                var globalSettings = new GlobalSettings
                 {
-                    ConnectionString = dapperSqlServerConnectionString,
-                },
-            };
-            dapperSqlServerCollection.AddSingleton(globalSettings);
-            dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
-            yield return dapperSqlServerCollection.BuildServiceProvider();
-        }
-
-        if (config.TryGetConnectionString(DatabaseTheoryAttribute.EfPostgresKey, out var efPostgresConnectionString))
-        {
-            var efPostgresCollection = new ServiceCollection();
-            efPostgresCollection.AddLogging(configureLogging);
-            efPostgresCollection.SetupEntityFramework(efPostgresConnectionString, SupportedDatabaseProviders.Postgres);
-            efPostgresCollection.AddPasswordManagerEFRepositories(SelfHosted);
-            efPostgresCollection.AddTransient<ITestDatabaseHelper, EfTestDatabaseHelper>();
-            yield return efPostgresCollection.BuildServiceProvider();
-        }
-
-        if (config.TryGetConnectionString(DatabaseTheoryAttribute.EfMySqlKey, out var efMySqlConnectionString))
-        {
-            var efMySqlCollection = new ServiceCollection();
-            efMySqlCollection.AddLogging(configureLogging);
-            efMySqlCollection.SetupEntityFramework(efMySqlConnectionString, SupportedDatabaseProviders.MySql);
-            efMySqlCollection.AddPasswordManagerEFRepositories(SelfHosted);
-            efMySqlCollection.AddTransient<ITestDatabaseHelper, EfTestDatabaseHelper>();
-            yield return efMySqlCollection.BuildServiceProvider();
+                    DatabaseProvider = "sqlServer",
+                    SqlServer = new GlobalSettings.SqlSettings
+                    {
+                        ConnectionString = database.ConnectionString,
+                    },
+                };
+                dapperSqlServerCollection.AddSingleton(globalSettings);
+                dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
+                dapperSqlServerCollection.AddSingleton<ITestDatabaseHelper>(_ => new DapperSqlServerTestDatabaseHelper(database));
+                dapperSqlServerCollection.AddDataProtection();
+                yield return dapperSqlServerCollection.BuildServiceProvider();
+            }
+            else
+            {
+                var efCollection = new ServiceCollection();
+                efCollection.AddLogging(configureLogging);
+                efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
+                efCollection.AddPasswordManagerEFRepositories(SelfHosted);
+                efCollection.AddTransient<ITestDatabaseHelper>(sp => new EfTestDatabaseHelper(sp.GetRequiredService<DatabaseContext>(), database));
+                efCollection.AddDataProtection();
+                yield return efCollection.BuildServiceProvider();
+            }
         }
     }
 }
