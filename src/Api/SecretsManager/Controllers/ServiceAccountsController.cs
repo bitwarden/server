@@ -4,6 +4,7 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
@@ -21,6 +22,7 @@ public class ServiceAccountsController : Controller
 {
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
+    private readonly IAuthorizationService _authorizationService;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
@@ -32,6 +34,7 @@ public class ServiceAccountsController : Controller
     public ServiceAccountsController(
         ICurrentContext currentContext,
         IUserService userService,
+        IAuthorizationService authorizationService,
         IServiceAccountRepository serviceAccountRepository,
         IApiKeyRepository apiKeyRepository,
         ICreateAccessTokenCommand createAccessTokenCommand,
@@ -42,6 +45,7 @@ public class ServiceAccountsController : Controller
     {
         _currentContext = currentContext;
         _userService = userService;
+        _authorizationService = authorizationService;
         _serviceAccountRepository = serviceAccountRepository;
         _apiKeyRepository = apiKeyRepository;
         _createServiceAccountCommand = createServiceAccountCommand;
@@ -73,32 +77,13 @@ public class ServiceAccountsController : Controller
 
     [HttpGet("{id}")]
     public async Task<ServiceAccountResponseModel> GetByServiceAccountIdAsync(
-     [FromRoute] Guid id)
+        [FromRoute] Guid id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Read);
 
-        if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
@@ -110,12 +95,18 @@ public class ServiceAccountsController : Controller
     public async Task<ServiceAccountResponseModel> CreateAsync([FromRoute] Guid organizationId,
         [FromBody] ServiceAccountCreateRequestModel createRequest)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        var serviceAccount = createRequest.ToServiceAccount(organizationId);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Create);
+
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
+
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
+        var result =
+            await _createServiceAccountCommand.CreateAsync(createRequest.ToServiceAccount(organizationId), userId);
         return new ServiceAccountResponseModel(result);
     }
 
@@ -123,9 +114,16 @@ public class ServiceAccountsController : Controller
     public async Task<ServiceAccountResponseModel> UpdateAsync([FromRoute] Guid id,
         [FromBody] ServiceAccountUpdateRequestModel updateRequest)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Update);
 
-        var result = await _updateServiceAccountCommand.UpdateAsync(updateRequest.ToServiceAccount(id), userId);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _updateServiceAccountCommand.UpdateAsync(updateRequest.ToServiceAccount(id));
         return new ServiceAccountResponseModel(result);
     }
 
