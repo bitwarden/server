@@ -115,7 +115,7 @@ public static class ServiceCollectionExtensions
 
             if (!string.IsNullOrEmpty(globalSettings.Amazon.AccessKeyId))
             {
-                builder.AddCheck<AmazonSesHealthCheck>("amazon_ses");   
+                builder.AddCheck<AmazonSesHealthCheck>("amazon_ses");
             }
         });
     }
