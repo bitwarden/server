@@ -69,23 +69,18 @@ public class DatabaseContext : DbContext
 
         // Going forward use `IEntityTypeConfiguration` in the Configurations folder for managing
         // Entity Framework code first database configurations.
-        var eCipher = builder.Entity<Cipher>();
         var eCollection = builder.Entity<Collection>();
         var eCollectionCipher = builder.Entity<CollectionCipher>();
         var eCollectionUser = builder.Entity<CollectionUser>();
         var eCollectionGroup = builder.Entity<CollectionGroup>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
-        var eFolder = builder.Entity<Folder>();
-        var eGrant = builder.Entity<Grant>();
         var eGroup = builder.Entity<Group>();
         var eGroupUser = builder.Entity<GroupUser>();
         var eInstallation = builder.Entity<Installation>();
         var eProvider = builder.Entity<Provider>();
         var eProviderUser = builder.Entity<ProviderUser>();
         var eProviderOrganization = builder.Entity<ProviderOrganization>();
-        var eSend = builder.Entity<Send>();
         var eSsoConfig = builder.Entity<SsoConfig>();
-        var eSsoUser = builder.Entity<SsoUser>();
         var eTaxRate = builder.Entity<TaxRate>();
         var eUser = builder.Entity<User>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
@@ -93,16 +88,13 @@ public class DatabaseContext : DbContext
         var eAuthRequest = builder.Entity<AuthRequest>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
 
-        eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
         eEmergencyAccess.Property(c => c.Id).ValueGeneratedNever();
-        eFolder.Property(c => c.Id).ValueGeneratedNever();
         eGroup.Property(c => c.Id).ValueGeneratedNever();
         eInstallation.Property(c => c.Id).ValueGeneratedNever();
         eProvider.Property(c => c.Id).ValueGeneratedNever();
         eProviderUser.Property(c => c.Id).ValueGeneratedNever();
         eProviderOrganization.Property(c => c.Id).ValueGeneratedNever();
-        eSend.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eAuthRequest.Property(ar => ar.Id).ValueGeneratedNever();
@@ -111,7 +103,6 @@ public class DatabaseContext : DbContext
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
         eCollectionGroup.HasKey(cg => new { cg.CollectionId, cg.GroupId });
-        eGrant.HasKey(x => x.Key);
         eGroupUser.HasKey(gu => new { gu.GroupId, gu.OrganizationUserId });
 
         var dataProtector = this.GetService<DP.IDataProtectionProvider>().CreateProtector(
@@ -126,26 +117,21 @@ public class DatabaseContext : DbContext
             // see https://www.npgsql.org/efcore/misc/collations-and-case-sensitivity.html#database-collation
             builder.HasCollation(postgresIndetermanisticCollation, locale: "en-u-ks-primary", provider: "icu", deterministic: false);
             eUser.Property(e => e.Email).UseCollation(postgresIndetermanisticCollation);
-            eSsoUser.Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
+            builder.Entity<SsoUser>().Property(e => e.ExternalId).UseCollation(postgresIndetermanisticCollation);
             builder.Entity<Organization>().Property(e => e.Identifier).UseCollation(postgresIndetermanisticCollation);
             //
         }
 
-        eCipher.ToTable(nameof(Cipher));
         eCollection.ToTable(nameof(Collection));
         eCollectionCipher.ToTable(nameof(CollectionCipher));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
-        eFolder.ToTable(nameof(Folder));
-        eGrant.ToTable(nameof(Grant));
         eGroup.ToTable(nameof(Group));
         eGroupUser.ToTable(nameof(GroupUser));
         eInstallation.ToTable(nameof(Installation));
         eProvider.ToTable(nameof(Provider));
         eProviderUser.ToTable(nameof(ProviderUser));
         eProviderOrganization.ToTable(nameof(ProviderOrganization));
-        eSend.ToTable(nameof(Send));
         eSsoConfig.ToTable(nameof(SsoConfig));
-        eSsoUser.ToTable(nameof(SsoUser));
         eTaxRate.ToTable(nameof(TaxRate));
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
