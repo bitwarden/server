@@ -202,28 +202,25 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     /// <summary>
     /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
     /// </summary>
-    private async Task<IEnumerable<UserDecryptionOption>> CreateUserDecryptionOptionsAsync(SsoConfigurationData ssoConfigurationData, User user)
+    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(SsoConfigurationData ssoConfigurationData, User user)
     {
-        var options = new List<UserDecryptionOption>();
+        var userDecryptionOption = new UserDecryptionOptions();
         if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
         {
             // KeyConnector makes it mutually exclusive
-            options.Add(new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl));
-            return options;
+            userDecryptionOption.KeyConnectorOption = new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
+            return userDecryptionOption;
         }
 
         if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
         {
             var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
-            options.Add(new TrustedDeviceUserDecryptionOption(hasAdminApproval));
+            userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval);
         }
 
-        if (!string.IsNullOrEmpty(user.MasterPassword))
-        {
-            options.Add(new MasterPasswordUserDecryptionOption());
-        }
+        userDecryptionOption.HasMasterPassword = !string.IsNullOrEmpty(user.MasterPassword);
 
-        return options;
+        return userDecryptionOption;
     }
 }
