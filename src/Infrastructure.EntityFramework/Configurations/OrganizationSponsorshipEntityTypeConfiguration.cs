@@ -13,22 +13,7 @@ public class OrganizationSponsorshipEntityTypeConfiguration : IEntityTypeConfigu
             .ValueGeneratedNever();
 
         builder
-            .HasIndex(o => o.SponsoringOrganizationId)
-            .HasFilter($"{nameof(OrganizationSponsorship.SponsoringOrganizationId)} IS NOT NULL")
-            .IsClustered(false);
-
-        builder
             .HasIndex(o => o.SponsoringOrganizationUserId)
-            .IsClustered(false);
-
-        builder
-            .HasIndex(o => o.OfferedToEmail)
-            .HasFilter($"{nameof(OrganizationSponsorship.OfferedToEmail)} IS NOT NULL")
-            .IsClustered(false);
-
-        builder
-            .HasIndex(o => o.SponsoredOrganizationId)
-            .HasFilter($"{nameof(OrganizationSponsorship.SponsoredOrganizationId)} IS NOT NULL")
             .IsClustered(false);
 
         builder.ToTable(nameof(OrganizationSponsorship));

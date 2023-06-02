@@ -16,11 +16,6 @@ public class OrganizationEntityTypeConfiguration : IEntityTypeConfiguration<Orga
             builder.HasIndex(o => new { o.Id, o.Enabled }),
             o => o.UseTotp);
 
-        builder
-            .HasIndex(o => o.Identifier)
-            .HasFilter($"{nameof(Organization.Identifier)} IS NOT NULL")
-            .IsUnique();
-
         builder.ToTable(nameof(Organization));
     }
 }

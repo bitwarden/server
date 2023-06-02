@@ -13,12 +13,6 @@ public class TransactionEntityTypeConfiguration : IEntityTypeConfiguration<Trans
             .ValueGeneratedNever();
 
         builder
-            .HasIndex(t => new { t.Gateway, t.GatewayId })
-            .HasFilter($"{nameof(Transaction.Gateway)} IS NOT NULL AND {nameof(Transaction.GatewayId)} IS NOT NULL")
-            .IsUnique()
-            .IsClustered(false);
-
-        builder
             .HasIndex(t => new { t.UserId, t.OrganizationId, t.CreationDate })
             .IsClustered(false);
 

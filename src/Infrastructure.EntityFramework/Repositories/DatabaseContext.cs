@@ -86,6 +86,7 @@ public class DatabaseContext : DbContext
         var eSend = builder.Entity<Send>();
         var eSsoConfig = builder.Entity<SsoConfig>();
         var eSsoUser = builder.Entity<SsoUser>();
+        var eTaxRate = builder.Entity<TaxRate>();
         var eUser = builder.Entity<User>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
@@ -145,6 +146,7 @@ public class DatabaseContext : DbContext
         eSend.ToTable(nameof(Send));
         eSsoConfig.ToTable(nameof(SsoConfig));
         eSsoUser.ToTable(nameof(SsoUser));
+        eTaxRate.ToTable(nameof(TaxRate));
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eAuthRequest.ToTable(nameof(AuthRequest));
