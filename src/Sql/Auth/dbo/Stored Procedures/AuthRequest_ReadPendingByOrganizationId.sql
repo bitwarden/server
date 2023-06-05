@@ -9,9 +9,11 @@ SELECT
 FROM
     [dbo].[AuthRequestView] ar
     INNER JOIN
-    [dbo].[OrganizationUser] ou ON ou.[UserId] = ar.[UserId] AND ou.[OrganizationId] = @OrganizationId
-    WHERE 
-        ar.[ResponseDate] IS NULL 
+        [dbo].[OrganizationUser] ou ON ou.[UserId] = ar.[UserId] AND ou.[OrganizationId] = ar.[OrganizationId]
+    WHERE
+        ar.[OrganizationId] = @OrganizationId 
     AND 
+        ar.[ResponseDate] IS NULL
+    AND
         ar.[Type] = 2 -- AdminApproval
 END;

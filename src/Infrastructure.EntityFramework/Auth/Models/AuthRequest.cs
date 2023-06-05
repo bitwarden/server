@@ -8,6 +8,7 @@ public class AuthRequest : Core.Auth.Entities.AuthRequest
 {
     public virtual User User { get; set; }
     public virtual Device ResponseDevice { get; set; }
+    public virtual Organization Organization { get; set; }
 }
 
 public class AuthRequestMapperProfile : Profile

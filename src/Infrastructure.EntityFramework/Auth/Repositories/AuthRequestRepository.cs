@@ -42,7 +42,7 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
         {
             var dbContext = GetDatabaseContext(scope);
             var orgUserAuthRequests = await (from ar in dbContext.AuthRequests
-                                             join ou in dbContext.OrganizationUsers on ar.UserId equals ou.UserId
+                                             join ou in dbContext.OrganizationUsers on new { UserId = (Guid?)ar.UserId, ar.OrganizationId } equals new { ou.UserId, OrganizationId = (Guid?)ou.OrganizationId }
                                              where ou.OrganizationId.Equals(organizationId) && ar.ResponseDate == null && ar.Type == AuthRequestType.AdminApproval
                                              select new { ar, ou }).ToListAsync();
 
@@ -65,7 +65,7 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
         {
             var dbContext = GetDatabaseContext(scope);
             var orgUserAuthRequests = await (from ar in dbContext.AuthRequests
-                                             join ou in dbContext.OrganizationUsers on ar.UserId equals ou.UserId
+                                             join ou in dbContext.OrganizationUsers on new { UserId = (Guid?)ar.UserId, ar.OrganizationId } equals new { ou.UserId, OrganizationId = (Guid?)ou.OrganizationId }
                                              where ou.OrganizationId.Equals(organizationId) && ids.Contains(ar.Id) && ar.Type == AuthRequestType.AdminApproval
                                              select new { ar, ou }).ToListAsync();
 

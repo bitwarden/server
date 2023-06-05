@@ -41,6 +41,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("MasterPasswordHash")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PublicKey")
                         .HasColumnType("TEXT");
 
@@ -68,6 +71,8 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
 
                     b.HasIndex("ResponseDeviceId");
 
@@ -1632,6 +1637,10 @@ namespace Bit.SqliteMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Device", "ResponseDevice")
                         .WithMany()
                         .HasForeignKey("ResponseDeviceId");
@@ -1641,6 +1650,8 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Organization");
 
                     b.Navigation("ResponseDevice");
 

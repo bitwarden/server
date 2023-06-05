@@ -1,6 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[AuthRequest_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,
     @Type TINYINT,
     @RequestDeviceIdentifier NVARCHAR(50),
     @RequestDeviceType TINYINT,
@@ -22,6 +23,7 @@ BEGIN
     (
         [Id],
         [UserId],
+        [OrganizationId],
         [Type],
         [RequestDeviceIdentifier],
         [RequestDeviceType],
@@ -40,6 +42,7 @@ BEGIN
     (
         @Id,
         @UserId,
+        @OrganizationId,
         @Type,
         @RequestDeviceIdentifier,
         @RequestDeviceType,
