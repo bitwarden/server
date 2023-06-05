@@ -86,11 +86,11 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseCustomPermissions { get; set; }
     public bool SelfHost { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
-    public bool UsePasswordManager { get; set; } = true;
+    public bool UsePasswordManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
-    public int? MaxAutoscaleSmSeats { get; set; } = null;
-    public int? MaxAutoscaleSmServiceAccounts { get; set; } = null;
+    public int? MaxAutoscaleSmSeats { get; set; }
+    public int? MaxAutoscaleSmServiceAccounts { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
