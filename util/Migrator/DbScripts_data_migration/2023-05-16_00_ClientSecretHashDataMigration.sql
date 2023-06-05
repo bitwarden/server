@@ -1,3 +1,8 @@
+/*
+This is the data migration script for the client secret hash updates.
+The initial migration util/Migrator/DbScripts/2023-05-16_00_ClientSecretHash.sql should be run prior.
+The final migration is in util/Migrator/DbScripts_future/2023-06-FutureMigration.sql.
+*/
 IF COL_LENGTH('[dbo].[ApiKey]', 'ClientSecretHash') IS NOT NULL AND COL_LENGTH('[dbo].[ApiKey]', 'ClientSecret')  IS NOT NULL
 BEGIN
 
