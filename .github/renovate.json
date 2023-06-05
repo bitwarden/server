@@ -11,11 +11,22 @@
     "schedule:weekends",
     ":separateMajorReleases"
   ],
-  "enabledManagers": ["cargo", "github-actions", "npm", "nuget"],
+  "enabledManagers": [
+    "dockerfile",
+    "docker-compose",
+    "github-actions",
+    "npm",
+    "nuget"
+  ],
   "packageRules": [
     {
-      "groupName": "cargo minor",
-      "matchManagers": ["cargo"],
+      "groupName": "dockerfile minor",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "groupName": "docker-compose minor",
+      "matchManagers": ["docker-compose"],
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
@@ -32,6 +43,6 @@
       "groupName": "nuget minor",
       "matchManagers": ["nuget"],
       "matchUpdateTypes": ["minor", "patch"]
-    },
+    }
   ]
 }
