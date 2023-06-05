@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Context;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -18,30 +17,10 @@ public class UpdateServiceAccountCommand : IUpdateServiceAccountCommand
         _currentContext = currentContext;
     }
 
-    public async Task<ServiceAccount> UpdateAsync(ServiceAccount updatedServiceAccount, Guid userId)
+    public async Task<ServiceAccount> UpdateAsync(ServiceAccount updatedServiceAccount)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(updatedServiceAccount.Id);
         if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(updatedServiceAccount.Id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
         {
             throw new NotFoundException();
         }
