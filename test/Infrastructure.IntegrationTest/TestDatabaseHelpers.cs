@@ -4,6 +4,7 @@ namespace Bit.Infrastructure.IntegrationTest;
 
 public interface ITestDatabaseHelper
 {
+    Database Info { get; }
     void ClearTracker();
 }
 
@@ -11,10 +12,13 @@ public class EfTestDatabaseHelper : ITestDatabaseHelper
 {
     private readonly DatabaseContext _databaseContext;
 
-    public EfTestDatabaseHelper(DatabaseContext databaseContext)
+    public EfTestDatabaseHelper(DatabaseContext databaseContext, Database database)
     {
         _databaseContext = databaseContext;
+        Info = database;
     }
+
+    public Database Info { get; }
 
     public void ClearTracker()
     {
@@ -24,10 +28,12 @@ public class EfTestDatabaseHelper : ITestDatabaseHelper
 
 public class DapperSqlServerTestDatabaseHelper : ITestDatabaseHelper
 {
-    public DapperSqlServerTestDatabaseHelper()
+    public DapperSqlServerTestDatabaseHelper(Database database)
     {
-
+        Info = database;
     }
+
+    public Database Info { get; }
 
     public void ClearTracker()
     {
