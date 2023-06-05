@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Models;
+using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
@@ -27,5 +28,11 @@ public class OrganizationUser : ITableObject<Guid>, IExternal
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
+    }
+
+    public Permissions GetPermissions()
+    {
+        return string.IsNullOrWhiteSpace(Permissions) ? null
+            : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
     }
 }

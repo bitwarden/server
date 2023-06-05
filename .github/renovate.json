@@ -2,24 +2,47 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:base",
-    "schedule:monthly",
-    ":maintainLockFilesMonthly",
-    ":preserveSemverRanges",
+    ":combinePatchMinorReleases",
+    ":dependencyDashboard",
+    ":maintainLockFilesWeekly",
+    ":pinAllExceptPeerDependencies",
+    ":prConcurrentLimit10",
     ":rebaseStalePrs",
-    ":disableMajorUpdates"
+    "schedule:weekends",
+    ":separateMajorReleases"
   ],
   "enabledManagers": [
+    "dockerfile",
+    "docker-compose",
+    "github-actions",
+    "npm",
     "nuget"
   ],
   "packageRules": [
     {
+      "groupName": "dockerfile minor",
+      "matchManagers": ["dockerfile"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "groupName": "docker-compose minor",
+      "matchManagers": ["docker-compose"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "groupName": "gh minor",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "groupName": "npm minor",
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "groupName": "nuget minor",
       "matchManagers": ["nuget"],
-      "groupName": "Nuget updates",
-      "groupSlug": "nuget",
-      "matchUpdateTypes": [
-        "minor",
-        "patch"
-      ]
+      "matchUpdateTypes": ["minor", "patch"]
     }
   ]
 }
