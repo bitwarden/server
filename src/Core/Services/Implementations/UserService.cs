@@ -253,7 +253,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         await _userRepository.DeleteAsync(user);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DeleteAccount, user));
+            new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
     }
@@ -324,7 +324,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -336,7 +336,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -1049,7 +1049,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await SaveUserAsync(user);
             await _pushService.PushSyncVaultAsync(user.Id);
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, user)
+                new ReferenceEvent(ReferenceEventType.UpgradePlan, user, _currentContext)
                 {
                     Storage = user.MaxStorageGb,
                     PlanName = PremiumPlanId,
@@ -1138,7 +1138,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
             StoragePlanId);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, user)
+            new ReferenceEvent(ReferenceEventType.AdjustStorage, user, _currentContext)
             {
                 Storage = storageAdjustmentGb,
                 PlanName = StoragePlanId,
@@ -1171,7 +1171,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         await _paymentService.CancelSubscriptionAsync(user, eop, accountDelete);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, user)
+            new ReferenceEvent(ReferenceEventType.CancelSubscription, user, _currentContext)
             {
                 EndOfPeriod = eop,
             });
@@ -1181,7 +1181,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     {
         await _paymentService.ReinstateSubscriptionAsync(user);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user));
+            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user, _currentContext));
     }
 
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
@@ -1436,7 +1436,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result.Succeeded)
         {
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user));
+                new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user, _currentContext));
         }
         return result;
     }

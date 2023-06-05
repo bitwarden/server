@@ -88,7 +88,7 @@ public class CipherService : ICipherService
                 await _cipherRepository.CreateAsync(cipher, collectionIds);
 
                 await _referenceEventService.RaiseEventAsync(
-                    new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value)));
+                    new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value), _currentContext));
             }
             else
             {
@@ -757,7 +757,7 @@ public class CipherService : ICipherService
         if (org != null)
         {
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.VaultImported, org));
+                new ReferenceEvent(ReferenceEventType.VaultImported, org, _currentContext));
         }
     }
 
@@ -870,15 +870,15 @@ public class CipherService : ICipherService
 
     public async Task<(IEnumerable<CipherOrganizationDetails>, Dictionary<Guid, IGrouping<Guid, CollectionCipher>>)> GetOrganizationCiphers(Guid userId, Guid organizationId)
     {
-        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.AccessReports(organizationId))
+        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.AccessReports(organizationId) && !await _currentContext.AccessImportExport(organizationId))
         {
             throw new NotFoundException();
         }
 
         IEnumerable<CipherOrganizationDetails> orgCiphers;
-        if (await _currentContext.OrganizationAdmin(organizationId))
+        if (await _currentContext.AccessImportExport(organizationId))
         {
-            // Admins, Owners and Providers can access all items even if not assigned to them
+            // Admins, Owners, Providers and Custom (with import/export permission) can access all items even if not assigned to them
             orgCiphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);
         }
         else
