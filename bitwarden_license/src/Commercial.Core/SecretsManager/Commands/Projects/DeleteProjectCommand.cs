@@ -13,7 +13,7 @@ public class DeleteProjectCommand : IDeleteProjectCommand
         _projectRepository = projectRepository;
     }
 
-    public async Task DeleteProjects(ICollection<Project> projects)
+    public async Task DeleteProjects(IEnumerable<Project> projects)
     {
         await _projectRepository.DeleteManyByIdAsync(projects.Select(p => p.Id));
     }
