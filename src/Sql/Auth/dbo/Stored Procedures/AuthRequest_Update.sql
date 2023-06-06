@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[AuthRequest_Update]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER = NULL,
     @Type SMALLINT, 
     @RequestDeviceIdentifier NVARCHAR(50),
     @RequestDeviceType SMALLINT,

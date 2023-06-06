@@ -36,7 +36,7 @@ GO
 CREATE PROCEDURE [dbo].[AuthRequest_Update]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER = NULL,
     @Type SMALLINT, 
     @RequestDeviceIdentifier NVARCHAR(50),
     @RequestDeviceType SMALLINT,
@@ -88,7 +88,7 @@ GO
 CREATE PROCEDURE [dbo].[AuthRequest_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER = NULL,
     @Type TINYINT,
     @RequestDeviceIdentifier NVARCHAR(50),
     @RequestDeviceType TINYINT,
