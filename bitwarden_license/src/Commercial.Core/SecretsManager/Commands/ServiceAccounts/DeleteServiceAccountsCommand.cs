@@ -14,7 +14,7 @@ public class DeleteServiceAccountsCommand : IDeleteServiceAccountsCommand
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    public async Task DeleteServiceAccounts(ICollection<ServiceAccount> serviceAccounts)
+    public async Task DeleteServiceAccounts(IEnumerable<ServiceAccount> serviceAccounts)
     {
         await _serviceAccountRepository.DeleteManyByIdAsync(serviceAccounts.Select(sa => sa.Id));
     }

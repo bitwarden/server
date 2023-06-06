@@ -4,6 +4,6 @@ namespace Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 
 public interface IDeleteServiceAccountsCommand
 {
-    Task DeleteServiceAccounts(ICollection<ServiceAccount> serviceAccounts);
+    Task DeleteServiceAccounts(IEnumerable<ServiceAccount> serviceAccounts);
 }
 
