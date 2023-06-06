@@ -535,6 +535,13 @@ public static class ServiceCollectionExtensions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
+
+        var nginxIp = System.Net.Dns.GetHostEntry("nginx").AddressList.FirstOrDefault();
+        if (nginxIp != null)
+        {
+            options.KnownProxies.Add(nginxIp);
+        }
+
         if (!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
         {
             var proxies = globalSettings.KnownProxies.Split(',');
