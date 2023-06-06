@@ -5,6 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- This is a transitive dependency to Sustainsys.Saml2.AspNetCore2 -->
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.1.22" />
+
     <PackageReference Include="Sustainsys.Saml2.AspNetCore2" Version="2.9.0" />
   </ItemGroup>
 
