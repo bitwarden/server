@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Handlebars.Net" Version="2.1.2" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="YamlDotNet" Version="11.2.1" />
   </ItemGroup>
 

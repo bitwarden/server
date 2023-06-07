@@ -305,16 +305,16 @@
       },
       "linq2db": {
         "type": "Transitive",
-        "resolved": "4.4.0",
-        "contentHash": "6/u1EzQlV25bhN0Ej/I5dLV5Hgxun+ww/TX2VnMBnSVytED2VzQGeFIO/14I624GkfPOtB79x1ooL3F18dAbdw=="
+        "resolved": "5.2.1",
+        "contentHash": "OOBM8s39zhbZAgqFnl2KGxT5RqBDw21X69U528qV2PgQispaA3f+or0ILrLEgnNIJuB4EBgaw8gC6ttSHn4X0Q=="
       },
       "linq2db.EntityFrameworkCore": {
         "type": "Transitive",
-        "resolved": "6.11.0",
-        "contentHash": "mS+L6HyVHP3oJaTuFVZswNmPpTfYleGjDTo2IWBJmYXZpSQ5EPw1DpHzmyLAiQd+93ofy0Ala+9HWzv6/k73ZQ==",
+        "resolved": "7.5.0",
+        "contentHash": "ePHzO99xbObgMLlAFh08of1SnVhg6j4Su9327DrIB7RZWCgtQIX6k+nbl+HRVOooAndZSs7b+DduSgdnJjaJGw==",
         "dependencies": {
-          "Microsoft.EntityFrameworkCore.Relational": "6.0.5",
-          "linq2db": "4.4.0"
+          "Microsoft.EntityFrameworkCore.Relational": "7.0.0",
+          "linq2db": "5.2.1"
         }
       },
       "MailKit": {
@@ -2796,7 +2796,7 @@
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[6.0.8, )",
           "Pomelo.EntityFrameworkCore.MySql": "[7.0.0, )",
-          "linq2db.EntityFrameworkCore": "[6.11.0, )"
+          "linq2db.EntityFrameworkCore": "[7.5.0, )"
         }
       },
       "sharedweb": {

@@ -7,7 +7,7 @@
       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.5" />
       <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.8" />
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
-      <PackageReference Include="linq2db.EntityFrameworkCore" Version="6.11.0" />
+      <PackageReference Include="linq2db.EntityFrameworkCore" Version="7.5.0" />
     </ItemGroup>
 
     <ItemGroup>
