@@ -536,6 +536,7 @@ public static class ServiceCollectionExtensions
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
 
+        // Trust the X-Forwarded-Host header of the nginx docker container
         var nginxIp = System.Net.Dns.GetHostEntry("nginx").AddressList.FirstOrDefault();
         if (nginxIp != null)
         {

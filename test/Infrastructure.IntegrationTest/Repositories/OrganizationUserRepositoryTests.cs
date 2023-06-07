@@ -16,7 +16,7 @@ public class OrganizationUserRepositoryTests
         var user = await userRepository.CreateAsync(new User
         {
             Name = "Test User",
-            Email = "test@email.com",
+            Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -24,6 +24,8 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
+            BillingEmail = user.Email, // TODO: EF does not enfore this being NOT NULL
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
         });
 
         var orgUser = await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -50,7 +52,7 @@ public class OrganizationUserRepositoryTests
         var user1 = await userRepository.CreateAsync(new User
         {
             Name = "Test User 1",
-            Email = "test1@email.com",
+            Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -58,7 +60,7 @@ public class OrganizationUserRepositoryTests
         var user2 = await userRepository.CreateAsync(new User
         {
             Name = "Test User 2",
-            Email = "test1@email.com",
+            Email = $"test+{Guid.NewGuid()}@email.com",
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
@@ -66,18 +68,22 @@ public class OrganizationUserRepositoryTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
+            BillingEmail = user1.Email, // TODO: EF does not enforce this being NOT NULl
+            Plan = "Test", // TODO: EF does not enforce this being NOT NULl
         });
 
         var orgUser1 = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             OrganizationId = organization.Id,
             UserId = user1.Id,
+            Status = OrganizationUserStatusType.Confirmed,
         });
 
         var orgUser2 = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             OrganizationId = organization.Id,
             UserId = user2.Id,
+            Status = OrganizationUserStatusType.Confirmed,
         });
 
         helper.ClearTracker();
