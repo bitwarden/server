@@ -529,18 +529,21 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    public static void UseForwardedHeaders(this IApplicationBuilder app, GlobalSettings globalSettings)
+    public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
     {
         var options = new ForwardedHeadersOptions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
 
-        // Trust the X-Forwarded-Host header of the nginx docker container
-        var nginxIp = System.Net.Dns.GetHostEntry("nginx").AddressList.FirstOrDefault();
-        if (nginxIp != null)
+        if (!globalSettings.UnifiedDeployment)
         {
-            options.KnownProxies.Add(nginxIp);
+            // Trust the X-Forwarded-Host header of the nginx docker container
+            var nginxIp = System.Net.Dns.GetHostEntry("nginx").AddressList.FirstOrDefault();
+            if (nginxIp != null)
+            {
+                options.KnownProxies.Add(nginxIp);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
