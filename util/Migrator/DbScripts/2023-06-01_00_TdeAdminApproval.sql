@@ -110,7 +110,7 @@ BEGIN
     (
         [Id],
         [UserId],
-        [OrganizationId]
+        [OrganizationId],
         [Type],
         [RequestDeviceIdentifier],
         [RequestDeviceType],
