@@ -73,7 +73,7 @@ public class OrganizationAuthRequestsController : Controller
         }
 
         await _authRequestService.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId,
-            new AuthRequestUpdateRequestModel { RequestApproved = model.RequestApproved, Key = model.Key });
+            new AuthRequestUpdateRequestModel { RequestApproved = model.RequestApproved, Key = model.EncryptedUserKey });
     }
 
     [HttpPost("deny")]
