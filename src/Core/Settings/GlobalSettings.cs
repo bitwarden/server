@@ -17,6 +17,7 @@ public class GlobalSettings : IGlobalSettings
     }
 
     public bool SelfHosted { get; set; }
+    public bool UnifiedDeployment { get; set; }
     public virtual string KnownProxies { get; set; }
     public virtual string SiteName { get; set; }
     public virtual string ProjectName { get; set; }

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Net;
+using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
@@ -529,7 +530,7 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    public static void UseForwardedHeaders(this IApplicationBuilder app, GlobalSettings globalSettings)
+    public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
     {
         var options = new ForwardedHeadersOptions
         {
@@ -540,7 +541,7 @@ public static class ServiceCollectionExtensions
             var proxies = globalSettings.KnownProxies.Split(',');
             foreach (var proxy in proxies)
             {
-                if (System.Net.IPAddress.TryParse(proxy.Trim(), out var ip))
+                if (IPAddress.TryParse(proxy.Trim(), out var ip))
                 {
                     options.KnownProxies.Add(ip);
                 }
