@@ -18,15 +18,7 @@ IF OBJECT_ID('[dbo].[ApiKeyView]') IS NOT NULL
     END
 GO
 
--- Drop existing SPROC
-IF OBJECT_ID('[dbo].[ApiKey_Create]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[ApiKey_Create]
-END
-GO
-
--- Create the new SPROC
-CREATE PROCEDURE [dbo].[ApiKey_Create]
+CREATE OR ALTER PROCEDURE [dbo].[ApiKey_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @ServiceAccountId UNIQUEIDENTIFIER,
     @Name VARCHAR(200),
