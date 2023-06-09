@@ -4,16 +4,16 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.Import.Interfaces;
+using Bit.Core.OrganizationFeatures.DirectoryConnector.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 
-namespace Bit.Core.OrganizationFeatures.Import;
+namespace Bit.Core.OrganizationFeatures.DirectoryConnector;
 
-public class ImportOrganizationCommand : IImportOrganizationCommand
+public class DirectoryConnectorSyncCommand : IDirectoryConnectorSyncCommand
 {
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
@@ -22,7 +22,7 @@ public class ImportOrganizationCommand : IImportOrganizationCommand
     private readonly IReferenceEventService _referenceEventService;
     private readonly IInviteOrganizationUserCommand _inviteOrganizationUserCommand;
 
-    public ImportOrganizationCommand(
+    public DirectoryConnectorSyncCommand(
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -38,7 +38,7 @@ public class ImportOrganizationCommand : IImportOrganizationCommand
         _inviteOrganizationUserCommand = inviteOrganizationUserCommand;
     }
 
-    public async Task ImportAsync(Guid organizationId,
+    public async Task SyncOrganizationAsync(Guid organizationId,
         Guid? importingUserId,
         IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers,

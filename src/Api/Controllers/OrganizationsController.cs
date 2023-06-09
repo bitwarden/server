@@ -16,7 +16,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
-using Bit.Core.OrganizationFeatures.Import.Interfaces;
+using Bit.Core.OrganizationFeatures.DirectoryConnector.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
@@ -48,7 +48,7 @@ public class OrganizationsController : Controller
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
-    private readonly IImportOrganizationCommand _importOrganizationCommand;
+    private readonly IDirectoryConnectorSyncCommand _directoryConnectorSyncCommand;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly ILicensingService _licensingService;
@@ -70,7 +70,7 @@ public class OrganizationsController : Controller
         IOrganizationApiKeyRepository organizationApiKeyRepository,
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
-        IImportOrganizationCommand importOrganizationCommand,
+        IDirectoryConnectorSyncCommand directoryConnectorSyncCommand,
         IFeatureService featureService,
         GlobalSettings globalSettings,
         ILicensingService licensingService)
@@ -91,7 +91,7 @@ public class OrganizationsController : Controller
         _organizationApiKeyRepository = organizationApiKeyRepository;
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
-        _importOrganizationCommand = importOrganizationCommand;
+        _directoryConnectorSyncCommand = directoryConnectorSyncCommand;
         _featureService = featureService;
         _globalSettings = globalSettings;
         _licensingService = licensingService;
@@ -464,7 +464,7 @@ public class OrganizationsController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _importOrganizationCommand.ImportAsync(
+        await _directoryConnectorSyncCommand.SyncOrganizationAsync(
             orgIdGuid,
             userId.Value,
             model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),

@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.Import;
+using Bit.Core.OrganizationFeatures.DirectoryConnector;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
@@ -11,13 +11,13 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.Import;
+namespace Bit.Core.Test.OrganizationFeatures.DirectoryConnector;
 
 [SutProviderCustomize]
-public class ImportOrganizationCommandTests
+public class DirectoryConnectorSyncCommandTests
 {
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task OrgImportCreateNewUsers(SutProvider<ImportOrganizationCommand> sutProvider, Guid userId,
+    public async Task OrgImportCreateNewUsers(SutProvider<DirectoryConnectorSyncCommand> sutProvider, Guid userId,
         Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
     {
         org.UseDirectory = true;
@@ -42,7 +42,7 @@ public class ImportOrganizationCommandTests
                 Arg.Any<IEnumerable<(OrganizationUserInvite invite, string externalId)>>())
             .Returns(new List<OrganizationUser>());
 
-        await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
+        await sutProvider.Sut.SyncOrganizationAsync(org.Id, userId, null, newUsers, null, false);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
@@ -55,7 +55,7 @@ public class ImportOrganizationCommandTests
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public async Task OrgImportCreateNewUsersAndMarryExistingUser(SutProvider<ImportOrganizationCommand> sutProvider,
+    public async Task OrgImportCreateNewUsersAndMarryExistingUser(SutProvider<DirectoryConnectorSyncCommand> sutProvider,
         Guid userId, Organization org, List<OrganizationUserUserDetails> existingUsers,
         List<ImportedOrganizationUser> newUsers)
     {
@@ -83,7 +83,7 @@ public class ImportOrganizationCommandTests
                 Arg.Any<IEnumerable<(OrganizationUserInvite invite, string externalId)>>())
             .Returns(new List<OrganizationUser>());
 
-        await sutProvider.Sut.ImportAsync(org.Id, userId, null, newUsers, null, false);
+        await sutProvider.Sut.SyncOrganizationAsync(org.Id, userId, null, newUsers, null, false);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .UpsertAsync(default);
