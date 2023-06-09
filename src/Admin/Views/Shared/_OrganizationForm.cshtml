@@ -219,6 +219,41 @@
         </div>
     }
 
+    @if (canViewPlan)
+    {
+        <div id="organization-secrets-configuration" hidden="@(!Model.UseSecretsManager)">
+            <h2>Secrets Manager Configuration</h2>
+            <div class="row">
+                <div class="col-sm">
+                    <div class="form-group">
+                        <label asp-for="SmSeats"></label>
+                        <input type="number" class="form-control" asp-for="SmSeats" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <div class="form-group">
+                        <label asp-for="MaxAutoscaleSmSeats"></label>
+                        <input type="number" class="form-control" asp-for="MaxAutoscaleSmSeats" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <div class="form-group">
+                        <label asp-for="SmServiceAccounts"></label>
+                        <input type="number" class="form-control" asp-for="SmServiceAccounts" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-4">
+                    <div class="form-group">
+                        <label asp-for="MaxAutoscaleSmServiceAccounts"></label>
+                        <input type="number" class="form-control" asp-for="MaxAutoscaleSmServiceAccounts" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     @if (canViewBilling)
     { 
         <h2>Billing</h2>
