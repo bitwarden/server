@@ -83,7 +83,7 @@ public class OrganizationAuthRequestsController : Controller
 
         if (!await _currentContext.ManageResetPassword(orgId))
         {
-            throw new NotFoundException();
+            throw new UnauthorizedAccessException();
         }
     }
 }
