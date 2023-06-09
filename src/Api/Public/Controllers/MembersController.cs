@@ -20,7 +20,7 @@ public class MembersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
-    private readonly ISaveOrganizationUserCommand _saveOrganizationUserCommand;
+    private readonly IUpdateOrganizationUserCommand _saveOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IInviteOrganizationUserCommand _inviteOrganizationUserCommand;
 
@@ -30,7 +30,7 @@ public class MembersController : Controller
         IOrganizationService organizationService,
         IUserService userService,
         ICurrentContext currentContext,
-        ISaveOrganizationUserCommand saveOrganizationUserCommand,
+        IUpdateOrganizationUserCommand saveOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IInviteOrganizationUserCommand inviteOrganizationUserCommand)
     {
@@ -159,7 +159,7 @@ public class MembersController : Controller
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-        await _saveOrganizationUserCommand.SaveUserAsync(updatedUser, null, associations, model.Groups);
+        await _saveOrganizationUserCommand.UpdateUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {

@@ -284,7 +284,6 @@ public class InviteOrganizationUserCommandTests
     ), BitAutoData]
     public async Task InviteUser_Passes(Organization organization, IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
         OrganizationUser invitor,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         SutProvider<InviteOrganizationUserCommand> sutProvider)
     {
         var expectedNewUsersCount = invites.SelectMany(i => i.invite.Emails).Count();
@@ -347,7 +346,6 @@ public class InviteOrganizationUserCommandTests
     ), BitAutoData]
     public async Task InviteUser_WithEventSystemUser_Passes(Organization organization, EventSystemUser eventSystemUser, IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
         OrganizationUser invitor,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
         SutProvider<InviteOrganizationUserCommand> sutProvider)
     {
         invitor.Permissions = JsonSerializer.Serialize(new Permissions() { ManageUsers = true },

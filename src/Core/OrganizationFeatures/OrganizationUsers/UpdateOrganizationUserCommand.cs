@@ -9,13 +9,13 @@ using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
-public class SaveOrganizationUserCommand : OrganizationUserCommand, ISaveOrganizationUserCommand
+public class UpdateOrganizationUserCommand : OrganizationUserCommand, IUpdateOrganizationUserCommand
 {
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
 
-    public SaveOrganizationUserCommand(
+    public UpdateOrganizationUserCommand(
         ICurrentContext currentContext,
         IEventService eventService,
         IOrganizationRepository organizationRepository,
@@ -28,7 +28,7 @@ public class SaveOrganizationUserCommand : OrganizationUserCommand, ISaveOrganiz
         _organizationService = organizationService;
     }
 
-    public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,
+    public async Task UpdateUserAsync(OrganizationUser user, Guid? savingUserId,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups)
     {

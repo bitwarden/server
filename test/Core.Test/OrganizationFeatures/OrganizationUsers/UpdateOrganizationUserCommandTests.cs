@@ -16,26 +16,26 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 
 [SutProviderCustomize]
-public class SaveOrganizationUserCommandTests
+public class UpdateOrganizationUserCommandTests
 {
     [Theory, BitAutoData]
     public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<SaveOrganizationUserCommand> sutProvider)
+        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         user.Id = default(Guid);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections, groups));
+            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collections, groups));
         Assert.Contains("invite the user first", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
     public async Task SaveUser_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<SaveOrganizationUserCommand> sutProvider)
+        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         organizationUserRepository.GetByIdAsync(user.Id).Returns(user);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(user, savingUserId, collections, groups));
+            () => sutProvider.Sut.UpdateUserAsync(user, savingUserId, collections, groups));
         Assert.Contains("make changes before saving", exception.Message.ToLowerInvariant());
     }
 
@@ -48,7 +48,7 @@ public class SaveOrganizationUserCommandTests
         IEnumerable<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<SaveOrganizationUserCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -71,7 +71,7 @@ public class SaveOrganizationUserCommandTests
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
         organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+        await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .ReplaceAsync(newUserData, collections);
@@ -89,7 +89,7 @@ public class SaveOrganizationUserCommandTests
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<SaveOrganizationUserCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         organization.UseCustomPermissions = false;
 
@@ -109,7 +109,7 @@ public class SaveOrganizationUserCommandTests
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups));
+            () => sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups));
         Assert.Contains("to enable custom permissions", exception.Message.ToLowerInvariant());
     }
 
@@ -127,7 +127,7 @@ public class SaveOrganizationUserCommandTests
         IEnumerable<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<SaveOrganizationUserCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         organization.UseCustomPermissions = false;
 
@@ -152,7 +152,7 @@ public class SaveOrganizationUserCommandTests
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
         organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+        await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
 
     [Theory, BitAutoData]
@@ -164,7 +164,7 @@ public class SaveOrganizationUserCommandTests
         IEnumerable<Guid> groups,
         Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<SaveOrganizationUserCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         organization.UseCustomPermissions = true;
 
@@ -188,7 +188,7 @@ public class SaveOrganizationUserCommandTests
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
         organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+        await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
 
     [Theory, BitAutoData]
@@ -200,7 +200,7 @@ public class SaveOrganizationUserCommandTests
         IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationOwner,
-        SutProvider<SaveOrganizationUserCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         organization.UseCustomPermissions = true;
 
@@ -224,7 +224,7 @@ public class SaveOrganizationUserCommandTests
         currentContext.AccessReports(savingUser.OrganizationId).Returns(true);
         organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+        await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
 
     [Theory, BitAutoData]
@@ -235,7 +235,7 @@ public class SaveOrganizationUserCommandTests
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
-        SutProvider<SaveOrganizationUserCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         organization.UseCustomPermissions = true;
 
@@ -258,7 +258,7 @@ public class SaveOrganizationUserCommandTests
         currentContext.AccessReports(savingUser.OrganizationId).Returns(false);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups));
+            () => sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups));
         Assert.Contains("custom users can only grant the same custom permissions that they have", exception.Message.ToLowerInvariant());
     }
 
@@ -269,7 +269,7 @@ public class SaveOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
-        SutProvider<SaveOrganizationUserCommand> sutProvider)
+        SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         organization.UseCustomPermissions = true;
 
@@ -287,7 +287,7 @@ public class SaveOrganizationUserCommandTests
         currentContext.ManageUsers(oldUserData.OrganizationId).Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.SaveUserAsync(newUserData, oldUserData.UserId, collections, groups));
+            () => sutProvider.Sut.UpdateUserAsync(newUserData, oldUserData.UserId, collections, groups));
         Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
     }
 }

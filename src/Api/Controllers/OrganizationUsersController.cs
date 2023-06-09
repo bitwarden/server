@@ -28,7 +28,7 @@ public class OrganizationUsersController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly ISaveOrganizationUserCommand _saveOrganizationUserCommand;
+    private readonly IUpdateOrganizationUserCommand _saveOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IInviteOrganizationUserCommand _inviteOrganizationUserCommand;
 
@@ -41,7 +41,7 @@ public class OrganizationUsersController : Controller
         IUserService userService,
         IPolicyRepository policyRepository,
         ICurrentContext currentContext,
-        ISaveOrganizationUserCommand saveOrganizationUserCommand,
+        IUpdateOrganizationUserCommand saveOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IInviteOrganizationUserCommand inviteOrganizationUserCommand)
     {
@@ -290,7 +290,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _saveOrganizationUserCommand.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
+        await _saveOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
             model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
     }
 

@@ -82,7 +82,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IDeleteOrganizationUserCommand, DeleteOrganizationUserCommand>();
         services.AddScoped<IInviteOrganizationUserCommand, InviteOrganizationUserCommand>();
-        services.AddScoped<ISaveOrganizationUserCommand, SaveOrganizationUserCommand>();
+        services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
     }
 
