@@ -10,7 +10,6 @@ using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -1620,86 +1619,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException($"Selected plan allows a maximum of " +
                 $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
         }
-    }
-
-    private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
-    {
-        if (permissions == null || await _currentContext.OrganizationOwner(organizationId) || await _currentContext.OrganizationAdmin(organizationId))
-        {
-            return true;
-        }
-
-        if (permissions.ManageUsers && !await _currentContext.ManageUsers(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.AccessReports && !await _currentContext.AccessReports(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManageGroups && !await _currentContext.ManageGroups(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManagePolicies && !await _currentContext.ManagePolicies(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManageScim && !await _currentContext.ManageScim(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManageSso && !await _currentContext.ManageSso(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.AccessEventLogs && !await _currentContext.AccessEventLogs(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.AccessImportExport && !await _currentContext.AccessImportExport(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.CreateNewCollections && !await _currentContext.CreateNewCollections(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.DeleteAnyCollection && !await _currentContext.DeleteAnyCollection(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
-        {
-            return false;
-        }
-
-        return true;
     }
 
     private async Task ValidateDeleteOrganizationAsync(Organization organization)
