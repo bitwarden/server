@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -52,6 +53,7 @@ public class SaveOrganizationUserCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
@@ -66,6 +68,7 @@ public class SaveOrganizationUserCommandTests
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
+        organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
@@ -123,6 +126,7 @@ public class SaveOrganizationUserCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
@@ -138,6 +142,7 @@ public class SaveOrganizationUserCommandTests
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
+        organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
@@ -158,6 +163,7 @@ public class SaveOrganizationUserCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
@@ -172,6 +178,7 @@ public class SaveOrganizationUserCommandTests
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
+        organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
@@ -192,6 +199,7 @@ public class SaveOrganizationUserCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
@@ -208,6 +216,7 @@ public class SaveOrganizationUserCommandTests
         currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
         currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
         currentContext.AccessReports(savingUser.OrganizationId).Returns(true);
+        organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
