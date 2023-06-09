@@ -30,6 +30,7 @@ public class OrganizationUsersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ISaveOrganizationUserCommand _saveOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IInviteOrganizationUserCommand _inviteOrganizationUserCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -41,7 +42,8 @@ public class OrganizationUsersController : Controller
         IPolicyRepository policyRepository,
         ICurrentContext currentContext,
         ISaveOrganizationUserCommand saveOrganizationUserCommand,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IInviteOrganizationUserCommand inviteOrganizationUserCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -53,6 +55,7 @@ public class OrganizationUsersController : Controller
         _currentContext = currentContext;
         _saveOrganizationUserCommand = saveOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _inviteOrganizationUserCommand = inviteOrganizationUserCommand;
     }
 
     [HttpGet("{id}")]
@@ -152,7 +155,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        var result = await _organizationService.InviteUsersAsync(orgGuidId, userId.Value,
+        var result = await _inviteOrganizationUserCommand.InviteUsersAsync(orgGuidId, userId.Value,
             new (OrganizationUserInvite, string)[] { (new OrganizationUserInvite(model.ToData()), null) });
     }
 

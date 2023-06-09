@@ -2,8 +2,8 @@
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Models;
 using Bit.Scim.Users;
 using Bit.Scim.Utilities;
@@ -33,7 +33,7 @@ public class PostUserCommandTests
             .GetManyDetailsByOrganizationAsync(organizationId)
             .Returns(organizationUsers);
 
-        sutProvider.GetDependency<IOrganizationService>()
+        sutProvider.GetDependency<IInviteOrganizationUserCommand>()
             .InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
                 OrganizationUserType.User, false, externalId, Arg.Any<List<CollectionAccessSelection>>(),
                 Arg.Any<List<Guid>>())
@@ -41,7 +41,7 @@ public class PostUserCommandTests
 
         var user = await sutProvider.Sut.PostUserAsync(organizationId, scimUserRequestModel);
 
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
+        await sutProvider.GetDependency<IInviteOrganizationUserCommand>().Received(1).InviteUserAsync(organizationId, EventSystemUser.SCIM, scimUserRequestModel.PrimaryEmail.ToLowerInvariant(),
             OrganizationUserType.User, false, scimUserRequestModel.ExternalId, Arg.Any<List<CollectionAccessSelection>>(), Arg.Any<List<Guid>>());
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetDetailsByIdAsync(newUser.Id);
     }

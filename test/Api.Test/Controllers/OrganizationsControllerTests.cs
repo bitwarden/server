@@ -9,6 +9,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.Import.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.Repositories;
@@ -38,6 +39,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
+    private readonly IImportOrganizationCommand _importOrganizationCommand;
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IFeatureService _featureService;
     private readonly ILicensingService _licensingService;
@@ -63,6 +65,7 @@ public class OrganizationsControllerTests : IDisposable
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
         _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
+        _importOrganizationCommand = Substitute.For<IImportOrganizationCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _licensingService = Substitute.For<ILicensingService>();
 
@@ -70,7 +73,7 @@ public class OrganizationsControllerTests : IDisposable
             _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
             _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
-            _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService);
+            _cloudGetOrganizationLicenseQuery, _importOrganizationCommand, _featureService, _globalSettings, _licensingService);
     }
 
     public void Dispose()
