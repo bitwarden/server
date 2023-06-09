@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -14,6 +15,7 @@ namespace Bit.Core.OrganizationFeatures.Import;
 
 public class ImportOrganizationCommand : IImportOrganizationCommand
 {
+    private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
@@ -21,12 +23,14 @@ public class ImportOrganizationCommand : IImportOrganizationCommand
     private readonly IInviteOrganizationUserCommand _inviteOrganizationUserCommand;
 
     public ImportOrganizationCommand(
+        ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
         IReferenceEventService referenceEventService,
         IInviteOrganizationUserCommand inviteOrganizationUserCommand)
     {
+        _currentContext = currentContext;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
@@ -211,7 +215,7 @@ public class ImportOrganizationCommand : IImportOrganizationCommand
         }
 
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization));
+            new ReferenceEvent(ReferenceEventType.DirectorySynced, organization, _currentContext));
     }
 
     private async Task UpdateUsersAsync(Group group, HashSet<string> groupUsers,

@@ -31,6 +31,7 @@ public class InviteOrganizationUserCommandTests
         OrganizationUserInvite invite, SutProvider<InviteOrganizationUserCommand> sutProvider)
     {
         invite.Emails = null;
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         await Assert.ThrowsAsync<NotFoundException>(
@@ -294,13 +295,10 @@ public class InviteOrganizationUserCommandTests
             });
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
         currentContext.ManageUsers(organization.Id).Returns(true);
         currentContext.AccessReports(organization.Id).Returns(true);
         currentContext.ManageGroups(organization.Id).Returns(true);
@@ -324,16 +322,22 @@ public class InviteOrganizationUserCommandTests
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(organization.Name,
-                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == expectedNewUsersCount), organization.PlanType == PlanType.Free);
+                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), organization.PlanType == PlanType.Free);
 
         // Send events
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
-            events.Count() == expectedNewUsersCount));
+                events.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IReferenceEventService>().Received(1)
             .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
-            referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == organization.Id &&
-            referenceEvent.Users == expectedNewUsersCount));
+                referenceEvent.Type == ReferenceEventType.InvitedUsers && referenceEvent.Id == organization.Id &&
+                referenceEvent.Users == expectedNewUsersCount));
+
+        await sutProvider.GetDependency<IMailService>().Received(1)
+            .BulkSendOrganizationInviteEmailAsync(organization.Name,
+                Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()), organization.PlanType == PlanType.Free);
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
     }
 
     [Theory]
@@ -353,13 +357,10 @@ public class InviteOrganizationUserCommandTests
             });
 
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var currentContext = sutProvider.GetDependency<ICurrentContext>();
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
         currentContext.ManageUsers(organization.Id).Returns(true);
         organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>()).Returns(true);
 

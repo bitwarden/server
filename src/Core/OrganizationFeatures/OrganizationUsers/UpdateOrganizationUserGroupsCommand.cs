@@ -12,7 +12,12 @@ public class UpdateOrganizationUserGroupsCommand : OrganizationUserCommand, IUpd
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public UpdateOrganizationUserGroupsCommand(ICurrentContext currentContext, IEventService eventService, IOrganizationRepository organizationRepository, IOrganizationUserRepository organizationUserRepository) : base(currentContext, organizationRepository)
+    public UpdateOrganizationUserGroupsCommand(
+        ICurrentContext currentContext,
+        IEventService eventService,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+        : base(currentContext, organizationRepository)
     {
         _eventService = eventService;
         _organizationUserRepository = organizationUserRepository;
@@ -25,7 +30,6 @@ public class UpdateOrganizationUserGroupsCommand : OrganizationUserCommand, IUpd
             await ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null, organizationUser.GetPermissions());
         }
         await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser,
-            EventType.OrganizationUser_UpdatedGroups);
+        await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
     }
 }

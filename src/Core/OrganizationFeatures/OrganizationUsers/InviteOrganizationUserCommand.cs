@@ -220,7 +220,7 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization)
+                new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
                 {
                     Users = orgUserInvitedCount
                 });
@@ -279,7 +279,7 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
             orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))), organization.PlanType == PlanType.Free);
     }
 
-    internal (bool canScale, string failureReason) CanScale(Organization organization,
+    private (bool canScale, string failureReason) CanScale(Organization organization,
         int seatsToAdd)
     {
         var failureReason = "";

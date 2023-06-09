@@ -13,6 +13,12 @@ public static class Constants
     public const long FileSize501mb = 501L * 1024L * 1024L;
     public const string DatabaseFieldProtectorPurpose = "DatabaseFieldProtection";
     public const string DatabaseFieldProtectedPrefix = "P|";
+
+    /// <summary>
+    /// Default number of days an organization has to apply an updated license to their self-hosted installation after
+    /// their subscription has expired.
+    /// </summary>
+    public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 }
 
 public static class TokenPurposes
@@ -27,8 +33,9 @@ public static class AuthenticationSchemes
 
 public static class FeatureFlagKeys
 {
-    public const string SecretsManager = "secrets-manager";
     public const string DisplayEuEnvironment = "display-eu-environment";
+    public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
+    public const string TrustedDeviceEncryption = "trusted-device-encryption";
 
     public static List<string> GetAllKeys()
     {

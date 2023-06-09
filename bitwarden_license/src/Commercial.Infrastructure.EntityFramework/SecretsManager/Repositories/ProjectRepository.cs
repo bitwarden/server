@@ -125,7 +125,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
         var policy = await query.FirstOrDefaultAsync();
 
-        return (policy.Read, policy.Write);
+        return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
     public async Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId)

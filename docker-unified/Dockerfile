@@ -194,6 +194,7 @@ ENV BW_ENABLE_SSO=false
 ENV BW_DB_FILE="/etc/bitwarden/vault.db"
 ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
 ENV globalSettings__selfHosted="true"
+ENV globalSettings__unifiedDeployment="true"
 ENV globalSettings__pushRelayBaseUri="https://push.bitwarden.com"
 ENV globalSettings__baseServiceUri__internalAdmin="http://localhost:5000"
 ENV globalSettings__baseServiceUri__internalApi="http://localhost:5001"

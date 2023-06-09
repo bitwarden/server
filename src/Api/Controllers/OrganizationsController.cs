@@ -7,7 +7,8 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
-using Bit.Api.SecretsManager;
+using Bit.Core;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -48,7 +49,9 @@ public class OrganizationsController : Controller
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IImportOrganizationCommand _importOrganizationCommand;
+    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
+    private readonly ILicensingService _licensingService;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -68,7 +71,9 @@ public class OrganizationsController : Controller
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IImportOrganizationCommand importOrganizationCommand,
-        GlobalSettings globalSettings)
+        IFeatureService featureService,
+        GlobalSettings globalSettings,
+        ILicensingService licensingService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -87,7 +92,9 @@ public class OrganizationsController : Controller
         _updateOrganizationLicenseCommand = updateOrganizationLicenseCommand;
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _importOrganizationCommand = importOrganizationCommand;
+        _featureService = featureService;
         _globalSettings = globalSettings;
+        _licensingService = licensingService;
     }
 
     [HttpGet("{id}")]
@@ -155,10 +162,14 @@ public class OrganizationsController : Controller
 
             return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, hideSensitiveData);
         }
-        else
+
+        if (_globalSettings.SelfHosted)
         {
-            return new OrganizationSubscriptionResponseModel(organization);
+            var orgLicense = await _licensingService.ReadOrganizationLicenseAsync(organization);
+            return new OrganizationSubscriptionResponseModel(organization, orgLicense);
         }
+
+        return new OrganizationSubscriptionResponseModel(organization);
     }
 
     [HttpGet("{id}/license")]
@@ -395,8 +406,7 @@ public class OrganizationsController : Controller
         var user = await _userService.GetUserByPrincipalAsync(User);
 
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(orgGuidId);
-        if (ssoConfig?.GetData()?.KeyConnectorEnabled == true &&
-            user.UsesKeyConnector)
+        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector && user.UsesKeyConnector)
         {
             throw new BadRequestException("Your organization's Single Sign-On settings prevent you from leaving.");
         }
@@ -682,6 +692,12 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
+        if (model.Data.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption &&
+            !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
+        {
+            throw new BadRequestException(nameof(model.Data.MemberDecryptionType), "Invalid member decryption type.");
+        }
+
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(id);
         ssoConfig = ssoConfig == null ? model.ToSsoConfig(id) : model.ToSsoConfig(ssoConfig);
         organization.Identifier = model.Identifier;
@@ -693,7 +709,6 @@ public class OrganizationsController : Controller
     }
 
     // This is a temporary endpoint to self-enroll in secrets manager
-    [SecretsManager]
     [SelfHosted(NotSelfHostedOnly = true)]
     [HttpPost("{id}/enroll-secrets-manager")]
     public async Task EnrollSecretsManager(Guid id, [FromBody] OrganizationEnrollSecretsManagerRequestModel model)
