@@ -34,15 +34,7 @@ public class OrganizationAuthRequestsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<PendingOrganizationAuthRequestResponseModel>> GetPendingRequests(Guid orgId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
-        {
-            throw new NotFoundException();
-        }
-
-        if (!await _currentContext.ManageResetPassword(orgId))
-        {
-            throw new NotFoundException();
-        }
+        await ValidateAdminRequest(orgId);
 
         var authRequests = await _authRequestRepository.GetManyPendingByOrganizationIdAsync(orgId);
         var responses = authRequests
@@ -54,15 +46,7 @@ public class OrganizationAuthRequestsController : Controller
     [HttpPost("{requestId}")]
     public async Task UpdateAuthRequest(Guid orgId, Guid requestId, [FromBody] AdminAuthRequestUpdateRequestModel model)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
-        {
-            throw new NotFoundException();
-        }
-
-        if (!await _currentContext.ManageResetPassword(orgId))
-        {
-            throw new NotFoundException();
-        }
+        await ValidateAdminRequest(orgId);
 
         var authRequest =
             (await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(orgId, new[] { requestId })).FirstOrDefault();
@@ -79,6 +63,19 @@ public class OrganizationAuthRequestsController : Controller
     [HttpPost("deny")]
     public async Task BulkDenyRequests(Guid orgId, [FromBody] BulkDenyAdminAuthRequestRequestModel model)
     {
+        await ValidateAdminRequest(orgId);
+
+        var authRequests = await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(orgId, model.Ids);
+
+        foreach (var authRequest in authRequests)
+        {
+            await _authRequestService.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId,
+                new AuthRequestUpdateRequestModel { RequestApproved = false, });
+        }
+    }
+
+    private async Task ValidateAdminRequest(Guid orgId)
+    {
         if (!_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
         {
             throw new NotFoundException();
@@ -87,14 +84,6 @@ public class OrganizationAuthRequestsController : Controller
         if (!await _currentContext.ManageResetPassword(orgId))
         {
             throw new NotFoundException();
-        }
-
-        var authRequests = await _authRequestRepository.GetManyAdminApprovalRequestsByManyIdsAsync(orgId, model.Ids);
-
-        foreach (var authRequest in authRequests)
-        {
-            await _authRequestService.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId,
-                new AuthRequestUpdateRequestModel { RequestApproved = false, });
         }
     }
 }
