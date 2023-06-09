@@ -3,6 +3,7 @@ using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,19 +20,22 @@ public class MembersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
+    private readonly ISaveOrganizationUserCommand _saveOrganizationUserCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
         IOrganizationService organizationService,
         IUserService userService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISaveOrganizationUserCommand saveOrganizationUserCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
+        _saveOrganizationUserCommand = saveOrganizationUserCommand;
     }
 
     /// <summary>
@@ -149,7 +153,7 @@ public class MembersController : Controller
         }
         var updatedUser = model.ToOrganizationUser(existingUser);
         var associations = model.Collections?.Select(c => c.ToSelectionReadOnly());
-        await _organizationService.SaveUserAsync(updatedUser, null, associations, model.Groups);
+        await _saveOrganizationUserCommand.SaveUserAsync(updatedUser, null, associations, model.Groups);
         MemberResponseModel response = null;
         if (existingUser.UserId.HasValue)
         {
