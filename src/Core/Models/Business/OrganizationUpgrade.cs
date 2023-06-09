@@ -12,4 +12,6 @@ public class OrganizationUpgrade
     public TaxInfo TaxInfo { get; set; }
     public string PublicKey { get; set; }
     public string PrivateKey { get; set; }
+    public int AdditionalSmSeats { get; set; }
+    public int AdditionalServiceAccount { get; set; }
 }
