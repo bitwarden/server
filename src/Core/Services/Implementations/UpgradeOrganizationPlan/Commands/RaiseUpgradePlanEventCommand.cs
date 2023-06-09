@@ -5,8 +5,7 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 
-
-namespace Bit.Core.Services.UpgradeOrganizationPlan.Commands;
+namespace Bit.Core.Services.Implementations.UpgradeOrganizationPlan.Commands;
 
 public static class RaiseUpgradePlanEventCommand
 {
@@ -22,6 +21,8 @@ public static class RaiseUpgradePlanEventCommand
                 OldPlanType = existingPlan.Type,
                 Seats = organization.Seats,
                 Storage = organization.MaxStorageGb,
+                SmSeats = organization.SmSeats,
+                ServiceAccounts = organization.SmServiceAccounts
             });
     }
 }

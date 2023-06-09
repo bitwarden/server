@@ -13,8 +13,8 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
-using Bit.Core.Services.UpgradeOrganizationPlan.Commands;
-using Bit.Core.Services.UpgradeOrganizationPlan.Queries;
+using Bit.Core.Services.Implementations.UpgradeOrganizationPlan.Commands;
+using Bit.Core.Services.Implementations.UpgradeOrganizationPlan.Queries;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -184,28 +184,30 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Your account has no payment method available.");
         }
         
-        var existingPlan = GetPlanByTypeQuery.Execute(organization.PlanType);
+        var existingPlan = GetPlanByTypeQuery.ExistingPlan(organization.PlanType);
         
-        var newPlan = GetPlanByTypeQuery.Execute(upgrade.Plan);
+        var newPlans = GetPlanByTypeQuery.NewPlans(upgrade.Plan);
+        var passwordManagerPlan = newPlans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.PasswordManager);
+        var secretsManagerPlan =  newPlans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.SecretsManager);
         
-        ValidateUpgradeCommand.ValidatePlanAsync(newPlan, existingPlan);
+        ValidateUpgradeCommand.ValidatePlan(passwordManagerPlan, existingPlan);
         
-        ValidateOrganizationUpgradeParameters(newPlan, upgrade);
+        ValidateOrganizationUpgradeParameters(passwordManagerPlan, upgrade);
         
-        await ValidateUpgradeCommand.ValidateSeatsAsync(organization, newPlan,upgrade, _organizationUserRepository);
-        await ValidateUpgradeCommand.ValidateCollectionsAsync(organization, newPlan, _collectionRepository);
-        await ValidateUpgradeCommand.ValidateGroupsAsync(organization, newPlan, _groupRepository);
-        await ValidateUpgradeCommand.ValidatePoliciesAsync(organization, newPlan, _policyRepository);
-        await ValidateUpgradeCommand.ValidateSsoAsync(organization, newPlan, _ssoConfigRepository);
-        await ValidateUpgradeCommand.ValidateKeyConnectorAsync(organization, newPlan, _ssoConfigRepository);
-        await ValidateUpgradeCommand.ValidateResetPasswordAsync(organization, newPlan, _policyRepository);
-        await ValidateUpgradeCommand.ValidateScimAsync(organization, newPlan, _organizationConnectionRepository);
-        await ValidateUpgradeCommand.ValidateCustomPermissionsAsync(organization, newPlan, _organizationUserRepository);
+        await ValidateUpgradeCommand.ValidateSeatsAsync(organization, passwordManagerPlan,upgrade, _organizationUserRepository);
+        await ValidateUpgradeCommand.ValidateCollectionsAsync(organization, passwordManagerPlan, _collectionRepository);
+        await ValidateUpgradeCommand.ValidateGroupsAsync(organization, passwordManagerPlan, _groupRepository);
+        await ValidateUpgradeCommand.ValidatePoliciesAsync(organization, passwordManagerPlan, _policyRepository);
+        await ValidateUpgradeCommand.ValidateSsoAsync(organization, passwordManagerPlan, _ssoConfigRepository);
+        await ValidateUpgradeCommand.ValidateKeyConnectorAsync(organization, passwordManagerPlan, _ssoConfigRepository);
+        await ValidateUpgradeCommand.ValidateResetPasswordAsync(organization, passwordManagerPlan, _policyRepository);
+        await ValidateUpgradeCommand.ValidateScimAsync(organization, passwordManagerPlan, _organizationConnectionRepository);
+        await ValidateUpgradeCommand.ValidateCustomPermissionsAsync(organization, passwordManagerPlan, _organizationUserRepository);
         if (_featureService.IsEnabled(FeatureFlagKeys.SecretManagerGaBilling, _currentContext) &&
             organization.UseSecretsManager)
         {
-            await ValidateUpgradeCommand.ValidateSmSeatsAsync(organization, newPlan,upgrade, _organizationUserRepository);
-            await ValidateUpgradeCommand.ValidateServiceAccountAsync(organization, newPlan,upgrade, _organizationUserRepository);
+            await ValidateUpgradeCommand.ValidateSmSeatsAsync(organization, secretsManagerPlan,upgrade, _organizationUserRepository);
+            await ValidateUpgradeCommand.ValidateServiceAccountAsync(organization, secretsManagerPlan,upgrade, _organizationUserRepository);
         }
         
         // TODO: Check storage?
@@ -214,7 +216,7 @@ public class OrganizationService : IOrganizationService
         var success = true;
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
+            paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, passwordManagerPlan,
                 upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
             success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
         }
@@ -224,11 +226,11 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
         }
         
-        UpdateOrganizationPropertiesCommand.UpdateOrganizationProperties(organization, newPlan, upgrade, success);
+        UpdateOrganizationPropertiesCommand.UpdateOrganizationProperties(organization, passwordManagerPlan, upgrade, success,secretsManagerPlan);
         await ReplaceAndUpdateCacheAsync(organization);
         if (success)
         {
-            await RaiseUpgradePlanEventCommand.RaiseUpgradePlanEventAsync(organization, existingPlan, newPlan
+            await RaiseUpgradePlanEventCommand.RaiseUpgradePlanEventAsync(organization, existingPlan, passwordManagerPlan
                 , _referenceEventService, _currentContext);
         }
 

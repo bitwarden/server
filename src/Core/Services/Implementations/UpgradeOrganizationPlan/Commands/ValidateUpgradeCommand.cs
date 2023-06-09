@@ -1,18 +1,18 @@
-﻿using Bit.Core.Auth.Enums;
-using Bit.Core.Entities;
-using Bit.Core.Models.Business;
-using Bit.Core.Repositories;
-using Bit.Core.Models.StaticStore;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
+using Bit.Core.Repositories;
 
-namespace Bit.Core.Services.UpgradeOrganizationPlan.Commands;
+namespace Bit.Core.Services.Implementations.UpgradeOrganizationPlan.Commands;
 
-public class ValidateUpgradeCommand
+public abstract class ValidateUpgradeCommand
 {
-    public static void ValidatePlanAsync(Plan newPlan,Plan existingPlan)
+    public static void ValidatePlan(Plan newPlan,Plan existingPlan)
     {
         if (existingPlan == null)
         {
@@ -45,11 +45,11 @@ public class ValidateUpgradeCommand
         }
     }
     
-    public static async Task ValidateSeatsAsync(Organization organization, Plan newPlan, OrganizationUpgrade upgrade,
+    public static async Task ValidateSeatsAsync(Organization organization, Plan passwordManagerPlan, OrganizationUpgrade upgrade,
         IOrganizationUserRepository organizationUserRepository)
     {
-        var newPlanSeats = (short)(newPlan.BaseSeats +
-                                   (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
+        var newPlanSeats = (short)(passwordManagerPlan.BaseSeats +
+                                   (passwordManagerPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
         if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
         {
             var occupiedSeats = await organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
@@ -79,14 +79,17 @@ public class ValidateUpgradeCommand
     public static async Task ValidateServiceAccountAsync(Organization organization, Plan newPlan, OrganizationUpgrade upgrade,
         IOrganizationUserRepository organizationUserRepository)
     {
-        var newPlanSeats = (short)(newPlan.BaseServiceAccount + (newPlan.HasAdditionalServiceAccountOption ? upgrade.AdditionalServiceAccount : 0));
-        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newPlanSeats)
+        if (newPlan.BaseServiceAccount != null)
         {
-            var occupiedServiceAccount = await organizationUserRepository.GetOccupiedServiceAccountCountByOrganizationIdAsync(organization.Id);
-            if (occupiedServiceAccount > newPlanSeats)
+            var newPlanSeats = (short)(newPlan.BaseServiceAccount + (newPlan.HasAdditionalServiceAccountOption ? upgrade.AdditionalServiceAccount : 0));
+            if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newPlanSeats)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedServiceAccount} service account seats filled. " +
-                                              $"Your new plan only has ({newPlanSeats}) service accounts. Remove some service accounts.");
+                var occupiedServiceAccount = await organizationUserRepository.GetOccupiedServiceAccountCountByOrganizationIdAsync(organization.Id);
+                if (occupiedServiceAccount > newPlanSeats)
+                {
+                    throw new BadRequestException($"Your organization currently has {occupiedServiceAccount} service account seats filled. " +
+                                                  $"Your new plan only has ({newPlanSeats}) service accounts. Remove some service accounts.");
+                }
             }
         }
     }
