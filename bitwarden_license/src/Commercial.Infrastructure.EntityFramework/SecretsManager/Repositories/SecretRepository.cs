@@ -139,16 +139,22 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 .Include("Projects")
                 .FirstAsync(s => s.Id == secret.Id);
 
-            foreach (var p in entity.Projects?.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
+            if (entity.Projects != null)
             {
-                entity.Projects.Remove(p);
-            }
+                foreach (var p in entity.Projects.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
+                {
+                    entity.Projects.Remove(p);
+                }
 
-            // Add new relationships
-            foreach (var project in mappedEntity.Projects?.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
-            {
-                var p = dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
-                entity.Projects.Add(p);
+                if (mappedEntity.Projects != null)
+                {
+                    // Add new relationships
+                    foreach (var project in mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
+                    {
+                        var p = dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
+                        entity.Projects.Add(p);
+                    }
+                }
             }
 
             dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
@@ -289,6 +295,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         };
 
         var policy = await query.FirstOrDefaultAsync();
+        if (policy == null)
+            return (false, false);
 
         return (policy.Read, policy.Write);
     }

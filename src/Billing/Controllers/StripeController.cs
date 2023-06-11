@@ -131,12 +131,12 @@ public class StripeController : Controller
             if (subCanceled || subUnpaid || subIncompleteExpired)
             {
                 // org
-                if (organizationId != null && organizationId != Guid.Empty)
+                if (organizationId != Guid.Empty)
                 {
                     await _organizationService.DisableAsync(organizationId, subscription.CurrentPeriodEnd);
                 }
                 // user
-                else if (userId != null && userId != Guid.Empty)
+                else if (userId != Guid.Empty)
                 {
                     await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
                 }
@@ -145,11 +145,11 @@ public class StripeController : Controller
             if (subActive)
             {
 
-                if (organizationId != null && organizationId != Guid.Empty)
+                if (organizationId != Guid.Empty)
                 {
                     await _organizationService.EnableAsync(organizationId);
                 }
-                else if (userId != null && userId != Guid.Empty)
+                else if (userId != Guid.Empty)
                 {
                     await _userService.EnablePremiumAsync(userId,
                         subscription.CurrentPeriodEnd);
@@ -159,7 +159,7 @@ public class StripeController : Controller
             if (subUpdated)
             {
                 // org
-                if (organizationId != null && organizationId != Guid.Empty)
+                if (organizationId != Guid.Empty)
                 {
                     await _organizationService.UpdateExpirationDateAsync(organizationId,
                         subscription.CurrentPeriodEnd);
@@ -169,7 +169,7 @@ public class StripeController : Controller
                     }
                 }
                 // user
-                else if (userId != null && userId != Guid.Empty)
+                else if (userId != Guid.Empty)
                 {
                     await _userService.UpdatePremiumExpirationAsync(userId,
                         subscription.CurrentPeriodEnd);
