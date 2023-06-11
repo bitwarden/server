@@ -13,8 +13,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
-using Bit.Core.Services.Implementations.UpgradeOrganizationPlan.Commands;
-using Bit.Core.Services.Implementations.UpgradeOrganizationPlan.Queries;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
