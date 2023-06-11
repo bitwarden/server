@@ -4,7 +4,7 @@ using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade.Interface;
 
-public interface IGetPlanByTypeQuery
+public interface IOrganizationUpgradeQuery
 {
     Plan ExistingPlan(PlanType planType);
 

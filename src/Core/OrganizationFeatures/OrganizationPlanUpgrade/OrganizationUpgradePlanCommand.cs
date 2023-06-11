@@ -13,7 +13,7 @@ using Bit.Core.Tools.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade;
 
-public class UpgradePlanCommand
+public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
 {
     private readonly IOrganizationUpgradeQuery _organizationUpgradeQuery;
     private readonly IValidateUpgradeCommand _validateUpgradeCommand;
@@ -24,7 +24,7 @@ public class UpgradePlanCommand
     private readonly IPaymentService _paymentService;
     private IOrganizationSignUpValidationStrategy _organizationSignUpValidationStrategy;
     
-    public UpgradePlanCommand(
+    public OrganizationUpgradePlanCommand(
         IOrganizationUpgradeQuery organizationUpgradeQuery
         ,IValidateUpgradeCommand validateUpgradeCommand
         ,IOrganizationService organizationService

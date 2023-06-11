@@ -11,6 +11,8 @@ using Bit.Core.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade;
+using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
@@ -126,5 +128,12 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IOrganizationSignUpCommand, OrganizationSignUpCommand>();
         services.AddScoped<IOrganizationSignUpValidationStrategy, PasswordManagerSignUpValidationStrategy>();
         services.AddScoped<IOrganizationSignUpValidationStrategy, SecretsManagerSignUpValidationStrategy>();
+    }
+    
+    private static void AddOrganizationUpgradeCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationUpgradePlanCommand, OrganizationUpgradePlanCommand>();
+        services.AddScoped<IOrganizationUpgradeQuery, OrganizationUpgradeQuery>();
+        services.AddScoped<IValidateUpgradeCommand, ValidateUpgradeCommand>();
     }
 }
