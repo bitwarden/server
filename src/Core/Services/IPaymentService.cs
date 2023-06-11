@@ -11,6 +11,9 @@ public interface IPaymentService
     Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
         bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false);
+    Task<string> PurchaseOrganizationWithProductsAsync(Organization org, PaymentMethodType paymentMethodType,
+        string paymentToken, IEnumerable<Plan> plans, short additionalStorageGb, int additionalSeats,
+        bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,int additionalSmSeats = 0, int additionalServiceAccount = 0);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
     Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan,

@@ -14,4 +14,5 @@ public class OrganizationUpgrade
     public string PrivateKey { get; set; }
     public int AdditionalSmSeats { get; set; }
     public int AdditionalServiceAccount { get; set; }
+    public bool UseSecretsManager { get; set; }
 }

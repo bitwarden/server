@@ -638,7 +638,7 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
+    public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization,
         Guid ownerId, string ownerKey, string collectionName, bool withPayment)
     {
         try
