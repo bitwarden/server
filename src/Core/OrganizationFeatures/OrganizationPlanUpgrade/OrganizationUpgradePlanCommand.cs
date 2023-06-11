@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Exceptions;
@@ -6,10 +7,10 @@ using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
 using Bit.Core.Services;
-using Bit.Core.Services.Implementations.UpgradeOrganizationPlan.Commands;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
+using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade;
 
@@ -108,7 +109,16 @@ public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
             throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
         }
         
-        UpdateOrganizationPropertiesCommand.UpdateOrganizationProperties(organization, passwordManagerPlan, upgrade, success,secretsManagerPlan);
+        UpdateOrganizationProperties(organization, passwordManagerPlan, upgrade
+            , success,secretsManagerPlan);
+
+        if (_featureService.IsEnabled(FeatureFlagKeys.SecretManagerGaBilling, _currentContext) &&
+            organization.UseSecretsManager)
+        {
+            organization.SmSeats = (short)(secretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats);
+            organization.SmServiceAccounts = (int)(secretsManagerPlan.BaseServiceAccount + upgrade.AdditionalServiceAccount);
+        }
+
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
         if (success)
         {
@@ -127,5 +137,41 @@ public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
         }
 
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
+    }
+    
+    private static void UpdateOrganizationProperties(Organization organization, Plan passwordManagerPlan, OrganizationUpgrade upgrade
+        , bool success, Plan secretManagerPlan)
+    {
+        organization.BusinessName = upgrade.BusinessName;
+        organization.PlanType = passwordManagerPlan.Type;
+        organization.Seats = (short)(passwordManagerPlan.BaseSeats + upgrade.AdditionalSeats);
+        organization.MaxCollections = passwordManagerPlan.MaxCollections;
+        organization.UseGroups = passwordManagerPlan.HasGroups;
+        organization.UseDirectory = passwordManagerPlan.HasDirectory;
+        organization.UseEvents = passwordManagerPlan.HasEvents;
+        organization.UseTotp = passwordManagerPlan.HasTotp;
+        organization.Use2fa = passwordManagerPlan.Has2fa;
+        organization.UseApi = passwordManagerPlan.HasApi;
+        organization.SelfHost = passwordManagerPlan.HasSelfHost;
+        organization.UsePolicies = passwordManagerPlan.HasPolicies;
+        organization.MaxStorageGb = !passwordManagerPlan.BaseStorageGb.HasValue ?
+            null : (short)(passwordManagerPlan.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
+        organization.UseGroups = passwordManagerPlan.HasGroups;
+        organization.UseDirectory = passwordManagerPlan.HasDirectory;
+        organization.UseEvents = passwordManagerPlan.HasEvents;
+        organization.UseTotp = passwordManagerPlan.HasTotp;
+        organization.Use2fa = passwordManagerPlan.Has2fa;
+        organization.UseApi = passwordManagerPlan.HasApi;
+        organization.UseSso = passwordManagerPlan.HasSso;
+        organization.UseKeyConnector = passwordManagerPlan.HasKeyConnector;
+        organization.UseScim = passwordManagerPlan.HasScim;
+        organization.UseResetPassword = passwordManagerPlan.HasResetPassword;
+        organization.SelfHost = passwordManagerPlan.HasSelfHost;
+        organization.UsersGetPremium = passwordManagerPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
+        organization.UseCustomPermissions = passwordManagerPlan.HasCustomPermissions;
+        organization.Plan = passwordManagerPlan.Name;
+        organization.Enabled = success;
+        organization.PublicKey = upgrade.PublicKey;
+        organization.PrivateKey = upgrade.PrivateKey;
     }
 }
