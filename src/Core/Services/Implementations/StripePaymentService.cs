@@ -1820,6 +1820,19 @@ public class StripePaymentService : IPaymentService
 
     // We are taking only first 30 characters of the SubscriberName because stripe provide
     // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create
-    private static string GetFirstThirtyCharacters(string subscriberName) => string.IsNullOrWhiteSpace(subscriberName) ? "" : subscriberName.Substring(0, 30);
-
+    public static string GetFirstThirtyCharacters(string subscriberName)
+    {
+        if (string.IsNullOrWhiteSpace(subscriberName))
+        {
+            return "";
+        }
+        else if (subscriberName.Length <= 30)
+        {
+            return subscriberName;
+        }
+        else
+        {
+            return subscriberName.Substring(0, 30);
+        }
+    }
 }

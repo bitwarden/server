@@ -319,6 +319,15 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
@@ -553,6 +562,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
 
+                    b.Property<int?>("MaxAutoscaleSmSeats")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxAutoscaleSmServiceAccounts")
+                        .HasColumnType("int");
+
                     b.Property<short?>("MaxCollections")
                         .HasColumnType("smallint");
 
@@ -591,6 +606,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int?>("SmSeats")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SmServiceAccounts")
+                        .HasColumnType("int");
+
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint unsigned");
 
@@ -619,6 +640,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsePolicies")

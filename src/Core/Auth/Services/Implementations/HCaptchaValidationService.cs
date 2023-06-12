@@ -98,10 +98,11 @@ public class HCaptchaValidationService : ICaptchaValidationService
 
         var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
         var failedLoginCount = user?.FailedLoginCount ?? 0;
-        var cloudEmailUnverified = !_globalSettings.SelfHosted && !user.EmailVerified;
+        var requireOnCloud = !_globalSettings.SelfHosted && !user.EmailVerified &&
+            user.CreationDate < DateTime.UtcNow.AddHours(-24);
         return currentContext.IsBot ||
                _globalSettings.Captcha.ForceCaptchaRequired ||
-               cloudEmailUnverified ||
+               requireOnCloud ||
                failedLoginCeiling > 0 && failedLoginCount >= failedLoginCeiling;
     }
 
