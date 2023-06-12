@@ -333,6 +333,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("text");
+
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -568,6 +577,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("MaxAutoscaleSmSeats")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxAutoscaleSmServiceAccounts")
+                        .HasColumnType("integer");
+
                     b.Property<short?>("MaxCollections")
                         .HasColumnType("smallint");
 
@@ -606,6 +621,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("SmSeats")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SmServiceAccounts")
+                        .HasColumnType("integer");
+
                     b.Property<byte>("Status")
                         .HasColumnType("smallint");
 
@@ -634,6 +655,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UsePolicies")
