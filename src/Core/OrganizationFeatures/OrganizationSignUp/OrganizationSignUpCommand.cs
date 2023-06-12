@@ -45,7 +45,7 @@ public class OrganizationSignUpCommand : IOrganizationSignUpCommand
         _organizationSignUpValidationStrategy = organizationSignUpValidationStrategy;
     }
     
-    public async Task<Tuple<Organization, OrganizationUser>> Handle(OrganizationSignup signup,
+    public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
         bool provider = false)
     {
         List<Plan> plans;

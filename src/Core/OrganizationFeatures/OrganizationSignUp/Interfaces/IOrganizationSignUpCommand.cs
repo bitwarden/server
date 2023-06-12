@@ -5,6 +5,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
 
 public interface IOrganizationSignUpCommand
 {
-    Task<Tuple<Organization, OrganizationUser>> Handle(OrganizationSignup signup,
+    Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
         bool provider = false);
 }
