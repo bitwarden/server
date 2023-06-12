@@ -78,7 +78,7 @@ public class OrganizationAuthRequestsController : Controller
     {
         if (!_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
         {
-            throw new NotFoundException();
+            throw new FeatureUnavailableException();
         }
 
         if (!await _currentContext.ManageResetPassword(orgId))
