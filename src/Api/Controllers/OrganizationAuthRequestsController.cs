@@ -7,7 +7,6 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,15 +21,13 @@ public class OrganizationAuthRequestsController : Controller
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IAuthRequestService _authRequestService;
-    private readonly IFeatureService _featureService;
 
     public OrganizationAuthRequestsController(IAuthRequestRepository authRequestRepository,
-        ICurrentContext currentContext, IAuthRequestService authRequestService, IFeatureService featureService)
+        ICurrentContext currentContext, IAuthRequestService authRequestService)
     {
         _authRequestRepository = authRequestRepository;
         _currentContext = currentContext;
         _authRequestService = authRequestService;
-        _featureService = featureService;
     }
 
     [HttpGet("")]
