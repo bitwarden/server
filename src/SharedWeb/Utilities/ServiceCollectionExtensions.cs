@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Net;
+using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
@@ -529,18 +530,29 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    public static void UseForwardedHeaders(this IApplicationBuilder app, GlobalSettings globalSettings)
+    public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
     {
         var options = new ForwardedHeadersOptions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
+
+        if (!globalSettings.UnifiedDeployment)
+        {
+            // Trust the X-Forwarded-Host header of the nginx docker container
+            var nginxIp = Dns.GetHostEntry("nginx").AddressList.FirstOrDefault();
+            if (nginxIp != null)
+            {
+                options.KnownProxies.Add(nginxIp);
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
         {
             var proxies = globalSettings.KnownProxies.Split(',');
             foreach (var proxy in proxies)
             {
-                if (System.Net.IPAddress.TryParse(proxy.Trim(), out var ip))
+                if (IPAddress.TryParse(proxy.Trim(), out var ip))
                 {
                     options.KnownProxies.Add(ip);
                 }

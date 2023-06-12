@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230522030836_AddKeysToDevice")]
+    partial class AddKeysToDevice
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -562,12 +564,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
 
-                    b.Property<int?>("MaxAutoscaleSmSeats")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("MaxAutoscaleSmServiceAccounts")
-                        .HasColumnType("int");
-
                     b.Property<short?>("MaxCollections")
                         .HasColumnType("smallint");
 
@@ -606,12 +602,6 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<int?>("SmSeats")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("SmServiceAccounts")
-                        .HasColumnType("int");
-
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint unsigned");
 
@@ -640,9 +630,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UseKeyConnector")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsePolicies")
