@@ -1,6 +1,8 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Bit.Admin.Enums;
 using Bit.Admin.Models;
+using Bit.Admin.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
@@ -55,6 +57,7 @@ public class ToolsController : Controller
         _environment = environment;
     }
 
+    [RequirePermission(Permission.Tools_ChargeBrainTreeCustomer)]
     public IActionResult ChargeBraintree()
     {
         return View(new ChargeBraintreeModel());
@@ -62,6 +65,7 @@ public class ToolsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_ChargeBrainTreeCustomer)]
     public async Task<IActionResult> ChargeBraintree(ChargeBraintreeModel model)
     {
         if (!ModelState.IsValid)
@@ -113,6 +117,7 @@ public class ToolsController : Controller
         return View(model);
     }
 
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
     public IActionResult CreateTransaction(Guid? organizationId = null, Guid? userId = null)
     {
         return View("CreateUpdateTransaction", new CreateUpdateTransactionModel
@@ -124,6 +129,7 @@ public class ToolsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
     public async Task<IActionResult> CreateTransaction(CreateUpdateTransactionModel model)
     {
         if (!ModelState.IsValid)
@@ -142,6 +148,7 @@ public class ToolsController : Controller
         }
     }
 
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
     public async Task<IActionResult> EditTransaction(Guid id)
     {
         var transaction = await _transactionRepository.GetByIdAsync(id);
@@ -154,6 +161,7 @@ public class ToolsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_CreateEditTransaction)]
     public async Task<IActionResult> EditTransaction(Guid id, CreateUpdateTransactionModel model)
     {
         if (!ModelState.IsValid)
@@ -171,6 +179,7 @@ public class ToolsController : Controller
         }
     }
 
+    [RequirePermission(Permission.Tools_PromoteAdmin)]
     public IActionResult PromoteAdmin()
     {
         return View();
@@ -178,6 +187,7 @@ public class ToolsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_PromoteAdmin)]
     public async Task<IActionResult> PromoteAdmin(PromoteAdminModel model)
     {
         if (!ModelState.IsValid)
@@ -207,6 +217,7 @@ public class ToolsController : Controller
         return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId.Value });
     }
 
+    [RequirePermission(Permission.Tools_GenerateLicenseFile)]
     public IActionResult GenerateLicense()
     {
         return View();
@@ -214,6 +225,7 @@ public class ToolsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_GenerateLicenseFile)]
     public async Task<IActionResult> GenerateLicense(LicenseModel model)
     {
         if (!ModelState.IsValid)
@@ -285,6 +297,7 @@ public class ToolsController : Controller
         }
     }
 
+    [RequirePermission(Permission.Tools_ManageTaxRates)]
     public async Task<IActionResult> TaxRate(int page = 1, int count = 25)
     {
         if (page < 1)
@@ -307,6 +320,7 @@ public class ToolsController : Controller
         });
     }
 
+    [RequirePermission(Permission.Tools_ManageTaxRates)]
     public async Task<IActionResult> TaxRateAddEdit(string stripeTaxRateId = null)
     {
         if (string.IsNullOrWhiteSpace(stripeTaxRateId))
@@ -328,6 +342,7 @@ public class ToolsController : Controller
     }
 
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_ManageTaxRates)]
     public async Task<IActionResult> TaxRateUpload(IFormFile file)
     {
         if (file == null || file.Length == 0)
@@ -395,6 +410,7 @@ public class ToolsController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequirePermission(Permission.Tools_ManageTaxRates)]
     public async Task<IActionResult> TaxRateAddEdit(TaxRateAddEditModel model)
     {
         var existingRateCheck = await _taxRateRepository.GetByLocationAsync(new TaxRate() { Country = model.Country, PostalCode = model.PostalCode });
@@ -429,6 +445,7 @@ public class ToolsController : Controller
         return RedirectToAction("TaxRate");
     }
 
+    [RequirePermission(Permission.Tools_ManageTaxRates)]
     public async Task<IActionResult> TaxRateArchive(string stripeTaxRateId)
     {
         if (!string.IsNullOrWhiteSpace(stripeTaxRateId))
@@ -439,6 +456,7 @@ public class ToolsController : Controller
         return RedirectToAction("TaxRate");
     }
 
+    [RequirePermission(Permission.Tools_ManageStripeSubscriptions)]
     public async Task<IActionResult> StripeSubscriptions(StripeSubscriptionListOptions options)
     {
         options = options ?? new StripeSubscriptionListOptions();
@@ -465,6 +483,7 @@ public class ToolsController : Controller
     }
 
     [HttpPost]
+    [RequirePermission(Permission.Tools_ManageStripeSubscriptions)]
     public async Task<IActionResult> StripeSubscriptions([FromForm] StripeSubscriptionsModel model)
     {
         if (!ModelState.IsValid)
@@ -508,7 +527,7 @@ public class ToolsController : Controller
     }
 
     // This requires a redundant API call to Stripe because of the way they handle pagination.
-    // The StartingBefore value has to be infered from the list we get, and isn't supplied by Stripe.
+    // The StartingBefore value has to be inferred from the list we get, and isn't supplied by Stripe.
     private async Task<bool> StripeSubscriptionsGetHasPreviousPage(List<Stripe.Subscription> subscriptions, StripeSubscriptionListOptions options)
     {
         var hasPreviousPage = false;

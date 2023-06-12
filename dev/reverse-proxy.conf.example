@@ -26,7 +26,7 @@ upstream identity_loadbalancer {
 }
 
 server {
-    listen 33756; # The port clients will connect to for the Identiy, must be exposed via Docker
+    listen 33756; # The port clients will connect to for the Identity, must be exposed via Docker
     location / {
         proxy_pass http://identity_loadbalancer;
     }

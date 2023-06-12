@@ -450,7 +450,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Fact]
-    public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_BadInsallationId_Fails()
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsInstallation_BadInstallationId_Fails()
     {
         var context = await _factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
