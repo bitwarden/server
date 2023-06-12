@@ -1,7 +1,6 @@
 ﻿CREATE TABLE [dbo].[AuthRequest] (
     [Id]                        UNIQUEIDENTIFIER NOT NULL,
     [UserId]                    UNIQUEIDENTIFIER NOT NULL,
-    [OrganizationId]            UNIQUEIDENTIFIER NULL,
     [Type]                      SMALLINT         NOT NULL,
     [RequestDeviceIdentifier]   NVARCHAR(50)     NOT NULL,
     [RequestDeviceType]         SMALLINT         NOT NULL,
@@ -15,10 +14,11 @@
     [CreationDate]              DATETIME2 (7)    NOT NULL,
     [ResponseDate]              DATETIME2 (7)    NULL,
     [AuthenticationDate]        DATETIME2 (7)    NULL,
+    [OrganizationId]            UNIQUEIDENTIFIER NULL,
     CONSTRAINT [PK_AuthRequest] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AuthRequest_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id]),
-    CONSTRAINT [FK_AuthRequest_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
-    CONSTRAINT [FK_AuthRequest_ResponseDevice] FOREIGN KEY ([ResponseDeviceId]) REFERENCES [dbo].[Device] ([Id])
+    CONSTRAINT [FK_AuthRequest_ResponseDevice] FOREIGN KEY ([ResponseDeviceId]) REFERENCES [dbo].[Device] ([Id]),
+    CONSTRAINT [FK_AuthRequest_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 );
 
 
