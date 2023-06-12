@@ -17,4 +17,4 @@ FROM
         ar.[Type] = 2 -- AdminApproval
     AND
         ar.[Id] IN (SELECT [Id] FROM @Ids)
-END;
+END

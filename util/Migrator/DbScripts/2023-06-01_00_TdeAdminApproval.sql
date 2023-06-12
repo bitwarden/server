@@ -6,7 +6,7 @@ ALTER TABLE
     ADD [OrganizationId] UNIQUEIDENTIFIER NULL;
     ALTER TABLE 
     [dbo].[AuthRequest]
-    ADD CONSTRAINT [FK_AuthRequest_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
+    ADD CONSTRAINT [FK_AuthRequest_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id])
 END
 GO
 

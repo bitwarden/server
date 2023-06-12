@@ -16,4 +16,4 @@ FROM
         ar.[ResponseDate] IS NULL
     AND
         ar.[Type] = 2 -- AdminApproval
-END;
+END
