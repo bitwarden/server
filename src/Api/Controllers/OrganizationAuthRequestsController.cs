@@ -8,6 +8,7 @@ using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,6 +16,7 @@ namespace Bit.Api.Controllers;
 
 [Route("organizations/{orgId}/auth-requests")]
 [Authorize("Application")]
+[RequireFeature(FeatureFlagKeys.TrustedDeviceEncryption)]
 public class OrganizationAuthRequestsController : Controller
 {
     private readonly IAuthRequestRepository _authRequestRepository;
@@ -76,11 +78,6 @@ public class OrganizationAuthRequestsController : Controller
 
     private async Task ValidateAdminRequest(Guid orgId)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
-        {
-            throw new FeatureUnavailableException();
-        }
-
         if (!await _currentContext.ManageResetPassword(orgId))
         {
             throw new UnauthorizedAccessException();
