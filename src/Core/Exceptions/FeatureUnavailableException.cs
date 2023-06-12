@@ -1,5 +1,5 @@
 ﻿namespace Bit.Core.Exceptions;
- 
+
 /// <summary>
 /// Exception to throw when a requested feature is not yet enabled/available for the requesting context.
 /// </summary>
