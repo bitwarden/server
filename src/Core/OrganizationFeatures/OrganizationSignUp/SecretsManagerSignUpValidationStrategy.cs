@@ -8,8 +8,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSignUp;
 public class SecretsManagerSignUpValidationStrategy : IOrganizationSignUpValidationStrategy
 {
     public void Validate(Plan plan, OrganizationUpgrade upgrade)
-    { 
-        if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccount > 0 )
+    {
+        if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccount > 0)
         {
             throw new BadRequestException("Plan does not allow additional service account.");
         }

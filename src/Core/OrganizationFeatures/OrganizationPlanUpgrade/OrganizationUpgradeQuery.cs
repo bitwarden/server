@@ -15,17 +15,17 @@ public class OrganizationUpgradeQuery : IOrganizationUpgradeQuery
         _organizationRepository = organizationRepository;
     }
     public Plan ExistingPlan(PlanType planType)
-    { 
-        return  StaticStore.Plans.FirstOrDefault(p => p.Type == planType);
+    {
+        return StaticStore.Plans.FirstOrDefault(p => p.Type == planType);
     }
 
     public List<Plan> NewPlans(PlanType planType)
     {
-        return  StaticStore.Plans.Where(p => p.Type == planType && !p.Disabled).ToList();
+        return StaticStore.Plans.Where(p => p.Type == planType && !p.Disabled).ToList();
     }
 
     public async Task<Organization> GetOrgById(Guid id)
-    { 
+    {
         return await _organizationRepository.GetByIdAsync(id);
     }
 }

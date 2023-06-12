@@ -44,15 +44,15 @@ public class OrganizationSignUpCommandTests
             organizationUserRepository,
             organizationSignUpValidationStrategy
         );
-        
+
         var plans = fixture.Create<List<Plan>>();
-        
+
         var passwordManagerPlan = fixture.Create<Organization>();
         var organization = fixture.Create<Organization>();
         var organizationUser = fixture.Create<OrganizationUser>();
 
         featureService.IsEnabled("sm-ga-billing", Arg.Any<CurrentContext>()).Returns(true);
-        
+
         policyService.AnyPoliciesApplicableToUserAsync(signup.Owner.Id, PolicyType.SingleOrg).Returns(false);
         organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id).Returns(0);
         organizationService.SignUpAsync(Arg.Any<Organization>(), Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), true)
@@ -80,7 +80,7 @@ public class OrganizationSignUpCommandTests
         Assert.Equal(organization, result.Item1);
         Assert.Equal(organizationUser, result.Item2);
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task SignUpAsync_WhenValidSignupAndFeatureFlagOn_ReturnsOrganizationAndOrganizationUser(
@@ -108,9 +108,9 @@ public class OrganizationSignUpCommandTests
             organizationUserRepository,
             organizationSignUpValidationStrategy
         );
-        
+
         var plans = fixture.Create<List<Plan>>();
-        
+
         var passwordManagerPlan = fixture.Create<Organization>();
         var organization = fixture.Create<Organization>();
         var organizationUser = fixture.Create<OrganizationUser>();

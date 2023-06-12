@@ -9,8 +9,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSignUp;
 public class PasswordManagerSignUpValidationStrategy : IOrganizationSignUpValidationStrategy
 {
     public void Validate(Plan plan, OrganizationUpgrade upgrade)
-    { 
-        if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0 )
+    {
+        if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
         {
             throw new BadRequestException("Plan does not allow additional storage.");
         }

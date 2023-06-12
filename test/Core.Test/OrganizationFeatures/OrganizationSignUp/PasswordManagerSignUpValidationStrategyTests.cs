@@ -17,24 +17,24 @@ public class PasswordManagerSignUpValidationStrategyTests
     public void Validate_WhenPlanDoesNotAllowAdditionalStorageAndUpgradeRequestsAdditionalStorage_ThrowsBadRequestException(OrganizationUpgrade upgrade,
         PasswordManagerSignUpValidationStrategy strategy)
     {
-        var plan = new Plan { HasAdditionalStorageOption = false,BitwardenProduct = BitwardenProductType.PasswordManager};
+        var plan = new Plan { HasAdditionalStorageOption = false, BitwardenProduct = BitwardenProductType.PasswordManager };
         upgrade.AdditionalStorageGb = 10;
 
         Assert.Throws<BadRequestException>(() => strategy.Validate(plan, upgrade));
     }
-    
+
     [Theory]
     [BitAutoData]
     public void Validate_WhenUpgradeRequestsNegativeAdditionalStorage_ThrowsBadRequestException(
         [Frozen] OrganizationUpgrade upgrade,
         PasswordManagerSignUpValidationStrategy strategy)
     {
-        var plan = new Plan { HasAdditionalStorageOption = true,BitwardenProduct = BitwardenProductType.PasswordManager};
+        var plan = new Plan { HasAdditionalStorageOption = true, BitwardenProduct = BitwardenProductType.PasswordManager };
         upgrade.AdditionalStorageGb = -5;
 
         Assert.Throws<BadRequestException>(() => strategy.Validate(plan, upgrade));
     }
-    
+
     [Theory]
     [BitAutoData]
     public void Validate_WhenNoSeatsAfterUpgrade_ThrowsBadRequestException(
@@ -48,7 +48,7 @@ public class PasswordManagerSignUpValidationStrategyTests
 
         Assert.Throws<BadRequestException>(() => strategy.Validate(plan, upgrade));
     }
-    
+
     [Theory]
     [BitAutoData]
     public void Validate_WhenUpgradeRequestsNegativeAdditionalSeats_ThrowsBadRequestException(

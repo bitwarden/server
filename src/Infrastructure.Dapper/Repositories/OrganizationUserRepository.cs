@@ -104,20 +104,20 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         {
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]",
-                new { OrganizationId = organizationId},
+                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
             return result;
         }
     }
-    
+
     public async Task<int> GetOccupiedServiceAccountCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[ServiceAccount_ReadCountByOrganizationId]",
-                new { OrganizationId = organizationId},
+                new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 
             return result;

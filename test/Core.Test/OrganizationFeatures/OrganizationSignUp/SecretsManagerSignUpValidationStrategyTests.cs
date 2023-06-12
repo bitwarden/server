@@ -1,4 +1,4 @@
-﻿using AutoFixture;  
+﻿using AutoFixture;
 using AutoFixture.Xunit2;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -35,7 +35,7 @@ public class SecretsManagerSignUpValidationStrategyTests
         SecretsManagerSignUpValidationStrategy strategy)
     {
         // Arrange
-        var plan = new Plan { HasAdditionalServiceAccountOption = true,BitwardenProduct = BitwardenProductType.PasswordManager};
+        var plan = new Plan { HasAdditionalServiceAccountOption = true, BitwardenProduct = BitwardenProductType.PasswordManager };
         upgrade.AdditionalServiceAccount = -5;
 
         Assert.Throws<BadRequestException>(() => strategy.Validate(plan, upgrade));
@@ -74,11 +74,11 @@ public class SecretsManagerSignUpValidationStrategyTests
     [Theory]
     [BitAutoData]
     public void Validate_WithNegativeAdditionalSmSeats_ThrowsBadRequestException(
-        [Frozen]OrganizationUpgrade upgrade,
+        [Frozen] OrganizationUpgrade upgrade,
         SecretsManagerSignUpValidationStrategy strategy)
     {
         // Arrange
-        var plan = new Plan { HasAdditionalSeatsOption = true,BitwardenProduct = BitwardenProductType.PasswordManager};
+        var plan = new Plan { HasAdditionalSeatsOption = true, BitwardenProduct = BitwardenProductType.PasswordManager };
         upgrade.AdditionalSmSeats = -5;
 
         // Act & Assert
@@ -88,8 +88,8 @@ public class SecretsManagerSignUpValidationStrategyTests
     [Theory]
     [BitAutoData]
     public void Validate_WithExceededMaxAdditionalSmSeats_ThrowsBadRequestException(
-        [Frozen]Plan plan,
-        [Frozen]OrganizationUpgrade upgrade,
+        [Frozen] Plan plan,
+        [Frozen] OrganizationUpgrade upgrade,
         SecretsManagerSignUpValidationStrategy sut)
     {
         // Arrange
@@ -127,7 +127,7 @@ public class SecretsManagerSignUpValidationStrategyTests
             return null;
         });
 
-        
+
         return fixture.Create<OrganizationUpgrade>();
     }
 }

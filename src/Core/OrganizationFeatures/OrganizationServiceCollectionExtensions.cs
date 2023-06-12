@@ -122,14 +122,14 @@ public static class OrganizationServiceCollectionExtensions
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>>())
         );
     }
-    
+
     private static void AddOrganizationSignUpCommands(this IServiceCollection services)
     {
         services.AddScoped<IOrganizationSignUpCommand, OrganizationSignUpCommand>();
         services.AddScoped<IOrganizationSignUpValidationStrategy, PasswordManagerSignUpValidationStrategy>();
         services.AddScoped<IOrganizationSignUpValidationStrategy, SecretsManagerSignUpValidationStrategy>();
     }
-    
+
     private static void AddOrganizationUpgradeCommands(this IServiceCollection services)
     {
         services.AddScoped<IOrganizationUpgradePlanCommand, OrganizationUpgradePlanCommand>();

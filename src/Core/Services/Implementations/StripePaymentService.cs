@@ -199,10 +199,10 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-     public async Task<string> PurchaseOrganizationWithProductsAsync(Organization org, PaymentMethodType paymentMethodType,
-        string paymentToken, IEnumerable<StaticStore.Plan> plans, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
-        int additionalSmSeats = 0, int additionalServiceAccount = 0)
+    public async Task<string> PurchaseOrganizationWithProductsAsync(Organization org, PaymentMethodType paymentMethodType,
+       string paymentToken, IEnumerable<StaticStore.Plan> plans, short additionalStorageGb,
+       int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
+       int additionalSmSeats = 0, int additionalServiceAccount = 0)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -210,7 +210,7 @@ public class StripePaymentService : IPaymentService
         var stripeCustomerMetadata = new Dictionary<string, string>();
         var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
             paymentMethodType == PaymentMethodType.BankAccount;
-    
+
         if (stripePaymentMethod && !string.IsNullOrWhiteSpace(paymentToken))
         {
             if (paymentToken.StartsWith("pm_"))
@@ -235,12 +235,12 @@ public class StripePaymentService : IPaymentService
                     [org.BraintreeIdField()] = org.Id.ToString()
                 }
             });
-    
+
             if (!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
             {
                 throw new GatewayException("Failed to create PayPal customer record.");
             }
-    
+
             braintreeCustomer = customerResult.Target;
             stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
         }
@@ -248,7 +248,7 @@ public class StripePaymentService : IPaymentService
         {
             throw new GatewayException("Payment method is not supported at this time.");
         }
-    
+
         if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
         {
             var taxRateSearch = new TaxRate
@@ -257,7 +257,7 @@ public class StripePaymentService : IPaymentService
                 PostalCode = taxInfo.BillingAddressPostalCode
             };
             var taxRates = await _taxRateRepository.GetByLocationAsync(taxRateSearch);
-    
+
             // should only be one tax rate per country/zip combo
             var taxRate = taxRates.FirstOrDefault();
             if (taxRate != null)
@@ -265,10 +265,10 @@ public class StripePaymentService : IPaymentService
                 taxInfo.StripeTaxRateId = taxRate.Id;
             }
         }
-    
+
         var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plans, taxInfo, additionalSeats, additionalStorageGb
-            , premiumAccessAddon,additionalSmSeats,additionalServiceAccount);
-    
+            , premiumAccessAddon, additionalSmSeats, additionalServiceAccount);
+
         Stripe.Customer customer = null;
         Stripe.Subscription subscription;
         try
@@ -337,11 +337,11 @@ public class StripePaymentService : IPaymentService
             }
             throw;
         }
-    
+
         org.Gateway = GatewayType.Stripe;
         org.GatewayCustomerId = customer.Id;
         org.GatewaySubscriptionId = subscription.Id;
-    
+
         if (subscription.Status == "incomplete" &&
             subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
         {
@@ -355,7 +355,7 @@ public class StripePaymentService : IPaymentService
             return null;
         }
     }
-    
+
     private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
     {
         var existingPlan = Utilities.StaticStore.GetPasswordManagerPlan(org.PlanType);

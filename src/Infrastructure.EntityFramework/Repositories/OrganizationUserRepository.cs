@@ -623,7 +623,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     }
 
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
-    { 
+    {
         var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
         return await GetCountFromQuery(query);
     }

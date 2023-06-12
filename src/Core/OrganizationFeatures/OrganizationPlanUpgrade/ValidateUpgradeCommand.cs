@@ -19,14 +19,14 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
     private readonly IPolicyRepository _policyRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
-    
+
     public ValidateUpgradeCommand(
         IOrganizationUserRepository organizationUserRepository
         , ICollectionRepository collectionRepository
-        ,IGroupRepository groupRepository
-        ,IPolicyRepository policyRepository
-        ,ISsoConfigRepository ssoConfigRepository 
-        ,IOrganizationConnectionRepository organizationConnectionRepository)
+        , IGroupRepository groupRepository
+        , IPolicyRepository policyRepository
+        , ISsoConfigRepository ssoConfigRepository
+        , IOrganizationConnectionRepository organizationConnectionRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
@@ -35,24 +35,24 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
         _ssoConfigRepository = ssoConfigRepository;
         _organizationConnectionRepository = organizationConnectionRepository;
     }
-    
-    public void ValidatePlan(Plan newPlan,Plan existingPlan)
+
+    public void ValidatePlan(Plan newPlan, Plan existingPlan)
     {
         if (existingPlan == null)
         {
             throw new BadRequestException("Existing plan not found.");
         }
-        
+
         if (newPlan == null)
         {
             throw new BadRequestException("Plan not found.");
         }
-        
+
         if (newPlan.Disabled)
         {
             throw new BadRequestException("Plan not found.");
         }
-        
+
         if (existingPlan.Type == newPlan.Type)
         {
             throw new BadRequestException("Organization is already on this plan.");
@@ -68,7 +68,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
         }
     }
-    
+
     public async Task ValidateSeatsAsync(Organization organization, Plan passwordManagerPlan, OrganizationUpgrade upgrade)
     {
         var newPlanSeats = (short)(passwordManagerPlan.BaseSeats +
@@ -83,7 +83,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateSmSeatsAsync(Organization organization, Plan newPlan, OrganizationUpgrade upgrade)
     {
         var newPlanSeats = (short)(newPlan.BaseSeats + (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSmSeats : 0));
@@ -97,7 +97,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateServiceAccountAsync(Organization organization, Plan newPlan, OrganizationUpgrade upgrade)
     {
         if (newPlan.BaseServiceAccount != null)
@@ -114,13 +114,13 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateCollectionsAsync(Organization organization, Plan newPlan)
     {
         if (newPlan.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
                                                 organization.MaxCollections.Value > newPlan.MaxCollections.Value))
         {
-            var collectionCount = await  _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
+            var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
             if (collectionCount > newPlan.MaxCollections.Value)
             {
                 throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
@@ -129,7 +129,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateGroupsAsync(Organization organization, Plan newPlan)
     {
         if (!newPlan.HasGroups && organization.UseGroups)
@@ -142,7 +142,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidatePoliciesAsync(Organization organization, Plan newPlan)
     {
         if (!newPlan.HasPolicies && organization.UsePolicies)
@@ -155,7 +155,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateSsoAsync(Organization organization, Plan newPlan)
     {
         if (!newPlan.HasSso && organization.UseSso)
@@ -168,7 +168,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateKeyConnectorAsync(Organization organization, Plan newPlan)
     {
         if (!newPlan.HasKeyConnector && organization.UseKeyConnector)
@@ -181,7 +181,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateResetPasswordAsync(Organization organization, Plan newPlan)
     {
         if (!newPlan.HasResetPassword && organization.UseResetPassword)
@@ -194,7 +194,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateScimAsync(Organization organization, Plan newPlan)
     {
         if (!newPlan.HasScim && organization.UseScim)
@@ -208,7 +208,7 @@ public class ValidateUpgradeCommand : IValidateUpgradeCommand
             }
         }
     }
-    
+
     public async Task ValidateCustomPermissionsAsync(Organization organization, Plan newPlan)
     {
         if (!newPlan.HasCustomPermissions && organization.UseCustomPermissions)

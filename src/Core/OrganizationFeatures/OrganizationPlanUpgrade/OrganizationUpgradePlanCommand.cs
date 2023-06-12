@@ -24,16 +24,16 @@ public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
     private readonly IFeatureService _featureService;
     private readonly IPaymentService _paymentService;
     private IOrganizationSignUpValidationStrategy _organizationSignUpValidationStrategy;
-    
+
     public OrganizationUpgradePlanCommand(
         IOrganizationUpgradeQuery organizationUpgradeQuery
-        ,IValidateUpgradeCommand validateUpgradeCommand
-        ,IOrganizationService organizationService
-        ,IReferenceEventService referenceEventService
-        ,ICurrentContext currentContext
-        ,IFeatureService featureService
-        ,IPaymentService paymentService
-        ,IOrganizationSignUpValidationStrategy organizationSignUpValidationStrategy)
+        , IValidateUpgradeCommand validateUpgradeCommand
+        , IOrganizationService organizationService
+        , IReferenceEventService referenceEventService
+        , ICurrentContext currentContext
+        , IFeatureService featureService
+        , IPaymentService paymentService
+        , IOrganizationSignUpValidationStrategy organizationSignUpValidationStrategy)
     {
         _organizationUpgradeQuery = organizationUpgradeQuery;
         _validateUpgradeCommand = validateUpgradeCommand;
@@ -44,26 +44,26 @@ public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
         _paymentService = paymentService;
         _organizationSignUpValidationStrategy = organizationSignUpValidationStrategy;
     }
-    
+
     public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
     {
-       var organization = await _organizationUpgradeQuery.GetOrgById(organizationId);
+        var organization = await _organizationUpgradeQuery.GetOrgById(organizationId);
         if (organization == null)
         {
             throw new NotFoundException();
         }
-        
+
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
             throw new BadRequestException("Your account has no payment method available.");
         }
-        
+
         var existingPlan = _organizationUpgradeQuery.ExistingPlan(organization.PlanType);
-        
+
         var newPlans = _organizationUpgradeQuery.NewPlans(upgrade.Plan);
         var passwordManagerPlan = newPlans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.PasswordManager);
-        var secretsManagerPlan =  newPlans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.SecretsManager);
-        
+        var secretsManagerPlan = newPlans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.SecretsManager);
+
         _validateUpgradeCommand.ValidatePlan(passwordManagerPlan, existingPlan);
 
         foreach (var plan in newPlans)
@@ -73,11 +73,11 @@ public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
                 BitwardenProductType.PasswordManager => new PasswordManagerSignUpValidationStrategy(),
                 _ => new SecretsManagerSignUpValidationStrategy()
             };
-            
+
             _organizationSignUpValidationStrategy.Validate(plan, upgrade);
         }
-        
-        await _validateUpgradeCommand.ValidateSeatsAsync(organization, passwordManagerPlan,upgrade);
+
+        await _validateUpgradeCommand.ValidateSeatsAsync(organization, passwordManagerPlan, upgrade);
         await _validateUpgradeCommand.ValidateCollectionsAsync(organization, passwordManagerPlan);
         await _validateUpgradeCommand.ValidateGroupsAsync(organization, passwordManagerPlan);
         await _validateUpgradeCommand.ValidatePoliciesAsync(organization, passwordManagerPlan);
@@ -89,10 +89,10 @@ public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
         if (_featureService.IsEnabled(FeatureFlagKeys.SecretManagerGaBilling, _currentContext) &&
             organization.UseSecretsManager)
         {
-            await _validateUpgradeCommand.ValidateSmSeatsAsync(organization, secretsManagerPlan,upgrade);
-            await _validateUpgradeCommand.ValidateServiceAccountAsync(organization, secretsManagerPlan,upgrade);
+            await _validateUpgradeCommand.ValidateSmSeatsAsync(organization, secretsManagerPlan, upgrade);
+            await _validateUpgradeCommand.ValidateServiceAccountAsync(organization, secretsManagerPlan, upgrade);
         }
-        
+
         // TODO: Check storage?
 
         string paymentIntentClientSecret = null;
@@ -108,9 +108,9 @@ public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
             // TODO: Update existing sub
             throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
         }
-        
+
         UpdateOrganizationProperties(organization, passwordManagerPlan, upgrade
-            , success,secretsManagerPlan);
+            , success, secretsManagerPlan);
 
         if (_featureService.IsEnabled(FeatureFlagKeys.SecretManagerGaBilling, _currentContext) &&
             organization.UseSecretsManager)
@@ -138,7 +138,7 @@ public class OrganizationUpgradePlanCommand : IOrganizationUpgradePlanCommand
 
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
-    
+
     private static void UpdateOrganizationProperties(Organization organization, Plan passwordManagerPlan, OrganizationUpgrade upgrade
         , bool success, Plan secretManagerPlan)
     {

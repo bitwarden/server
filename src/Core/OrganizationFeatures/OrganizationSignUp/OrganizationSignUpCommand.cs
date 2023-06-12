@@ -29,11 +29,11 @@ public class OrganizationSignUpCommand : IOrganizationSignUpCommand
         IPaymentService paymentService
         , ICurrentContext currentContext
         , IOrganizationService organizationService
-        ,IFeatureService featureService
-        ,IPolicyService policyService
-        ,IReferenceEventService referenceEventService
-        ,IOrganizationUserRepository organizationUserRepository
-        ,IOrganizationSignUpValidationStrategy organizationSignUpValidationStrategy)
+        , IFeatureService featureService
+        , IPolicyService policyService
+        , IReferenceEventService referenceEventService
+        , IOrganizationUserRepository organizationUserRepository
+        , IOrganizationSignUpValidationStrategy organizationSignUpValidationStrategy)
     {
         _paymentService = paymentService;
         _currentContext = currentContext;
@@ -44,7 +44,7 @@ public class OrganizationSignUpCommand : IOrganizationSignUpCommand
         _organizationUserRepository = organizationUserRepository;
         _organizationSignUpValidationStrategy = organizationSignUpValidationStrategy;
     }
-    
+
     public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
         bool provider = false)
     {
@@ -58,7 +58,7 @@ public class OrganizationSignUpCommand : IOrganizationSignUpCommand
         {
             plans = StaticStore.Plans.Where(p => p.Type == signup.Plan).ToList();
         }
-        
+
         foreach (var plan in plans)
         {
             if (plan is not { LegacyYear: null })
@@ -70,10 +70,10 @@ public class OrganizationSignUpCommand : IOrganizationSignUpCommand
             {
                 throw new BadRequestException("Plan not found.");
             }
-            
+
             ValidateOrganizationUpgradeParameters(plan, signup, _organizationSignUpValidationStrategy);
         }
-        
+
         if (!provider)
         {
             var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(signup.Owner.Id, PolicyType.SingleOrg);
@@ -127,7 +127,7 @@ public class OrganizationSignUpCommand : IOrganizationSignUpCommand
             signup.UseSecretsManager)
         {
             var secretsManagerPlan = plans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.SecretsManager);
-            
+
             organization.SmSeats = (short)(secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats);
             organization.SmServiceAccounts =
                 (short)(secretsManagerPlan.BaseServiceAccount + signup.AdditionalServiceAccount);
@@ -163,9 +163,9 @@ public class OrganizationSignUpCommand : IOrganizationSignUpCommand
             });
         return returnValue;
     }
-    
+
     private static void ValidateOrganizationUpgradeParameters(Plan plan, OrganizationUpgrade upgrade
-        ,IOrganizationSignUpValidationStrategy strategy)
+        , IOrganizationSignUpValidationStrategy strategy)
     {
         strategy = plan.BitwardenProduct switch
         {
@@ -175,5 +175,5 @@ public class OrganizationSignUpCommand : IOrganizationSignUpCommand
 
         strategy.Validate(plan, upgrade);
     }
-    
+
 }
