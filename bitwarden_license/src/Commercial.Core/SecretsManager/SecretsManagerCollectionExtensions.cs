@@ -1,4 +1,4 @@
-using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
+﻿using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
