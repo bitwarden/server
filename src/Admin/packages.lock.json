@@ -2890,7 +2890,7 @@
         "type": "Project",
         "dependencies": {
           "Core": "[2023.5.0, )",
-          "Microsoft.Extensions.Logging": "[7.0.0, )",
+          "Microsoft.Extensions.Logging": "[6.0.0, )",
           "dbup-sqlserver": "[5.0.8, )"
         }
       },
