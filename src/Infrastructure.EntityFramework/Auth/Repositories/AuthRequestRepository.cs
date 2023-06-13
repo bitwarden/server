@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Repositories;
@@ -42,18 +43,10 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
         {
             var dbContext = GetDatabaseContext(scope);
             var orgUserAuthRequests = await (from ar in dbContext.AuthRequests
-                                             join ou in dbContext.OrganizationUsers on new { UserId = (Guid?)ar.UserId, ar.OrganizationId } equals new { ou.UserId, OrganizationId = (Guid?)ou.OrganizationId }
-                                             where ou.OrganizationId.Equals(organizationId) && ar.ResponseDate == null && ar.Type == AuthRequestType.AdminApproval
-                                             select new { ar, ou }).ToListAsync();
+                                             where ar.OrganizationId.Equals(organizationId) && ar.ResponseDate == null && ar.Type == AuthRequestType.AdminApproval
+                                             select ar).ProjectTo<OrganizationAdminAuthRequest>(Mapper.ConfigurationProvider).ToListAsync();
 
-            return orgUserAuthRequests.Select(t =>
-            {
-                var authRequestWithEmail = Mapper.Map<OrganizationAdminAuthRequest>(t.ar);
-                authRequestWithEmail.Email = t.ou.Email;
-                authRequestWithEmail.OrganizationId = t.ou.OrganizationId;
-                authRequestWithEmail.OrganizationUserId = t.ou.Id;
-                return authRequestWithEmail;
-            }).ToList();
+            return orgUserAuthRequests;
         }
     }
 
@@ -65,18 +58,10 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
         {
             var dbContext = GetDatabaseContext(scope);
             var orgUserAuthRequests = await (from ar in dbContext.AuthRequests
-                                             join ou in dbContext.OrganizationUsers on new { UserId = (Guid?)ar.UserId, ar.OrganizationId } equals new { ou.UserId, OrganizationId = (Guid?)ou.OrganizationId }
-                                             where ou.OrganizationId.Equals(organizationId) && ids.Contains(ar.Id) && ar.Type == AuthRequestType.AdminApproval
-                                             select new { ar, ou }).ToListAsync();
+                                             where ar.OrganizationId.Equals(organizationId) && ids.Contains(ar.Id) && ar.Type == AuthRequestType.AdminApproval
+                                             select ar).ProjectTo<OrganizationAdminAuthRequest>(Mapper.ConfigurationProvider).ToListAsync();
 
-            return orgUserAuthRequests.Select(t =>
-            {
-                var authRequestWithEmail = Mapper.Map<OrganizationAdminAuthRequest>(t.ar);
-                authRequestWithEmail.Email = t.ou.Email;
-                authRequestWithEmail.OrganizationId = t.ou.OrganizationId;
-                authRequestWithEmail.OrganizationUserId = t.ou.Id;
-                return authRequestWithEmail;
-            }).ToList();
+            return orgUserAuthRequests;
         }
     }
 }
