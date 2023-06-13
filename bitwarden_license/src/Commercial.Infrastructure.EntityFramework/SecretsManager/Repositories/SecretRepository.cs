@@ -139,22 +139,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 .Include("Projects")
                 .FirstAsync(s => s.Id == secret.Id);
 
-            if (entity.Projects != null)
+            foreach (var p in entity.Projects.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
             {
-                foreach (var p in entity.Projects.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
-                {
-                    entity.Projects.Remove(p);
-                }
+                entity.Projects.Remove(p);
+            }
 
-                if (mappedEntity.Projects != null)
-                {
-                    // Add new relationships
-                    foreach (var project in mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
-                    {
-                        var p = dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
-                        entity.Projects.Add(p);
-                    }
-                }
+            // Add new relationships
+            foreach (var project in mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
+            {
+                var p = dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
+                entity.Projects.Add(p);
             }
 
             dbContext.Entry(entity).CurrentValues.SetValues(mappedEntity);
