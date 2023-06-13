@@ -15,6 +15,4 @@ public class OrganizationAdminAuthRequest : AuthRequest
     public string Email { get; set; }
 
     public Guid OrganizationUserId { get; set; }
-
-    public Guid OrganizationId { get; set; }
 }
