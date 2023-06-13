@@ -35,6 +35,7 @@
     })();
     
     function togglePlanSettings(planType) {
+    function togglePlanSettings(planType, trial = false) {
         document.getElementById('@(nameof(Model.PlanType))').value = planType;
         switch(planType) {
             case '@((byte)Bit.Core.Enums.PlanType.TeamsMonthly)':
@@ -60,7 +61,7 @@
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
-                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = trial;
             break;
             
             case '@((byte)Bit.Core.Enums.PlanType.EnterpriseMonthly)':
@@ -86,7 +87,7 @@
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
-                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = trial;
             break;
         }
         

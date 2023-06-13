@@ -20,7 +20,7 @@
                     alert('Organization is not on a free plan.');
                     return;
                 }
-                togglePlanSettings('@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)');
+                togglePlanSettings('@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)', true);
                 document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
             });
             document.getElementById('enterprise-trial').addEventListener('click', () => {
@@ -28,7 +28,7 @@
                     alert('Organization is not on a free plan.');
                     return;
                 }
-                togglePlanSettings('@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)');
+                togglePlanSettings('@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)', true);
                 document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
             });
         })();
