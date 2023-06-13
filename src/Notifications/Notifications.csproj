@@ -4,6 +4,8 @@
     <UserSecretsId>bitwarden-Notifications</UserSecretsId>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Notifications' " />
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Notifications-SelfHost' " />
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.MessagePack" Version="6.0.4" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="6.0.4" />
