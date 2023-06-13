@@ -14,9 +14,9 @@ public class PendingOrganizationAuthRequestResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(authRequest));
         }
 
-        Id = authRequest.Id.ToString();
-        UserId = authRequest.UserId.ToString();
-        OrganizationUserId = authRequest.OrganizationUserId.ToString();
+        Id = authRequest.Id;
+        UserId = authRequest.UserId;
+        OrganizationUserId = authRequest.OrganizationUserId;
         Email = authRequest.Email;
         PublicKey = authRequest.PublicKey;
         RequestDeviceIdentifier = authRequest.RequestDeviceIdentifier;
@@ -26,9 +26,9 @@ public class PendingOrganizationAuthRequestResponseModel : ResponseModel
         CreationDate = authRequest.CreationDate;
     }
 
-    public string Id { get; set; }
-    public string UserId { get; set; }
-    public string OrganizationUserId { get; set; }
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid OrganizationUserId { get; set; }
     public string Email { get; set; }
     public string PublicKey { get; set; }
     public string RequestDeviceIdentifier { get; set; }
