@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
+--Added filter to exclude Organizations that do not use policies
+CREATE PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
     @UserId UNIQUEIDENTIFIER,
     @PolicyType TINYINT
 AS
@@ -18,7 +19,7 @@ SELECT
             FROM [dbo].[ProviderUserView] PU
             INNER JOIN [dbo].[ProviderOrganizationView] PO ON PO.[ProviderId] = PU.[ProviderId]
             WHERE PU.[UserId] = OU.[UserId] AND PO.[OrganizationId] = P.[OrganizationId]
-        ) THEN 1 ELSE 0 END AS IsProvider
+    ) THEN 1 ELSE 0 END AS IsProvider
 FROM [dbo].[PolicyView] P
 INNER JOIN [dbo].[OrganizationUserView] OU
     ON P.[OrganizationId] = OU.[OrganizationId]

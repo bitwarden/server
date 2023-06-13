@@ -603,9 +603,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var query = from p in dbContext.Policies
                         join ou in dbContext.OrganizationUsers
                             on p.OrganizationId equals ou.OrganizationId
+                        join o in dbContext.Organizations
+                            on p.OrganizationId equals o.Id
                         let email = dbContext.Users.Find(userId).Email  // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
-                        where p.Type == policyType &&
-                            (ou.UserId == userId || ou.Email == email)
+                        where o.UsePolicies && p.Type == policyType && (ou.UserId == userId || ou.Email == email)
                         select new OrganizationUserPolicyDetails
                         {
                             OrganizationUserId = ou.Id,
