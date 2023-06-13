@@ -290,7 +290,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         var policy = await query.FirstOrDefaultAsync();
 
-return policy == null ? (false, false) : (policy.Read, policy.Write);
+        return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
     private IQueryable<SecretPermissionDetails> SecretToPermissionDetails(IQueryable<Secret> query, Guid userId, AccessClientType accessType)
