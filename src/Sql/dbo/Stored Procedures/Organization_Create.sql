@@ -44,7 +44,12 @@
     @UseScim BIT = 0,
     @UseCustomPermissions BIT = 0,
     @UseSecretsManager BIT = 0,
-    @Status TINYINT = 0
+    @Status TINYINT = 0,
+    @UsePasswordManager BIT = 1,
+    @SmSeats INT = null,
+    @SmServiceAccounts INT = null,
+    @MaxAutoscaleSmSeats INT= null,
+    @MaxAutoscaleSmServiceAccounts INT = null
 AS
 BEGIN
     SET NOCOUNT ON
@@ -96,7 +101,12 @@ BEGIN
         [UseScim],
         [UseCustomPermissions],
         [UseSecretsManager],
-        [Status]
+        [Status],
+        [UsePasswordManager],
+        [SmSeats],
+        [SmServiceAccounts],
+        [MaxAutoscaleSmSeats],
+        [MaxAutoscaleSmServiceAccounts]
     )
     VALUES
     (
@@ -145,6 +155,11 @@ BEGIN
         @UseScim,
         @UseCustomPermissions,
         @UseSecretsManager,
-        @Status
+        @Status,
+        @UsePasswordManager,
+        @SmSeats,
+        @SmServiceAccounts,
+        @MaxAutoscaleSmSeats,
+        @MaxAutoscaleSmServiceAccounts
     )
 END

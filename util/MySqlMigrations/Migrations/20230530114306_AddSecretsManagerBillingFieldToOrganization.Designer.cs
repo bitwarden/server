@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230530114306_AddSecretsManagerBillingFieldToOrganization")]
+    partial class AddSecretsManagerBillingFieldToOrganization
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -318,15 +320,6 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<string>("EncryptedPrivateKey")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("EncryptedPublicKey")
-                        .HasColumnType("longtext");
-
-                    b.Property<string>("EncryptedUserKey")
-                        .HasColumnType("longtext");
 
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
