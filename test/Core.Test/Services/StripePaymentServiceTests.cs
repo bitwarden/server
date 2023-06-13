@@ -35,7 +35,7 @@ public class StripePaymentServiceTests
 
         Assert.Equal("Payment method is not supported at this time.", exception.Message);
     }
-    
+
     [Theory]
     [BitAutoData(PaymentMethodType.BitPay)]
     [BitAutoData(PaymentMethodType.BitPay)]
@@ -101,7 +101,7 @@ public class StripePaymentServiceTests
             s.Items.Count == 0
         ));
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
@@ -203,7 +203,7 @@ public class StripePaymentServiceTests
             s.Items.Count == 0
         ));
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
@@ -308,7 +308,7 @@ public class StripePaymentServiceTests
             s.Items.Count == 0
         ));
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_Stripe_PM(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
@@ -390,7 +390,7 @@ public class StripePaymentServiceTests
             s.DefaultTaxRates[0] == "T-1"
         ));
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_Stripe_TaxRate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
@@ -452,7 +452,7 @@ public class StripePaymentServiceTests
 
         await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
@@ -516,7 +516,7 @@ public class StripePaymentServiceTests
         Assert.Equal("clientSecret", result);
         Assert.False(organization.Enabled);
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
@@ -606,7 +606,7 @@ public class StripePaymentServiceTests
             s.Items.Count == 0
         ));
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
@@ -683,7 +683,7 @@ public class StripePaymentServiceTests
 
         Assert.Equal("Failed to create PayPal customer record.", exception.Message);
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
@@ -744,7 +744,7 @@ public class StripePaymentServiceTests
         await stripeAdapter.Received(1).CustomerDeleteAsync("C-1");
         await braintreeGateway.Customer.Received(1).DeleteAsync("Braintree-Id");
     }
-    
+
     [Theory, BitAutoData]
     public async void PurchaseOrganizationWithProductsAsync_PayPal_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {

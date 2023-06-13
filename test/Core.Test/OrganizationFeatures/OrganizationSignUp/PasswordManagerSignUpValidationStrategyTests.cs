@@ -16,7 +16,7 @@ public class PasswordManagerSignUpValidationStrategyTests
     [Theory]
     [BitAutoData]
     public void Validate_WhenPlanDoesNotAllowAdditionalStorageAndUpgradeRequestsAdditionalStorage_ThrowsBadRequestException(
-        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider,OrganizationUpgrade upgrade)
+        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider, OrganizationUpgrade upgrade)
     {
         var plan = new Plan { HasAdditionalStorageOption = false, BitwardenProduct = BitwardenProductType.PasswordManager };
         upgrade.AdditionalStorageGb = 10;

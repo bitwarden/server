@@ -38,7 +38,7 @@ public class OrganizationUpgradePlanCommandTests
             PlanType = PlanType.TeamsAnnually,
             UseSecretsManager = true,
         };
-        
+
         var existingPlan = new Plan()
         {
             Type = PlanType.TeamsAnnually,
@@ -52,7 +52,7 @@ public class OrganizationUpgradePlanCommandTests
                 Type = PlanType.EnterpriseAnnually,
                 BaseSeats = 2,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
-            
+
             },
             new()
             {
@@ -60,7 +60,7 @@ public class OrganizationUpgradePlanCommandTests
                 BaseSeats = 2,
                 BaseServiceAccount = 2,
                 BitwardenProduct = BitwardenProductType.SecretsManager,
-            
+
             }
         };
 
@@ -98,7 +98,7 @@ public class OrganizationUpgradePlanCommandTests
         await validateUpgradeCommand.Received(1).ValidateServiceAccountAsync(Arg.Any<Organization>(), Arg.Any<Plan>(),
             Arg.Any<OrganizationUpgrade>());
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task UpgradePlanAsync_ExistingSubscription_ThrowsBadRequestException(SutProvider<OrganizationUpgradePlanCommand> sutProvider)
@@ -121,7 +121,7 @@ public class OrganizationUpgradePlanCommandTests
                 Type = PlanType.EnterpriseAnnually,
                 BaseSeats = 2,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
-            
+
             },
             new()
             {
@@ -129,7 +129,7 @@ public class OrganizationUpgradePlanCommandTests
                 BaseSeats = 2,
                 BaseServiceAccount = 2,
                 BitwardenProduct = BitwardenProductType.SecretsManager,
-            
+
             }
         };
 
@@ -167,7 +167,7 @@ public class OrganizationUpgradePlanCommandTests
 
         await Assert.ThrowsAsync<BadRequestException>(() => command.UpgradePlanAsync(organizationId, upgrade));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task UpgradePlanAsync_NoPaymentMethodAvailable_ThrowsBadRequestException(SutProvider<OrganizationUpgradePlanCommand> sutProvider)
@@ -181,9 +181,9 @@ public class OrganizationUpgradePlanCommandTests
         var organization = new Organization
         {
             Id = organizationId,
-            GatewayCustomerId = null, 
+            GatewayCustomerId = null,
         };
-        
+
         var existingPlan = new Plan()
         {
             Type = PlanType.TeamsAnnually,
@@ -197,7 +197,7 @@ public class OrganizationUpgradePlanCommandTests
                 Type = PlanType.EnterpriseAnnually,
                 BaseSeats = 2,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
-            
+
             },
             new()
             {
@@ -205,7 +205,7 @@ public class OrganizationUpgradePlanCommandTests
                 BaseSeats = 2,
                 BaseServiceAccount = 2,
                 BitwardenProduct = BitwardenProductType.SecretsManager,
-            
+
             }
         };
 

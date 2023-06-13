@@ -14,7 +14,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationPlanUpgrade;
 [SutProviderCustomize]
 public class OrganizationUpgradeQueryTests
 {
-    
+
     [Theory]
     [BitAutoData]
     public void ExistingPlan_ShouldReturnMatchingPlan(SutProvider<OrganizationUpgradeQuery> sutProvider)

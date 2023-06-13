@@ -19,9 +19,9 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSignUp;
 [SutProviderCustomize]
 public class OrganizationSignUpCommandTests
 {
-    [Theory,BitAutoData]
+    [Theory, BitAutoData]
     public async Task SignUpAsync_WhenValidSignupAndFeatureFlagOff_ReturnsOrganizationAndOrganizationUser(
-        SutProvider<OrganizationSignUpCommand> sutProvider,OrganizationSignup signup,
+        SutProvider<OrganizationSignUpCommand> sutProvider, OrganizationSignup signup,
         bool provider)
     {
         var fixture = new Fixture();

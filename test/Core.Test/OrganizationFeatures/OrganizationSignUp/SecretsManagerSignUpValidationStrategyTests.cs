@@ -28,7 +28,7 @@ public class SecretsManagerSignUpValidationStrategyTests
     [Theory]
     [BitAutoData]
     public void Validate_WithNegativeAdditionalServiceAccount_ThrowsBadRequestException(
-        SutProvider<SecretsManagerSignUpValidationStrategy> sutProvider,[Frozen] OrganizationUpgrade upgrade)
+        SutProvider<SecretsManagerSignUpValidationStrategy> sutProvider, [Frozen] OrganizationUpgrade upgrade)
     {
         var plan = new Plan { HasAdditionalServiceAccountOption = true, BitwardenProduct = BitwardenProductType.PasswordManager };
         upgrade.AdditionalServiceAccount = -5;
@@ -40,7 +40,7 @@ public class SecretsManagerSignUpValidationStrategyTests
     [BitAutoData]
     public void Validate_WithZeroSeats_ThrowsBadRequestException(
         SutProvider<SecretsManagerSignUpValidationStrategy> sutProvider
-        ,[Frozen] Plan plan,
+        , [Frozen] Plan plan,
         [Frozen] OrganizationUpgrade upgrade)
     {
         plan.BaseSeats = 0;
