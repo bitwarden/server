@@ -1,3 +1,5 @@
+@model OrganizationEditModel
+
 <script>
     (() => {
         document.getElementById('@(nameof(Model.PlanType))').addEventListener('change', () => {
@@ -34,10 +36,59 @@
         });
     })();
     
-    function togglePlanSettings(planType) {
     function togglePlanSettings(planType, trial = false) {
         document.getElementById('@(nameof(Model.PlanType))').value = planType;
         switch(planType) {
+            case '@((byte)Bit.Core.Enums.PlanType.Free)':
+                // Plan                
+                document.getElementById('@(nameof(Model.Seats))').value = '2';
+                document.getElementById('@(nameof(Model.MaxCollections))').value = '2';
+                document.getElementById('@(nameof(Model.MaxStorageGb))').value = '';
+                // Features
+                document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
+                document.getElementById('@(nameof(Model.UseSso))').checked = false;
+                document.getElementById('@(nameof(Model.UseGroups))').checked = false;
+                document.getElementById('@(nameof(Model.UseDirectory))').checked = false;
+                document.getElementById('@(nameof(Model.UseEvents))').checked = false;
+                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = false;
+                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;                
+                document.getElementById('@(nameof(Model.UseTotp))').checked = false;
+                document.getElementById('@(nameof(Model.Use2fa))').checked = false;
+                document.getElementById('@(nameof(Model.UseApi))').checked = false;
+                document.getElementById('@(nameof(Model.SelfHost))').checked = false;
+                document.getElementById('@(nameof(Model.UseResetPassword))').checked = false;
+                document.getElementById('@(nameof(Model.UseScim))').checked = false;
+                // Licensing
+                document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+                document.getElementById('@(nameof(Model.ExpirationDate))').value = null;
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = trial;
+            break;
+            
+            case '@((byte)Bit.Core.Enums.PlanType.FamiliesAnnually)':
+                // Plan                
+                document.getElementById('@(nameof(Model.Seats))').value = '6';
+                document.getElementById('@(nameof(Model.MaxCollections))').value = '';
+                document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                // Features
+                document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
+                document.getElementById('@(nameof(Model.UseSso))').checked = false;
+                document.getElementById('@(nameof(Model.UseGroups))').checked = false;
+                document.getElementById('@(nameof(Model.UseDirectory))').checked = false;
+                document.getElementById('@(nameof(Model.UseEvents))').checked = false;
+                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
+                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;                
+                document.getElementById('@(nameof(Model.UseTotp))').checked = true;
+                document.getElementById('@(nameof(Model.Use2fa))').checked = false;
+                document.getElementById('@(nameof(Model.UseApi))').checked = false;
+                document.getElementById('@(nameof(Model.SelfHost))').checked = true;
+                document.getElementById('@(nameof(Model.UseResetPassword))').checked = false;
+                document.getElementById('@(nameof(Model.UseScim))').checked = false;
+                // Licensing
+                document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+                document.getElementById('@(nameof(Model.ExpirationDate))').value = null;
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = trial;
+            break;
+            
             case '@((byte)Bit.Core.Enums.PlanType.TeamsMonthly)':
             case '@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)':
                 // Plan                
