@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Bit.Core.Enums;
+using Stripe;
 
 namespace Bit.Core.Models.Business;
 
@@ -50,6 +51,9 @@ public class SubscriptionInfo
 
                 Quantity = (int)item.Quantity;
                 SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
+                var bitwardenProduct = Utilities.StaticStore.Plans.FirstOrDefault(p => p.StripePlanId == item.Plan.Id)
+                    ?.BitwardenProduct;
+                BitwardenProduct = bitwardenProduct ?? BitwardenProductType.PasswordManager;
             }
 
             public string Name { get; set; }
@@ -57,6 +61,7 @@ public class SubscriptionInfo
             public int Quantity { get; set; }
             public string Interval { get; set; }
             public bool SponsoredSubscriptionItem { get; set; }
+            public BitwardenProductType? BitwardenProduct { get; set; }
         }
     }
 
