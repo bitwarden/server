@@ -1,5 +1,5 @@
---Added filter to exclude Organizations that do not use policies
-CREATE PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
+--Added filter to only include Organizations that have UsePolicies = 1
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
     @UserId UNIQUEIDENTIFIER,
     @PolicyType TINYINT
 AS
