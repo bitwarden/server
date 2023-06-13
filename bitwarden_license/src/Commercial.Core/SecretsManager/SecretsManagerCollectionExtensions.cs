@@ -1,4 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
+using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Secrets;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.ServiceAccounts;
 using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
 using Bit.Commercial.Core.SecretsManager.Commands.AccessTokens;
@@ -26,6 +27,7 @@ public static class SecretsManagerCollectionExtensions
     public static void AddSecretsManagerServices(this IServiceCollection services)
     {
         services.AddScoped<IAuthorizationHandler, ProjectAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, SecretAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountAuthorizationHandler>();
         services.AddScoped<IAccessClientQuery, AccessClientQuery>();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
