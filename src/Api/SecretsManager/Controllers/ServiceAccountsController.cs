@@ -171,28 +171,12 @@ public class ServiceAccountsController : Controller
     [HttpGet("{id}/access-tokens")]
     public async Task<ListResponseModel<AccessTokenResponseModel>> GetAccessTokens([FromRoute] Guid id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount,
+                ServiceAccountOperations.ReadAccessTokens);
 
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasReadAccessToServiceAccount(id, userId),
-            _ => false,
-        };
-        if (!hasAccess)
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
@@ -206,38 +190,29 @@ public class ServiceAccountsController : Controller
     public async Task<AccessTokenCreationResponseModel> CreateAccessTokenAsync([FromRoute] Guid id,
         [FromBody] AccessTokenCreateRequestModel request)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount,
+                ServiceAccountOperations.CreateAccessToken);
 
-        var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id), userId);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id));
         return new AccessTokenCreationResponseModel(result);
     }
 
     [HttpPost("{id}/access-tokens/revoke")]
     public async Task RevokeAccessTokensAsync(Guid id, [FromBody] RevokeAccessTokensRequest request)
     {
-        var userId = _userService.GetProperUserId(User).Value;
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount,
+                ServiceAccountOperations.RevokeAccessTokens);
 
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
