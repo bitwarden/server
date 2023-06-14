@@ -40,4 +40,6 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task RevokeAsync(Guid id);
     Task RestoreAsync(Guid id, OrganizationUserStatusType status);
     Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType);
+    Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId);
+    Task<int> GetOccupiedServiceAccountCountByOrganizationIdAsync(Guid organizationId);
 }

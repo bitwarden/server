@@ -621,4 +621,21 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return await query.ToListAsync();
         }
     }
+    
+    public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
+        return await GetCountFromQuery(query);
+    }
+
+    public async Task<int> GetOccupiedServiceAccountCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.ServiceAccount
+                .Where(ou => ou.OrganizationId == organizationId)
+                .CountAsync();
+        }
+    }
 }

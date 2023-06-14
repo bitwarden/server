@@ -19,6 +19,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -53,6 +54,7 @@ public class OrganizationsController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ILicensingService _licensingService;
     private readonly IOrganizationSignUpCommand _organizationSignUpCommand;
+    private readonly IOrganizationUpgradePlanCommand _organizationUpgradePlanCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -74,7 +76,8 @@ public class OrganizationsController : Controller
         IFeatureService featureService,
         GlobalSettings globalSettings,
         ILicensingService licensingService,
-        IOrganizationSignUpCommand organizationSignUpCommand)
+        IOrganizationSignUpCommand organizationSignUpCommand, 
+        IOrganizationUpgradePlanCommand organizationUpgradePlanCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -96,6 +99,7 @@ public class OrganizationsController : Controller
         _globalSettings = globalSettings;
         _licensingService = licensingService;
         _organizationSignUpCommand = organizationSignUpCommand;
+        _organizationUpgradePlanCommand = organizationUpgradePlanCommand;
     }
 
     [HttpGet("{id}")]
@@ -316,7 +320,11 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+        var result = !_featureService.IsEnabled(FeatureFlagKeys.SecretManagerGaBilling, _currentContext) &&
+                     !model.UseSecretsManager
+            ? await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade())
+            : await _organizationUpgradePlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+        
         return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
     }
 
