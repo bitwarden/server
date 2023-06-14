@@ -1,8 +1,9 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
@@ -10,7 +11,6 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade;
 
