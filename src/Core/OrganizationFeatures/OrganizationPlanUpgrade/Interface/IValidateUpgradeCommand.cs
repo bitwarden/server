@@ -1,6 +1,6 @@
-﻿using Bit.Core.Models.StaticStore;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade.Interface;
 
