@@ -5,5 +5,5 @@ namespace Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 
 public interface ICreateAccessTokenCommand
 {
-    Task<ApiKeyClientSecretDetails> CreateAsync(ApiKey apiKey, Guid userId);
+    Task<ApiKeyClientSecretDetails> CreateAsync(ApiKey apiKey);
 }

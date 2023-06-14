@@ -1,7 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Exceptions;
-using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+﻿using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 
@@ -10,44 +7,14 @@ namespace Bit.Commercial.Core.SecretsManager.Commands.Secrets;
 public class CreateSecretCommand : ICreateSecretCommand
 {
     private readonly ISecretRepository _secretRepository;
-    private readonly IProjectRepository _projectRepository;
-    private readonly ICurrentContext _currentContext;
 
-    public CreateSecretCommand(ISecretRepository secretRepository, IProjectRepository projectRepository, ICurrentContext currentContext)
+    public CreateSecretCommand(ISecretRepository secretRepository)
     {
         _secretRepository = secretRepository;
-        _projectRepository = projectRepository;
-        _currentContext = currentContext;
     }
 
-    public async Task<Secret> CreateAsync(Secret secret, Guid userId)
+    public async Task<Secret> CreateAsync(Secret secret)
     {
-        var orgAdmin = await _currentContext.OrganizationAdmin(secret.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-        var project = secret.Projects?.FirstOrDefault();
-
-        if (project == null && !orgAdmin)
-        {
-            throw new NotFoundException();
-        }
-
-        if (secret.Projects != null && secret.Projects.Any() && !(await _projectRepository.ProjectsAreInOrganization(secret.Projects.Select(p => p.Id).ToList(), secret.OrganizationId)))
-        {
-            throw new NotFoundException();
-        }
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => (await _projectRepository.AccessToProjectAsync(project.Id, userId, accessClient)).Write,
-            _ => false,
-        };
-
-        if (!hasAccess)
-        {
-            throw new NotFoundException();
-        }
-
         return await _secretRepository.CreateAsync(secret);
     }
 }
