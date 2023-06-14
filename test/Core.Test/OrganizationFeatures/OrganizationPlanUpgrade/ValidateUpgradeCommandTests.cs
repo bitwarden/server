@@ -2,11 +2,11 @@
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade;
-using Bit.Core.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
+using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade;
+using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

@@ -1,11 +1,11 @@
-﻿using Bit.Core.Exceptions;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp;
-using Xunit;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSignUp;
 
