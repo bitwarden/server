@@ -199,6 +199,163 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    public async Task<string> PurchaseOrganizationWithProductsAsync(Organization org, PaymentMethodType paymentMethodType,
+       string paymentToken, IEnumerable<StaticStore.Plan> plans, short additionalStorageGb,
+       int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
+       int additionalSmSeats = 0, int additionalServiceAccount = 0)
+    {
+        Braintree.Customer braintreeCustomer = null;
+        string stipeCustomerSourceToken = null;
+        string stipeCustomerPaymentMethodId = null;
+        var stripeCustomerMetadata = new Dictionary<string, string>();
+        var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
+            paymentMethodType == PaymentMethodType.BankAccount;
+
+        if (stripePaymentMethod && !string.IsNullOrWhiteSpace(paymentToken))
+        {
+            if (paymentToken.StartsWith("pm_"))
+            {
+                stipeCustomerPaymentMethodId = paymentToken;
+            }
+            else
+            {
+                stipeCustomerSourceToken = paymentToken;
+            }
+        }
+        else if (paymentMethodType == PaymentMethodType.PayPal)
+        {
+            var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
+            var customerResult = await _btGateway.Customer.CreateAsync(new Braintree.CustomerRequest
+            {
+                PaymentMethodNonce = paymentToken,
+                Email = org.BillingEmail,
+                Id = org.BraintreeCustomerIdPrefix() + org.Id.ToString("N").ToLower() + randomSuffix,
+                CustomFields = new Dictionary<string, string>
+                {
+                    [org.BraintreeIdField()] = org.Id.ToString()
+                }
+            });
+
+            if (!customerResult.IsSuccess() || customerResult.Target.PaymentMethods.Length == 0)
+            {
+                throw new GatewayException("Failed to create PayPal customer record.");
+            }
+
+            braintreeCustomer = customerResult.Target;
+            stripeCustomerMetadata.Add("btCustomerId", braintreeCustomer.Id);
+        }
+        else
+        {
+            throw new GatewayException("Payment method is not supported at this time.");
+        }
+
+        if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
+        {
+            var taxRateSearch = new TaxRate
+            {
+                Country = taxInfo.BillingAddressCountry,
+                PostalCode = taxInfo.BillingAddressPostalCode
+            };
+            var taxRates = await _taxRateRepository.GetByLocationAsync(taxRateSearch);
+
+            // should only be one tax rate per country/zip combo
+            var taxRate = taxRates.FirstOrDefault();
+            if (taxRate != null)
+            {
+                taxInfo.StripeTaxRateId = taxRate.Id;
+            }
+        }
+
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plans, taxInfo, additionalSeats, additionalStorageGb
+            , premiumAccessAddon, additionalSmSeats, additionalServiceAccount);
+
+        Stripe.Customer customer = null;
+        Stripe.Subscription subscription;
+        try
+        {
+            customer = await _stripeAdapter.CustomerCreateAsync(new Stripe.CustomerCreateOptions
+            {
+                Description = org.BusinessName,
+                Email = org.BillingEmail,
+                Source = stipeCustomerSourceToken,
+                PaymentMethod = stipeCustomerPaymentMethodId,
+                Metadata = stripeCustomerMetadata,
+                InvoiceSettings = new Stripe.CustomerInvoiceSettingsOptions
+                {
+                    DefaultPaymentMethod = stipeCustomerPaymentMethodId,
+                    CustomFields = new List<Stripe.CustomerInvoiceSettingsCustomFieldOptions>
+                    {
+                        new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
+                        {
+                            Name = org.SubscriberType(),
+                            Value = GetFirstThirtyCharacters(org.SubscriberName()),
+                        },
+                    },
+                },
+                Coupon = provider ? ProviderDiscountId : null,
+                Address = new Stripe.AddressOptions
+                {
+                    Country = taxInfo.BillingAddressCountry,
+                    PostalCode = taxInfo.BillingAddressPostalCode,
+                    // Line1 is required in Stripe's API, suggestion in Docs is to use Business Name instead.
+                    Line1 = taxInfo.BillingAddressLine1 ?? string.Empty,
+                    Line2 = taxInfo.BillingAddressLine2,
+                    City = taxInfo.BillingAddressCity,
+                    State = taxInfo.BillingAddressState,
+                },
+                TaxIdData = !taxInfo.HasTaxId ? null : new List<Stripe.CustomerTaxIdDataOptions>
+                {
+                    new Stripe.CustomerTaxIdDataOptions
+                    {
+                        Type = taxInfo.TaxIdType,
+                        Value = taxInfo.TaxIdNumber,
+                    },
+                },
+            });
+            subCreateOptions.AddExpand("latest_invoice.payment_intent");
+            subCreateOptions.Customer = customer.Id;
+            subscription = await _stripeAdapter.SubscriptionCreateAsync(subCreateOptions);
+            if (subscription.Status == "incomplete" && subscription.LatestInvoice?.PaymentIntent != null)
+            {
+                if (subscription.LatestInvoice.PaymentIntent.Status == "requires_payment_method")
+                {
+                    await _stripeAdapter.SubscriptionCancelAsync(subscription.Id, new Stripe.SubscriptionCancelOptions());
+                    throw new GatewayException("Payment method was declined.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating customer, walking back operation.");
+            if (customer != null)
+            {
+                await _stripeAdapter.CustomerDeleteAsync(customer.Id);
+            }
+            if (braintreeCustomer != null)
+            {
+                await _btGateway.Customer.DeleteAsync(braintreeCustomer.Id);
+            }
+            throw;
+        }
+
+        org.Gateway = GatewayType.Stripe;
+        org.GatewayCustomerId = customer.Id;
+        org.GatewaySubscriptionId = subscription.Id;
+
+        if (subscription.Status == "incomplete" &&
+            subscription.LatestInvoice?.PaymentIntent?.Status == "requires_action")
+        {
+            org.Enabled = false;
+            return subscription.LatestInvoice.PaymentIntent.ClientSecret;
+        }
+        else
+        {
+            org.Enabled = true;
+            org.ExpirationDate = subscription.CurrentPeriodEnd;
+            return null;
+        }
+    }
+
     private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
     {
         var existingPlan = Utilities.StaticStore.GetPasswordManagerPlan(org.PlanType);
