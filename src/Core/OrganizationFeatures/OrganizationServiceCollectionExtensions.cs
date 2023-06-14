@@ -130,7 +130,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IOrganizationSignUpValidationStrategy, PasswordManagerSignUpValidationStrategy>();
         services.AddScoped<IOrganizationSignUpValidationStrategy, SecretsManagerSignUpValidationStrategy>();
     }
-    
+
     private static void AddOrganizationUpgradeCommands(this IServiceCollection services)
     {
         services.AddScoped<IOrganizationUpgradePlanCommand, OrganizationUpgradePlanCommand>();

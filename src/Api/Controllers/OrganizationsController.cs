@@ -76,7 +76,7 @@ public class OrganizationsController : Controller
         IFeatureService featureService,
         GlobalSettings globalSettings,
         ILicensingService licensingService,
-        IOrganizationSignUpCommand organizationSignUpCommand, 
+        IOrganizationSignUpCommand organizationSignUpCommand,
         IOrganizationUpgradePlanCommand organizationUpgradePlanCommand)
     {
         _organizationRepository = organizationRepository;
@@ -324,7 +324,7 @@ public class OrganizationsController : Controller
                      !model.UseSecretsManager
             ? await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade())
             : await _organizationUpgradePlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
-        
+
         return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
     }
 

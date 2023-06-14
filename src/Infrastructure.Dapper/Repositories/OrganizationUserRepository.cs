@@ -98,7 +98,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return result;
         }
     }
-    
+
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
@@ -111,7 +111,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return result;
         }
     }
-    
+
     public async Task<int> GetOccupiedServiceAccountCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
