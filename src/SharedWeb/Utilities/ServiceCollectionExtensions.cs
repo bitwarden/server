@@ -536,6 +536,24 @@ public static class ServiceCollectionExtensions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
+
+        if (!globalSettings.UnifiedDeployment)
+        {
+            // Trust the X-Forwarded-Host header of the nginx docker container
+            try
+            {
+                var nginxIp = Dns.GetHostEntry("nginx")?.AddressList.FirstOrDefault();
+                if (nginxIp != null)
+                {
+                    options.KnownProxies.Add(nginxIp);
+                }
+            }
+            catch
+            {
+                // Ignore DNS errors
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
         {
             var proxies = globalSettings.KnownProxies.Split(',');

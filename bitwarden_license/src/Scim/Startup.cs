@@ -93,6 +93,12 @@ public class Startup
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
 
+        // Forwarding Headers
+        if (globalSettings.SelfHosted)
+        {
+            app.UseForwardedHeaders(globalSettings);
+        }
+
         if (env.IsDevelopment())
         {
             app.UseDeveloperExceptionPage();
