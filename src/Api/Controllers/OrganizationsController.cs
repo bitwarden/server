@@ -12,12 +12,14 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -50,6 +52,7 @@ public class OrganizationsController : Controller
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly ILicensingService _licensingService;
+    private readonly IOrganizationSignUpCommand _organizationSignUpCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -70,7 +73,8 @@ public class OrganizationsController : Controller
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IFeatureService featureService,
         GlobalSettings globalSettings,
-        ILicensingService licensingService)
+        ILicensingService licensingService,
+        IOrganizationSignUpCommand organizationSignUpCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -91,6 +95,7 @@ public class OrganizationsController : Controller
         _featureService = featureService;
         _globalSettings = globalSettings;
         _licensingService = licensingService;
+        _organizationSignUpCommand = organizationSignUpCommand;
     }
 
     [HttpGet("{id}")]
@@ -241,7 +246,12 @@ public class OrganizationsController : Controller
         }
 
         var organizationSignup = model.ToOrganizationSignup(user);
-        var result = await _organizationService.SignUpAsync(organizationSignup);
+
+        var result = !_featureService.IsEnabled(FeatureFlagKeys.SecretManagerGaBilling, _currentContext) &&
+                     !model.UseSecretsManager
+            ? await _organizationService.SignUpAsync(organizationSignup)
+            : await _organizationSignUpCommand.SignUpAsync(organizationSignup);
+
         return new OrganizationResponseModel(result.Item1);
     }
 
