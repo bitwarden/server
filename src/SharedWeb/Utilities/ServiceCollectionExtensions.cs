@@ -540,13 +540,16 @@ public static class ServiceCollectionExtensions
         if (!globalSettings.UnifiedDeployment)
         {
             // Trust the X-Forwarded-Host header of the nginx docker container
-            try {
+            try
+            {
                 var nginxIp = Dns.GetHostEntry("nginx")?.AddressList.FirstOrDefault();
                 if (nginxIp != null)
                 {
                     options.KnownProxies.Add(nginxIp);
                 }
-            } catch {
+            } 
+            catch
+            {
                 // Ignore DNS errors
             }
         }
