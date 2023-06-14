@@ -547,7 +547,7 @@ public static class ServiceCollectionExtensions
                 {
                     options.KnownProxies.Add(nginxIp);
                 }
-            } 
+            }
             catch
             {
                 // Ignore DNS errors
