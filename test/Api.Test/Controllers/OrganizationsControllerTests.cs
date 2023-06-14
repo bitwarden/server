@@ -11,6 +11,8 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -41,6 +43,8 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IFeatureService _featureService;
     private readonly ILicensingService _licensingService;
+    private readonly IOrganizationSignUpCommand _organizationSignUpCommand;
+    private readonly IOrganizationUpgradePlanCommand _organizationUpgradePlanCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -65,12 +69,15 @@ public class OrganizationsControllerTests : IDisposable
         _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _licensingService = Substitute.For<ILicensingService>();
+        _organizationSignUpCommand = Substitute.For<IOrganizationSignUpCommand>();
+        _organizationUpgradePlanCommand = Substitute.For<IOrganizationUpgradePlanCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
             _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
-            _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService);
+            _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService,
+            _organizationSignUpCommand, _organizationUpgradePlanCommand);
     }
 
     public void Dispose()
