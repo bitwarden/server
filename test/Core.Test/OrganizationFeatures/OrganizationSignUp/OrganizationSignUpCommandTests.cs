@@ -1,5 +1,4 @@
 ﻿using AutoFixture;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;

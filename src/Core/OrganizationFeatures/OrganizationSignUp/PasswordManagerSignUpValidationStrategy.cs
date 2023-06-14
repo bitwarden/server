@@ -1,5 +1,4 @@
-﻿using Bit.Core.Services;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
