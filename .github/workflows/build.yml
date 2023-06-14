@@ -557,7 +557,7 @@ jobs:
               workflow_id: 'build-self-host.yml',
               ref: 'DEVOPS-1204-Migrate_Build_pipeline_to_self-host_repo',
               inputs: {
-                server_branch: '${{ github.event.inputs.tag }}'
+                server_branch: '${{ github.ref }}'
               }
             })
 
