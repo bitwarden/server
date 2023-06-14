@@ -1,12 +1,11 @@
-﻿using AutoFixture.Xunit2;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSignUp;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Core.Exceptions;
 using Xunit;
-using Bit.Core.Models.StaticStore;
 using Bit.Test.Common.AutoFixture;
+using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSignUp;
 
@@ -27,9 +26,9 @@ public class PasswordManagerSignUpValidationStrategyTests
     [Theory]
     [BitAutoData]
     public void Validate_WhenUpgradeRequestsNegativeAdditionalStorage_ThrowsBadRequestException(
-        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider,
-        [Frozen] OrganizationUpgrade upgrade)
+        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider)
     {
+        var upgrade = new OrganizationUpgrade();
         var plan = new Plan { HasAdditionalStorageOption = true, BitwardenProduct = BitwardenProductType.PasswordManager };
         upgrade.AdditionalStorageGb = -5;
 
@@ -39,10 +38,10 @@ public class PasswordManagerSignUpValidationStrategyTests
     [Theory]
     [BitAutoData]
     public void Validate_WhenNoSeatsAfterUpgrade_ThrowsBadRequestException(
-        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider,
-        [Frozen] Plan plan,
-        [Frozen] OrganizationUpgrade upgrade)
+        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider)
     {
+        var plan = new Plan();
+        var upgrade = new OrganizationUpgrade();
         plan.BaseSeats = 5;
         plan.BitwardenProduct = BitwardenProductType.PasswordManager;
         upgrade.AdditionalSeats = -5;
@@ -53,10 +52,10 @@ public class PasswordManagerSignUpValidationStrategyTests
     [Theory]
     [BitAutoData]
     public void Validate_WhenUpgradeRequestsNegativeAdditionalSeats_ThrowsBadRequestException(
-        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider,
-        [Frozen] Plan plan,
-        [Frozen] OrganizationUpgrade upgrade)
+        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider)
     {
+        var plan = new Plan();
+        var upgrade = new OrganizationUpgrade();
         plan.BitwardenProduct = BitwardenProductType.PasswordManager;
         upgrade.AdditionalSeats = -3;
 
@@ -66,10 +65,10 @@ public class PasswordManagerSignUpValidationStrategyTests
     [Theory]
     [BitAutoData]
     public void Validate_WhenPlanDoesNotAllowAdditionalSeatsAndUpgradeRequestsAdditionalSeats_ThrowsBadRequestException(
-        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider,
-        [Frozen] Plan plan,
-        [Frozen] OrganizationUpgrade upgrade)
+        SutProvider<PasswordManagerSignUpValidationStrategy> sutProvider)
     {
+        var plan = new Plan();
+        var upgrade = new OrganizationUpgrade();
         plan.HasAdditionalSeatsOption = false;
         plan.BitwardenProduct = BitwardenProductType.PasswordManager;
         upgrade.AdditionalSeats = 2;
