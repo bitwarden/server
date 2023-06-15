@@ -1,7 +1,9 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Identity;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
+using SendGrid.Helpers.Errors.Model;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.Projects;
 
@@ -21,20 +23,44 @@ public class CreateProjectCommand : ICreateProjectCommand
         _projectRepository = projectRepository;
     }
 
-    public async Task<Project> CreateAsync(Project project, Guid userId)
+    public async Task<Project> CreateAsync(Project project, Guid id, ClientType clientType)
     {
+        if(clientType != ClientType.User && clientType != ClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
+
         var createdProject = await _projectRepository.CreateAsync(project);
 
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId,
-            userId);
-        var accessPolicy = new UserProjectAccessPolicy()
+            id);
+
+        if(clientType == ClientType.User)
         {
-            OrganizationUserId = orgUser.Id,
-            GrantedProjectId = createdProject.Id,
-            Read = true,
-            Write = true,
-        };
-        await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
+            var accessPolicy = new UserProjectAccessPolicy()
+            {
+                OrganizationUserId = orgUser.Id,
+                GrantedProjectId = createdProject.Id,
+                Read = true,
+                Write = true,
+            };
+
+            await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
+
+        }
+        else if(clientType ==ClientType.ServiceAccount)
+        {
+            var serviceAccountProjectAccessPolicy = new ServiceAccountProjectAccessPolicy()
+            {
+                ServiceAccountId = id,
+                GrantedProjectId = createdProject.Id,
+                Read = true,
+                Write = true,
+            };
+
+            await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { serviceAccountProjectAccessPolicy });
+        }
+
         return createdProject;
     }
 }
