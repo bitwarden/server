@@ -103,7 +103,6 @@ public class ProjectAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task CanCreateProject_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)

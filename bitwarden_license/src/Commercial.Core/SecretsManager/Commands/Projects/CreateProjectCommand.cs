@@ -4,6 +4,7 @@ using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Context;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.Projects;
 
@@ -12,15 +13,19 @@ public class CreateProjectCommand : ICreateProjectCommand
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ICurrentContext _currentContext;
+
 
     public CreateProjectCommand(
         IAccessPolicyRepository accessPolicyRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IProjectRepository projectRepository)
+        IProjectRepository projectRepository,
+        ICurrentContext currentContext)
     {
         _accessPolicyRepository = accessPolicyRepository;
         _organizationUserRepository = organizationUserRepository;
         _projectRepository = projectRepository;
+        _currentContext = currentContext;
     }
 
     public async Task<Project> CreateAsync(Project project, Guid id, ClientType clientType)
