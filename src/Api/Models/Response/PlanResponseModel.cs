@@ -105,7 +105,7 @@ public class PlanResponseModel : ResponseModel
     public decimal SeatPrice { get; set; }
     public decimal AdditionalStoragePricePerGb { get; set; }
     public decimal PremiumAccessOptionPrice { get; set; }
-    
+
     public decimal? AdditionalPricePerServiceAccount { get; set; }
     public short? BaseServiceAccount { get; set; }
     public short? MaxServiceAccount { get; set; }
