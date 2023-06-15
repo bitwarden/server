@@ -11,6 +11,10 @@ using Bit.Core.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade;
+using Bit.Core.OrganizationFeatures.OrganizationPlanUpgrade.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationSignUp;
+using Bit.Core.OrganizationFeatures.OrganizationSignUp.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -38,6 +42,8 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
+        services.AddOrganizationSignUpCommands();
+        services.AddOrganizationUpgradeCommands();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -116,5 +122,19 @@ public static class OrganizationServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>>())
         );
+    }
+
+    private static void AddOrganizationSignUpCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationSignUpCommand, OrganizationSignUpCommand>();
+        services.AddScoped<IOrganizationSignUpValidationStrategy, PasswordManagerSignUpValidationStrategy>();
+        services.AddScoped<IOrganizationSignUpValidationStrategy, SecretsManagerSignUpValidationStrategy>();
+    }
+
+    private static void AddOrganizationUpgradeCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IOrganizationUpgradePlanCommand, OrganizationUpgradePlanCommand>();
+        services.AddScoped<IOrganizationUpgradeQuery, OrganizationUpgradeQuery>();
+        services.AddScoped<IValidateUpgradeCommand, ValidateUpgradeCommand>();
     }
 }
