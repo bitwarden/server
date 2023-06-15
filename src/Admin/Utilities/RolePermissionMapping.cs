@@ -138,6 +138,7 @@ public static class RolePermissionMapping
                 Permission.User_BillingInformation_DownloadInvoice,
                 Permission.User_BillingInformation_CreateEditTransaction,
                 Permission.User_Premium_View,
+                Permission.User_Premium_Edit,
                 Permission.User_Licensing_View,
                 Permission.User_Billing_View,
                 Permission.User_Billing_Edit,
