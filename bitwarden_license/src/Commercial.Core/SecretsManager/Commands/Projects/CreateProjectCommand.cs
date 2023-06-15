@@ -1,10 +1,10 @@
-﻿using Bit.Core.Identity;
+﻿using Bit.Core.Context;
+using Bit.Core.Exceptions;
+using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Exceptions;
-using Bit.Core.Context;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.Projects;
 
@@ -30,14 +30,14 @@ public class CreateProjectCommand : ICreateProjectCommand
 
     public async Task<Project> CreateAsync(Project project, Guid id, ClientType clientType)
     {
-        if(clientType != ClientType.User && clientType != ClientType.ServiceAccount)
+        if (clientType != ClientType.User && clientType != ClientType.ServiceAccount)
         {
             throw new NotFoundException();
         }
 
         var createdProject = await _projectRepository.CreateAsync(project);
 
-        if(clientType == ClientType.User)
+        if (clientType == ClientType.User)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId, id);
 
@@ -52,7 +52,7 @@ public class CreateProjectCommand : ICreateProjectCommand
             await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> { accessPolicy });
 
         }
-        else if(clientType ==ClientType.ServiceAccount)
+        else if (clientType == ClientType.ServiceAccount)
         {
             var serviceAccountProjectAccessPolicy = new ServiceAccountProjectAccessPolicy()
             {
