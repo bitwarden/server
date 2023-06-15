@@ -3,7 +3,7 @@ using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using SendGrid.Helpers.Errors.Model;
+using Bit.Core.Exceptions;
 
 namespace Bit.Commercial.Core.SecretsManager.Commands.Projects;
 
@@ -32,11 +32,10 @@ public class CreateProjectCommand : ICreateProjectCommand
 
         var createdProject = await _projectRepository.CreateAsync(project);
 
-        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId,
-            id);
-
         if(clientType == ClientType.User)
         {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(createdProject.OrganizationId, id);
+
             var accessPolicy = new UserProjectAccessPolicy()
             {
                 OrganizationUserId = orgUser.Id,

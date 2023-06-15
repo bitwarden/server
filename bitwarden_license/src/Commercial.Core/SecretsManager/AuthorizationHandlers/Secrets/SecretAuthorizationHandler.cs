@@ -71,7 +71,8 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => (await _projectRepository.AccessToProjectAsync(project!.Id, userId, accessClient))
                 .Write,
-            AccessClientType.ServiceAccount => true,
+            AccessClientType.ServiceAccount => (await _projectRepository.AccessToProjectAsync(project!.Id, userId, accessClient))
+                .Write,
             _ => false,
         };
 
