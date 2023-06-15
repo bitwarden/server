@@ -81,7 +81,7 @@ public static class SecretsManagerPlanStore
                 StripeStoragePlanId = "service-account-annually",
                 BasePrice = 0,
                 SeatPrice = 120,
-                AdditionalPricePerServiceAccount = 0.5M,
+                AdditionalPricePerServiceAccount = 6,
                 AllowSeatAutoscale = true,
             },
             new Plan
@@ -156,7 +156,7 @@ public static class SecretsManagerPlanStore
                 StripeStoragePlanId = "service-account-annually",
                 BasePrice = 0,
                 SeatPrice = 48,
-                AdditionalPricePerServiceAccount = 0.5M,
+                AdditionalPricePerServiceAccount = 6,
                 AllowSeatAutoscale = true,
             },
             new Plan
