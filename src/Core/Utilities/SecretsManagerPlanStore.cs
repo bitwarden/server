@@ -80,8 +80,8 @@ public static class SecretsManagerPlanStore
                 StripeSeatPlanId = "sm-enterprise-seat-annually",
                 StripeStoragePlanId = "service-account-annually",
                 BasePrice = 0,
-                SeatPrice = 10,
-                AdditionalPricePerServiceAccount = 0.5M,
+                SeatPrice = 120,
+                AdditionalPricePerServiceAccount = 6,
                 AllowSeatAutoscale = true,
             },
             new Plan
@@ -155,8 +155,8 @@ public static class SecretsManagerPlanStore
                 StripeSeatPlanId = "sm-teams-seat-annually",
                 StripeStoragePlanId = "service-account-annually",
                 BasePrice = 0,
-                SeatPrice = 4,
-                AdditionalPricePerServiceAccount = 0.5M,
+                SeatPrice = 48,
+                AdditionalPricePerServiceAccount = 6,
                 AllowSeatAutoscale = true,
             },
             new Plan
@@ -169,7 +169,7 @@ public static class SecretsManagerPlanStore
                 DescriptionLocalizationKey = "planDescFree",
                 BaseSeats = 2,
                 BaseServiceAccount = 3,
-                MaxCollections = 2,
+                MaxProjects = 3,
                 MaxUsers = 2,
                 MaxServiceAccount = 3,
                 UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
