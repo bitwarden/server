@@ -169,7 +169,7 @@ public static class SecretsManagerPlanStore
                 DescriptionLocalizationKey = "planDescFree",
                 BaseSeats = 2,
                 BaseServiceAccount = 3,
-                MaxCollections = 2,
+                MaxProjects = 3,
                 MaxUsers = 2,
                 MaxServiceAccount = 3,
                 UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
