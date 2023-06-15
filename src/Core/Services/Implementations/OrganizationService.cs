@@ -21,6 +21,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Stripe;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Services;
 
@@ -184,6 +185,9 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Existing plan not found.");
         }
+        var useSecretsManager = organization.UseSecretsManager
+            ? organization.UseSecretsManager
+            : upgrade.UseSecretsManager;
         
         string paymentIntentClientSecret = null;
         var success = true;
@@ -210,10 +214,6 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
             }
 
-            var useSecretsManager = organization.UseSecretsManager
-                ? organization.UseSecretsManager
-                : upgrade.UseSecretsManager;
-            
             ValidateOrganizationUpgradeParameters(newPlan, upgrade,useSecretsManager);
 
             var newPlanSeats = (short)(newPlan.BaseSeats +
@@ -231,7 +231,7 @@ public class OrganizationService : IOrganizationService
                 }
             }
 
-            if (upgrade.UseSecretsManager || organization.UseSecretsManager)
+            if (useSecretsManager)
             {
                 var newPlanSmSeats = (short)(newPlan.BaseSeats + (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSmSeats : 0));
                 if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newPlanSmSeats && 
@@ -353,7 +353,11 @@ public class OrganizationService : IOrganizationService
 
             if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
-                paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlans,
+                var organizationUpgradePlan = useSecretsManager
+                    ? newPlans
+                    : newPlans.Where(x => x.BitwardenProduct == BitwardenProductType.PasswordManager).Take(1).ToList();
+                
+                paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, organizationUpgradePlan,
                     upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
                 success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
             }
@@ -402,7 +406,7 @@ public class OrganizationService : IOrganizationService
         organization.PrivateKey = upgrade.PrivateKey;
         organization.UsePasswordManager = true;
         
-        if ((secretsManagerPlan != null && upgrade.UseSecretsManager) || (secretsManagerPlan != null && organization.UseSecretsManager))
+        if (secretsManagerPlan != null && useSecretsManager)
         {
             organization.SmSeats = (short)(secretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats);
             organization.SmServiceAccounts = (int)(secretsManagerPlan.BaseServiceAccount + upgrade.AdditionalServiceAccount);
@@ -668,17 +672,7 @@ public class OrganizationService : IOrganizationService
         var plans = StaticStore.Plans.Where(p => p.Type == signup.Plan).ToList();
         foreach (var plan in plans)
         {
-            if (plan is not { LegacyYear: null })
-            {
-                throw new BadRequestException("Invalid plan selected.");
-            }
-
-            if (plan.Disabled)
-            {
-                throw new BadRequestException("Plan not found.");
-            }
-            
-            ValidateOrganizationUpgradeParameters(plan, signup,signup.UseSecretsManager);
+            ValidateOrganizationUpgradeParameters(plan, signup, signup.UseSecretsManager);
         }
 
         if (!provider)
@@ -747,8 +741,12 @@ public class OrganizationService : IOrganizationService
         }
         else if (passwordManagerPlan.Type != PlanType.Free)
         {
+            var purchaseOrganizationPlan = signup.UseSecretsManager
+                ? plans
+                : plans.Where(x => x.BitwardenProduct == BitwardenProductType.PasswordManager).Take(1).ToList();
+
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                signup.PaymentToken, plans, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                 signup.PremiumAccessAddon, signup.TaxInfo, provider);
         }
 
@@ -2139,78 +2137,107 @@ public class OrganizationService : IOrganizationService
 
     private void ValidateOrganizationUpgradeParameters(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade,bool useSecretsManager)
     {
-        if (plan.BitwardenProduct == BitwardenProductType.PasswordManager)
+        switch (plan.BitwardenProduct)
         {
-            if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
-            {
-                throw new BadRequestException("Plan does not allow additional storage.");
-            }
+            case BitwardenProductType.PasswordManager:
+                ValidatePasswordManagerPlan(plan, upgrade);
+                break;
+            case BitwardenProductType.SecretsManager when useSecretsManager:
+                ValidateSecretsManagerPlan(plan, upgrade);
+                break;
+        }
+    }
 
-            if (upgrade.AdditionalStorageGb < 0)
-            {
-                throw new BadRequestException("You can't subtract storage!");
-            }
-
-            if (!plan.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
-            {
-                throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
-            }
-
-            if (plan.BaseSeats + upgrade.AdditionalSeats <= 0)
-            {
-                throw new BadRequestException("You do not have any seats!");
-            }
-
-            if (upgrade.AdditionalSeats < 0)
-            {
-                throw new BadRequestException("You can't subtract seats!");
-            }
-
-            if (!plan.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
-            {
-                throw new BadRequestException("Plan does not allow additional users.");
-            }
-
-            if (plan.HasAdditionalSeatsOption && plan.MaxAdditionalSeats.HasValue &&
-                upgrade.AdditionalSeats > plan.MaxAdditionalSeats.Value)
-            {
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                                              $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
-            }
+    private static void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    {
+        if (plan is not { LegacyYear: null })
+        {
+            throw new BadRequestException("Invalid Password Manager plan selected.");
         }
 
-        if (plan.BitwardenProduct == BitwardenProductType.SecretsManager && useSecretsManager)
+        if (plan.Disabled)
         {
+            throw new BadRequestException("Password Manager Plan not found.");
+        }
+            
+        if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
+        {
+            throw new BadRequestException("Plan does not allow additional storage.");
+        }
 
-            if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccount > 0)
-            {
-                throw new BadRequestException("Plan does not allow additional service account.");
-            }
+        if (upgrade.AdditionalStorageGb < 0)
+        {
+            throw new BadRequestException("You can't subtract storage!");
+        }
 
-            if (upgrade.AdditionalServiceAccount < 0)
-            {
-                throw new BadRequestException("You can't subtract service account!");
-            }
+        if (!plan.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
+        {
+            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
+        }
 
-            if (plan.BaseSeats + upgrade.AdditionalSmSeats <= 0)
-            {
-                throw new BadRequestException("You do not have any seats!");
-            }
+        if (plan.BaseSeats + upgrade.AdditionalSeats <= 0)
+        {
+            throw new BadRequestException("You do not have any seats!");
+        }
 
-            if (upgrade.AdditionalSmSeats < 0)
-            {
-                throw new BadRequestException("You can't subtract secrets manager seats!");
-            }
+        if (upgrade.AdditionalSeats < 0)
+        {
+            throw new BadRequestException("You can't subtract seats!");
+        }
 
-            switch (plan.HasAdditionalSeatsOption)
-            {
-                case false when upgrade.AdditionalSmSeats > 0:
-                    throw new BadRequestException("Plan does not allow additional users.");
-                case true when plan.MaxAdditionalSeats.HasValue &&
-                               upgrade.AdditionalSmSeats > plan.MaxAdditionalSeats.Value:
-                    throw new BadRequestException($"Selected plan allows a maximum of " +
-                                                  $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
-            }
+        if (!plan.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
+        {
+            throw new BadRequestException("Plan does not allow additional users.");
+        }
+
+        if (plan.HasAdditionalSeatsOption && plan.MaxAdditionalSeats.HasValue &&
+            upgrade.AdditionalSeats > plan.MaxAdditionalSeats.Value)
+        {
+            throw new BadRequestException($"Selected plan allows a maximum of " +
+                                          $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+        }
+    }
+
+    private static void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    {
+        if (plan is not { LegacyYear: null })
+        {
+            throw new BadRequestException("Invalid Secrets Manager plan selected.");
+        }
+
+        if (plan.Disabled)
+        {
+            throw new BadRequestException("Secrets Manager Plan not found.");
+        }
+            
+        if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccount > 0)
+        {
+            throw new BadRequestException("Plan does not allow additional service account.");
+        }
+
+        if (upgrade.AdditionalServiceAccount < 0)
+        {
+            throw new BadRequestException("You can't subtract service account!");
+        }
+
+        if (plan.BaseSeats + upgrade.AdditionalSmSeats <= 0)
+        {
+            throw new BadRequestException("You do not have any seats!");
+        }
+
+        if (upgrade.AdditionalSmSeats < 0)
+        {
+            throw new BadRequestException("You can't subtract secrets manager seats!");
+        }
+
+        switch (plan.HasAdditionalSeatsOption)
+        {
+            case false when upgrade.AdditionalSmSeats > 0:
+                throw new BadRequestException("Plan does not allow additional users.");
+            case true when plan.MaxAdditionalSeats.HasValue &&
+                           upgrade.AdditionalSmSeats > plan.MaxAdditionalSeats.Value:
+                throw new BadRequestException($"Selected plan allows a maximum of " +
+                                              $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
         }
     }
 
