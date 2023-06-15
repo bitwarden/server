@@ -98,7 +98,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return result;
         }
     }
-    
+
     public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))

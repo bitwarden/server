@@ -188,7 +188,7 @@ public class OrganizationService : IOrganizationService
         var useSecretsManager = organization.UseSecretsManager
             ? organization.UseSecretsManager
             : upgrade.UseSecretsManager;
-        
+
         string paymentIntentClientSecret = null;
         var success = true;
         var newPlans = StaticStore.Plans.Where(p => p.Type == upgrade.Plan && !p.Disabled).ToList();
@@ -214,12 +214,12 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
             }
 
-            ValidateOrganizationUpgradeParameters(newPlan, upgrade,useSecretsManager);
+            ValidateOrganizationUpgradeParameters(newPlan, upgrade, useSecretsManager);
 
             var newPlanSeats = (short)(newPlan.BaseSeats +
                                        (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
-            
-            if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats && 
+
+            if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats &&
                 newPlan.BitwardenProduct == BitwardenProductType.PasswordManager)
             {
                 var occupiedSeats =
@@ -234,7 +234,7 @@ public class OrganizationService : IOrganizationService
             if (useSecretsManager)
             {
                 var newPlanSmSeats = (short)(newPlan.BaseSeats + (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSmSeats : 0));
-                if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newPlanSmSeats && 
+                if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newPlanSmSeats &&
                     newPlan.BitwardenProduct == BitwardenProductType.SecretsManager)
                 {
                     var occupiedSmSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
@@ -244,7 +244,7 @@ public class OrganizationService : IOrganizationService
                                                       $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
                     }
                 }
-            
+
                 if (newPlan.BaseServiceAccount != null)
                 {
                     var newPlanServiceAccount = (short)(newPlan.BaseServiceAccount + (newPlan.HasAdditionalServiceAccountOption ? upgrade.AdditionalServiceAccount : 0));
@@ -356,7 +356,7 @@ public class OrganizationService : IOrganizationService
                 var organizationUpgradePlan = useSecretsManager
                     ? newPlans
                     : newPlans.Where(x => x.BitwardenProduct == BitwardenProductType.PasswordManager).Take(1).ToList();
-                
+
                 paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, organizationUpgradePlan,
                     upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
                 success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
@@ -372,7 +372,7 @@ public class OrganizationService : IOrganizationService
             newPlans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.PasswordManager);
         var secretsManagerPlan =
             newPlans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.SecretsManager);
-        
+
         organization.BusinessName = upgrade.BusinessName;
         organization.PlanType = passwordManagerPlan.Type;
         organization.Seats = (short)(passwordManagerPlan.BaseSeats + upgrade.AdditionalSeats);
@@ -405,14 +405,14 @@ public class OrganizationService : IOrganizationService
         organization.PublicKey = upgrade.PublicKey;
         organization.PrivateKey = upgrade.PrivateKey;
         organization.UsePasswordManager = true;
-        
+
         if (secretsManagerPlan != null && useSecretsManager)
         {
             organization.SmSeats = (short)(secretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats);
             organization.SmServiceAccounts = (int)(secretsManagerPlan.BaseServiceAccount + upgrade.AdditionalServiceAccount);
             organization.UseSecretsManager = true;
         }
-        
+
         await ReplaceAndUpdateCacheAsync(organization);
         if (success)
         {
@@ -681,7 +681,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var passwordManagerPlan = plans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.PasswordManager);
-        
+
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription..
@@ -728,7 +728,7 @@ public class OrganizationService : IOrganizationService
                 (short)(secretsManagerPlan.BaseServiceAccount + signup.AdditionalServiceAccount);
             organization.UseSecretsManager = true;
         }
-        
+
 
         if (passwordManagerPlan.Type == PlanType.Free && !provider)
         {
@@ -761,7 +761,7 @@ public class OrganizationService : IOrganizationService
                 Storage = returnValue.Item1.MaxStorageGb,
                 SmSeats = returnValue.Item1.SmSeats,
                 ServiceAccounts = returnValue.Item1.SmServiceAccounts
-                
+
             });
         return returnValue;
     }
@@ -2135,7 +2135,7 @@ public class OrganizationService : IOrganizationService
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private void ValidateOrganizationUpgradeParameters(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade,bool useSecretsManager)
+    private void ValidateOrganizationUpgradeParameters(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade, bool useSecretsManager)
     {
         switch (plan.BitwardenProduct)
         {
@@ -2159,7 +2159,7 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Password Manager Plan not found.");
         }
-            
+
         if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
         {
             throw new BadRequestException("Plan does not allow additional storage.");
@@ -2209,7 +2209,7 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Secrets Manager Plan not found.");
         }
-            
+
         if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccount > 0)
         {
             throw new BadRequestException("Plan does not allow additional service account.");
