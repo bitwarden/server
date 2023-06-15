@@ -45,7 +45,7 @@ public class StripePaymentService : IPaymentService
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-        string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
+        string paymentToken, List<StaticStore.Plan> plans, short additionalStorageGb,
         int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false)
     {
         Braintree.Customer braintreeCustomer = null;
@@ -110,7 +110,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
 
         Stripe.Customer customer = null;
         Stripe.Subscription subscription;
@@ -221,7 +221,7 @@ public class StripePaymentService : IPaymentService
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
-    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
+    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, List<StaticStore.Plan> plans,
         short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
@@ -255,7 +255,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
         var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,

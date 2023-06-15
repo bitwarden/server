@@ -98,6 +98,32 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
             return result;
         }
     }
+    
+    public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.ExecuteScalarAsync<int>(
+                "[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
+    public async Task<int> GetOccupiedServiceAccountCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.ExecuteScalarAsync<int>(
+                "[dbo].[ServiceAccount_ReadCountByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
 
     public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
         bool onlyRegisteredUsers)

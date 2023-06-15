@@ -47,6 +47,7 @@ public class Plan
     public string StripePlanId { get; set; }
     public string StripeSeatPlanId { get; set; }
     public string StripeStoragePlanId { get; set; }
+    public string StripeServiceAccountPlanId { get; set; }
     public string StripePremiumAccessPlanId { get; set; }
     public decimal BasePrice { get; set; }
     public decimal SeatPrice { get; set; }
