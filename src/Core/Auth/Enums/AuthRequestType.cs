@@ -3,5 +3,6 @@
 public enum AuthRequestType : byte
 {
     AuthenticateAndUnlock = 0,
-    Unlock = 1
+    Unlock = 1,
+    AdminApproval = 2,
 }
