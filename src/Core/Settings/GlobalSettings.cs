@@ -124,6 +124,7 @@ public class GlobalSettings : IGlobalSettings
     {
         private readonly GlobalSettings _globalSettings;
 
+        private string _cloudVault;
         private string _api;
         private string _identity;
         private string _admin;
@@ -145,6 +146,12 @@ public class GlobalSettings : IGlobalSettings
 
         public string Vault { get; set; }
         public string VaultWithHash => $"{Vault}/#";
+
+        public string CloudVault
+        {
+            get => string.IsNullOrWhiteSpace(_cloudVault) ? _globalSettings.SelfHosted ? "https://vault.bitwarden.com" : Vault : _cloudVault;
+            set => _cloudVault = value;
+        }
 
         public string Api
         {
