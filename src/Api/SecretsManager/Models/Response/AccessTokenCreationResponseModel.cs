@@ -23,8 +23,8 @@ public class AccessTokenCreationResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
-    public string Name { get; set; }
-    public string ClientSecret { get; set; }
+    public string? Name { get; set; }
+    public string? ClientSecret { get; set; }
     public DateTime? ExpireAt { get; set; }
     public DateTime CreationDate { get; set; }
     public DateTime RevisionDate { get; set; }
