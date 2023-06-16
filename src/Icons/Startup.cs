@@ -1,4 +1,5 @@
 ﻿using System.Globalization;
+using System.Net;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Icons.Services;
@@ -29,6 +30,18 @@ public class Startup
         var iconsSettings = new IconsSettings();
         ConfigurationBinder.Bind(Configuration.GetSection("IconsSettings"), iconsSettings);
         services.AddSingleton(s => iconsSettings);
+
+        // Http client
+        services.AddHttpClient("Icons", client =>
+        {
+            client.Timeout = TimeSpan.FromSeconds(20);
+            client.MaxResponseContentBufferSize = 5000000; // 5 MB
+
+        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+        {
+            AllowAutoRedirect = false,
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+        });
 
         // Cache
         services.AddMemoryCache(options =>
