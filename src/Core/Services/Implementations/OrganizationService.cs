@@ -21,7 +21,6 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Stripe;
-using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Services;
 
