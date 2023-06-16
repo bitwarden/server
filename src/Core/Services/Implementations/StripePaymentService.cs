@@ -131,7 +131,7 @@ public class StripePaymentService : IPaymentService
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
                             Name = org.SubscriberType(),
-                            Value = org.SubscriberName(),
+                            Value = GetFirstThirtyCharacters(org.SubscriberName()),
                         },
                     },
                 },
@@ -201,7 +201,7 @@ public class StripePaymentService : IPaymentService
 
     private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
     {
-        var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
+        var existingPlan = Utilities.StaticStore.GetPasswordManagerPlan(org.PlanType);
         var sponsoredPlan = sponsorship != null ?
             Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
             null;
@@ -443,7 +443,7 @@ public class StripePaymentService : IPaymentService
                         new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                         {
                             Name = user.SubscriberType(),
-                            Value = user.SubscriberName(),
+                            Value = GetFirstThirtyCharacters(user.SubscriberName()),
                         },
                     }
                 },
@@ -1358,7 +1358,7 @@ public class StripePaymentService : IPaymentService
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
                                 Name = subscriber.SubscriberType(),
-                                Value = subscriber.SubscriberName(),
+                                Value = GetFirstThirtyCharacters(subscriber.SubscriberName()),
                             },
                         }
                     },
@@ -1438,7 +1438,7 @@ public class StripePaymentService : IPaymentService
                             new Stripe.CustomerInvoiceSettingsCustomFieldOptions()
                             {
                                 Name = subscriber.SubscriberType(),
-                                Value = subscriber.SubscriberName(),
+                                Value = GetFirstThirtyCharacters(subscriber.SubscriberName())
                             },
                         }
                     },
@@ -1816,5 +1816,23 @@ public class StripePaymentService : IPaymentService
         return invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
             .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
 
+    }
+
+    // We are taking only first 30 characters of the SubscriberName because stripe provide
+    // for 30 characters  for custom_fields,see the link: https://stripe.com/docs/api/invoices/create
+    public static string GetFirstThirtyCharacters(string subscriberName)
+    {
+        if (string.IsNullOrWhiteSpace(subscriberName))
+        {
+            return "";
+        }
+        else if (subscriberName.Length <= 30)
+        {
+            return subscriberName;
+        }
+        else
+        {
+            return subscriberName.Substring(0, 30);
+        }
     }
 }

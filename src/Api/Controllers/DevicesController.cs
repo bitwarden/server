@@ -91,6 +91,22 @@ public class DevicesController : Controller
         return response;
     }
 
+    [HttpPut("{identifier}/keys")]
+    [HttpPost("{identifier}/keys")]
+    public async Task<DeviceResponseModel> PutKeys(string identifier, [FromBody] DeviceKeysRequestModel model)
+    {
+        var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+        if (device == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _deviceService.SaveAsync(model.ToDevice(device));
+
+        var response = new DeviceResponseModel(device);
+        return response;
+    }
+
     [HttpPut("identifier/{identifier}/token")]
     [HttpPost("identifier/{identifier}/token")]
     public async Task PutToken(string identifier, [FromBody] DeviceTokenRequestModel model)

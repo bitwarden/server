@@ -154,9 +154,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
         return scope.ServiceProvider.GetRequiredService<DatabaseContext>();
     }
 
-    public T GetService<T>()
+    public TS GetService<TS>()
     {
         var scope = Services.CreateScope();
-        return scope.ServiceProvider.GetRequiredService<T>();
+        return scope.ServiceProvider.GetRequiredService<TS>();
     }
 }

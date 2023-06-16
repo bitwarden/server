@@ -10,7 +10,6 @@
   "profiles": {
     "IIS Express": {
       "commandName": "IISExpress",
-      "launchBrowser": false,
       "launchUrl": "bitwarden.com/icon.png",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
@@ -18,12 +17,11 @@
     },
     "Icons": {
       "commandName": "Project",
-      "launchBrowser": false,
       "launchUrl": "bitwarden.com/icon.png",
+      "applicationUrl": "http://localhost:50024/",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      },
-      "applicationUrl": "http://localhost:50024/"
+      }
     }
   }
 }
