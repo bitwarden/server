@@ -90,11 +90,6 @@ public class IconHttpRequest
         using var responseForRedirect = response;
         var redirectUri = DetermineRedirectUri(responseForRedirect.Headers.Location, originalIconUri);
 
-        if (!IconUri.TryCreate(redirectUri, out var redirectIconUri) || !redirectIconUri!.IsValid)
-        {
-            return NotFound;
-        }
-
         return await new IconHttpRequest(redirectUri, _logger, _httpClientFactory, _redirectsCount + 1).FetchAsync();
     }
 

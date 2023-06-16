@@ -17,6 +17,12 @@ public class IconUri
     {
         get
         {
+            // Prevent direct access to any ip
+            if (IPAddress.TryParse(Host, out _))
+            {
+                return false;
+            }
+
             // Prevent non-http(s) and non-default ports
             if ((InnerUri.Scheme != "http" && InnerUri.Scheme != "https") || !InnerUri.IsDefaultPort)
             {

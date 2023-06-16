@@ -1,6 +1,6 @@
 ﻿#nullable enable
 
-using System.Net;
+using Bit.Icons.Extensions;
 using Bit.Icons.Models;
 
 namespace Bit.Icons.Services;
@@ -18,11 +18,6 @@ public class IconFetchingService : IIconFetchingService
 
     public async Task<Icon?> GetIconAsync(string domain)
     {
-        if (string.IsNullOrWhiteSpace(domain) || IPAddress.TryParse(domain, out _))
-        {
-            return null;
-        }
-
         var domainIcons = await DomainIcons.Fetch(domain, _logger, _httpClientFactory);
         var result = domainIcons.Where(result => result != null).FirstOrDefault();
         return result ?? await GetFaviconAsync(domain);
@@ -31,12 +26,17 @@ public class IconFetchingService : IIconFetchingService
     private async Task<Icon?> GetFaviconAsync(string domain)
     {
         // Fall back to favicon
-        var faviconUri = new UriBuilder
+        var faviconUriBuilder = new UriBuilder
         {
             Scheme = "https",
             Host = domain,
             Path = "/favicon.ico"
-        }.Uri;
-        return await new IconLink(faviconUri).FetchAsync(_logger, _httpClientFactory);
+        };
+
+        if (faviconUriBuilder.TryBuild(out var faviconUri))
+        {
+            return await new IconLink(faviconUri!).FetchAsync(_logger, _httpClientFactory);
+        }
+        return null;
     }
 }
