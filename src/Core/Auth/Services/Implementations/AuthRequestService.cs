@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Exceptions;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Context;
@@ -119,13 +120,17 @@ public class AuthRequestService : IAuthRequestService
             throw new DuplicateAuthRequestException();
         }
 
-        var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, userId);
-        if (device == null)
+        // Admin approval responses are not tied to a specific device, so we don't need to validate it.
+        if (authRequest.Type != AuthRequestType.AdminApproval)
         {
-            throw new BadRequestException("Invalid device.");
+            var device = await _deviceRepository.GetByIdentifierAsync(model.DeviceIdentifier, userId);
+            if (device == null)
+            {
+                throw new BadRequestException("Invalid device.");
+            }
+            authRequest.ResponseDeviceId = device.Id;
         }
 
-        authRequest.ResponseDeviceId = device.Id;
         authRequest.ResponseDate = DateTime.UtcNow;
         authRequest.Approved = model.RequestApproved;
 
