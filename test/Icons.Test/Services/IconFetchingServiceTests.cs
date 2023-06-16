@@ -1,10 +1,9 @@
 ﻿using Bit.Icons.Services;
-using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace Bit.Icons.Test.Services;
 
-public class IconFetchingServiceTests : ServiceTestBase
+public class IconFetchingServiceTests : ServiceTestBase<IconFetchingService>
 {
     [Theory]
     [InlineData("www.google.com")] // https site
@@ -34,5 +33,5 @@ public class IconFetchingServiceTests : ServiceTestBase
     }
 
     private IconFetchingService BuildSut() =>
-        new IconFetchingService(GetService<ILogger<IIconFetchingService>>(), GetService<IHttpClientFactory>());
+        GetService<IconFetchingService>();
 }

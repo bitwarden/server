@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.Collections;
+using AngleSharp.Html.Parser;
 using Bit.Icons.Extensions;
 using Bit.Icons.Services;
 
@@ -30,15 +31,15 @@ public class DomainIcons : IEnumerable<Icon>
         Domain = domain;
     }
 
-    public static async Task<DomainIcons> Fetch(string domain, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory)
+    public static async Task<DomainIcons> FetchAsync(string domain, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IHtmlParser parser)
     {
         var pageIcons = new DomainIcons(domain, logger, httpClientFactory);
-        await pageIcons.FetchIconsAsync();
+        await pageIcons.FetchIconsAsync(parser);
         return pageIcons;
     }
 
 
-    private async Task FetchIconsAsync()
+    private async Task FetchIconsAsync(IHtmlParser parser)
     {
         if (!Uri.TryCreate($"https://{Domain}", UriKind.Absolute, out var uri))
         {
@@ -53,7 +54,7 @@ public class DomainIcons : IEnumerable<Icon>
         {
             if (response.IsSuccessStatusCode)
             {
-                _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain));
+                _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain, parser));
                 return;
             }
         }
@@ -64,7 +65,7 @@ public class DomainIcons : IEnumerable<Icon>
         {
             if (response.IsSuccessStatusCode)
             {
-                _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain));
+                _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain, parser));
                 return;
             }
         }
@@ -78,7 +79,7 @@ public class DomainIcons : IEnumerable<Icon>
             using var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory);
             if (response.IsSuccessStatusCode)
             {
-                _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain));
+                _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain, parser));
                 return;
             }
         }
@@ -89,7 +90,7 @@ public class DomainIcons : IEnumerable<Icon>
             using var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory);
             if (response.IsSuccessStatusCode)
             {
-                _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain));
+                _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain, parser));
                 return;
             }
         }

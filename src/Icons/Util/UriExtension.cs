@@ -1,8 +1,6 @@
 ﻿
 #nullable enable
 
-using IdentityServer4.Extensions;
-
 namespace Bit.Icons.Extensions;
 
 public static class UriExtension
@@ -26,7 +24,7 @@ public static class UriExtension
         => uri.ConcatPath(paths.AsEnumerable());
     public static Uri ConcatPath(this Uri uri, IEnumerable<string> paths)
     {
-        if (paths.IsNullOrEmpty())
+        if (!paths.Any())
         {
             return uri;
         }

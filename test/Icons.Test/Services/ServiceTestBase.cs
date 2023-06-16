@@ -1,4 +1,4 @@
-﻿using System.Net;
+﻿using Bit.Icons.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -6,31 +6,35 @@ namespace Bit.Icons.Test.Services;
 
 public class ServiceTestBase
 {
-    private ServiceProvider _provider;
+    internal ServiceCollection _services = new();
+    internal ServiceProvider _provider;
 
     public ServiceTestBase()
     {
-        var services = new ServiceCollection();
-        services.AddLogging(b =>
+        _services = new ServiceCollection();
+        _services.AddLogging(b =>
         {
             b.ClearProviders();
             b.AddDebug();
         });
 
-        services.AddHttpClient("Icons", client =>
-            {
-                client.Timeout = TimeSpan.FromSeconds(20);
-                client.MaxResponseContentBufferSize = 5000000; // 5 MB
+        _services.ConfigureHttpClients();
+        _services.AddHtmlParsing();
 
-            }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-            {
-                AllowAutoRedirect = false,
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-            });
-
-        _provider = services.BuildServiceProvider();
+        _provider = _services.BuildServiceProvider();
     }
 
     public T GetService<T>() =>
         _provider.GetRequiredService<T>();
+}
+
+public class ServiceTestBase<TSut> : ServiceTestBase where TSut : class
+{
+    public ServiceTestBase() : base()
+    {
+        _services.AddTransient<TSut>();
+        _provider = _services.BuildServiceProvider();
+    }
+
+    public TSut Sut => GetService<TSut>();
 }

@@ -38,13 +38,12 @@ public class IconHttpResponse : IEnumerable<Icon>, IDisposable
         _httpClientFactory = httpClientFactory;
     }
 
-    public async Task<IEnumerable<Icon>> RetrieveIconsAsync(Uri requestUri, string domain)
+    public async Task<IEnumerable<Icon>> RetrieveIconsAsync(Uri requestUri, string domain, IHtmlParser parser)
     {
-        var parser = new HtmlParser();
         using var htmlStream = await _response.Content.ReadAsStreamAsync();
-        using var document = parser.ParseDocument(htmlStream);
+        var head = await parser.ParseHeadAsync(htmlStream);
 
-        if (document.DocumentElement == null)
+        if (head == null)
         {
             _logger.LogWarning("No DocumentElement for {domain}.", domain);
             return Array.Empty<Icon>();
@@ -57,20 +56,21 @@ public class IconHttpResponse : IEnumerable<Icon>, IDisposable
             uri = requestUri;
         }
 
-        var baseUrl = document.QuerySelector("head base[href]")?.Attributes["href"]?.Value;
+        var baseUrl = head.QuerySelector("base[href]")?.Attributes["href"]?.Value;
         if (string.IsNullOrWhiteSpace(baseUrl))
         {
             baseUrl = "/";
         }
 
-        var links = document.QuerySelectorAll("head link[href]")
+        var links = head.QuerySelectorAll("link[href]")
             ?.Take(_maxIconLinksProcessed)
             .Select(l => new IconLink(l, uri, baseUrl))
             .Where(l => l.IsUsable())
             .OrderBy(l => l.Priority)
             .Take(_maxRetrievedIcons)
-            .ToList() ?? new List<IconLink>();
-        return await Task.WhenAll(links.Select(l => l.FetchAsync(_logger, _httpClientFactory)));
+            .ToArray() ?? Array.Empty<IconLink>();
+        var results = await Task.WhenAll(links.Select(l => l.FetchAsync(_logger, _httpClientFactory)));
+        return results.Where(r => r != null).Select(r => r!);
     }
 
 

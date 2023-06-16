@@ -13,6 +13,7 @@ public class IconHttpRequest
     private readonly HttpStatusCode[] _redirectStatusCodes = new HttpStatusCode[] { HttpStatusCode.Redirect, HttpStatusCode.MovedPermanently, HttpStatusCode.RedirectKeepVerb, HttpStatusCode.SeeOther };
 
     private readonly ILogger<IIconFetchingService> _logger;
+    private readonly HttpClient _httpClient;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly int _redirectsCount;
     private readonly Uri _uri;
@@ -22,6 +23,7 @@ public class IconHttpRequest
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _httpClient = _httpClientFactory.CreateClient("Icons");
         _redirectsCount = redirectsCount;
         _uri = uri;
     }
@@ -30,7 +32,7 @@ public class IconHttpRequest
     {
         var pageIcons = new IconHttpRequest(uri, logger, httpClientFactory, 0);
         var httpResponse = await pageIcons.FetchAsync();
-        return new IconHttpResponse(httpResponse, logger, httpClientFactory); ;
+        return new IconHttpResponse(httpResponse, logger, httpClientFactory);
     }
 
     private async Task<HttpResponseMessage> FetchAsync()
@@ -59,19 +61,9 @@ public class IconHttpRequest
         message.Headers.Host = iconUri.Host;
         message.Method = HttpMethod.Get;
 
-        // Let's add some headers to look like we're coming from a web browser request. Some websites
-        // will block our request without these.
-        message.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-            "(KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36 Edge/16.16299");
-        message.Headers.Add("Accept-Language", "en-US,en;q=0.8");
-        message.Headers.Add("Cache-Control", "no-cache");
-        message.Headers.Add("Pragma", "no-cache");
-        message.Headers.Add("Accept", "text/html,application/xhtml+xml,application/xml;" +
-            "q=0.9,image/webp,image/apng,*/*;q=0.8");
-
         try
         {
-            return await _httpClientFactory.CreateClient("Icons").SendAsync(message);
+            return await _httpClient.SendAsync(message);
         }
         catch
         {

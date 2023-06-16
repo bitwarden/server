@@ -2,6 +2,7 @@
 using System.Net;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Bit.Icons.Extensions;
 using Bit.Icons.Services;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Net.Http.Headers;
@@ -32,16 +33,10 @@ public class Startup
         services.AddSingleton(s => iconsSettings);
 
         // Http client
-        services.AddHttpClient("Icons", client =>
-        {
-            client.Timeout = TimeSpan.FromSeconds(20);
-            client.MaxResponseContentBufferSize = 5000000; // 5 MB
+        services.ConfigureHttpClients();
 
-        }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
-        {
-            AllowAutoRedirect = false,
-            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
-        });
+        // Add HtmlParser
+        services.AddHtmlParsing();
 
         // Cache
         services.AddMemoryCache(options =>

@@ -142,7 +142,6 @@ public class IconLink
 
         var format = response.Content.Headers.ContentType?.MediaType;
         var bytes = await response.Content.ReadAsByteArrayAsync();
-        response.Content.Dispose();
         if (format == null || !_allowedMediaTypes.Contains(format))
         {
             format = DetermineImageFormatFromFile(bytes);
