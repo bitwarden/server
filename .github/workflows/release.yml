@@ -215,6 +215,8 @@ jobs:
             origin_docker_repo: bitwarden
           - project_name: Billing
             origin_docker_repo: bitwardenprod.azurecr.io
+          - project_name: MsSqlMigratorUtility
+            origin_docker_repo: bitwardenprod.azurecr.io
     steps:
       - name: Print environment
         env:
