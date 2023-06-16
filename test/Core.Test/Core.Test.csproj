@@ -1,8 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <RootNamespace>Bit.Core.Test</RootNamespace>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -20,14 +23,18 @@
     <PackageReference Include="AutoFixture.AutoNSubstitute" Version="$(AutoFixtureAutoNSubstituteVersion)" />
     <PackageReference Include="Kralizek.AutoFixture.Extensions.MockHttp" Version="1.2.0" />
   </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
     <ProjectReference Include="..\Common\Common.csproj" />
   </ItemGroup>
+
   <ItemGroup>
     <None Remove="Utilities\data\embeddedResource.txt" />
   </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Utilities\data\embeddedResource.txt" />
   </ItemGroup>
+
 </Project>
