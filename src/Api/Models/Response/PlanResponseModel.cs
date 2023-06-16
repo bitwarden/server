@@ -52,6 +52,13 @@ public class PlanResponseModel : ResponseModel
         SeatPrice = plan.SeatPrice;
         AdditionalStoragePricePerGb = plan.AdditionalStoragePricePerGb;
         PremiumAccessOptionPrice = plan.PremiumAccessOptionPrice;
+
+        AdditionalPricePerServiceAccount = plan.AdditionalPricePerServiceAccount;
+        BaseServiceAccount = plan.BaseServiceAccount;
+        MaxServiceAccount = plan.MaxServiceAccount;
+        HasAdditionalServiceAccountOption = plan.HasAdditionalServiceAccountOption;
+        MaxProjects = plan.MaxProjects;
+        BitwardenProduct = plan.BitwardenProduct;
     }
 
     public PlanType Type { get; set; }
@@ -98,4 +105,11 @@ public class PlanResponseModel : ResponseModel
     public decimal SeatPrice { get; set; }
     public decimal AdditionalStoragePricePerGb { get; set; }
     public decimal PremiumAccessOptionPrice { get; set; }
+
+    public decimal? AdditionalPricePerServiceAccount { get; set; }
+    public short? BaseServiceAccount { get; set; }
+    public short? MaxServiceAccount { get; set; }
+    public bool HasAdditionalServiceAccountOption { get; set; }
+    public short? MaxProjects { get; set; }
+    public BitwardenProductType BitwardenProduct { get; set; }
 }
