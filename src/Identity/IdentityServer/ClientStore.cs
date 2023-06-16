@@ -96,6 +96,17 @@ public class ClientStore : IClientStore
             return null;
         }
 
+        switch (apiKey)
+        {
+            case ServiceAccountApiKeyDetails key:
+                var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
+                if (!org.UseSecretsManager)
+                {
+                    return null;
+                }
+                break;
+        }
+
         if (string.IsNullOrEmpty(apiKey.ClientSecretHash))
         {
             apiKey.ClientSecretHash = apiKey.ClientSecret.Sha256();
