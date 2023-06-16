@@ -54,7 +54,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         FamilySponsorshipAvailable = FamilySponsorshipFriendlyName == null &&
             StaticStore.GetSponsoredPlan(PlanSponsorshipType.FamiliesForEnterprise)
             .UsersCanSponsor(organization);
-        PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
+        PlanProductType = StaticStore.GetPasswordManagerPlan(organization.PlanType).Product;
         FamilySponsorshipLastSyncDate = organization.FamilySponsorshipLastSyncDate;
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
