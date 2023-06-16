@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 
@@ -14,28 +13,31 @@ public class EnableAccessSecretsManagerCommand : IEnableAccessSecretsManagerComm
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public async Task<List<(OrganizationUser, string)>> EnableUsersAsync(Guid organizationId,
-        ICollection<OrganizationUser> organizationUsers)
+    public async Task<List<(OrganizationUser organizationUser, string error)>> EnableUsersAsync(
+        IEnumerable<OrganizationUser> organizationUsers)
     {
-        var filteredUsersByOrg = organizationUsers.Where(ou => ou.OrganizationId == organizationId)
-            .ToList();
+        var results = new List<(OrganizationUser organizationUser, string error)>();
+        var usersToEnable = new List<OrganizationUser>();
 
-        if (!filteredUsersByOrg.Any())
+        foreach (var orgUser in organizationUsers)
         {
-            throw new BadRequestException("Users invalid.");
-        }
-
-        var filteredUsers = filteredUsersByOrg.Where(ou => ou.AccessSecretsManager == false).ToList();
-        if (filteredUsers.Any())
-        {
-            foreach (var orgUser in filteredUsers)
+            if (orgUser.AccessSecretsManager)
+            {
+                results.Add((orgUser, "User already has access to Secrets Manager"));
+            }
+            else
             {
                 orgUser.AccessSecretsManager = true;
+                usersToEnable.Add(orgUser);
+                results.Add((orgUser, ""));
             }
-
-            await _organizationUserRepository.ReplaceManyAsync(filteredUsers);
         }
 
-        return filteredUsersByOrg.Select(ou => (ou, "")).ToList();
+        if (usersToEnable.Any())
+        {
+            await _organizationUserRepository.ReplaceManyAsync(usersToEnable);
+        }
+
+        return results;
     }
 }

@@ -458,23 +458,25 @@ public class OrganizationUsersController : Controller
 
     [HttpPatch("enable-secrets-manager")]
     [HttpPut("enable-secrets-manager")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnableSecretsManagerAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnableSecretsManagerAsync(Guid orgId,
+        [FromBody] OrganizationUserBulkRequestModel model)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
-        var orgUsers = await _organizationUserRepository.GetManyAsync(model.Ids);
+        var orgUsers = (await _organizationUserRepository.GetManyAsync(model.Ids))
+            .Where(ou => ou.OrganizationId == orgId).ToList();
         if (orgUsers.Count == 0)
         {
-            throw new NotFoundException();
+            throw new BadRequestException("Users invalid.");
         }
 
-        var results = await _enableAccessSecretsManagerCommand.EnableUsersAsync(orgId, orgUsers);
+        var results = await _enableAccessSecretsManagerCommand.EnableUsersAsync(orgUsers);
 
         return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-            new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+            new OrganizationUserBulkResponseModel(r.organizationUser.Id, r.error)));
     }
 
     private async Task RestoreOrRevokeUserAsync(
