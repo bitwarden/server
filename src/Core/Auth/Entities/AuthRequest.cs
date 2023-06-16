@@ -9,6 +9,7 @@ public class AuthRequest : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
+    public Guid? OrganizationId { get; set; }
     public Enums.AuthRequestType Type { get; set; }
     [MaxLength(50)]
     public string RequestDeviceIdentifier { get; set; }
