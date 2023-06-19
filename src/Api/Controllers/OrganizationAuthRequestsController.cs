@@ -2,6 +2,7 @@
 using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
@@ -21,13 +22,16 @@ public class OrganizationAuthRequestsController : Controller
     private readonly IAuthRequestRepository _authRequestRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IAuthRequestService _authRequestService;
+    private readonly IUpdateOrganizationAuthRequestCommand _updateOrganizationAuthRequestCommand;
 
     public OrganizationAuthRequestsController(IAuthRequestRepository authRequestRepository,
-        ICurrentContext currentContext, IAuthRequestService authRequestService)
+        ICurrentContext currentContext, IAuthRequestService authRequestService,
+        IUpdateOrganizationAuthRequestCommand updateOrganizationAuthRequestCommand)
     {
         _authRequestRepository = authRequestRepository;
         _currentContext = currentContext;
         _authRequestService = authRequestService;
+        _updateOrganizationAuthRequestCommand = updateOrganizationAuthRequestCommand;
     }
 
     [HttpGet("")]
@@ -55,8 +59,7 @@ public class OrganizationAuthRequestsController : Controller
             throw new NotFoundException();
         }
 
-        await _authRequestService.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId,
-            new AuthRequestUpdateRequestModel { RequestApproved = model.RequestApproved, Key = model.EncryptedUserKey });
+        await _updateOrganizationAuthRequestCommand.UpdateAsync(authRequest.Id, authRequest.UserId, model.RequestApproved, model.EncryptedUserKey);
     }
 
     [HttpPost("deny")]

@@ -1,4 +1,6 @@
-﻿using Bit.Core.Models.Business.Tokenables;
+﻿using Bit.Core.AdminConsole.OrganizationAuth;
+using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
@@ -38,6 +40,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
+        services.AddOrganizationAuthCommands();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -105,6 +108,11 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
+    }
+
+    private static void AddOrganizationAuthCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IUpdateOrganizationAuthRequestCommand, UpdateOrganizationAuthRequestCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

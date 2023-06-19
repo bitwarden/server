@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
+using Bit.Core.Enums;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services;
@@ -55,4 +56,5 @@ public interface IMailService
     Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);
     Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip);
     Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName);
+    Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeIdentifier);
 }

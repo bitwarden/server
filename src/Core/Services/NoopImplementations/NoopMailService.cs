@@ -2,6 +2,7 @@
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
+using Bit.Core.Enums;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services;
@@ -235,6 +236,11 @@ public class NoopMailService : IMailService
     }
 
     public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
+    {
+        return Task.FromResult(0);
+    }
+    
+    public Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeIdentifier)
     {
         return Task.FromResult(0);
     }
