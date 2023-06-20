@@ -29,7 +29,7 @@ public class ConfigResponseModel : ResponseModel
         Environment = new EnvironmentConfigResponseModel
         {
             Vault = globalSettings.BaseServiceUri.Vault,
-            CloudVault = globalSettings.BaseServiceUri.CloudVault,
+            CloudWebVault = globalSettings.BaseServiceUri.CloudWebVault,
             Api = globalSettings.BaseServiceUri.Api,
             Identity = globalSettings.BaseServiceUri.Identity,
             Notifications = globalSettings.BaseServiceUri.Notifications,
@@ -48,7 +48,7 @@ public class ServerConfigResponseModel
 public class EnvironmentConfigResponseModel
 {
     public string Vault { get; set; }
-    public string CloudVault { get; set; }
+    public string CloudWebVault { get; set; }
     public string Api { get; set; }
     public string Identity { get; set; }
     public string Notifications { get; set; }
