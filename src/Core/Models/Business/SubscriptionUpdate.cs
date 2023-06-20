@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
@@ -42,7 +43,12 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
     {
         _plan = plan;
         _additionalSeats = additionalSeats;
-        _previousSeats = organization.Seats ?? 0;
+        _previousSeats = plan.BitwardenProduct switch
+        {
+            BitwardenProductType.PasswordManager => organization.Seats ?? 0,
+            BitwardenProductType.SecretsManager => organization.SmSeats ?? 0,
+            _ => _previousSeats
+        };
     }
 
     public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)

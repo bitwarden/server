@@ -7,6 +7,8 @@ public class OrganizationSeatRequestModel : IValidatableObject
     [Required]
     public int? SeatAdjustment { get; set; }
 
+    public bool IsSecretsManagerAdjustment { get; set; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (SeatAdjustment == 0)
