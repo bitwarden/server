@@ -99,34 +99,6 @@
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="Seats"></label>
-                    <input type="number" class="form-control" asp-for="Seats" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxCollections"></label>
-                    <input type="number" class="form-control" asp-for="MaxCollections" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxStorageGb"></label>
-                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-4">
-                <div class="form-group">
-                    <label asp-for="MaxAutoscaleSeats"></label>
-                    <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-        </div>
         <h2>Features</h2>
         <div class="row mb-3">
             <div class="col-4">
@@ -200,20 +172,35 @@
             </div>
         </div>
     }
-    @if(canViewLicensing)
+    
+    @if (canViewPlan)
     {
-        <h2>Licensing</h2>
+        <h2>Password Manager Configuration</h2>
         <div class="row">
             <div class="col-sm">
                 <div class="form-group">
-                    <label asp-for="LicenseKey"></label>
-                    <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
+                    <label asp-for="Seats"></label>
+                    <input type="number" class="form-control" asp-for="Seats" min="1" readonly='@(!canEditPlan)'>
                 </div>
             </div>
             <div class="col-sm">
                 <div class="form-group">
-                    <label asp-for="ExpirationDate"></label>
-                    <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)'>
+                    <label asp-for="MaxCollections"></label>
+                    <input type="number" class="form-control" asp-for="MaxCollections" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="MaxStorageGb"></label>
+                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label asp-for="MaxAutoscaleSeats"></label>
+                    <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1" readonly='@(!canEditPlan)'>
                 </div>
             </div>
         </div>
@@ -249,6 +236,25 @@
                         <label asp-for="MaxAutoscaleSmServiceAccounts"></label>
                         <input type="number" class="form-control" asp-for="MaxAutoscaleSmServiceAccounts" min="1" readonly='@(!canEditPlan)'>
                     </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if(canViewLicensing)
+    {
+        <h2>Licensing</h2>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="LicenseKey"></label>
+                    <input type="text" class="form-control" asp-for="LicenseKey" readonly='@(!canEditLicensing)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="ExpirationDate"></label>
+                    <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)'>
                 </div>
             </div>
         </div>
