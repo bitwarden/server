@@ -464,7 +464,8 @@ public class OrganizationService : IOrganizationService
         return secret;
     }
 
-    public async Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats)
+    public async Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats,int? smSeatAdjustment,
+        int? maxAutoscaleSmSeats)
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -473,12 +474,18 @@ public class OrganizationService : IOrganizationService
         }
 
         var newSeatCount = organization.Seats + seatAdjustment;
+        var newSmSeatCount = organization.SmSeats + smSeatAdjustment;
         if (maxAutoscaleSeats.HasValue && newSeatCount > maxAutoscaleSeats.Value)
         {
-            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+            throw new BadRequestException("Cannot set max password manager seat autoscaling below seat count.");
+        }
+        
+        if (maxAutoscaleSmSeats.HasValue && newSmSeatCount > maxAutoscaleSmSeats.Value && organization.UseSecretsManager)
+        {
+            throw new BadRequestException("Cannot set max secrets manager seat autoscaling below seat count.");
         }
 
-        if (seatAdjustment != 0)
+        if (seatAdjustment != 0 || smSeatAdjustment != 0)
         {
             await AdjustSeatsAsync(organization, seatAdjustment);
         }
@@ -533,11 +540,17 @@ public class OrganizationService : IOrganizationService
         return await AdjustSeatsAsync(organization, seatAdjustment, prorationDate);
     }
 
-    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null, IEnumerable<string> ownerEmails = null)
+    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null,
+        IEnumerable<string> ownerEmails = null,int? smSeatAdjustment = null)
     {
         if (organization.Seats == null)
         {
             throw new BadRequestException("Organization has no seat limit, no need to adjust seats");
+        }
+
+        if (organization.SmSeats == null && smSeatAdjustment != null)
+        {
+            throw new BadRequestException("Organization has no secret manager seat limit, no need to adjust seats");
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -550,55 +563,77 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("No subscription found.");
         }
 
-        var plan = StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan == null)
+        var plans = StaticStore.Plans.Where(p => p.Type == organization.PlanType).ToList();
+        var newSeatTotal = 0;
+        foreach (var plan in plans)
         {
-            throw new BadRequestException("Existing plan not found.");
-        }
-
-        if (!plan.HasAdditionalSeatsOption)
-        {
-            throw new BadRequestException("Plan does not allow additional seats.");
-        }
-
-        var newSeatTotal = organization.Seats.Value + seatAdjustment;
-        if (plan.BaseSeats > newSeatTotal)
-        {
-            throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} seats.");
-        }
-
-        if (newSeatTotal <= 0)
-        {
-            throw new BadRequestException("You must have at least 1 seat.");
-        }
-
-        var additionalSeats = newSeatTotal - plan.BaseSeats;
-        if (plan.MaxAdditionalSeats.HasValue && additionalSeats > plan.MaxAdditionalSeats.Value)
-        {
-            throw new BadRequestException($"Organization plan allows a maximum of " +
-                $"{plan.MaxAdditionalSeats.Value} additional seats.");
-        }
-
-        if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
-        {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > newSeatTotal)
+            if (plan == null)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                    $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+                throw new BadRequestException("Existing plan not found.");
             }
+
+            if (!plan.HasAdditionalSeatsOption)
+            {
+                throw new BadRequestException("Plan does not allow additional seats.");
+            }
+
+            newSeatTotal = plan.BitwardenProduct switch
+            {
+                BitwardenProductType.PasswordManager => organization.Seats.Value + seatAdjustment,
+                BitwardenProductType.SecretsManager when smSeatAdjustment != null => organization.SmSeats.Value +
+                    (int)smSeatAdjustment,
+                _ => newSeatTotal
+            };
+
+            if (plan.BaseSeats > newSeatTotal)
+            {
+                throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} seats.");
+            }
+
+            if (newSeatTotal <= 0)
+            {
+                throw new BadRequestException("You must have at least 1 seat.");
+            }
+
+            var additionalSeats = newSeatTotal - plan.BaseSeats;
+
+            if (plan.MaxAdditionalSeats.HasValue && additionalSeats > plan.MaxAdditionalSeats.Value)
+            {
+                throw new BadRequestException($"Organization plan allows a maximum of " +
+                    $"{plan.MaxAdditionalSeats.Value} additional seats.");
+            }
+            
+            switch (plan.BitwardenProduct)
+            {
+                case BitwardenProductType.PasswordManager when organization.UseSecretsManager && smSeatAdjustment != null:
+                    await ValidateSecretsManagerOccupiedSeatAsync(plan, newSeatTotal, organization);
+                    break;
+                case BitwardenProductType.PasswordManager:
+                    await ValidatePasswordmanagerSeatAdjustmentAsync(plan, newSeatTotal,organization);
+                    break;
+            }
+
         }
 
-        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
+        var secretManagerPlan = plans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.SecretsManager);
+        var passwordManagerPlan = plans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.PasswordManager);
+
+        //var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalSeats, prorationDate);
+
+        var newPmSeatTotal = organization.Seats.Value + seatAdjustment;
+        var newSmSeatTotal = organization.Seats.Value + smSeatAdjustment;
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustSeats, organization, _currentContext)
             {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = newSeatTotal,
-                PreviousSeats = organization.Seats
+                PlanName = passwordManagerPlan.Name,
+                PlanType = passwordManagerPlan.Type,
+                Seats = newPmSeatTotal,
+                SmSeats = newSmSeatTotal,
+                PreviousSeats = organization.Seats,
+                PreviousSmSeats = organization.SmSeats
             });
         organization.Seats = (short?)newSeatTotal;
+
         await ReplaceAndUpdateCacheAsync(organization);
 
         if (organization.Seats.HasValue && organization.MaxAutoscaleSeats.HasValue && organization.Seats == organization.MaxAutoscaleSeats)
@@ -619,6 +654,33 @@ public class OrganizationService : IOrganizationService
         }
 
         return paymentIntentClientSecret;
+    }
+
+    private async Task ValidatePasswordmanagerSeatAdjustmentAsync(Models.StaticStore.Plan plan,int newSeatTotal, Organization organization)
+    {
+
+        if (!organization.Seats.HasValue || organization.Seats.Value > newSeatTotal)
+        {
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            if (occupiedSeats > newSeatTotal)
+            {
+                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+                    $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+            }
+        }
+    }
+
+    private async Task ValidateSecretsManagerOccupiedSeatAsync(Models.StaticStore.Plan plan, int newSeatTotal, Organization organization)
+    {
+        if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newSeatTotal)
+        {
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+            if (occupiedSeats > newSeatTotal)
+            {
+                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+                    $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+            }
+        }
     }
 
     public async Task VerifyBankAsync(Guid organizationId, int amount1, int amount2)

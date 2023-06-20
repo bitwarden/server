@@ -15,7 +15,7 @@ public interface IOrganizationService
     Task ReinstateSubscriptionAsync(Guid organizationId);
     Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
-    Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
+    Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats,int? smSeatAdjustment, int? maxAutoscaleSmSeats);
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null);
     Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);

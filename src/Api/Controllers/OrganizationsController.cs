@@ -320,7 +320,8 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
+        await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats
+            ,model.SmSeatAdjustment,model.MaxAutoscaleSmSeats);
     }
 
     [HttpPost("{id}/seat")]
