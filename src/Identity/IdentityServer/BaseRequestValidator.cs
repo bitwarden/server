@@ -37,11 +37,12 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IMailService _mailService;
     private readonly ILogger _logger;
-    private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
-    private readonly IPolicyService _policyService;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
+
+    protected ICurrentContext CurrentContext { get; }
+    protected IPolicyService PolicyService { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -73,11 +74,10 @@ public abstract class BaseRequestValidator<T> where T : class
         _applicationCacheService = applicationCacheService;
         _mailService = mailService;
         _logger = logger;
-        _currentContext = currentContext;
+        CurrentContext = currentContext;
         _globalSettings = globalSettings;
-        _policyService = policyService;
+        PolicyService = policyService;
         _userRepository = userRepository;
-        _policyService = policyService;
         _tokenDataFactory = tokenDataFactory;
     }
 
@@ -284,7 +284,7 @@ public abstract class BaseRequestValidator<T> where T : class
         {
             _logger.LogWarning(Constants.BypassFiltersEventId,
                 string.Format("Failed login attempt{0}{1}", twoFactorRequest ? ", 2FA invalid." : ".",
-                    $" {_currentContext.IpAddress}"));
+                    $" {CurrentContext.IpAddress}"));
         }
 
         await Task.Delay(2000); // Delay for brute force.
@@ -314,7 +314,7 @@ public abstract class BaseRequestValidator<T> where T : class
                                  (await _userManager.GetValidTwoFactorProvidersAsync(user)).Count > 0;
 
         Organization firstEnabledOrg = null;
-        var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
+        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
             .ToList();
         if (orgs.Any())
         {
@@ -341,7 +341,7 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         // Check if user belongs to any organization with an active SSO policy 
-        var anySsoPoliciesApplicableToUser = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
         {
             return false;
@@ -501,7 +501,7 @@ public abstract class BaseRequestValidator<T> where T : class
                     if (!_globalSettings.DisableEmailNewDevice)
                     {
                         await _mailService.SendNewDeviceLoggedInEmail(user.Email, deviceType, now,
-                            _currentContext.IpAddress);
+                            CurrentContext.IpAddress);
                     }
                 }
 
@@ -543,11 +543,11 @@ public abstract class BaseRequestValidator<T> where T : class
         {
             if (twoFactorInvalid)
             {
-                await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, _currentContext.IpAddress);
+                await _mailService.SendFailedTwoFactorAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
             }
             else
             {
-                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email, utcNow, _currentContext.IpAddress);
+                await _mailService.SendFailedLoginAttemptsEmailAsync(user.Email, utcNow, CurrentContext.IpAddress);
             }
         }
     }
@@ -562,7 +562,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private async Task<MasterPasswordPolicyResponseModel> GetMasterPasswordPolicy(User user)
     {
         // Check current context/cache to see if user is in any organizations, avoids extra DB call if not
-        var orgs = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
+        var orgs = (await CurrentContext.OrganizationMembershipAsync(_organizationUserRepository, user.Id))
             .ToList();
 
         if (!orgs.Any())
@@ -570,6 +570,6 @@ public abstract class BaseRequestValidator<T> where T : class
             return null;
         }
 
-        return new MasterPasswordPolicyResponseModel(await _policyService.GetMasterPasswordPolicyForUserAsync(user));
+        return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
     }
 }
