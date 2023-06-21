@@ -422,7 +422,8 @@ public class OrganizationService : IOrganizationService
                     Seats = organization.Seats,
                     Storage = organization.MaxStorageGb,
                     SmSeats = organization.SmSeats,
-                    ServiceAccounts = organization.SmServiceAccounts
+                    ServiceAccounts = organization.SmServiceAccounts,
+                    UseSecretsManager = organization.UseSecretsManager
                 });
         }
 
@@ -756,8 +757,8 @@ public class OrganizationService : IOrganizationService
                 Seats = returnValue.Item1.Seats,
                 Storage = returnValue.Item1.MaxStorageGb,
                 SmSeats = returnValue.Item1.SmSeats,
-                ServiceAccounts = returnValue.Item1.SmServiceAccounts
-
+                ServiceAccounts = returnValue.Item1.SmServiceAccounts,
+                UseSecretsManager = returnValue.Item1.UseSecretsManager
             });
         return returnValue;
     }
