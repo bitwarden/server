@@ -119,10 +119,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         // It's worth noting that CurrentContext here will build a user in LaunchDarkly that is anonymous but DOES belong
         // to an organization. So we will not be able to turn this feature on for only a single user, only for an entire 
         // organization at a time.
-        if (ssoConfigData != null)
-        {
-            context.Result.CustomResponse["UserDecryptionOptions"] = await CreateUserDecryptionOptionsAsync(ssoConfigData, user);
-        }
+        context.Result.CustomResponse["UserDecryptionOptions"] = await CreateUserDecryptionOptionsAsync(ssoConfigData, user);
 
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
         {
@@ -202,7 +199,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     /// <summary>
     /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
     /// </summary>
-    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(SsoConfigurationData ssoConfigurationData, User user)
+    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(SsoConfigurationData? ssoConfigurationData, User user)
     {
         var userDecryptionOption = new UserDecryptionOptions
         {
