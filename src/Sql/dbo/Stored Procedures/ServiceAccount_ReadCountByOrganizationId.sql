@@ -1,5 +1,5 @@
 CREATE PROCEDURE [dbo].[ServiceAccount_ReadCountByOrganizationId]
-    @OrganizationId UNIQUEIDENTIFIER
+        UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
