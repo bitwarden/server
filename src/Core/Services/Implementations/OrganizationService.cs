@@ -222,7 +222,7 @@ public class OrganizationService : IOrganizationService
                     await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
                 if (occupiedSeats > newPlanSeats)
                 {
-                    throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
+                    throw new BadRequestException($"Your organization currently has {occupiedSeats} Password Manager seats filled. " +
                                                   $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
                 }
             }
@@ -236,7 +236,7 @@ public class OrganizationService : IOrganizationService
                     var occupiedSmSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
                     if (occupiedSmSeats > newPlanSeats)
                     {
-                        throw new BadRequestException($"Your organization currently has {occupiedSmSeats} secrets manager seats filled. " +
+                        throw new BadRequestException($"Your organization currently has {occupiedSmSeats} Secrets Manager seats filled. " +
                                                       $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
                     }
                 }
