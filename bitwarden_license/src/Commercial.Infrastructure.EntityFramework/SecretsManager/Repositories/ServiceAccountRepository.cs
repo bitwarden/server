@@ -130,7 +130,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
-    public async  Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
+    public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
