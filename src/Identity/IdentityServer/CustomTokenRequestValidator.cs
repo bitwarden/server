@@ -119,7 +119,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         // It's worth noting that CurrentContext here will build a user in LaunchDarkly that is anonymous but DOES belong
         // to an organization. So we will not be able to turn this feature on for only a single user, only for an entire 
         // organization at a time.
-        if (ssoConfigData != null && _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext))
+        if (ssoConfigData != null)
         {
             context.Result.CustomResponse["UserDecryptionOptions"] = await CreateUserDecryptionOptionsAsync(ssoConfigData, user);
         }
@@ -204,7 +204,11 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
     /// </summary>
     private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(SsoConfigurationData ssoConfigurationData, User user)
     {
-        var userDecryptionOption = new UserDecryptionOptions();
+        var userDecryptionOption = new UserDecryptionOptions
+        {
+            HasMasterPassword = !string.IsNullOrEmpty(user.MasterPassword)
+        };
+
         if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
         {
             // KeyConnector makes it mutually exclusive
@@ -212,14 +216,13 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             return userDecryptionOption;
         }
 
-        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
+        // Only add the trusted device specific option when the flag is turned on
+        if (_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext) && ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
         {
             var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
             userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval);
         }
-
-        userDecryptionOption.HasMasterPassword = !string.IsNullOrEmpty(user.MasterPassword);
 
         return userDecryptionOption;
     }
