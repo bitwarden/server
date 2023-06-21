@@ -2145,17 +2145,39 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private static void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    private static void ValidatePlan(Models.StaticStore.Plan plan, int? additionalSeats, bool premiumAccessAddon,
+        string productType)
     {
         if (plan is not { LegacyYear: null })
         {
-            throw new BadRequestException("Invalid Password Manager plan selected.");
+            throw new BadRequestException($"Invalid {productType} plan selected.");
         }
 
         if (plan.Disabled)
         {
-            throw new BadRequestException("Password Manager Plan not found.");
+            throw new BadRequestException($"{productType} Plan not found.");
         }
+
+        if (!plan.HasPremiumAccessOption && premiumAccessAddon)
+        {
+            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
+        }
+
+        if (plan.BaseSeats + additionalSeats <= 0)
+        {
+            throw new BadRequestException($"You do not have any {productType} seats!");
+        }
+
+        if (additionalSeats < 0)
+        {
+            throw new BadRequestException($"You can't subtract {productType} seats!");
+        }
+
+    }
+
+    private static void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    {
+        ValidatePlan(plan, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, "Password Manager");
 
         if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
         {
@@ -2165,21 +2187,6 @@ public class OrganizationService : IOrganizationService
         if (upgrade.AdditionalStorageGb < 0)
         {
             throw new BadRequestException("You can't subtract storage!");
-        }
-
-        if (!plan.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
-        {
-            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
-        }
-
-        if (plan.BaseSeats + upgrade.AdditionalSeats <= 0)
-        {
-            throw new BadRequestException("You do not have any seats!");
-        }
-
-        if (upgrade.AdditionalSeats < 0)
-        {
-            throw new BadRequestException("You can't subtract seats!");
         }
 
         if (!plan.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
@@ -2197,15 +2204,7 @@ public class OrganizationService : IOrganizationService
 
     private static void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException("Invalid Secrets Manager plan selected.");
-        }
-
-        if (plan.Disabled)
-        {
-            throw new BadRequestException("Secrets Manager Plan not found.");
-        }
+        ValidatePlan(plan, upgrade.AdditionalSmSeats, upgrade.PremiumAccessAddon, "Password Manager");
 
         if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccount > 0)
         {
@@ -2215,16 +2214,6 @@ public class OrganizationService : IOrganizationService
         if (upgrade.AdditionalServiceAccount < 0)
         {
             throw new BadRequestException("You can't subtract service account!");
-        }
-
-        if (plan.BaseSeats + upgrade.AdditionalSmSeats <= 0)
-        {
-            throw new BadRequestException("You do not have any seats!");
-        }
-
-        if (upgrade.AdditionalSmSeats < 0)
-        {
-            throw new BadRequestException("You can't subtract secrets manager seats!");
         }
 
         switch (plan.HasAdditionalSeatsOption)
