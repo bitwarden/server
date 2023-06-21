@@ -319,8 +319,8 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-
-        await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats, model.IsSecretsManagerSeatAdjustment);
+        var organizationUpdate = model.ToOrganizationUpdate(orgIdGuid);
+        await _organizationService.UpdateSubscription(organizationUpdate);
     }
 
     [HttpPost("{id}/seat")]
@@ -333,7 +333,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value, null, model.IsSecretsManagerAdjustment);
+        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value, null, model.BitwardenProductType);
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
