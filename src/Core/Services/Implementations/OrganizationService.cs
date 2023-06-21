@@ -13,6 +13,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -53,6 +54,7 @@ public class OrganizationService : IOrganizationService
     private readonly ILogger<OrganizationService> _logger;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -81,7 +83,8 @@ public class OrganizationService : IOrganizationService
         ICurrentContext currentContext,
         ILogger<OrganizationService> logger,
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
+        IProviderUserRepository providerUserRepository,
+        IServiceAccountRepository serviceAccountRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -110,6 +113,7 @@ public class OrganizationService : IOrganizationService
         _logger = logger;
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
+        _serviceAccountRepository = serviceAccountRepository;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -184,9 +188,7 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Existing plan not found.");
         }
-
-        string paymentIntentClientSecret = null;
-        var success = true;
+        
         var newPlans = StaticStore.Plans.Where(p => p.Type == upgrade.Plan && !p.Disabled).ToList();
         foreach (var newPlan in newPlans)
         {
@@ -247,7 +249,7 @@ public class OrganizationService : IOrganizationService
                     if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newPlanServiceAccount &&
                         newPlan.BitwardenProduct == BitwardenProductType.SecretsManager)
                     {
-                        var occupiedServiceAccount = await _organizationUserRepository.GetOccupiedServiceAccountCountByOrganizationIdAsync(organization.Id);
+                        var occupiedServiceAccount = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
                         if (occupiedServiceAccount > newPlanSeats)
                         {
                             throw new BadRequestException($"Your organization currently has {occupiedServiceAccount} service account seats filled. " +
@@ -344,24 +346,26 @@ public class OrganizationService : IOrganizationService
                 }
             }
 
-            // TODO: Check storage?
+        }
+        
+        // TODO: Check storage?
+        string paymentIntentClientSecret = null;
+        var success = true;
 
+        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
+        {
+            var organizationUpgradePlan = upgrade.UseSecretsManager
+                ? newPlans
+                : newPlans.Where(x => x.BitwardenProduct == BitwardenProductType.PasswordManager).Take(1).ToList();
 
-            if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-            {
-                var organizationUpgradePlan = upgrade.UseSecretsManager
-                    ? newPlans
-                    : newPlans.Where(x => x.BitwardenProduct == BitwardenProductType.PasswordManager).Take(1).ToList();
-
-                paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, organizationUpgradePlan,
-                    upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
-                success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
-            }
-            else
-            {
-                // TODO: Update existing sub
-                throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
-            }
+            paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, organizationUpgradePlan,
+                upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
+            success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
+        }
+        else
+        {
+            // TODO: Update existing sub
+            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
         }
 
         var passwordManagerPlan =

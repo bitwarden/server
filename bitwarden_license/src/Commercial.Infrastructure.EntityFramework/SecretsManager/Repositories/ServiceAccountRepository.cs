@@ -130,6 +130,17 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
+    public async  Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.ServiceAccount
+                .Where(ou => ou.OrganizationId == organizationId)
+                .CountAsync();
+        }
+    }
+
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>
         sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
         sa.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read));
