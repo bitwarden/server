@@ -184,9 +184,6 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Existing plan not found.");
         }
-        var useSecretsManager = organization.UseSecretsManager
-            ? organization.UseSecretsManager
-            : upgrade.UseSecretsManager;
 
         string paymentIntentClientSecret = null;
         var success = true;
@@ -213,7 +210,7 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
             }
 
-            ValidateOrganizationUpgradeParameters(newPlan, upgrade, useSecretsManager);
+            ValidateOrganizationUpgradeParameters(newPlan, upgrade, upgrade.UseSecretsManager);
 
             var newPlanSeats = (short)(newPlan.BaseSeats +
                                        (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
@@ -230,7 +227,7 @@ public class OrganizationService : IOrganizationService
                 }
             }
 
-            if (useSecretsManager)
+            if (upgrade.UseSecretsManager)
             {
                 var newPlanSmSeats = (short)(newPlan.BaseSeats + (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSmSeats : 0));
                 if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newPlanSmSeats &&
@@ -352,7 +349,7 @@ public class OrganizationService : IOrganizationService
 
             if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
             {
-                var organizationUpgradePlan = useSecretsManager
+                var organizationUpgradePlan = upgrade.UseSecretsManager
                     ? newPlans
                     : newPlans.Where(x => x.BitwardenProduct == BitwardenProductType.PasswordManager).Take(1).ToList();
 
@@ -405,7 +402,7 @@ public class OrganizationService : IOrganizationService
         organization.PrivateKey = upgrade.PrivateKey;
         organization.UsePasswordManager = true;
 
-        if (secretsManagerPlan != null && useSecretsManager)
+        if (secretsManagerPlan != null && upgrade.UseSecretsManager)
         {
             organization.SmSeats = (short)(secretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats);
             organization.SmServiceAccounts = (int)(secretsManagerPlan.BaseServiceAccount + upgrade.AdditionalServiceAccount);
