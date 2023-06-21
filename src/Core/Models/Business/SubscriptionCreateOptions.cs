@@ -20,61 +20,23 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
             {
                 case BitwardenProductType.PasswordManager:
                     {
-                        if (plan.StripePlanId != null)
-                        {
-                            Items.Add(new SubscriptionItemOptions { Plan = plan.StripePlanId, Quantity = 1 });
-                        }
+                        AddPlanIdToSubscription(plan);
+                        AddAdditionalSeatToSubscription(additionalSeats, plan);
 
-                        if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
-                        {
-                            Items.Add(new SubscriptionItemOptions { Plan = plan.StripeSeatPlanId, Quantity = additionalSeats });
-                        }
+                        AddAdditionalStorage(additionalStorageGb, plan);
 
-                        if (additionalStorageGb > 0)
-                        {
-                            Items.Add(new SubscriptionItemOptions
-                            {
-                                Plan = plan.StripeStoragePlanId,
-                                Quantity = additionalStorageGb
-                            });
-                        }
-
-                        if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
-                        {
-                            Items.Add(new SubscriptionItemOptions { Plan = plan.StripePremiumAccessPlanId, Quantity = 1 });
-                        }
+                        AddPremiumAccessAddon(premiumAccessAddon, plan);
 
                         break;
                     }
                 case BitwardenProductType.SecretsManager:
                     {
-                        if (plan.StripePlanId != null)
-                        {
-                            Items.Add(new SubscriptionItemOptions { Plan = plan.StripePlanId, Quantity = 1 });
-                        }
+                        AddPlanIdToSubscription(plan);
+                        AddAdditionalSeatToSubscription(additionalSmSeats, plan);
 
-                        if (additionalSmSeats > 0 && plan.StripeSeatPlanId != null)
-                        {
-                            Items.Add(new SubscriptionItemOptions
-                            {
-                                Plan = plan.StripeSeatPlanId,
-                                Quantity = additionalSmSeats
-                            });
-                        }
+                        AddServiceAccount(additionalServiceAccount, plan);
 
-                        if (additionalServiceAccount > 0 && plan.StripeServiceAccountPlanId != null)
-                        {
-                            Items.Add(new SubscriptionItemOptions
-                            {
-                                Plan = plan.StripeServiceAccountPlanId,
-                                Quantity = additionalServiceAccount
-                            });
-                        }
-
-                        if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
-                        {
-                            Items.Add(new SubscriptionItemOptions { Plan = plan.StripePremiumAccessPlanId, Quantity = 1 });
-                        }
+                        AddPremiumAccessAddon(premiumAccessAddon, plan);
 
                         break;
                     }
@@ -84,6 +46,54 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
         {
             DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
+        }
+    }
+
+    private void AddServiceAccount(int additionalServiceAccount, StaticStore.Plan plan)
+    {
+        if (additionalServiceAccount > 0 && plan.StripeServiceAccountPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions
+            {
+                Plan = plan.StripeServiceAccountPlanId,
+                Quantity = additionalServiceAccount
+            });
+        }
+    }
+
+    private void AddAdditionalStorage(int additionalStorageGb, StaticStore.Plan plan)
+    {
+        if (additionalStorageGb > 0)
+        {
+            Items.Add(new SubscriptionItemOptions
+            {
+                Plan = plan.StripeStoragePlanId,
+                Quantity = additionalStorageGb
+            });
+        }
+    }
+
+    private void AddPremiumAccessAddon(bool premiumAccessAddon, StaticStore.Plan plan)
+    {
+        if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions { Plan = plan.StripePremiumAccessPlanId, Quantity = 1 });
+        }
+    }
+
+    private void AddAdditionalSeatToSubscription(int additionalSeats, StaticStore.Plan plan)
+    {
+        if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions { Plan = plan.StripeSeatPlanId, Quantity = additionalSeats });
+        }
+    }
+
+    private void AddPlanIdToSubscription(StaticStore.Plan plan)
+    {
+        if (plan.StripePlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions { Plan = plan.StripePlanId, Quantity = 1 });
         }
     }
 }
