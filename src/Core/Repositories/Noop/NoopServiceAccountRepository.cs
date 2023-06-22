@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
-using Stripe;
 
 namespace Bit.Core.Repositories.Noop;
 
