@@ -193,7 +193,7 @@ public class OrganizationServiceTests
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
     }
-    
+
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
     public async Task UpgradePlan_WithSecretsManager_Passes(Organization organization, OrganizationUpgrade upgrade,
@@ -1482,5 +1482,5 @@ public class OrganizationServiceTests
 
         Assert.Equal(includeProvider, result);
     }
-    
+
 }
