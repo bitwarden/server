@@ -325,8 +325,8 @@ public class OrganizationService : IOrganizationService
         }
 
         // TODO: Check storage?
-        string paymentIntentClientSecret;
-        bool success;
+        string paymentIntentClientSecret = null;
+        var success = true;
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
@@ -2204,12 +2204,12 @@ public class OrganizationService : IOrganizationService
 
         if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException("Plan does not allow additional service account.");
+            throw new BadRequestException("Plan does not allow additional service accounts.");
         }
 
         if (upgrade.AdditionalServiceAccounts < 0)
         {
-            throw new BadRequestException("You can't subtract service account!");
+            throw new BadRequestException("You can't subtract service accounts!");
         }
 
         switch (plan.HasAdditionalSeatsOption)
