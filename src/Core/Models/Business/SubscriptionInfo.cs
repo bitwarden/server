@@ -47,8 +47,8 @@ public class SubscriptionInfo
                     Name = item.Plan.Nickname;
                     Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                     Interval = item.Plan.Interval;
-                    AddonProduct =
-                        Utilities.StaticStore.GetAddonProductTypeFromStripeId(item.Plan.Id);
+                    AddonSubscriptionItem =
+                        Utilities.StaticStore.IsAddonSubscriptionItem(item.Plan.Id);
                 }
 
                 BitwardenProduct = BitwardenProductType.PasswordManager; // TODO: How to determine this from Stripe item?
@@ -58,7 +58,7 @@ public class SubscriptionInfo
 
             public BitwardenProductType BitwardenProduct { get; set; }
 
-            public AddonProductType? AddonProduct { get; set; }
+            public bool AddonSubscriptionItem { get; set; }
 
             public string Name { get; set; }
             public decimal Amount { get; set; }

@@ -141,26 +141,26 @@ public class StaticStore
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
 
     /// <summary>
-    /// Determines the addon product type from the stripe plan id by checking if the provided stripe plan id
-    /// matches any of the <see cref="Plan.StripeStoragePlanId"/> or <see cref="Plan.StripeServiceAccountPlanId"/>
+    /// Determines if the stripe plan id is an addon item by checking if the provided stripe plan id
+    /// matches either the <see cref="Plan.StripeStoragePlanId"/> or <see cref="Plan.StripeServiceAccountPlanId"/>
     /// in any <see cref="Plans"/>.
     /// </summary>
     /// <param name="stripePlanId"></param>
     /// <returns>
-    /// The corresponding <see cref="AddonProductType"/> if applicable, null otherwise
+    /// True if the stripePlanId is a addon product, false otherwise
     /// </returns>
-    public static AddonProductType? GetAddonProductTypeFromStripeId(string stripePlanId)
+    public static bool IsAddonSubscriptionItem(string stripePlanId)
     {
-        if (Plans.Select(p => p.StripeStoragePlanId).Contains(stripePlanId))
+        if (PasswordManagerPlans.Select(p => p.StripeStoragePlanId).Contains(stripePlanId))
         {
-            return AddonProductType.PasswordManager_Storage;
+            return true;
         }
 
-        if (Plans.Select(p => p.StripeServiceAccountPlanId).Contains(stripePlanId))
+        if (SecretManagerPlans.Select(p => p.StripeServiceAccountPlanId).Contains(stripePlanId))
         {
-            return AddonProductType.SecretsManager_ServiceAccounts;
+            return true;
         }
 
-        return null;
+        return false;
     }
 }

@@ -83,7 +83,7 @@ public class BillingSubscription
             Interval = item.Interval;
             Quantity = item.Quantity;
             SponsoredSubscriptionItem = item.SponsoredSubscriptionItem;
-            AddonProduct = item.AddonProduct;
+            AddonSubscriptionItem = item.AddonSubscriptionItem;
             BitwardenProduct = item.BitwardenProduct;
         }
 
@@ -92,7 +92,7 @@ public class BillingSubscription
         public int Quantity { get; set; }
         public string Interval { get; set; }
         public bool SponsoredSubscriptionItem { get; set; }
-        public AddonProductType? AddonProduct { get; set; }
+        public bool AddonSubscriptionItem { get; set; }
         public BitwardenProductType BitwardenProduct { get; set; }
     }
 }
