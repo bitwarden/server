@@ -65,7 +65,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
             BusinessName = BusinessName,
             CollectionName = CollectionName,
             AdditionalSmSeats = AdditionalSmSeats.GetValueOrDefault(),
-            AdditionalServiceAccount = AdditionalServiceAccounts.GetValueOrDefault(),
+            AdditionalServiceAccounts = AdditionalServiceAccounts.GetValueOrDefault(),
             UseSecretsManager = UseSecretsManager,
             TaxInfo = new TaxInfo
             {

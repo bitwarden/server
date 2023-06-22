@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Business;
 public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
 {
     public OrganizationSubscriptionOptionsBase(Organization org, List<StaticStore.Plan> plans, TaxInfo taxInfo, int additionalSeats,
-        int additionalStorageGb, bool premiumAccessAddon, int additionalSmSeats = 0, int additionalServiceAccount = 0)
+        int additionalStorageGb, bool premiumAccessAddon, int additionalSmSeats = 0, int additionalServiceAccounts = 0)
     {
         Items = new List<SubscriptionItemOptions>();
         Metadata = new Dictionary<string, string>
@@ -34,7 +34,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
                         AddPlanIdToSubscription(plan);
                         AddAdditionalSeatToSubscription(additionalSmSeats, plan);
 
-                        AddServiceAccount(additionalServiceAccount, plan);
+                        AddServiceAccount(additionalServiceAccounts, plan);
 
                         AddPremiumAccessAddon(premiumAccessAddon, plan);
 
@@ -49,14 +49,14 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         }
     }
 
-    private void AddServiceAccount(int additionalServiceAccount, StaticStore.Plan plan)
+    private void AddServiceAccount(int additionalServiceAccounts, StaticStore.Plan plan)
     {
-        if (additionalServiceAccount > 0 && plan.StripeServiceAccountPlanId != null)
+        if (additionalServiceAccounts > 0 && plan.StripeServiceAccountPlanId != null)
         {
             Items.Add(new SubscriptionItemOptions
             {
                 Plan = plan.StripeServiceAccountPlanId,
-                Quantity = additionalServiceAccount
+                Quantity = additionalServiceAccounts
             });
         }
     }
@@ -104,8 +104,8 @@ public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionO
         Organization org, List<StaticStore.Plan> plans,
         TaxInfo taxInfo, int additionalSeats = 0,
         int additionalStorageGb = 0, bool premiumAccessAddon = false,
-        int additionalSmSeats = 0, int additionalServiceAccount = 0) :
-        base(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon, additionalSmSeats, additionalServiceAccount)
+        int additionalSmSeats = 0, int additionalServiceAccounts = 0) :
+        base(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon, additionalSmSeats, additionalServiceAccounts)
     {
         OffSession = true;
         TrialPeriodDays = plans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.PasswordManager)!.TrialPeriodDays;

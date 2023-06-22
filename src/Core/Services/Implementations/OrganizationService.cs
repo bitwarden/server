@@ -381,7 +381,7 @@ public class OrganizationService : IOrganizationService
         organization.PrivateKey = upgrade.PrivateKey;
         organization.UsePasswordManager = true;
         organization.SmSeats = (short)(newSecretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats);
-        organization.SmServiceAccounts = upgrade.AdditionalServiceAccount;
+        organization.SmServiceAccounts = upgrade.AdditionalServiceAccounts;
         organization.UseSecretsManager = upgrade.UseSecretsManager;
 
         await ReplaceAndUpdateCacheAsync(organization);
@@ -427,7 +427,7 @@ public class OrganizationService : IOrganizationService
         {
             var newPlanServiceAccount = (short)(newSecretsManagerPlan.BaseServiceAccount +
                                                 (newSecretsManagerPlan.HasAdditionalServiceAccountOption
-                                                    ? upgrade.AdditionalServiceAccount
+                                                    ? upgrade.AdditionalServiceAccounts
                                                     : 0));
             if (!organization.SmServiceAccounts.HasValue ||
                 organization.SmServiceAccounts.Value > newPlanServiceAccount)
@@ -732,7 +732,7 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             SmSeats = (short)(secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats),
-            SmServiceAccounts = signup.AdditionalServiceAccount,
+            SmServiceAccounts = signup.AdditionalServiceAccounts,
             UseSecretsManager = signup.UseSecretsManager
         };
 
@@ -2202,12 +2202,12 @@ public class OrganizationService : IOrganizationService
     {
         ValidatePlan(plan, upgrade.AdditionalSmSeats, upgrade.PremiumAccessAddon, "Password Manager");
 
-        if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccount > 0)
+        if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
             throw new BadRequestException("Plan does not allow additional service account.");
         }
 
-        if (upgrade.AdditionalServiceAccount < 0)
+        if (upgrade.AdditionalServiceAccounts < 0)
         {
             throw new BadRequestException("You can't subtract service account!");
         }
