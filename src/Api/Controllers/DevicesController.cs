@@ -66,7 +66,7 @@ public class DevicesController : Controller
         return new ListResponseModel<DeviceResponseModel>(responses);
     }
 
-    [HttpPost("exists-by-types")]
+    [HttpPost("exist-by-types")]
     public async Task<ActionResult<bool>> GetExistenceByTypes([FromBody] DeviceType[] deviceTypes)
     {
         var userId = _userService.GetProperUserId(User).Value;
