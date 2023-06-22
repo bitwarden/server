@@ -219,16 +219,16 @@ public class OrganizationService : IOrganizationService
             ValidateSecretsManagerSeatsAndServiceAccount(newSecretsManagerPlan, upgrade);
         }
 
-        var newPlanSeats = (short)(newPasswordManagerPlan.BaseSeats +
-                                   (newPasswordManagerPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
-        if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
+        var newPasswordManagerPlanSeats = (short)(newPasswordManagerPlan.BaseSeats +
+                                                  (newPasswordManagerPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
+        if (!organization.Seats.HasValue || organization.Seats.Value > newPasswordManagerPlanSeats)
         {
             var occupiedSeats =
                 await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > newPlanSeats)
+            if (occupiedSeats > newPasswordManagerPlanSeats)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                                              $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
+                                              $"Your new plan only has ({newPasswordManagerPlanSeats}) seats. Remove some users.");
             }
         }
 
@@ -321,7 +321,7 @@ public class OrganizationService : IOrganizationService
 
         if (upgrade.UseSecretsManager && newSecretsManagerPlan != null)
         {
-            await ValidateSecretsManagerSeatsAndServiceAccount(upgrade, organization, newPlanSeats, newSecretsManagerPlan);
+            await ValidateSecretsManagerSeatsAndServiceAccount(upgrade, organization, newPasswordManagerPlanSeats, newSecretsManagerPlan);
         }
 
         // TODO: Check storage?
