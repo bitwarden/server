@@ -66,8 +66,8 @@ public class DevicesController : Controller
         return new ListResponseModel<DeviceResponseModel>(responses);
     }
 
-    [HttpPost("HasDevicesOfTypes")]
-    public async Task<ActionResult<bool>> HasDevicesOfTypes([FromBody] DeviceType[] deviceTypes)
+    [HttpPost("exists-by-types")]
+    public async Task<ActionResult<bool>> GetExistenceByTypes([FromBody] DeviceType[] deviceTypes)
     {
         var userId = _userService.GetProperUserId(User).Value;
         ICollection<Device> devices = await _deviceRepository.GetManyByUserIdAsync(userId);
