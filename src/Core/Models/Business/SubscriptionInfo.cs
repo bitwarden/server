@@ -50,7 +50,7 @@ public class SubscriptionInfo
                     AddonProduct =
                         Utilities.StaticStore.GetAddonProductTypeFromStripeId(item.Plan.Id);
                 }
-                
+
                 BitwardenProduct = BitwardenProductType.PasswordManager; // TODO: How to determine this from Stripe item?
                 Quantity = (int)item.Quantity;
                 SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
