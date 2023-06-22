@@ -1,4 +1,5 @@
-﻿using Stripe;
+﻿using Bit.Core.Enums;
+using Stripe;
 
 namespace Bit.Core.Models.Business;
 
@@ -46,11 +47,18 @@ public class SubscriptionInfo
                     Name = item.Plan.Nickname;
                     Amount = item.Plan.Amount.GetValueOrDefault() / 100M;
                     Interval = item.Plan.Interval;
+                    AddonProduct =
+                        Utilities.StaticStore.GetAddonProductTypeFromStripeId(item.Plan.Id);
                 }
-
+                
+                BitwardenProduct = BitwardenProductType.PasswordManager; // TODO: How to determine this from Stripe item?
                 Quantity = (int)item.Quantity;
                 SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
             }
+
+            public BitwardenProductType BitwardenProduct { get; set; }
+
+            public AddonProductType? AddonProduct { get; set; }
 
             public string Name { get; set; }
             public decimal Amount { get; set; }

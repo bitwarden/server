@@ -139,4 +139,28 @@ public class StaticStore
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
+
+    /// <summary>
+    /// Determines the addon product type from the stripe plan id by checking if the provided stripe plan id
+    /// matches any of the <see cref="Plan.StripeStoragePlanId"/> or <see cref="Plan.StripeServiceAccountPlanId"/>
+    /// in any <see cref="Plans"/>.
+    /// </summary>
+    /// <param name="stripePlanId"></param>
+    /// <returns>
+    /// The corresponding <see cref="AddonProductType"/> if applicable, null otherwise
+    /// </returns>
+    public static AddonProductType? GetAddonProductTypeFromStripeId(string stripePlanId)
+    {
+        if (Plans.Select(p => p.StripeStoragePlanId).Contains(stripePlanId))
+        {
+            return AddonProductType.PasswordManager_Storage;
+        }
+
+        if (Plans.Select(p => p.StripeServiceAccountPlanId).Contains(stripePlanId))
+        {
+            return AddonProductType.SecretsManager_ServiceAccounts;
+        }
+
+        return null;
+    }
 }
