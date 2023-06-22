@@ -45,7 +45,7 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
-        
+
         services.AddOosServices();
 
         // Context

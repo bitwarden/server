@@ -405,7 +405,7 @@ public class OrganizationService : IOrganizationService
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 
-    private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization, 
+    private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,
         Models.StaticStore.Plan newSecretsManagerPlan)
     {
         var newPlanSmSeats = (short)(newSecretsManagerPlan.BaseSeats +
@@ -414,7 +414,7 @@ public class OrganizationService : IOrganizationService
                                          : 0));
         var occupiedSmSeats =
             await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
-        
+
         if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newPlanSmSeats)
         {
             if (occupiedSmSeats > newPlanSmSeats)
