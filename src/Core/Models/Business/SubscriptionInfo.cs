@@ -49,9 +49,10 @@ public class SubscriptionInfo
                     Interval = item.Plan.Interval;
                     AddonSubscriptionItem =
                         Utilities.StaticStore.IsAddonSubscriptionItem(item.Plan.Id);
+                    BitwardenProduct =
+                        Utilities.StaticStore.GetPlanByStripeId(item.Plan.Id)?.BitwardenProduct ?? BitwardenProductType.PasswordManager;
                 }
 
-                BitwardenProduct = BitwardenProductType.PasswordManager; // TODO: How to determine this from Stripe item?
                 Quantity = (int)item.Quantity;
                 SponsoredSubscriptionItem = Utilities.StaticStore.SponsoredPlans.Any(p => p.StripePlanId == item.Plan.Id);
             }
