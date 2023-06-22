@@ -70,7 +70,7 @@ public class DevicesController : Controller
     public async Task<ActionResult<bool>> GetExistenceByTypes([FromBody] DeviceType[] deviceTypes)
     {
         var userId = _userService.GetProperUserId(User).Value;
-        ICollection<Device> devices = await _deviceRepository.GetManyByUserIdAsync(userId);
+        var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
         var userHasDeviceOfTypes = devices.Any(d => deviceTypes.Contains(d.Type));
         return Ok(userHasDeviceOfTypes);
     }
