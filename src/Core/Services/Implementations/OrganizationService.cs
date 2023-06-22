@@ -216,15 +216,17 @@ public class OrganizationService : IOrganizationService
             StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
         if (upgrade.UseSecretsManager)
         {
-            ValidateSecretsManagerSeatsAndServiceAccount(newSecretsManagerPlan, upgrade);
+            ValidateSecretsManagerPlan(newSecretsManagerPlan, upgrade);
         }
 
         var newPasswordManagerPlanSeats = (short)(newPasswordManagerPlan.BaseSeats +
                                                   (newPasswordManagerPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
+        var occupiedPmSeats = 0;
         if (!organization.Seats.HasValue || organization.Seats.Value > newPasswordManagerPlanSeats)
         {
             var occupiedSeats =
                 await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+            occupiedPmSeats = occupiedSeats;
             if (occupiedSeats > newPasswordManagerPlanSeats)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
@@ -321,7 +323,7 @@ public class OrganizationService : IOrganizationService
 
         if (upgrade.UseSecretsManager && newSecretsManagerPlan != null)
         {
-            await ValidateSecretsManagerSeatsAndServiceAccount(upgrade, organization, newPasswordManagerPlanSeats, newSecretsManagerPlan);
+            await ValidateSecretsManagerSeatsAndServiceAccountAsync(upgrade, organization, newSecretsManagerPlan);
         }
 
         // TODO: Check storage?
@@ -403,22 +405,31 @@ public class OrganizationService : IOrganizationService
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 
-    private async Task ValidateSecretsManagerSeatsAndServiceAccount(OrganizationUpgrade upgrade, Organization organization, short newPlanSeats, Models.StaticStore.Plan newSecretsManagerPlan)
+    private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization, 
+        Models.StaticStore.Plan newSecretsManagerPlan)
     {
         var newPlanSmSeats = (short)(newSecretsManagerPlan.BaseSeats +
                                      (newSecretsManagerPlan.HasAdditionalSeatsOption
                                          ? upgrade.AdditionalSmSeats
                                          : 0));
+        var occupiedSmSeats =
+            await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+        
         if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newPlanSmSeats)
         {
-            var occupiedSmSeats =
-                await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSmSeats > newPlanSeats)
+            if (occupiedSmSeats > newPlanSmSeats)
             {
                 throw new BadRequestException(
                     $"Your organization currently has {occupiedSmSeats} Secrets Manager seats filled. " +
-                    $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
+                    $"Your new plan only has ({newPlanSmSeats}) seats. Remove some users.");
             }
+        }
+
+        var occupiedPmSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
+
+        if (occupiedSmSeats > occupiedPmSeats)
+        {
+            throw new BadRequestException("Your secrets manager seats should not be greater than password manager occupied seat");
         }
 
         if (newSecretsManagerPlan.BaseServiceAccount != null)
@@ -432,7 +443,7 @@ public class OrganizationService : IOrganizationService
             {
                 var occupiedServiceAccount =
                     await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
-                if (occupiedServiceAccount > newPlanSeats)
+                if (occupiedServiceAccount > newPlanSmSeats)
                 {
                     throw new BadRequestException(
                         $"Your organization currently has {occupiedServiceAccount} service account seats filled. " +
@@ -685,7 +696,7 @@ public class OrganizationService : IOrganizationService
         var secretsManagerPlan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == signup.Plan);
         if (signup.UseSecretsManager)
         {
-            ValidateSecretsManagerSeatsAndServiceAccount(secretsManagerPlan, signup);
+            ValidateSecretsManagerPlan(secretsManagerPlan, signup);
         }
 
         if (!provider)
@@ -2196,9 +2207,9 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private static void ValidateSecretsManagerSeatsAndServiceAccount(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    private static void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
-        ValidatePlan(plan, upgrade.AdditionalSmSeats, upgrade.PremiumAccessAddon, "Password Manager");
+        ValidatePlan(plan, upgrade.AdditionalSmSeats, upgrade.PremiumAccessAddon, "Secrets Manager");
 
         if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
