@@ -163,4 +163,29 @@ public class StaticStore
 
         return false;
     }
+
+    /// <summary>
+    /// Get a <see cref="Plan"/> by comparing the provided stripeId to the various
+    /// Stripe plan ids within a <see cref="Plan"/>.
+    /// The following <see cref="Plan"/> properties are checked:
+    /// <list type="bullet">
+    ///     <item><see cref="Plan.StripePlanId"/></item>
+    ///     <item><see cref="Plan.StripeSeatPlanId"/></item>
+    ///     <item><see cref="Plan.StripeStoragePlanId"/></item>
+    ///     <item><see cref="Plan.StripeServiceAccountPlanId"/></item>
+    ///     <item><see cref="Plan.StripePremiumAccessPlanId"/></item>
+    /// </list>
+    /// </summary>
+    /// <param name="stripeId"></param>
+    /// <returns>The plan if a matching stripeId was found, null otherwise</returns>
+    public static Plan GetPlanByStripeId(string stripeId)
+    {
+        return Plans.FirstOrDefault(p =>
+            p.StripePlanId == stripeId ||
+            p.StripeSeatPlanId == stripeId ||
+            p.StripeStoragePlanId == stripeId ||
+            p.StripeServiceAccountPlanId == stripeId ||
+            p.StripePremiumAccessPlanId == stripeId
+        );
+    }
 }
