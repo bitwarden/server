@@ -213,10 +213,10 @@ public class OrganizationService : IOrganizationService
 
         ValidatePasswordManagerPlan(newPasswordManagerPlan, upgrade);
         var newSecretsManagerPlan =
-            StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
+            StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
         if (upgrade.UseSecretsManager)
         {
-            ValidateSecretsManagerPlan(newSecretsManagerPlan, upgrade);
+            ValidateSecretsManagerSeatsAndServiceAccount(newSecretsManagerPlan, upgrade);
         }
 
         var newPlanSeats = (short)(newPasswordManagerPlan.BaseSeats +
@@ -330,8 +330,6 @@ public class OrganizationService : IOrganizationService
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            var newPlans = StaticStore.Plans.Where(p => p.Type == upgrade.Plan).ToList();
-
             var organizationUpgradePlan = upgrade.UseSecretsManager
                 ? StaticStore.Plans.Where(p => p.Type == upgrade.Plan).ToList()
                 : StaticStore.Plans.Where(p => p.Type == upgrade.Plan && p.BitwardenProduct == BitwardenProductType.PasswordManager).ToList();
@@ -687,7 +685,7 @@ public class OrganizationService : IOrganizationService
         var secretsManagerPlan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == signup.Plan);
         if (signup.UseSecretsManager)
         {
-            ValidateSecretsManagerPlan(secretsManagerPlan, signup);
+            ValidateSecretsManagerSeatsAndServiceAccount(secretsManagerPlan, signup);
         }
 
         if (!provider)
@@ -2198,7 +2196,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private static void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    private static void ValidateSecretsManagerSeatsAndServiceAccount(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
         ValidatePlan(plan, upgrade.AdditionalSmSeats, upgrade.PremiumAccessAddon, "Password Manager");
 
