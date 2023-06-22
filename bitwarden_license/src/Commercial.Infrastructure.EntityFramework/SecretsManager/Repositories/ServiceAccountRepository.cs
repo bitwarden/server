@@ -136,8 +136,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         {
             var dbContext = GetDatabaseContext(scope);
             return await dbContext.ServiceAccount
-                .Where(ou => ou.OrganizationId == organizationId)
-                .CountAsync();
+                .CountAsync(ou => ou.OrganizationId == organizationId);;
         }
     }
 
