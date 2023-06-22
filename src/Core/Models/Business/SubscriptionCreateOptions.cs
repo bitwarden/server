@@ -16,28 +16,20 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         };
         foreach (var plan in plans)
         {
+            AddPlanIdToSubscription(plan);
+            AddPremiumAccessAddon(premiumAccessAddon, plan);
             switch (plan.BitwardenProduct)
             {
                 case BitwardenProductType.PasswordManager:
                     {
-                        AddPlanIdToSubscription(plan);
                         AddAdditionalSeatToSubscription(additionalSeats, plan);
-
                         AddAdditionalStorage(additionalStorageGb, plan);
-
-                        AddPremiumAccessAddon(premiumAccessAddon, plan);
-
                         break;
                     }
                 case BitwardenProductType.SecretsManager:
                     {
-                        AddPlanIdToSubscription(plan);
                         AddAdditionalSeatToSubscription(additionalSmSeats, plan);
-
                         AddServiceAccount(additionalServiceAccounts, plan);
-
-                        AddPremiumAccessAddon(premiumAccessAddon, plan);
-
                         break;
                     }
             }

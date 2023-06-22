@@ -183,8 +183,8 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Your account has no payment method available.");
         }
 
-        var existingPlan = StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (existingPlan == null)
+        var existingPasswordManagerPlan = StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
+        if (existingPasswordManagerPlan == null)
         {
             throw new BadRequestException("Existing plan not found.");
         }
@@ -196,17 +196,17 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan not found.");
         }
 
-        if (existingPlan.Type == newPasswordManagerPlan.Type)
+        if (existingPasswordManagerPlan.Type == newPasswordManagerPlan.Type)
         {
             throw new BadRequestException("Organization is already on this plan.");
         }
 
-        if (existingPlan.UpgradeSortOrder >= newPasswordManagerPlan.UpgradeSortOrder)
+        if (existingPasswordManagerPlan.UpgradeSortOrder >= newPasswordManagerPlan.UpgradeSortOrder)
         {
             throw new BadRequestException("You cannot upgrade to this plan.");
         }
 
-        if (existingPlan.Type != PlanType.Free)
+        if (existingPasswordManagerPlan.Type != PlanType.Free)
         {
             throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
         }
@@ -390,8 +390,8 @@ public class OrganizationService : IOrganizationService
                 {
                     PlanName = newPasswordManagerPlan.Name,
                     PlanType = newPasswordManagerPlan.Type,
-                    OldPlanName = existingPlan.Name,
-                    OldPlanType = existingPlan.Type,
+                    OldPlanName = existingPasswordManagerPlan.Name,
+                    OldPlanType = existingPasswordManagerPlan.Type,
                     Seats = organization.Seats,
                     Storage = organization.MaxStorageGb,
                     SmSeats = organization.SmSeats,
