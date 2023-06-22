@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -63,6 +64,15 @@ public class DevicesController : Controller
         ICollection<Device> devices = await _deviceRepository.GetManyByUserIdAsync(_userService.GetProperUserId(User).Value);
         var responses = devices.Select(d => new DeviceResponseModel(d));
         return new ListResponseModel<DeviceResponseModel>(responses);
+    }
+    
+    [HttpPost("HasDevicesOfTypes")]
+    public async Task<ActionResult<bool>> HasDevicesOfTypes([FromBody] DeviceType[] deviceTypes)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+        ICollection<Device> devices = await _deviceRepository.GetManyByUserIdAsync(userId);
+        var userHasDeviceOfTypes = devices.Any(d => deviceTypes.Contains(d.Type));
+        return Ok(userHasDeviceOfTypes);
     }
 
     [HttpPost("")]
