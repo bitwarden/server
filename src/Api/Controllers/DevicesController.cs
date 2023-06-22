@@ -65,7 +65,7 @@ public class DevicesController : Controller
         var responses = devices.Select(d => new DeviceResponseModel(d));
         return new ListResponseModel<DeviceResponseModel>(responses);
     }
-    
+
     [HttpPost("HasDevicesOfTypes")]
     public async Task<ActionResult<bool>> HasDevicesOfTypes([FromBody] DeviceType[] deviceTypes)
     {
