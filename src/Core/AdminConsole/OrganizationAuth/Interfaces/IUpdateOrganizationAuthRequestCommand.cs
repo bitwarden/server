@@ -1,4 +1,4 @@
-namespace Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+﻿namespace Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 
 public interface IUpdateOrganizationAuthRequestCommand
 {

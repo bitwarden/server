@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
@@ -26,7 +26,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
     {
         var updatedAuthRequest = await _authRequestService.UpdateAuthRequestAsync(requestId, userId,
             new AuthRequestUpdateRequestModel { RequestApproved = requestApproved, Key = encryptedUserKey });
-        
+
         if (updatedAuthRequest.Approved is true)
         {
             var user = await _userRepository.GetByIdAsync(userId);
