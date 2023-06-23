@@ -190,6 +190,7 @@ public class OrganizationServiceTests
             SutProvider<OrganizationService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        upgrade.AdditionalSmSeats = upgrade.AdditionalSeats;
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
     }
