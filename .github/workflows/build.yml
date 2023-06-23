@@ -528,6 +528,39 @@ jobs:
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
 
+  trigger-self-host-build:
+    name: Trigger self-host build
+    runs-on: ubuntu-22.04
+    needs:
+      - build-docker
+    steps:
+      - name: Login to Azure - CI Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve github PAT secrets
+        id: retrieve-secret-pat
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Trigger self-host build
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'bitwarden',
+              repo: 'self-host',
+              workflow_id: 'build-self-host.yml',
+              ref: 'DEVOPS-1204-Migrate_Build_pipeline_to_self-host_repo',
+              inputs: {
+                server_branch: '${{ github.ref }}'
+              }
+            })
+
   check-failures:
     name: Check for failures
     if: always()
