@@ -43,7 +43,7 @@ public class OrganizationCreateRequestModel : IValidatableObject
     [Range(0, int.MaxValue)]
     public int? AdditionalSmSeats { get; set; }
     [Range(0, int.MaxValue)]
-    public int? AdditionalServiceAccount { get; set; }
+    public int? AdditionalServiceAccounts { get; set; }
     [Required]
     public bool UseSecretsManager { get; set; }
 
@@ -64,8 +64,8 @@ public class OrganizationCreateRequestModel : IValidatableObject
             BillingEmail = BillingEmail,
             BusinessName = BusinessName,
             CollectionName = CollectionName,
-            AdditionalSmSeats = AdditionalSmSeats.GetValueOrDefault(0),
-            AdditionalServiceAccount = AdditionalServiceAccount.GetValueOrDefault(0),
+            AdditionalSmSeats = AdditionalSmSeats.GetValueOrDefault(),
+            AdditionalServiceAccounts = AdditionalServiceAccounts.GetValueOrDefault(),
             UseSecretsManager = UseSecretsManager,
             TaxInfo = new TaxInfo
             {
