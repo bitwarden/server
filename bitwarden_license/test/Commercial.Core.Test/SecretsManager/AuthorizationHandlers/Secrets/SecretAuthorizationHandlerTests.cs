@@ -41,6 +41,10 @@ public class SecretAuthorizationHandlerTests
                 sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
                     (clientType, userId));
                 break;
+            case PermissionType.RunAsServiceAccountWithPermission:
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+                    (clientType, userId));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }
@@ -207,6 +211,8 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsAdmin, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true)]
     public async Task CanCreateSecret_Success(PermissionType permissionType, bool read, bool write,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
         Guid userId,
@@ -327,6 +333,15 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false, false)]
     public async Task CanUpdateSecret_DoesNotSucceed(PermissionType permissionType, bool read, bool write,
         bool projectRead, bool projectWrite,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
@@ -355,6 +370,8 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsAdmin, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true)]
     public async Task CanUpdateSecret_Success(PermissionType permissionType, bool read, bool write,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
         Guid userId,
