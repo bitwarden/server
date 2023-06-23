@@ -1,4 +1,24 @@
-CREATE PROCEDURE [dbo].[ApiKey_Create]
+IF COL_LENGTH('[dbo].[ApiKey]', 'ClientSecretHash') IS NULL
+BEGIN
+  ALTER TABLE [dbo].[ApiKey]
+  ADD [ClientSecretHash] VARCHAR(128);
+END
+GO
+
+-- Refresh views
+IF OBJECT_ID('[dbo].[ApiKeyDetailsView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshview N'[dbo].[ApiKeyDetailsView]';
+    END
+GO
+
+IF OBJECT_ID('[dbo].[ApiKeyView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshview N'[dbo].[ApiKeyView]';
+    END
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[ApiKey_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @ServiceAccountId UNIQUEIDENTIFIER,
     @Name VARCHAR(200),
@@ -49,3 +69,4 @@ BEGIN
         @RevisionDate
     )
 END
+GO
