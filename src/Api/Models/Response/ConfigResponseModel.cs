@@ -28,8 +28,8 @@ public class ConfigResponseModel : ResponseModel
         GitHash = AssemblyHelpers.GetGitHash();
         Environment = new EnvironmentConfigResponseModel
         {
+            CloudVaultRegion = globalSettings.BaseServiceUri.CloudVaultRegion,
             Vault = globalSettings.BaseServiceUri.Vault,
-            CloudWebVault = globalSettings.BaseServiceUri.CloudWebVault,
             Api = globalSettings.BaseServiceUri.Api,
             Identity = globalSettings.BaseServiceUri.Identity,
             Notifications = globalSettings.BaseServiceUri.Notifications,
@@ -47,8 +47,8 @@ public class ServerConfigResponseModel
 
 public class EnvironmentConfigResponseModel
 {
+    public string CloudVaultRegion { get; set; }
     public string Vault { get; set; }
-    public string CloudWebVault { get; set; }
     public string Api { get; set; }
     public string Identity { get; set; }
     public string Notifications { get; set; }

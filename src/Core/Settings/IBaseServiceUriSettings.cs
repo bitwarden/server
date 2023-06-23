@@ -3,9 +3,9 @@ namespace Bit.Core.Settings;
 
 public interface IBaseServiceUriSettings
 {
+    string CloudVaultRegion { get; set; }
     string Vault { get; set; }
     string VaultWithHash { get; }
-    string CloudWebVault { get; set; }
     string Api { get; set; }
     public string Identity { get; set; }
     public string Admin { get; set; }
