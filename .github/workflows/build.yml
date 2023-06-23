@@ -554,7 +554,7 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: 'bitwarden',
               repo: 'self-host',
-              workflow_id: 'build-self-host.yml',
+              workflow_id: 'build-unified.yml',
               ref: 'master',
               inputs: {
                 server_branch: '${{ github.ref }}'
