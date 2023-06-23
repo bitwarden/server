@@ -1,10 +1,11 @@
+using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Microsoft.OpenApi.Extensions;
 
 namespace Bit.Core.AdminConsole.OrganizationAuth;
 
@@ -25,7 +26,7 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
     {
         var updatedAuthRequest = await _authRequestService.UpdateAuthRequestAsync(requestId, userId,
             new AuthRequestUpdateRequestModel { RequestApproved = requestApproved, Key = encryptedUserKey });
-
+        
         if (updatedAuthRequest.Approved is true)
         {
             var user = await _userRepository.GetByIdAsync(userId);
@@ -34,11 +35,15 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
                 throw new BadRequestException("User Email is Required");
             }
             var approvalDateTime = updatedAuthRequest.ResponseDate ?? DateTime.UtcNow;
+            var deviceTypeDisplayName = updatedAuthRequest.RequestDeviceType.GetType()
+                .GetMember(updatedAuthRequest.RequestDeviceType.ToString())
+                .First()
+                .GetCustomAttribute<DisplayAttribute>()?.Name;
             string[] identifiers =
             {
-                updatedAuthRequest.RequestDeviceType.GetDisplayName(), updatedAuthRequest.RequestDeviceIdentifier
+                deviceTypeDisplayName, updatedAuthRequest.RequestDeviceIdentifier
             };
-            var deviceTypeIdentifier = string.Join(" ", identifiers);
+            var deviceTypeIdentifier = string.Join(" - ", identifiers);
             await _mailService.SendTrustedDeviceAdminApprovalEmailAsync(user.Email, approvalDateTime,
                 updatedAuthRequest.RequestIpAddress, deviceTypeIdentifier);
         }

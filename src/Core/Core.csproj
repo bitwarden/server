@@ -40,7 +40,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="6.0.4" />
-    <PackageReference Include="Microsoft.OpenApi" Version="1.2.3" />
     <PackageReference Include="Quartz" Version="3.4.0" />
     <PackageReference Include="SendGrid" Version="9.27.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="5.0.0" />

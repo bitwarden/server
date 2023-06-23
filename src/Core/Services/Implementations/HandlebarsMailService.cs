@@ -909,7 +909,7 @@ public class HandlebarsMailService : IMailService
             IpAddress = ip,
             DeviceType = deviceTypeIdentifier,
         };
-        await AddMessageContentAsync(message, "TrustedDeviceAdminApproval", model);
+        await AddMessageContentAsync(message, "Auth.TrustedDeviceAdminApproval", model);
         message.Category = "TrustedDeviceAdminApproval";
         await _mailDeliveryService.SendEmailAsync(message);
     }

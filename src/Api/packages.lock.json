@@ -2837,7 +2837,6 @@
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[6.0.1, )",
           "Microsoft.Extensions.Configuration.UserSecrets": "[6.0.1, )",
           "Microsoft.Extensions.Identity.Stores": "[6.0.4, )",
-          "Microsoft.OpenApi": "[1.2.3, )",
           "Newtonsoft.Json": "[13.0.1, )",
           "Otp.NET": "[1.2.2, )",
           "Quartz": "[3.4.0, )",

@@ -977,11 +977,6 @@
         "resolved": "7.6.4",
         "contentHash": "MSSmA6kIfpgFTtNpOnnayoSj/6KSzHC1U9KOjF7cTA1PG4tZ7rIMi1pvjFc8CmYEvP4cxGl/+vrCn+HpK26HTQ=="
       },
-      "Microsoft.OpenApi": {
-        "type": "Transitive",
-        "resolved": "1.2.3",
-        "contentHash": "Nug3rO+7Kl5/SBAadzSMAVgqDlfGjJZ0GenQrLywJ84XGKO0uRqkunz5Wyl0SDwcR71bAATXvSdbdzPrYRYKGw=="
-      },
       "Microsoft.Spatial": {
         "type": "Transitive",
         "resolved": "7.6.4",
@@ -2959,7 +2954,6 @@
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[6.0.1, )",
           "Microsoft.Extensions.Configuration.UserSecrets": "[6.0.1, )",
           "Microsoft.Extensions.Identity.Stores": "[6.0.4, )",
-          "Microsoft.OpenApi": "[1.2.3, )",
           "Newtonsoft.Json": "[13.0.1, )",
           "Otp.NET": "[1.2.2, )",
           "Quartz": "[3.4.0, )",

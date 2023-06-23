@@ -279,12 +279,6 @@
           "Microsoft.Extensions.Logging": "6.0.0"
         }
       },
-      "Microsoft.OpenApi": {
-        "type": "Direct",
-        "requested": "[1.2.3, )",
-        "resolved": "1.2.3",
-        "contentHash": "Nug3rO+7Kl5/SBAadzSMAVgqDlfGjJZ0GenQrLywJ84XGKO0uRqkunz5Wyl0SDwcR71bAATXvSdbdzPrYRYKGw=="
-      },
       "Newtonsoft.Json": {
         "type": "Direct",
         "requested": "[13.0.1, )",
