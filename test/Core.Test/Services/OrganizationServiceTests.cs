@@ -186,16 +186,6 @@ public class OrganizationServiceTests
 
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<OrganizationService> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
-    }
-
-    [Theory]
-    [FreeOrganizationUpgradeCustomize, BitAutoData]
     public async Task UpgradePlan_WithSecretsManager_Passes(Organization organization, OrganizationUpgrade upgrade,
         SutProvider<OrganizationService> sutProvider)
     {
