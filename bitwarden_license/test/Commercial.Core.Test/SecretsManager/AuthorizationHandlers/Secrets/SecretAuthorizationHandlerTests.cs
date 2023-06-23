@@ -249,7 +249,6 @@ public class SecretAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task CanUpdateSecret_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
