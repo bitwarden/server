@@ -555,7 +555,7 @@ jobs:
               owner: 'bitwarden',
               repo: 'self-host',
               workflow_id: 'build-self-host.yml',
-              ref: 'DEVOPS-1204-Migrate_Build_pipeline_to_self-host_repo',
+              ref: 'master',
               inputs: {
                 server_branch: '${{ github.ref }}'
               }
@@ -573,6 +573,7 @@ jobs:
       - build-docker
       - upload
       - build-mssqlmigratorutility
+      - trigger-self-host-build
     steps:
       - name: Check if any job failed
         if: |
@@ -587,6 +588,7 @@ jobs:
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
           BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
+          TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.trigger-self-host-build.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
@@ -601,6 +603,8 @@ jobs:
           elif [ "$UPLOAD_STATUS" = "failure" ]; then
               exit 1
           elif [ "$BUILD_MSSQLMIGRATORUTILITY_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$TRIGGER_SELF_HOST_BUILD_STATUS" = "failure" ]; then
               exit 1
           fi
 
