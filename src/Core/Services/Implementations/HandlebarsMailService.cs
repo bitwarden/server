@@ -896,8 +896,26 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip,
+        string deviceTypeIdentifier)
+    {
+        var message = CreateDefaultMessage("Login request approved", email);
+        var model = new TrustedDeviceAdminApprovalViewModel
+        {
+            TheDate = utcNow.ToLongDateString(),
+            TheTime = utcNow.ToShortTimeString(),
+            TimeZone = "UTC",
+            IpAddress = ip,
+            DeviceType = deviceTypeIdentifier,
+        };
+        await AddMessageContentAsync(message, "Auth.TrustedDeviceAdminApproval", model);
+        message.Category = "TrustedDeviceAdminApproval";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     private static string GetUserIdentifier(string email, string userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
     }
 }
+
