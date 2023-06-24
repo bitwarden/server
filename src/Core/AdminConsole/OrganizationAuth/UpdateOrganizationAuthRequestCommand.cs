@@ -30,14 +30,14 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
         if (updatedAuthRequest.Approved is true)
         {
             var user = await _userRepository.GetByIdAsync(userId);
-            if (string.IsNullOrEmpty(user.Email))
+            if (user == null)
             {
-                throw new BadRequestException("User Email is Required");
+                throw new NotFoundException("User not found.");
             }
             var approvalDateTime = updatedAuthRequest.ResponseDate ?? DateTime.UtcNow;
             var deviceTypeDisplayName = updatedAuthRequest.RequestDeviceType.GetType()
                 .GetMember(updatedAuthRequest.RequestDeviceType.ToString())
-                .First()
+                .FirstOrDefault()?
                 .GetCustomAttribute<DisplayAttribute>()?.Name;
             string[] identifiers =
             {
