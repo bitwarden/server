@@ -379,8 +379,8 @@ public class OrganizationService : IOrganizationService
         organization.PublicKey = upgrade.PublicKey;
         organization.PrivateKey = upgrade.PrivateKey;
         organization.UsePasswordManager = true;
-        organization.SmSeats = (short)(newSecretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats);
-        organization.SmServiceAccounts = upgrade.AdditionalServiceAccounts;
+        organization.SmSeats = (short)(newSecretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault());
+        organization.SmServiceAccounts = upgrade.AdditionalServiceAccounts.GetValueOrDefault();
         organization.UseSecretsManager = upgrade.UseSecretsManager;
 
         await ReplaceAndUpdateCacheAsync(organization);
