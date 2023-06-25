@@ -46,6 +46,8 @@ public class Startup
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 
+        services.AddOosServices();
+
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
@@ -150,6 +152,7 @@ public class Startup
             client.BaseAddress = new Uri(globalSettings.BaseServiceUri.InternalSso);
         });
     }
+
 
     public void Configure(
         IApplicationBuilder app,

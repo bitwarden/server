@@ -195,6 +195,19 @@ public class OrganizationServiceTests
     }
 
     [Theory]
+    [FreeOrganizationUpgradeCustomize, BitAutoData]
+    public async Task UpgradePlan_WithSecretsManager_Passes(Organization organization, OrganizationUpgrade upgrade,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        upgrade.UseSecretsManager = true;
+        upgrade.AdditionalSmSeats = 2;
+        upgrade.AdditionalServiceAccounts = 2;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
+    }
+
+    [Theory]
     [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
          InvitorUserType = OrganizationUserType.Owner), BitAutoData]
     public async Task InviteUser_NoEmails_Throws(Organization organization, OrganizationUser invitor,
@@ -1481,4 +1494,5 @@ public class OrganizationServiceTests
 
         Assert.Equal(includeProvider, result);
     }
+
 }

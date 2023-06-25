@@ -16,7 +16,7 @@ public class OrganizationUpgradeRequestModel
     [Range(0, int.MaxValue)]
     public int? AdditionalSmSeats { get; set; }
     [Range(0, int.MaxValue)]
-    public int? AdditionalServiceAccount { get; set; }
+    public int? AdditionalServiceAccounts { get; set; }
     [Required]
     public bool UseSecretsManager { get; set; }
     public bool PremiumAccessAddon { get; set; }
@@ -30,7 +30,7 @@ public class OrganizationUpgradeRequestModel
         {
             AdditionalSeats = AdditionalSeats,
             AdditionalStorageGb = AdditionalStorageGb.GetValueOrDefault(),
-            AdditionalServiceAccount = AdditionalServiceAccount.GetValueOrDefault(0),
+            AdditionalServiceAccounts = AdditionalServiceAccounts.GetValueOrDefault(0),
             AdditionalSmSeats = AdditionalSmSeats.GetValueOrDefault(0),
             UseSecretsManager = UseSecretsManager,
             BusinessName = BusinessName,
