@@ -23,7 +23,7 @@ public class OrganizationSubscriptionUpdateRequestModel
             SeatAdjustment = SeatAdjustment,
             MaxAutoscaleSeats = MaxAutoscaleSeats,
             ServiceAccountsAdjustment = ServiceAccountsAdjustment.GetValueOrDefault(),
-            MaxAutoscaleServiceAccounts = MaxAutoscaleServiceAccounts,
+            MaxAutoscaleServiceAccounts = MaxAutoscaleServiceAccounts.GetValueOrDefault(),
             BitwardenProduct = BitwardenProduct
         };
 
