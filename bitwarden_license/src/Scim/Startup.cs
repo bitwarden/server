@@ -41,6 +41,8 @@ public class Startup
 
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
+        
+        services.AddOosServices();
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
