@@ -750,7 +750,7 @@ public class OrganizationService : IOrganizationService
 
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                 signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                signup.PremiumAccessAddon, signup.TaxInfo, provider,signup.AdditionalSmSeats.GetValueOrDefault(),
+                signup.PremiumAccessAddon, signup.TaxInfo, provider, signup.AdditionalSmSeats.GetValueOrDefault(),
                 signup.AdditionalServiceAccounts.GetValueOrDefault());
         }
 
@@ -2139,7 +2139,7 @@ public class OrganizationService : IOrganizationService
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static void ValidatePlan(Models.StaticStore.Plan plan,int additionalSeats, string productType)
+    private static void ValidatePlan(Models.StaticStore.Plan plan, int additionalSeats, string productType)
     {
         if (plan is not { LegacyYear: null })
         {
@@ -2150,7 +2150,7 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException($"{productType} Plan not found.");
         }
-        
+
         if (plan.BaseSeats + additionalSeats <= 0)
         {
             throw new BadRequestException($"You do not have any {productType} seats!");
@@ -2164,7 +2164,7 @@ public class OrganizationService : IOrganizationService
 
     private static void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
-        ValidatePlan(plan,upgrade.AdditionalSeats,"Password Manager");
+        ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
 
         if (plan.BaseSeats + upgrade.AdditionalSeats <= 0)
         {
