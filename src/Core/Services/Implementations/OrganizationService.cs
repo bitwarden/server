@@ -222,12 +222,10 @@ public class OrganizationService : IOrganizationService
 
         var newPasswordManagerPlanSeats = (short)(newPasswordManagerPlan.BaseSeats +
                                                   (newPasswordManagerPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
-        var occupiedPmSeats = 0;
         if (!organization.Seats.HasValue || organization.Seats.Value > newPasswordManagerPlanSeats)
         {
             var occupiedSeats =
                 await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            occupiedPmSeats = occupiedSeats;
             if (occupiedSeats > newPasswordManagerPlanSeats)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
@@ -339,7 +337,8 @@ public class OrganizationService : IOrganizationService
 
             paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
                 organizationUpgradePlan,
-                upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
+                upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo
+                , upgrade.AdditionalSmSeats.GetValueOrDefault(), upgrade.AdditionalServiceAccounts.GetValueOrDefault());
             success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
         }
         else
@@ -381,8 +380,8 @@ public class OrganizationService : IOrganizationService
         organization.PublicKey = upgrade.PublicKey;
         organization.PrivateKey = upgrade.PrivateKey;
         organization.UsePasswordManager = true;
-        organization.SmSeats = (short)(newSecretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats);
-        organization.SmServiceAccounts = upgrade.AdditionalServiceAccounts;
+        organization.SmSeats = (short)(newSecretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault());
+        organization.SmServiceAccounts = upgrade.AdditionalServiceAccounts.GetValueOrDefault();
         organization.UseSecretsManager = upgrade.UseSecretsManager;
 
         await ReplaceAndUpdateCacheAsync(organization);
@@ -426,29 +425,18 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        var occupiedPmSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-
-        if (occupiedSmSeats > occupiedPmSeats)
-        {
-            throw new BadRequestException("Your secrets manager seats should not be greater than password manager occupied seat");
-        }
-
         if (newSecretsManagerPlan.BaseServiceAccount != null)
         {
-            var newPlanServiceAccount = (short)(newSecretsManagerPlan.BaseServiceAccount +
-                                                (newSecretsManagerPlan.HasAdditionalServiceAccountOption
-                                                    ? upgrade.AdditionalServiceAccounts
-                                                    : 0));
             if (!organization.SmServiceAccounts.HasValue ||
-                organization.SmServiceAccounts.Value > newPlanServiceAccount)
+                organization.SmServiceAccounts.Value > newSecretsManagerPlan.MaxServiceAccount)
             {
-                var occupiedServiceAccount =
+                var currentServiceAccounts =
                     await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
-                if (occupiedServiceAccount > newPlanSmSeats)
+                if (currentServiceAccounts > newSecretsManagerPlan.MaxServiceAccount)
                 {
                     throw new BadRequestException(
-                        $"Your organization currently has {occupiedServiceAccount} service account seats filled. " +
-                        $"Your new plan only has ({newPlanServiceAccount}) service accounts. Remove some service accounts.");
+                        $"Your organization currently has {currentServiceAccounts} service account seats filled. " +
+                        $"Your new plan only has ({newSecretsManagerPlan.MaxServiceAccount}) service accounts. Remove some service accounts.");
                 }
             }
         }
@@ -1032,8 +1020,8 @@ public class OrganizationService : IOrganizationService
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
-            SmSeats = (short)(secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats),
-            SmServiceAccounts = signup.AdditionalServiceAccounts,
+            SmSeats = (short)(secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault()),
+            SmServiceAccounts = signup.AdditionalServiceAccounts.GetValueOrDefault(),
             UseSecretsManager = signup.UseSecretsManager
         };
 
@@ -1054,7 +1042,8 @@ public class OrganizationService : IOrganizationService
 
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
                 signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                signup.PremiumAccessAddon, signup.TaxInfo, provider);
+                signup.PremiumAccessAddon, signup.TaxInfo, provider, signup.AdditionalSmSeats.GetValueOrDefault(),
+                signup.AdditionalServiceAccounts.GetValueOrDefault());
         }
 
         var ownerId = provider ? default : signup.Owner.Id;
@@ -2442,8 +2431,7 @@ public class OrganizationService : IOrganizationService
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static void ValidatePlan(Models.StaticStore.Plan plan, int? additionalSeats, bool premiumAccessAddon,
-        string productType)
+    private static void ValidatePlan(Models.StaticStore.Plan plan, int additionalSeats, string productType)
     {
         if (plan is not { LegacyYear: null })
         {
@@ -2455,11 +2443,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException($"{productType} Plan not found.");
         }
 
-        if (!plan.HasPremiumAccessOption && premiumAccessAddon)
-        {
-            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
-        }
-
         if (plan.BaseSeats + additionalSeats <= 0)
         {
             throw new BadRequestException($"You do not have any {productType} seats!");
@@ -2469,12 +2452,21 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException($"You can't subtract {productType} seats!");
         }
-
     }
 
     private static void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
-        ValidatePlan(plan, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, "Password Manager");
+        ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
+
+        if (plan.BaseSeats + upgrade.AdditionalSeats <= 0)
+        {
+            throw new BadRequestException($"You do not have any Password Manager seats!");
+        }
+
+        if (upgrade.AdditionalSeats < 0)
+        {
+            throw new BadRequestException($"You can't subtract Password Manager seats!");
+        }
 
         if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
         {
@@ -2484,6 +2476,11 @@ public class OrganizationService : IOrganizationService
         if (upgrade.AdditionalStorageGb < 0)
         {
             throw new BadRequestException("You can't subtract storage!");
+        }
+
+        if (!plan.HasPremiumAccessOption && upgrade.PremiumAccessAddon)
+        {
+            throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
         }
 
         if (!plan.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
@@ -2501,16 +2498,21 @@ public class OrganizationService : IOrganizationService
 
     private static void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
-        ValidatePlan(plan, upgrade.AdditionalSmSeats, upgrade.PremiumAccessAddon, "Secrets Manager");
+        ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");
 
         if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
         {
-            throw new BadRequestException("Plan does not allow additional service accounts.");
+            throw new BadRequestException("Plan does not allow additional Service Accounts.");
         }
 
-        if (upgrade.AdditionalServiceAccounts < 0)
+        if (upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats)
         {
-            throw new BadRequestException("You can't subtract service accounts!");
+            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+        }
+
+        if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
+        {
+            throw new BadRequestException("You can't subtract Service Accounts!");
         }
 
         switch (plan.HasAdditionalSeatsOption)

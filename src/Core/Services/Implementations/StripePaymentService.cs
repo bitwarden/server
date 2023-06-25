@@ -46,7 +46,8 @@ public class StripePaymentService : IPaymentService
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
         string paymentToken, List<StaticStore.Plan> plans, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false)
+        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
+        int additionalSmSeats = 0, int additionalServiceAccount = 0)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -110,7 +111,8 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
+        , additionalSmSeats, additionalServiceAccount);
 
         Stripe.Customer customer = null;
         Stripe.Subscription subscription;
@@ -222,7 +224,8 @@ public class StripePaymentService : IPaymentService
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
     public async Task<string> UpgradeFreeOrganizationAsync(Organization org, List<StaticStore.Plan> plans,
-        short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
+        short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo,
+        int additionalSmSeats = 0, int additionalServiceAccounts = 0)
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
         {

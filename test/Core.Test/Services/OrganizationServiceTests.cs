@@ -174,10 +174,37 @@ public class OrganizationServiceTests
         Assert.Contains("already on this plan", exception.Message);
     }
 
+    [Theory, BitAutoData]
+    public async Task UpgradePlan_SM_AlreadyInPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        upgrade.Plan = organization.PlanType;
+        upgrade.UseSecretsManager = true;
+        upgrade.AdditionalSmSeats = 10;
+        upgrade.AdditionalServiceAccounts = 10;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+        Assert.Contains("already on this plan", exception.Message);
+    }
+
     [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
     public async Task UpgradePlan_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
             SutProvider<OrganizationService> sutProvider)
     {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+        Assert.Contains("can only upgrade", exception.Message);
+    }
+
+    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
+    public async Task UpgradePlan_SM_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        upgrade.UseSecretsManager = true;
+        upgrade.AdditionalSmSeats = 10;
+        upgrade.AdditionalServiceAccounts = 10;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
@@ -190,21 +217,39 @@ public class OrganizationServiceTests
             SutProvider<OrganizationService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        upgrade.AdditionalSmSeats = 10;
+        upgrade.AdditionalSeats = 10;
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
     }
 
     [Theory]
+    [BitAutoData]
+    public async Task SignUp_SM_Passes(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalSeats = 10;
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.UseSecretsManager = true;
+        signup.PremiumAccessAddon = false;
+
+        var result = await sutProvider.Sut.SignUpAsync(signup);
+        Assert.NotNull(result);
+        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
+    }
+
+    [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_WithSecretsManager_Passes(Organization organization, OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_SM_Passes(Organization organization, OrganizationUpgrade upgrade,
         SutProvider<OrganizationService> sutProvider)
     {
-        upgrade.UseSecretsManager = true;
-        upgrade.AdditionalSmSeats = 2;
-        upgrade.AdditionalServiceAccounts = 2;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
+        upgrade.AdditionalSmSeats = 10;
+        upgrade.AdditionalSeats = 10;
+        var result = await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
+        Assert.True(result.Item1);
+        Assert.NotNull(result.Item2);
     }
 
     [Theory]

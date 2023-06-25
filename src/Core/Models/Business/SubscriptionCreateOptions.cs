@@ -17,11 +17,12 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         foreach (var plan in plans)
         {
             AddPlanIdToSubscription(plan);
-            AddPremiumAccessAddon(premiumAccessAddon, plan);
+
             switch (plan.BitwardenProduct)
             {
                 case BitwardenProductType.PasswordManager:
                     {
+                        AddPremiumAccessAddon(premiumAccessAddon, plan);
                         AddAdditionalSeatToSubscription(additionalSeats, plan);
                         AddAdditionalStorage(additionalStorageGb, plan);
                         break;
@@ -110,8 +111,8 @@ public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOp
         string customerId, Organization org,
         List<StaticStore.Plan> plans, TaxInfo taxInfo,
         int additionalSeats = 0, int additionalStorageGb = 0,
-        bool premiumAccessAddon = false) :
-        base(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+        bool premiumAccessAddon = false, int additionalSmSeats = 0, int additionalServiceAccounts = 0) :
+        base(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon, additionalSmSeats, additionalServiceAccounts)
     {
         Customer = customerId;
     }
