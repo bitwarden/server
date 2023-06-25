@@ -224,9 +224,8 @@ public class OrganizationServiceTests
     }
 
     [Theory]
-    [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task SignUp_SM_Passes(Organization organization, OrganizationSignup signup,
-        SutProvider<OrganizationService> sutProvider)
+    [BitAutoData]
+    public async Task SignUp_SM_Passes(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
         signup.AdditionalSmSeats = 10;
         signup.AdditionalSeats = 10;
