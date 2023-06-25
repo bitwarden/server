@@ -42,6 +42,6 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         UserId = organization.UserId?.ToString();
         ProviderId = organization.ProviderId?.ToString();
         ProviderName = organization.ProviderName;
-        PlanProductType = StaticStore.GetPlan(organization.PlanType).Product;
+        PlanProductType = StaticStore.GetPasswordManagerPlan(organization.PlanType).Product;
     }
 }

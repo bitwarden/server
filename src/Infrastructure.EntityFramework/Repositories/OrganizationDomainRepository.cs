@@ -111,11 +111,11 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         var dbContext = GetDatabaseContext(scope);
 
         //Get domains that have not been verified after 72 hours
-        var domains = dbContext.OrganizationDomains
-            .AsEnumerable()
+        var domains = await dbContext.OrganizationDomains
             .Where(x => (DateTime.UtcNow - x.CreationDate).Days == 4
                         && x.VerifiedDate == null)
-            .ToList();
+            .AsNoTracking()
+            .ToListAsync();
 
         return Mapper.Map<List<Core.Entities.OrganizationDomain>>(domains);
     }
