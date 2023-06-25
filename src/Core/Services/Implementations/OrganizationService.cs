@@ -428,15 +428,15 @@ public class OrganizationService : IOrganizationService
         if (newSecretsManagerPlan.BaseServiceAccount != null)
         {
             if (!organization.SmServiceAccounts.HasValue ||
-                organization.SmServiceAccounts.Value > newSecretsManagerPlan.MaxServiceAccount)
+                organization.SmServiceAccounts.Value > newSecretsManagerPlan.MaxServiceAccounts)
             {
                 var currentServiceAccounts =
                     await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
-                if (currentServiceAccounts > newSecretsManagerPlan.MaxServiceAccount)
+                if (currentServiceAccounts > newSecretsManagerPlan.MaxServiceAccounts)
                 {
                     throw new BadRequestException(
                         $"Your organization currently has {currentServiceAccounts} service account seats filled. " +
-                        $"Your new plan only has ({newSecretsManagerPlan.MaxServiceAccount}) service accounts. Remove some service accounts.");
+                        $"Your new plan only has ({newSecretsManagerPlan.MaxServiceAccounts}) service accounts. Remove some service accounts.");
                 }
             }
         }
@@ -685,7 +685,7 @@ public class OrganizationService : IOrganizationService
 
         if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newServiceAccountsTotal)
         {
-            var occupiedServiceAccounts = await _organizationUserRepository.GetOccupiedServiceAccountCountByOrganizationIdAsync(organization.Id);
+            var occupiedServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
             if (occupiedServiceAccounts > newServiceAccountsTotal)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedServiceAccounts} seats filled. " +
