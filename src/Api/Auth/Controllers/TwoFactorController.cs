@@ -1,4 +1,4 @@
-﻿using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
 using Bit.Api.Models.Request;
@@ -172,6 +172,32 @@ public class TwoFactorController : Controller
         await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
         var response = new TwoFactorDuoResponseModel(user);
         return response;
+    }
+
+    [AllowAnonymous]
+    [HttpPost("validate-duo")]
+    public async Task<IActionResult> ValidateDuo(string code)
+    {
+        string clientId = "-------------";
+        string clientSecret = "-------------";
+        string apiHost = "-------------";
+        string returnUrl = "-----------------------";
+
+        Duo.Client duoClient = new Duo.ClientBuilder(clientId, clientSecret, apiHost, returnUrl).Build();
+
+        Duo.IdToken token;
+        try
+        {
+            token = await duoClient.ExchangeAuthorizationCodeFor2faResult(code, "jfink@bitwarden.com");
+        }
+        catch (Exception)
+        {
+            throw new BadRequestException(
+                "Duo authorization code invalid.");
+        }
+
+        return Ok(new { Value = token });
+
     }
 
     [HttpPost("~/organizations/{id}/two-factor/get-duo")]

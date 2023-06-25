@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
@@ -21,6 +21,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
+using Duo = DuoUniversal;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -428,9 +429,28 @@ public abstract class BaseRequestValidator<T> where T : class
                     CoreHelpers.CustomProviderName(type));
                 if (type == TwoFactorProviderType.Duo)
                 {
+                    string clientId = "-------------";
+                    string clientSecret = "-------------";
+                    string apiHost = "-------------";
+                    string returnUrl = "-----------------------";
+                    Duo.Client duoClient = new Duo.ClientBuilder(clientId, clientSecret, apiHost, returnUrl).Build();
+
+                    // Check if Duo seems to be healthy and able to service authentications.
+                    // If Duo were unhealthy, you could possibly send user to an error page, or implement a fail mode
+                    var isDuoHealthy = await duoClient.DoHealthCheck();
+
+                    // Generate a random state value to tie the authentication steps together
+                    string state = Duo.Client.GenerateState();
+                    // Save the state and username in the session for later
+                    // _currentContext.HttpContext.Session.SetString(STATE_SESSION_KEY, state);
+                    // HttpContext.Session.SetString(USERNAME_SESSION_KEY, username);
+
+                    // Get the URI of the Duo prompt from the client.  This includes an embedded authentication request.
+                    string promptUri = duoClient.GenerateAuthUri("jfink@bitwarden.com", state);
                     return new Dictionary<string, object>
                     {
-                        ["Host"] = provider.MetaData["Host"],
+                        // ["Host"] = provider.MetaData["Host"],
+                        ["Host"] = promptUri,
                         ["Signature"] = token
                     };
                 }
