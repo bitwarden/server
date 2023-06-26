@@ -526,7 +526,7 @@ jobs:
   self-host-build:
     name: Self-host build
     needs: build-docker
-    uses: bitwarden/self-host/.github/workflows/build-unified.yml
+    uses: bitwarden/self-host/.github/workflows/build-unified.yml@master
     with:
       server_branch: ${{ github.ref }}
     secrets: inherit
