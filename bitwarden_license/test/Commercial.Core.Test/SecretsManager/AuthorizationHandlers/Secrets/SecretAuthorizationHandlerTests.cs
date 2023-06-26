@@ -350,7 +350,7 @@ public class SecretAuthorizationHandlerTests
     {
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
-        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default).Returns(
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>()).Returns(
             (read, write));
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
@@ -379,10 +379,10 @@ public class SecretAuthorizationHandlerTests
     {
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
-        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default).Returns(
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>()).Returns(
             (read, write));
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
                 (read, write));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
