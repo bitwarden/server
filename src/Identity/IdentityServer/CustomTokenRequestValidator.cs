@@ -1,5 +1,4 @@
 ﻿using System.Security.Claims;
-using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -88,7 +87,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         return validatorContext.User != null;
     }
 
-    protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
+    protected override Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
         List<Claim> claims, Dictionary<string, object> customResponse)
     {
         context.Result.CustomResponse = customResponse;
@@ -104,7 +103,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         // KeyConnector responses below
@@ -119,7 +118,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse["ResetMasterPassword"] = false;
             }
 
-            return;
+            return Task.CompletedTask;
         }
 
         // Key connector data should have already been set in the decryption options
@@ -128,7 +127,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         if (!context.Result.CustomResponse.TryGetValue("UserDecryptionOptions", out var userDecryptionOptionsObj) ||
             userDecryptionOptionsObj is not UserDecryptionOptions userDecryptionOptions)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         if (userDecryptionOptions is { KeyConnectorOption: { } })
@@ -136,6 +135,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
             context.Result.CustomResponse["ResetMasterPassword"] = false;
         }
+
+        return Task.CompletedTask;
     }
 
     protected override ClaimsPrincipal GetSubject(CustomTokenRequestValidationContext context)
