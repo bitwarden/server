@@ -17,9 +17,9 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
     private readonly ILogger<UpdateOrganizationAuthRequestCommand> _logger;
 
     public UpdateOrganizationAuthRequestCommand(
-        IAuthRequestService authRequestService, 
-        IMailService mailService, 
-        IUserRepository userRepository, 
+        IAuthRequestService authRequestService,
+        IMailService mailService,
+        IUserRepository userRepository,
         ILogger<UpdateOrganizationAuthRequestCommand> logger)
     {
         _authRequestService = authRequestService;
