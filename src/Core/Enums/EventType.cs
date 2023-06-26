@@ -54,6 +54,9 @@ public enum EventType : int
     OrganizationUser_FirstSsoLogin = 1510,
     OrganizationUser_Revoked = 1511,
     OrganizationUser_Restored = 1512,
+    OrganizationUser_ApprovedAuthRequest = 1513,
+    OrganizationUser_RejectedAuthRequest = 1514,
+    OrganizationUser_RequestedDeviceApproval = 1515,
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,
