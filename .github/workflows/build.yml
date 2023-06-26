@@ -523,38 +523,13 @@ jobs:
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
 
-  trigger-self-host-build:
-    name: Trigger self-host build
-    runs-on: ubuntu-22.04
-    needs:
-      - build-docker
-    steps:
-      - name: Login to Azure - CI Subscription
-        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
-        with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-
-      - name: Retrieve github PAT secrets
-        id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
-        with:
-          keyvault: "bitwarden-ci"
-          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
-
-      - name: Trigger self-host build
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
-          script: |
-            await github.rest.actions.createWorkflowDispatch({
-              owner: 'bitwarden',
-              repo: 'self-host',
-              workflow_id: 'build-unified.yml',
-              ref: 'master',
-              inputs: {
-                server_branch: '${{ github.ref }}'
-              }
-            })
+  self-host-build:
+    name: Self-host build
+    needs: build-docker
+    uses: bitwarden/self-host/.github/workflows/build-unified.yml
+    with:
+      server_branch: ${{ github.ref }}
+    secrets: inherit
 
   check-failures:
     name: Check for failures
@@ -568,7 +543,7 @@ jobs:
       - build-docker
       - upload
       - build-mssqlmigratorutility
-      - trigger-self-host-build
+      - self-host-build
     steps:
       - name: Check if any job failed
         if: |
@@ -583,7 +558,7 @@ jobs:
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
           BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
-          TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.trigger-self-host-build.result }}
+          TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.self-host-build.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
