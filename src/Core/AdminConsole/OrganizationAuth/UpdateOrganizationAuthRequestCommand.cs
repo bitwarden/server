@@ -3,9 +3,9 @@ using System.Reflection;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
-using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.AdminConsole.OrganizationAuth;
 
@@ -14,12 +14,18 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
     private readonly IAuthRequestService _authRequestService;
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
+    private readonly ILogger<UpdateOrganizationAuthRequestCommand> _logger;
 
-    public UpdateOrganizationAuthRequestCommand(IAuthRequestService authRequestService, IMailService mailService, IUserRepository userRepository)
+    public UpdateOrganizationAuthRequestCommand(
+        IAuthRequestService authRequestService, 
+        IMailService mailService, 
+        IUserRepository userRepository, 
+        ILogger<UpdateOrganizationAuthRequestCommand> logger)
     {
         _authRequestService = authRequestService;
         _mailService = mailService;
         _userRepository = userRepository;
+        _logger = logger;
     }
 
     public async Task UpdateAsync(Guid requestId, Guid userId, bool requestApproved, string encryptedUserKey)
@@ -32,7 +38,8 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
-                throw new NotFoundException("User not found.");
+                _logger.LogError("User ({id}) not found. Trusted device admin approval email not sent.", userId);
+                return;
             }
             var approvalDateTime = updatedAuthRequest.ResponseDate ?? DateTime.UtcNow;
             var deviceTypeDisplayName = updatedAuthRequest.RequestDeviceType.GetType()
