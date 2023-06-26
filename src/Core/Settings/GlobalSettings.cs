@@ -534,6 +534,9 @@ public class GlobalSettings : IGlobalSettings
     public class PasswordlessAuthSettings : IPasswordlessAuthSettings
     {
         public bool KnownDevicesOnly { get; set; } = true;
+        public TimeSpan UserRequestExpiration { get; set; } = TimeSpan.FromMinutes(15);
+        public TimeSpan AdminRequestExpiration { get; set; } = TimeSpan.FromDays(6);
+        public TimeSpan AfterAdminApprovalExpiration { get; set; } = TimeSpan.FromHours(12);
     }
 
     public class DomainVerificationSettings : IDomainVerificationSettings
