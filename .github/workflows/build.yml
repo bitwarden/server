@@ -528,7 +528,7 @@ jobs:
     needs: build-docker
     uses: bitwarden/self-host/.github/workflows/build-unified.yml@master
     with:
-      server_branch: ${{ github.ref }}
+      server_branch: ${{ github.ref_name }}
     secrets: inherit
 
   check-failures:
