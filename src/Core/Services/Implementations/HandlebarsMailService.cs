@@ -904,7 +904,7 @@ public class HandlebarsMailService : IMailService
         {
             TheDate = utcNow.ToLongDateString(),
             TheTime = utcNow.ToShortTimeString(),
-            TimeZone = "UTC",
+            TimeZone = utcNow.Kind.ToString(),
             IpAddress = ip,
             DeviceType = deviceTypeIdentifier,
         };
