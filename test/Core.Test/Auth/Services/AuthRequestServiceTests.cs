@@ -445,7 +445,7 @@ public class AuthRequestServiceTests
             .PushAuthRequestResponseAsync(udpatedAuthRequest);
 
         var expectedNumberOfCalls = organizationId.HasValue ? 1 : 0;
-        
+
         await sutProvider.GetDependency<IEventService>()
             .Received(expectedNumberOfCalls)
             .LogOrganizationUserEventAsync(

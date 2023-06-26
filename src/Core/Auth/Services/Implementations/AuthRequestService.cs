@@ -137,7 +137,7 @@ public class AuthRequestService : IAuthRequestService
 
             // This will send out the request to all organizations this user belongs to 
             var organizationUsers = await _organizationUserRepository.GetManyByUserAsync(_currentContext.UserId!.Value);
-            
+
             if (organizationUsers.Count == 0)
             {
                 throw new BadRequestException("User does not belong to any organizations.");
