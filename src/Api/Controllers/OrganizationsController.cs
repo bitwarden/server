@@ -322,20 +322,6 @@ public class OrganizationsController : Controller
         var organizationUpdate = model.ToOrganizationUpdate(orgIdGuid);
         await _organizationService.UpdateSubscription(organizationUpdate);
     }
-    
-    [HttpPost("{id}/subscribe-secrets-manager")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostSubscribeSecretsManagerAsync(string id, [FromBody] OrganizationSeatRequestModel model)
-    {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.EditSubscription(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-
-        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value, null, model.BitwardenProductType);
-        return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
-    }
 
     [HttpPost("{id}/seat")]
     [SelfHosted(NotSelfHostedOnly = true)]
