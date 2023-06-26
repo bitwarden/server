@@ -82,15 +82,6 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
-    private async Task<bool> checkAccessToSecret(Secret resource, Guid userId, AccessClientType accessClient)
-    {
-        var newProject = resource.Projects?.FirstOrDefault();
-        var access = (await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient)).Write;
-        var accessToNew = newProject != null &&
-                          (await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient))
-                          .Write;
-        return access && accessToNew;
-    }
 
     private async Task CanUpdateSecretAsync(AuthorizationHandlerContext context,
         SecretOperationRequirement requirement, Secret resource)
@@ -114,10 +105,10 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
                 hasAccess = true;
                 break;
             case AccessClientType.User:
-                hasAccess = await checkAccessToSecret(resource, userId, accessClient);
+                hasAccess = await GetAccessToUpdateSecretAsync(resource, userId, accessClient);
                 break;
             case AccessClientType.ServiceAccount:
-                hasAccess = await checkAccessToSecret(resource, userId, accessClient);
+                hasAccess = await GetAccessToUpdateSecretAsync(resource, userId, accessClient);
                 break;
             default:
                 hasAccess = false;
@@ -129,4 +120,15 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             context.Succeed(requirement);
         }
     }
+
+    private async Task<bool> GetAccessToUpdateSecretAsync(Secret resource, Guid userId, AccessClientType accessClient)
+    {
+        var newProject = resource.Projects?.FirstOrDefault();
+        var access = (await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient)).Write;
+        var accessToNew = newProject != null &&
+                          (await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient))
+                          .Write;
+        return access && accessToNew;
+    }
+
 }

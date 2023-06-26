@@ -43,7 +43,7 @@ public class SecretAuthorizationHandlerTests
                 break;
             case PermissionType.RunAsServiceAccountWithPermission:
                 sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
-                    (clientType, userId));
+                    (AccessClientType.ServiceAccount, userId));
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
@@ -109,7 +109,6 @@ public class SecretAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task CanCreateSecret_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
@@ -118,7 +117,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Create;
         SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId, clientType);
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
                 (true, true));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -186,6 +185,8 @@ public class SecretAuthorizationHandlerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false)]
     public async Task CanCreateSecret_DoesNotSucceed(PermissionType permissionType, bool read, bool write,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
         Guid userId,
@@ -194,7 +195,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Create;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).ReturnsForAnyArgs(
                 (read, write));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -221,7 +222,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Create;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).ReturnsForAnyArgs(
                 (read, write));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -257,7 +258,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId, clientType);
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
                 (true, true));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -352,7 +353,7 @@ public class SecretAuthorizationHandlerTests
         sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default).Returns(
             (read, write));
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
                 (projectRead, projectWrite));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
