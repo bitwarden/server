@@ -317,17 +317,12 @@ jobs:
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
-      - name: Setup Docker Trust
+      - name: Setup Docker Content Trust (DCT)
         if: ${{ env.is_publish_branch == 'true' }}
-        env:
-          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
-          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
-          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
-        run: |
-          mkdir -p ~/.docker/trust/private
-          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
-          echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
-          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
+        uses: bitwarden/gh-actions/setup-docker-trust@f955298c7a982b3fb5dbb73afd582c584fd5beec
+        with:
+          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          azure-keyvault-name: "bitwarden-ci"
 
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
@@ -554,8 +549,8 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: 'bitwarden',
               repo: 'self-host',
-              workflow_id: 'build-self-host.yml',
-              ref: 'DEVOPS-1204-Migrate_Build_pipeline_to_self-host_repo',
+              workflow_id: 'build-unified.yml',
+              ref: 'master',
               inputs: {
                 server_branch: '${{ github.ref }}'
               }
@@ -573,6 +568,7 @@ jobs:
       - build-docker
       - upload
       - build-mssqlmigratorutility
+      - trigger-self-host-build
     steps:
       - name: Check if any job failed
         if: |
@@ -587,6 +583,7 @@ jobs:
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
           BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
+          TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.trigger-self-host-build.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
@@ -601,6 +598,8 @@ jobs:
           elif [ "$UPLOAD_STATUS" = "failure" ]; then
               exit 1
           elif [ "$BUILD_MSSQLMIGRATORUTILITY_STATUS" = "failure" ]; then
+              exit 1
+          elif [ "$TRIGGER_SELF_HOST_BUILD_STATUS" = "failure" ]; then
               exit 1
           fi
 
