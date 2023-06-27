@@ -6,7 +6,10 @@ using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Models.Data;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -43,6 +46,8 @@ public abstract class BaseRequestValidator<T> where T : class
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
+    protected IFeatureService FeatureService { get; }
+    protected ISsoConfigRepository SsoConfigRepository { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -58,10 +63,11 @@ public abstract class BaseRequestValidator<T> where T : class
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
+        IFeatureService featureService,
+        ISsoConfigRepository ssoConfigRepository)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -79,6 +85,8 @@ public abstract class BaseRequestValidator<T> where T : class
         PolicyService = policyService;
         _userRepository = userRepository;
         _tokenDataFactory = tokenDataFactory;
+        FeatureService = featureService;
+        SsoConfigRepository = ssoConfigRepository;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -199,6 +207,7 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfIterations", user.KdfIterations);
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
+        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, GetSubject(context)));
 
         if (sendRememberToken)
         {
@@ -300,6 +309,7 @@ public abstract class BaseRequestValidator<T> where T : class
         Dictionary<string, object> customResponse);
 
     protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
+    protected abstract ClaimsPrincipal GetSubject(T context);
 
     private async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
     {
@@ -571,5 +581,54 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
+    }
+
+#nullable enable
+    /// <summary>
+    /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
+    /// </summary>
+    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, ClaimsPrincipal subject)
+    {
+        var ssoConfigurationData = await GetSsoConfigurationDataAsync(subject);
+
+        var userDecryptionOption = new UserDecryptionOptions
+        {
+            HasMasterPassword = !string.IsNullOrEmpty(user.MasterPassword)
+        };
+
+        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
+        {
+            // KeyConnector makes it mutually exclusive
+            userDecryptionOption.KeyConnectorOption = new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
+            return userDecryptionOption;
+        }
+
+        // Only add the trusted device specific option when the flag is turned on
+        if (FeatureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext) && ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
+        {
+            var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
+            // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
+            userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval);
+        }
+
+        return userDecryptionOption;
+    }
+
+    private async Task<SsoConfigurationData?> GetSsoConfigurationDataAsync(ClaimsPrincipal subject)
+    {
+        var organizationClaim = subject?.FindFirstValue("organizationId");
+
+        if (organizationClaim == null || !Guid.TryParse(organizationClaim, out var organizationId))
+        {
+            return null;
+        }
+
+        var ssoConfig = await SsoConfigRepository.GetByOrganizationIdAsync(organizationId);
+        if (ssoConfig == null)
+        {
+            return null;
+        }
+
+        return ssoConfig.GetData();
     }
 }
