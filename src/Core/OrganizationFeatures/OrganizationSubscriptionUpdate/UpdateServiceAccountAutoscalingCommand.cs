@@ -14,7 +14,7 @@ public class UpdateServiceAccountAutoscalingCommand : IUpdateServiceAccountAutos
     {
         _organizationService = organizationService;
     }
-    
+
     public async Task UpdateServiceAccountAutoscalingAsync(Organization organization, int? maxAutoscaleServiceAccounts)
     {
         if (maxAutoscaleServiceAccounts.HasValue &&

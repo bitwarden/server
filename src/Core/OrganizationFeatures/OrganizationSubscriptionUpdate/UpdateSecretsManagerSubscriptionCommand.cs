@@ -30,11 +30,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _updateServiceAccountAutoscalingCommand = updateServiceAccountAutoscalingCommand;
         _updateSeatsAutoscalingCommand = updateSeatsAutoscalingCommand;
     }
-    
+
     public async Task UpdateSecretsManagerSubscription(OrganizationUpdate update)
     {
-         var organization = await _organizationRepository.GetByIdAsync(update.OrganizationId);
-         
+        var organization = await _organizationRepository.GetByIdAsync(update.OrganizationId);
+
         if (organization == null)
         {
             throw new NotFoundException();

@@ -41,7 +41,7 @@ public class UpdateSeatsAutoscalingCommandTests
         plan.MaxUsers = 20;
         maxAutoscaleSeats = 15;
         organization.SmSeats = 10;
-        
+
         await sutProvider.Sut.UpdateSeatsAutoscalingAsync(organization, maxAutoscaleSeats);
 
         Assert.Equal(maxAutoscaleSeats, organization.MaxAutoscaleSmSeats);

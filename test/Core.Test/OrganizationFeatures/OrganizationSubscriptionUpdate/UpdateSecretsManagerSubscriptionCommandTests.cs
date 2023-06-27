@@ -19,7 +19,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [Theory]
     [BitAutoData]
     public async Task UpdateSecretsManagerSubscription_NoOrganization_Throws(
-        Guid organizationId, 
+        Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -32,11 +32,11 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSeats = null,
             SeatAdjustment = 0
         };
-        
+
         await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
     }
-    
+
     [Theory]
     [PaidOrganizationCustomize(CheckedPlanType = PlanType.EnterpriseAnnually)]
     [BitAutoData("Cannot set max seat autoscaling below seat count", 1, 0, 2)]
@@ -62,7 +62,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         Assert.Contains(expectedMessage, exception.Message);
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task UpdateSecretsManagerSubscription_SeatAdjustmentExceedsMaxAutoscaleSeats_Throws(
@@ -80,7 +80,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task UpdateSecretsManagerSubscription_ServiceAccountsAdjustmentExceedsMaxAutoscaleServiceAccounts_Throws(
@@ -94,11 +94,11 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organizationUpdate.OrganizationId)
             .Returns(organization);
-        
+
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
     }
-    
-    
+
+
 
 }

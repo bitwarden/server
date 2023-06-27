@@ -20,11 +20,11 @@ public class AdjustServiceAccountsCommand : IAdjustServiceAccountsCommand
     private readonly IOrganizationService _organizationService;
     private readonly IPaymentService _paymentService;
     private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext; 
+    private readonly ICurrentContext _currentContext;
     private readonly IMailService _mailService;
     private readonly ILogger<AdjustServiceAccountsCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    
+
     public AdjustServiceAccountsCommand(
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
@@ -44,10 +44,10 @@ public class AdjustServiceAccountsCommand : IAdjustServiceAccountsCommand
         _logger = logger;
         _serviceAccountRepository = serviceAccountRepository;
     }
-    
+
     public async Task<string> AdjustServiceAccountsAsync(Organization organization, int serviceAccountAdjustment, IEnumerable<string> ownerEmails = null,
         DateTime? prorationDate = null)
-    { 
+    {
         if (organization.SmServiceAccounts == null)
         {
             throw new BadRequestException("Organization has no Service Account limit, no need to adjust Service Account");

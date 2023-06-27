@@ -325,7 +325,7 @@ public class OrganizationsController : Controller
         }
         await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
     }
-    
+
     [HttpPost("{id}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task PostSmSubscription(string id, [FromBody] OrganizationSmSubscriptionUpdateRequestModel model)

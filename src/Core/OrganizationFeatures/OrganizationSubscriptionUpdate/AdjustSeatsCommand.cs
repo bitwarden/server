@@ -19,7 +19,7 @@ public class AdjustSeatsCommand : IAdjustSeatsCommand
     private readonly IOrganizationService _organizationService;
     private readonly IPaymentService _paymentService;
     private readonly IReferenceEventService _referenceEventService;
-    private readonly ICurrentContext _currentContext; 
+    private readonly ICurrentContext _currentContext;
     private readonly IMailService _mailService;
     private readonly ILogger<AdjustSeatsCommand> _logger;
 
@@ -40,7 +40,7 @@ public class AdjustSeatsCommand : IAdjustSeatsCommand
         _mailService = mailService;
         _logger = logger;
     }
-    
+
     public async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment,
         DateTime? prorationDate = null, IEnumerable<string> ownerEmails = null)
     {
@@ -114,10 +114,10 @@ public class AdjustSeatsCommand : IAdjustSeatsCommand
                 PreviousSeats = organization.SmSeats
             });
 
-       organization.SmSeats = (short?)newSeatTotal;
+        organization.SmSeats = (short?)newSeatTotal;
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-        
+
         if (organization.SmSeats.HasValue && organization.MaxAutoscaleSmSeats.HasValue && organization.SmSeats == organization.MaxAutoscaleSmSeats)
         {
             try

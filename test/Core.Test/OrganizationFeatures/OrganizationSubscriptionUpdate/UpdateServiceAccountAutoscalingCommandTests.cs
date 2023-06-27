@@ -26,7 +26,7 @@ public class UpdateServiceAccountAutoscalingCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task UpdateServiceAccountAutoscalingAsync_SeatAutoscaleNotAllowed_ThrowsBadRequestException(
@@ -37,11 +37,11 @@ public class UpdateServiceAccountAutoscalingCommandTests
         var plan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
         plan.Type = organization.PlanType;
         plan.AllowServiceAccountsAutoscale = false;
-        
+
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task UpdateServiceAccountAutoscalingAsync_ExceedsMaxServiceAccountLimit_ThrowsBadRequestException(
@@ -52,14 +52,14 @@ public class UpdateServiceAccountAutoscalingCommandTests
         var plan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
         plan.Type = organization.PlanType;
         plan.MaxServiceAccounts = 20;
-        
+
         maxAutoscaleServiceAccounts = 25;
 
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task UpdateServiceAccountAutoscalingAsync_ValidInput_UpdatesOrganization(
@@ -70,7 +70,7 @@ public class UpdateServiceAccountAutoscalingCommandTests
         var plan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
         plan.Type = organization.PlanType;
         plan.MaxServiceAccounts = (short?)maxAutoscaleServiceAccounts.GetValueOrDefault();
-        
+
         await sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts);
 
         Assert.Equal(maxAutoscaleServiceAccounts, organization.MaxAutoscaleSmServiceAccounts);

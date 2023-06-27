@@ -38,9 +38,9 @@ public class AdjustSeatsCommandTests
         var result = await sutProvider.Sut.AdjustSeatsAsync(organization, seatsAdjustment);
 
         Assert.NotNull(result);
-        Assert.Equal("paymentIntentClientSecret",result);
+        Assert.Equal("paymentIntentClientSecret", result);
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustSeatsAsync_NoSeatLimit_ThrowsBadRequestException(
@@ -52,7 +52,7 @@ public class AdjustSeatsCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustSeatsAsync(organization, seatAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustSeatsAsync_NoPaymentMethod_ThrowsBadRequestException(
@@ -65,7 +65,7 @@ public class AdjustSeatsCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustSeatsAsync(organization, seatAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustSeatsAsync_NoSubscription_ThrowsBadRequestException(
@@ -78,7 +78,7 @@ public class AdjustSeatsCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustSeatsAsync(organization, seatAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustSeatsAsync_PlanDoesNotAllowAdditionalSeats_ThrowsBadRequestException(
@@ -89,11 +89,11 @@ public class AdjustSeatsCommandTests
         var plan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
         plan.Type = organization.PlanType;
         plan.HasAdditionalSeatsOption = false;
-        
+
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustSeatsAsync(organization, seatAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustSeatsAsync_OccupiedSeatsExceedsNewCount_ThrowsBadRequestException(
@@ -109,11 +109,11 @@ public class AdjustSeatsCommandTests
         plan.MaxAdditionalSeats = 10;
 
         organization.SmSeats = 10;
-        
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
             .Returns(occupiedSeats);
-        
+
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustSeatsAsync(organization, seatAdjustment));
     }

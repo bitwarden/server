@@ -44,9 +44,9 @@ public class AdjustServiceAccountCommandTests
         var result = await sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment);
 
         Assert.NotNull(result);
-        Assert.Equal("paymentIntentClientSecret",result);
+        Assert.Equal("paymentIntentClientSecret", result);
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustServiceAccountAsync_NoServiceAccountLimit_ThrowsBadRequestException(
@@ -59,7 +59,7 @@ public class AdjustServiceAccountCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustServiceAccountAsync_NoPaymentMethod_ThrowsBadRequestException(
@@ -72,7 +72,7 @@ public class AdjustServiceAccountCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustServiceAccountAsync_NoSubscription_ThrowsBadRequestException(
@@ -85,7 +85,7 @@ public class AdjustServiceAccountCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustServiceAccountAsync_PlanDoesNotAllowAdditionalServiceAccount_ThrowsBadRequestException(
@@ -100,7 +100,7 @@ public class AdjustServiceAccountCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustServiceAccountAsync_NegativeServiceAccountCount_ThrowsBadRequestException(
@@ -113,7 +113,7 @@ public class AdjustServiceAccountCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustServiceAccountAsync_ExceedsMaxAdditionalServiceAccounts_ThrowsBadRequestException(
@@ -126,11 +126,11 @@ public class AdjustServiceAccountCommandTests
         plan.HasAdditionalServiceAccountOption = true;
         plan.BaseServiceAccount = 5;
         plan.MaxAdditionalServiceAccount = 10;
-        
+
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task AdjustServiceAccountAsync_OccupiedServiceAccountsExceedsNewCount_ThrowsBadRequestException(

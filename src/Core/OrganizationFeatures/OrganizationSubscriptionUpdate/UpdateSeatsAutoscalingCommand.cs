@@ -14,7 +14,7 @@ public class UpdateSeatsAutoscalingCommand : IUpdateSeatsAutoscalingCommand
     {
         _organizationService = organizationService;
     }
-    
+
     public async Task UpdateSeatsAutoscalingAsync(Organization organization, int? maxAutoscaleSeats)
     {
         if (maxAutoscaleSeats.HasValue && organization.SmSeats.HasValue &&
