@@ -24,7 +24,6 @@ public class DeleteAuthRequestsJob : BaseJob
     protected async override Task ExecuteJobAsync(IJobExecutionContext context)
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, "Execute job task: DeleteAuthRequestsJob: Start");
-        // TODO: Replace with global settings
         var count = await _authRepo.DeleteExpiredAsync(
             _globalSettings.PasswordlessAuth.UserRequestExpiration,
             _globalSettings.PasswordlessAuth.AdminRequestExpiration,
