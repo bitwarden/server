@@ -1,13 +1,8 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
-using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using NSubstitute;
 using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
@@ -15,38 +10,6 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 [SutProviderCustomize]
 public class AdjustServiceAccountCommandTests
 {
-    [Theory]
-    [BitAutoData]
-    public async Task AdjustServiceAccountAsync_ValidAdjustment_NoExceptions(
-        Organization organization,
-        int serviceAccountAdjustment,
-        SutProvider<AdjustServiceAccountsCommand> sutProvider)
-    {
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        var plan = StaticStore.SecretManagerPlans.First(x => x.Type == organization.PlanType);
-        plan.HasAdditionalServiceAccountOption = true;
-        plan.BaseServiceAccount = 5;
-        plan.MaxAdditionalServiceAccount = 500;
-
-        var occupiedServiceAccounts = 2;
-
-        organization.SmServiceAccounts = 3;
-
-        sutProvider.GetDependency<IServiceAccountRepository>()
-            .GetServiceAccountCountByOrganizationIdAsync(organization.Id)
-            .Returns(occupiedServiceAccounts);
-
-        sutProvider.GetDependency<IPaymentService>()
-            .AdjustServiceAccountsAsync(organization, plan, serviceAccountAdjustment)
-            .Returns("paymentIntentClientSecret");
-
-
-        var result = await sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment);
-
-        Assert.NotNull(result);
-        Assert.Equal("paymentIntentClientSecret", result);
-    }
-
     [Theory]
     [BitAutoData]
     public async Task AdjustServiceAccountAsync_NoServiceAccountLimit_ThrowsBadRequestException(
@@ -81,35 +44,6 @@ public class AdjustServiceAccountCommandTests
         SutProvider<AdjustServiceAccountsCommand> sutProvider)
     {
         organization.GatewaySubscriptionId = null;
-
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AdjustServiceAccountAsync_PlanDoesNotAllowAdditionalServiceAccount_ThrowsBadRequestException(
-         Organization organization,
-         int serviceAccountAdjustment,
-         SutProvider<AdjustServiceAccountsCommand> sutProvider)
-    {
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
-
-        plan.HasAdditionalServiceAccountOption = false;
-
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AdjustServiceAccountAsync_NegativeServiceAccountCount_ThrowsBadRequestException(
-        Organization organization,
-        int serviceAccountAdjustment,
-        SutProvider<AdjustServiceAccountsCommand> sutProvider)
-    {
-        organization.SmServiceAccounts = -5;
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));

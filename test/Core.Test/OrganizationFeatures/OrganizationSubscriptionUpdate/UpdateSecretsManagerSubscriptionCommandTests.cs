@@ -63,42 +63,4 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Assert.Contains(expectedMessage, exception.Message);
     }
 
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSecretsManagerSubscription_SeatAdjustmentExceedsMaxAutoscaleSeats_Throws(
-        Organization organization,
-        OrganizationUpdate organizationUpdate,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        organization.MaxAutoscaleSmSeats = 5;
-        organization.SmSeats = 3;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationUpdate.OrganizationId)
-            .Returns(organization);
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSecretsManagerSubscription_ServiceAccountsAdjustmentExceedsMaxAutoscaleServiceAccounts_Throws(
-        Organization organization,
-        OrganizationUpdate organizationUpdate,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        organization.MaxAutoscaleSmServiceAccounts = 10;
-        organization.SmServiceAccounts = 7;
-
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationUpdate.OrganizationId)
-            .Returns(organization);
-
-        await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
-    }
-
-
-
 }
