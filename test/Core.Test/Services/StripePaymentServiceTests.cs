@@ -31,7 +31,7 @@ public class StripePaymentServiceTests
     public async void PurchaseOrganizationAsync_Invalid(PaymentMethodType paymentMethodType, SutProvider<StripePaymentService> sutProvider)
     {
         var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(null, paymentMethodType, null, null, 0, 0, false, null,false, -1, -1));
+            () => sutProvider.Sut.PurchaseOrganizationAsync(null, paymentMethodType, null, null, 0, 0, false, null, false, -1, -1));
 
         Assert.Equal("Payment method is not supported at this time.", exception.Message);
     }
@@ -135,7 +135,7 @@ public class StripePaymentServiceTests
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count ==4
+            s.Items.Count == 4
         ));
     }
 
@@ -156,7 +156,7 @@ public class StripePaymentServiceTests
         });
 
         var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans, 0, 0
-            , false, taxInfo,false,8, 10);
+            , false, taxInfo, false, 8, 10);
 
         Assert.Null(result);
         Assert.Equal(GatewayType.Stripe, organization.Gateway);
