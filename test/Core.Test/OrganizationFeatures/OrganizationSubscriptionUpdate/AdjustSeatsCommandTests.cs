@@ -24,15 +24,15 @@ public class AdjustSeatsCommandTests
         plan.HasAdditionalSeatsOption = true;
         plan.BaseSeats = 5;
         plan.MaxAdditionalSeats = 500;
-    
+
         organization.SmSeats = 3;
-    
+
         sutProvider.GetDependency<IPaymentService>()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>(), Arg.Any<DateTime?>())
             .Returns("paymentIntentClientSecret");
-    
+
         var result = await sutProvider.Sut.AdjustSeatsAsync(organization, seatsAdjustment);
-    
+
         Assert.NotNull(result);
         Assert.Equal("paymentIntentClientSecret", result);
     }
@@ -60,7 +60,7 @@ public class AdjustSeatsCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustSeatsAsync(organization, seatAdjustment));
-        
+
         Assert.Contains("No payment method found.", exception.Message);
     }
 
@@ -75,7 +75,7 @@ public class AdjustSeatsCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustSeatsAsync(organization, seatAdjustment));
-        
+
         Assert.Contains("No subscription found.", exception.Message);
     }
 

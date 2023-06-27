@@ -22,7 +22,7 @@ public class UpdateServiceAccountAutoscalingCommandTests
     {
         organization.SmServiceAccounts = 10;
         maxAutoscaleServiceAccounts = 5;
-    
+
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));
     }
@@ -37,7 +37,7 @@ public class UpdateServiceAccountAutoscalingCommandTests
         organization.PlanType = PlanType.TeamsAnnually;
         var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
         plan.AllowServiceAccountsAutoscale = false;
-    
+
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));
     }
@@ -51,11 +51,11 @@ public class UpdateServiceAccountAutoscalingCommandTests
     {
         organization.PlanType = PlanType.TeamsAnnually;
         var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
-        
+
         plan.MaxServiceAccounts = 20;
-    
+
         maxAutoscaleServiceAccounts = 25;
-    
+
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));

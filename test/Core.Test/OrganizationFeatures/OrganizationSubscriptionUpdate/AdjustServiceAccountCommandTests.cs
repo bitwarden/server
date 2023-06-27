@@ -23,24 +23,24 @@ public class AdjustServiceAccountCommandTests
         SutProvider<AdjustServiceAccountsCommand> sutProvider)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
-        var plan = StaticStore.SecretManagerPlans.First(x=>x.Type == organization.PlanType);
+        var plan = StaticStore.SecretManagerPlans.First(x => x.Type == organization.PlanType);
         plan.HasAdditionalServiceAccountOption = true;
         plan.BaseServiceAccount = 5;
         plan.MaxAdditionalServiceAccount = 500;
-    
+
         var occupiedServiceAccounts = 2;
-    
+
         organization.SmServiceAccounts = 3;
-    
+
         sutProvider.GetDependency<IServiceAccountRepository>()
             .GetServiceAccountCountByOrganizationIdAsync(organization.Id)
             .Returns(occupiedServiceAccounts);
-    
+
         sutProvider.GetDependency<IPaymentService>()
             .AdjustServiceAccountsAsync(organization, plan, serviceAccountAdjustment)
             .Returns("paymentIntentClientSecret");
-        
-        
+
+
         var result = await sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment);
 
         Assert.NotNull(result);
@@ -87,20 +87,20 @@ public class AdjustServiceAccountCommandTests
     }
 
     [Theory]
-     [BitAutoData]
-     public async Task AdjustServiceAccountAsync_PlanDoesNotAllowAdditionalServiceAccount_ThrowsBadRequestException(
+    [BitAutoData]
+    public async Task AdjustServiceAccountAsync_PlanDoesNotAllowAdditionalServiceAccount_ThrowsBadRequestException(
          Organization organization,
          int serviceAccountAdjustment,
          SutProvider<AdjustServiceAccountsCommand> sutProvider)
-     {
-         organization.PlanType = PlanType.EnterpriseAnnually;
-         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x=>x.Type == organization.PlanType);
-         
-         plan.HasAdditionalServiceAccountOption = false;
-    
-         await Assert.ThrowsAsync<BadRequestException>(() =>
-             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
-     }
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
+
+        plan.HasAdditionalServiceAccountOption = false;
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
+    }
 
     [Theory]
     [BitAutoData]
@@ -114,6 +114,6 @@ public class AdjustServiceAccountCommandTests
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AdjustServiceAccountsAsync(organization, serviceAccountAdjustment));
     }
-    
-    
+
+
 }
