@@ -396,38 +396,6 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
 
-    [Obsolete("2022-07-22 Moved to {id}/revoke endpoint")]
-    [HttpPatch("{id}/deactivate")]
-    [HttpPut("{id}/deactivate")]
-    public async Task Deactivate(Guid orgId, Guid id)
-    {
-        await RevokeAsync(orgId, id);
-    }
-
-    [Obsolete("2022-07-22 Moved to /revoke endpoint")]
-    [HttpPatch("deactivate")]
-    [HttpPut("deactivate")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkRevokeAsync(orgId, model);
-    }
-
-    [Obsolete("2022-07-22 Moved to {id}/restore endpoint")]
-    [HttpPatch("{id}/activate")]
-    [HttpPut("{id}/activate")]
-    public async Task Activate(Guid orgId, Guid id)
-    {
-        await RestoreAsync(orgId, id);
-    }
-
-    [Obsolete("2022-07-22 Moved to /restore endpoint")]
-    [HttpPatch("activate")]
-    [HttpPut("activate")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkRestoreAsync(orgId, model);
-    }
-
     [HttpPatch("{id}/revoke")]
     [HttpPut("{id}/revoke")]
     public async Task RevokeAsync(Guid orgId, Guid id)
