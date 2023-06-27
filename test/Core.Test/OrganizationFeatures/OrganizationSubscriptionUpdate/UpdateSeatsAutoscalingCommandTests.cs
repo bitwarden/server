@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;

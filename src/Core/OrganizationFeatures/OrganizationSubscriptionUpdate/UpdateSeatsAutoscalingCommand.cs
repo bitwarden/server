@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 

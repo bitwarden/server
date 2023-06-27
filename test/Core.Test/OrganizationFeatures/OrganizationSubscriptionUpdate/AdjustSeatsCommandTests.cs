@@ -4,7 +4,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
