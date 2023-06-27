@@ -38,7 +38,6 @@ public class OrganizationsControllerTests : IDisposable
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
-    private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IFeatureService _featureService;
     private readonly ILicensingService _licensingService;
 

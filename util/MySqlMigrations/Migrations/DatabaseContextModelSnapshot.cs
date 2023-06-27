@@ -43,6 +43,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("MasterPasswordHash")
                         .HasColumnType("longtext");
 
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("char(36)");
+
                     b.Property<string>("PublicKey")
                         .HasColumnType("longtext");
 
@@ -70,6 +73,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
 
                     b.HasIndex("ResponseDeviceId");
 
@@ -319,6 +324,15 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
                         .HasColumnType("varchar(50)");
@@ -553,6 +567,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
 
+                    b.Property<int?>("MaxAutoscaleSmSeats")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("MaxAutoscaleSmServiceAccounts")
+                        .HasColumnType("int");
+
                     b.Property<short?>("MaxCollections")
                         .HasColumnType("smallint");
 
@@ -591,6 +611,12 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("SelfHost")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<int?>("SmSeats")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SmServiceAccounts")
+                        .HasColumnType("int");
+
                     b.Property<byte>("Status")
                         .HasColumnType("tinyint unsigned");
 
@@ -619,6 +645,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("UsePasswordManager")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("UsePolicies")
@@ -1306,9 +1335,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("ClientSecret")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                    b.Property<string>("ClientSecretHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
@@ -1637,6 +1666,10 @@ namespace Bit.MySqlMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Device", "ResponseDevice")
                         .WithMany()
                         .HasForeignKey("ResponseDeviceId");
@@ -1646,6 +1679,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Organization");
 
                     b.Navigation("ResponseDevice");
 
