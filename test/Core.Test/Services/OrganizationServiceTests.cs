@@ -22,6 +22,7 @@ using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -225,15 +226,42 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUp_SM_Passes(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    public async Task SignUp_SM_Passes(Organization organization,OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        
         signup.AdditionalSmSeats = 10;
         signup.AdditionalSeats = 10;
         signup.Plan = PlanType.EnterpriseAnnually;
         signup.UseSecretsManager = true;
+        signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
-
+        
+        var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan).ToList();
+       
+        const int adminCount = 2;
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id)
+            .Returns(adminCount);
+        
+        sutProvider.GetDependency<IPaymentService>().PurchaseOrganizationAsync(organization,signup.PaymentMethodType.Value,
+            signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+            signup.PremiumAccessAddon, signup.TaxInfo, false, signup.AdditionalSmSeats.GetValueOrDefault(),
+            signup.AdditionalServiceAccounts.GetValueOrDefault()).Returns("");
+        
         var result = await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
+                referenceEvent.Type == ReferenceEventType.Signup &&
+                referenceEvent.PlanName == purchaseOrganizationPlan[0].Name &&
+                referenceEvent.PlanType == purchaseOrganizationPlan[0].Type &&
+                referenceEvent.Seats == result.Item1.Seats &&
+                referenceEvent.SmSeats == result.Item1.SmSeats &&
+                referenceEvent.ServiceAccounts == result.Item1.SmServiceAccounts &&
+                referenceEvent.UseSecretsManager == result.Item1.UseSecretsManager &&
+                referenceEvent.Storage == result.Item1.MaxStorageGb));
+
         Assert.NotNull(result);
         Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
     }
