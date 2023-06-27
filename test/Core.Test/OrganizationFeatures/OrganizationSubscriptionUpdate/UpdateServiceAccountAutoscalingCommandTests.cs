@@ -22,7 +22,7 @@ public class UpdateServiceAccountAutoscalingCommandTests
     {
         organization.SmServiceAccounts = 10;
         maxAutoscaleServiceAccounts = 5;
-
+    
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));
     }
@@ -34,10 +34,10 @@ public class UpdateServiceAccountAutoscalingCommandTests
         int? maxAutoscaleServiceAccounts,
         SutProvider<UpdateServiceAccountAutoscalingCommand> sutProvider)
     {
-        var plan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
-        plan.Type = organization.PlanType;
+        organization.PlanType = PlanType.TeamsAnnually;
+        var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
         plan.AllowServiceAccountsAutoscale = false;
-
+    
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));
     }
@@ -49,12 +49,13 @@ public class UpdateServiceAccountAutoscalingCommandTests
         int? maxAutoscaleServiceAccounts,
         SutProvider<UpdateServiceAccountAutoscalingCommand> sutProvider)
     {
-        var plan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
-        plan.Type = organization.PlanType;
+        organization.PlanType = PlanType.TeamsAnnually;
+        var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        
         plan.MaxServiceAccounts = 20;
-
+    
         maxAutoscaleServiceAccounts = 25;
-
+    
         // Act & Assert
         await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts));
@@ -67,9 +68,10 @@ public class UpdateServiceAccountAutoscalingCommandTests
         int? maxAutoscaleServiceAccounts,
         SutProvider<UpdateServiceAccountAutoscalingCommand> sutProvider)
     {
-        var plan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
-        plan.Type = organization.PlanType;
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
         plan.MaxServiceAccounts = (short?)maxAutoscaleServiceAccounts.GetValueOrDefault();
+        organization.SmServiceAccounts = (short?)maxAutoscaleServiceAccounts.GetValueOrDefault();
 
         await sutProvider.Sut.UpdateServiceAccountAutoscalingAsync(organization, maxAutoscaleServiceAccounts);
 
