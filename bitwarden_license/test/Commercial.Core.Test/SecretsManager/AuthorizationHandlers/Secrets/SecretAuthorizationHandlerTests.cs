@@ -427,31 +427,15 @@ public class SecretAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task CanDeleteSecret_ServiceAccountClient_DoesNotSucceed(
-        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
-        ClaimsPrincipal claimsPrincipal)
-    {
-        var requirement = SecretOperations.Delete;
-        SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId,
-            AccessClientType.ServiceAccount);
-        sutProvider.GetDependency<ISecretRepository>()
-            .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((true, true));
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, secret);
-
-        await sutProvider.Sut.HandleAsync(authzContext);
-
-        Assert.False(authzContext.HasSucceeded);
-    }
-
-    [Theory]
     [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]                                                                                                                                             
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]                                                                                                                                               
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]                                                                                                                                              
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
     public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
         bool expected,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
