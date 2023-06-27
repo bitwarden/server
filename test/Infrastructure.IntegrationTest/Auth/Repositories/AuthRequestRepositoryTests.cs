@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -63,7 +63,7 @@ public class AuthRequestRepositoryTests
         Assert.NotNull(await authRequestRepository.GetByIdAsync(notExpiredUserAuthRequest.Id));
         Assert.NotNull(await authRequestRepository.GetByIdAsync(notExpiredAdminApprovalRequest.Id));
         Assert.NotNull(await authRequestRepository.GetByIdAsync(notExpiredApprovedAdminApprovalRequest.Id));
-        
+
         // Ensure the repository responds with the amount of items it deleted and it deleted the right amount.
         // NOTE: On local development this might fail on it's first run because the developer could have expired AuthRequests
         // on their machine but aren't running the job that would delete them. The second run of this test should succeed.
