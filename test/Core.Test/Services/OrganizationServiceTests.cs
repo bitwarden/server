@@ -1307,7 +1307,7 @@ public class OrganizationServiceTests
         => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
     [Theory]
     [FreeOrganizationCustomize]
-    [BitAutoData("Plan does not allow additional Service Account.", 10, 0, null)]
+    [BitAutoData("Your plan does not allow seat autoscaling", 10, 0, null)]
     public async Task Free_UpdateSubscription_BadInputThrows(string expectedMessage,
         int? maxAutoscaleSeats, int seatAdjustment, int? currentSeats, Organization organization, SutProvider<OrganizationService> sutProvider)
         => await UpdateSubscription_BadInputThrows(expectedMessage, maxAutoscaleSeats, seatAdjustment, currentSeats, organization, sutProvider);
@@ -1318,14 +1318,8 @@ public class OrganizationServiceTests
         organization.Seats = currentSeats;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
-        {
-            OrganizationId = organization.Id,
-            BitwardenProduct = BitwardenProductType.PasswordManager,
-            MaxAutoscaleSeats = maxAutoscaleSeats,
-            SeatAdjustment = seatAdjustment
-        };
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organizationUpdate));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscription(organization.Id,
+            seatAdjustment, maxAutoscaleSeats));
 
         Assert.Contains(expectedMessage, exception.Message);
     }
@@ -1334,14 +1328,8 @@ public class OrganizationServiceTests
     public async Task UpdateSubscription_NoOrganization_Throws(Guid organizationId, SutProvider<OrganizationService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns((Organization)null);
-        var organizationUpdate = new OrganizationUpdate
-        {
-            OrganizationId = organizationId,
-            BitwardenProduct = BitwardenProductType.PasswordManager,
-            MaxAutoscaleSeats = null,
-            SeatAdjustment = 0
-        };
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSubscription(organizationUpdate));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.UpdateSubscription(organizationId, 0, null));
     }
 
     [Theory, PaidOrganizationCustomize]

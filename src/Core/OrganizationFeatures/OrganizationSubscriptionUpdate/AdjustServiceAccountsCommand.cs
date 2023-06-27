@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
-public class AdjustServiceAccountsesCommand : IAdjustServiceAccountsCommand
+public class AdjustServiceAccountsCommand : IAdjustServiceAccountsCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
@@ -22,17 +22,17 @@ public class AdjustServiceAccountsesCommand : IAdjustServiceAccountsCommand
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext; 
     private readonly IMailService _mailService;
-    private readonly ILogger<OrganizationService> _logger;
+    private readonly ILogger<AdjustServiceAccountsCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     
-    public AdjustServiceAccountsesCommand(
+    public AdjustServiceAccountsCommand(
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IPaymentService paymentService,
         IReferenceEventService referenceEventService,
         ICurrentContext currentContext,
         IMailService mailService,
-        ILogger<OrganizationService> logger,
+        ILogger<AdjustServiceAccountsCommand> logger,
         IServiceAccountRepository serviceAccountRepository)
     {
         _organizationService = organizationService;
@@ -45,7 +45,7 @@ public class AdjustServiceAccountsesCommand : IAdjustServiceAccountsCommand
         _serviceAccountRepository = serviceAccountRepository;
     }
     
-    public async Task<string> AdjustServiceAccountAsync(Organization organization, int serviceAccountAdjustment, IEnumerable<string> ownerEmails = null,
+    public async Task<string> AdjustServiceAccountsAsync(Organization organization, int serviceAccountAdjustment, IEnumerable<string> ownerEmails = null,
         DateTime? prorationDate = null)
     { 
         if (organization.SmServiceAccounts == null)

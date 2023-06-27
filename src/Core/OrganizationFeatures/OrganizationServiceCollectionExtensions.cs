@@ -15,6 +15,8 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -38,6 +40,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
+        services.AddOrganizationSubscriptionUpdateCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -105,6 +108,15 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
+    }
+    
+    private static void AddOrganizationSubscriptionUpdateCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
+        services.AddScoped<IUpdateServiceAccountAutoscalingCommand, UpdateServiceAccountAutoscalingCommand>();
+        services.AddScoped<IUpdateSeatsAutoscalingCommand, UpdateSeatsAutoscalingCommand>();
+        services.AddScoped<IAdjustServiceAccountsCommand, AdjustServiceAccountsCommand>();
+        services.AddScoped<IAdjustSeatsCommand, AdjustSeatsCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

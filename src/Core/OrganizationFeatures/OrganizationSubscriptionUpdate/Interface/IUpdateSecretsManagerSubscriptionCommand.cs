@@ -2,7 +2,7 @@
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 
-public interface IOrganizationUpdateSubscription
+public interface IUpdateSecretsManagerSubscriptionCommand
 {
     Task UpdateSecretsManagerSubscription(OrganizationUpdate update);
 }

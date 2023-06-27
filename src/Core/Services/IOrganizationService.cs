@@ -15,9 +15,9 @@ public interface IOrganizationService
     Task ReinstateSubscriptionAsync(Guid organizationId);
     Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
-    Task UpdateSubscription(OrganizationUpdate update);
+    Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null);
-    Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null, BitwardenProductType bitwardenProductType = BitwardenProductType.PasswordManager);
+    Task<string> AdjustSeatsAsync(Guid organizationId, int seatAdjustment, DateTime? prorationDate = null);
     Task VerifyBankAsync(Guid organizationId, int amount1, int amount2);
     Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup organizationSignup, bool provider = false);
     Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationLicense license, User owner,
