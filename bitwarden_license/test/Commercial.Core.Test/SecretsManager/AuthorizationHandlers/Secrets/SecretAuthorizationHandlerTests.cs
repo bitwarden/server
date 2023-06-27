@@ -391,4 +391,83 @@ public class SecretAuthorizationHandlerTests
 
         Assert.True(authzContext.HasSucceeded);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteSecret_AccessToSecretsManagerFalse_DoesNotSucceed(
+        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretOperations.Delete;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(secret.OrganizationId)
+            .Returns(false);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, secret);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteSecret_NullResource_DoesNotSucceed(
+        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = SecretOperations.Delete;
+        SetupPermission(sutProvider, PermissionType.RunAsAdmin, secret.OrganizationId, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, null);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteSecret_ServiceAccountClient_DoesNotSucceed(
+        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = SecretOperations.Delete;
+        SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId,
+            AccessClientType.ServiceAccount);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>())
+            .Returns((true, true));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, secret);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = SecretOperations.Delete;
+        SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
+        sutProvider.GetDependency<ISecretRepository>()
+            .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>())
+            .Returns((read, write));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, secret);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
 }
