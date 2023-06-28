@@ -129,11 +129,6 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
     {
         var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
 
-        if (accessClient == AccessClientType.ServiceAccount)
-        {
-            return;
-        }
-
         var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
 
         if (access.Write)
