@@ -213,7 +213,7 @@ public class OrganizationUsersController : Controller
 
         if (useMasterPasswordPolicy)
         {
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, _userService, user.Id);
         }
     }
 
@@ -315,7 +315,7 @@ public class OrganizationUsersController : Controller
 
         var callingUserId = user.Id;
         await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
-            new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            new Guid(orgId), new Guid(userId), model.ResetPasswordKey, _userService, callingUserId);
     }
 
     [HttpPut("{id}/reset-password")]

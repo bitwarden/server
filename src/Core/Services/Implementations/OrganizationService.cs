@@ -1269,6 +1269,24 @@ public class OrganizationService : IOrganizationService
         return await AcceptUserAsync(orgUser, user, userService);
     }
 
+    public async Task<OrganizationUser> AcceptUserAsync(Guid organizationId, User user, IUserService userService)
+    {
+        var org = await _organizationRepository.GetByIdAsync(organizationId);
+        if (org == null)
+        {
+            throw new BadRequestException("Organization invalid.");
+        }
+
+        var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+        var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
+        if (orgUser == null)
+        {
+            throw new BadRequestException("User not found within organization.");
+        }
+
+        return await AcceptUserAsync(orgUser, user, userService);
+    }
+
     private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user,
         IUserService userService)
     {
@@ -1716,7 +1734,7 @@ public class OrganizationService : IOrganizationService
             EventType.OrganizationUser_UpdatedGroups);
     }
 
-    public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
+    public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, IUserService userService, Guid? callingUserId)
     {
         // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
@@ -1756,6 +1774,12 @@ public class OrganizationService : IOrganizationService
         await _organizationUserRepository.ReplaceAsync(orgUser);
         await _eventService.LogOrganizationUserEventAsync(orgUser, resetPasswordKey != null ?
             EventType.OrganizationUser_ResetPassword_Enroll : EventType.OrganizationUser_ResetPassword_Withdraw);
+
+        if (orgUser.Status == OrganizationUserStatusType.Invited)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            await AcceptUserAsync(orgUser, user, userService);
+        }
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
