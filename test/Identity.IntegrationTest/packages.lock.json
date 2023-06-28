@@ -3144,7 +3144,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "4.17.0",
           "AutoFixture.Xunit2": "4.17.0",
-          "Core": "2023.3.0",
+          "Core": "2023.5.1",
           "Kralizek.AutoFixture.Extensions.MockHttp": "1.2.0",
           "Microsoft.NET.Test.Sdk": "17.1.0",
           "NSubstitute": "4.3.0",
@@ -3196,15 +3196,15 @@
       "identity": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "SharedWeb": "2023.3.0",
+          "Core": "2023.5.1",
+          "SharedWeb": "2023.5.1",
           "Swashbuckle.AspNetCore.SwaggerGen": "6.5.0"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
+          "Core": "2023.5.1",
           "Dapper": "2.0.123"
         }
       },
@@ -3212,7 +3212,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "12.0.1",
-          "Core": "2023.3.0",
+          "Core": "2023.5.1",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.12",
           "Microsoft.EntityFrameworkCore.SqlServer": "6.0.12",
           "Microsoft.EntityFrameworkCore.Sqlite": "6.0.12",
@@ -3224,8 +3224,8 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "2023.3.0",
-          "Identity": "2023.3.0",
+          "Common": "2023.5.1",
+          "Identity": "2023.5.1",
           "Microsoft.AspNetCore.Mvc.Testing": "6.0.5",
           "Microsoft.EntityFrameworkCore.InMemory": "6.0.5",
           "Microsoft.Extensions.Configuration": "6.0.1"
@@ -3234,9 +3234,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "Infrastructure.Dapper": "2023.3.0",
-          "Infrastructure.EntityFramework": "2023.3.0"
+          "Core": "2023.5.1",
+          "Infrastructure.Dapper": "2023.5.1",
+          "Infrastructure.EntityFramework": "2023.5.1"
         }
       }
     }

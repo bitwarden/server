@@ -148,11 +148,8 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
-        var project = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123" });
-
         var request = new SecretCreateRequestModel
         {
-            ProjectIds = new Guid[] { project.Id },
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
             Note = _mockEncryptedString,
@@ -647,8 +644,26 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         });
         var secretIds = new[] { secret.Id };
 
-        var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/delete", secretIds);
+        var response = await _client.PostAsJsonAsync($"/secrets/delete", secretIds);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_MissingAccessPolicy_AccessDenied()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var (_, secretIds) = await CreateSecretsAsync(org.Id, 3);
+
+        var response = await _client.PostAsync("/secrets/delete", JsonContent.Create(secretIds));
+
+        var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
+        Assert.NotNull(results);
+        Assert.Equal(secretIds.OrderBy(x => x),
+            results!.Data.Select(x => x.Id).OrderBy(x => x));
+        Assert.All(results.Data, item => Assert.Equal("access denied", item.Error));
     }
 
     [Theory]
@@ -659,12 +674,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
-        var project = await _projectRepository.CreateAsync(new Project()
-        {
-            Id = new Guid(),
-            OrganizationId = org.Id,
-            Name = _mockEncryptedString
-        });
+        var (project, secretIds) = await CreateSecretsAsync(org.Id, 3);
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
@@ -679,21 +689,6 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
                 },
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
-        }
-
-
-        var secretIds = new List<Guid>();
-        for (var i = 0; i < 3; i++)
-        {
-            var secret = await _secretRepository.CreateAsync(new Secret
-            {
-                OrganizationId = org.Id,
-                Key = _mockEncryptedString,
-                Value = _mockEncryptedString,
-                Note = _mockEncryptedString,
-                Projects = new List<Project>() { project }
-            });
-            secretIds.Add(secret.Id);
         }
 
         var response = await _client.PostAsJsonAsync($"/secrets/delete", secretIds);
@@ -712,5 +707,31 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         var secrets = await _secretRepository.GetManyByIds(secretIds);
         Assert.Empty(secrets);
+    }
+
+    private async Task<(Project Project, List<Guid> secretIds)> CreateSecretsAsync(Guid orgId, int numberToCreate = 3)
+    {
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            Id = new Guid(),
+            OrganizationId = orgId,
+            Name = _mockEncryptedString
+        });
+
+        var secretIds = new List<Guid>();
+        for (var i = 0; i < numberToCreate; i++)
+        {
+            var secret = await _secretRepository.CreateAsync(new Secret
+            {
+                OrganizationId = orgId,
+                Key = _mockEncryptedString,
+                Value = _mockEncryptedString,
+                Note = _mockEncryptedString,
+                Projects = new List<Project>() { project }
+            });
+            secretIds.Add(secret.Id);
+        }
+
+        return (project, secretIds);
     }
 }
