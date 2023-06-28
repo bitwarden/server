@@ -8,9 +8,9 @@ namespace Bit.Infrastructure.IntegrationTest.Auth.Repositories;
 
 public class AuthRequestRepositoryTests
 {
-    private readonly static TimeSpan _userExpiration = TimeSpan.FromMinutes(15);
-    private readonly static TimeSpan _adminExpiration = TimeSpan.FromDays(6);
-    private readonly static TimeSpan _adminApprovalExpiration = TimeSpan.FromHours(12);
+    private readonly static TimeSpan _userRequestExpiration = TimeSpan.FromMinutes(15);
+    private readonly static TimeSpan _adminRequestExpiration = TimeSpan.FromDays(6);
+    private readonly static TimeSpan _afterAdminApprovalExpiration = TimeSpan.FromHours(12);
 
     [DatabaseTheory, DatabaseData]
     public async Task DeleteExpiredAsync_Works(
@@ -28,19 +28,19 @@ public class AuthRequestRepositoryTests
 
         // A user auth request type that has passed it's expiration time, should be deleted.
         var userExpiredAuthRequest = await authRequestRepository.CreateAsync(
-            CreateAuthRequest(user.Id, AuthRequestType.AuthenticateAndUnlock, CreateExpiredDate(_userExpiration)));
+            CreateAuthRequest(user.Id, AuthRequestType.AuthenticateAndUnlock, CreateExpiredDate(_userRequestExpiration)));
 
         // An AdminApproval request that hasn't had any action taken on it and has passed it's expiration time, should be deleted.
         var adminApprovalExpiredAuthRequest = await authRequestRepository.CreateAsync(
-            CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, CreateExpiredDate(_adminExpiration)));
+            CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, CreateExpiredDate(_adminRequestExpiration)));
 
         // An AdminApproval request that was approved before it expired but the user has been approved for too long, should be deleted.
         var adminApprovedExpiredAuthRequest = await authRequestRepository.CreateAsync(
-            CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddDays(-6), true, CreateExpiredDate(_adminApprovalExpiration)));
+            CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddDays(-6), true, CreateExpiredDate(_afterAdminApprovalExpiration)));
 
         // An AdminApproval request that was rejected within it's allowed lifetime but has no gone past it's expiration time, should be deleted.
         var adminRejectedExpiredAuthRequest = await authRequestRepository.CreateAsync(
-            CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, CreateExpiredDate(_adminExpiration), false, DateTime.UtcNow.AddHours(-1)));
+            CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, CreateExpiredDate(_adminRequestExpiration), false, DateTime.UtcNow.AddHours(-1)));
 
         // A User AuthRequest that was created just a minute ago.
         var notExpiredUserAuthRequest = await authRequestRepository.CreateAsync(
@@ -56,7 +56,7 @@ public class AuthRequestRepositoryTests
 
         helper.ClearTracker();
 
-        var numberOfDeleted = await authRequestRepository.DeleteExpiredAsync(_userExpiration, _adminExpiration, _adminApprovalExpiration);
+        var numberOfDeleted = await authRequestRepository.DeleteExpiredAsync(_userRequestExpiration, _adminRequestExpiration, _afterAdminApprovalExpiration);
 
         // Ensure all the AuthRequests that should have been deleted, have been deleted.
         Assert.Null(await authRequestRepository.GetByIdAsync(userExpiredAuthRequest.Id));
