@@ -19,7 +19,8 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<int> DeleteExpiredAsync(TimeSpan userExpiration, TimeSpan adminExpiration, TimeSpan adminApprovalExpiration)
+    public async Task<int> DeleteExpiredAsync(
+        TimeSpan userRequestExpiration, TimeSpan adminRequestExpiration, TimeSpan afterAdminApprovalExpiration)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
@@ -27,9 +28,9 @@ public class AuthRequestRepository : Repository<AuthRequest, Guid>, IAuthRequest
                 $"[{Schema}].[AuthRequest_DeleteIfExpired]",
                 new
                 {
-                    UserExpirationSeconds = (int)userExpiration.TotalSeconds,
-                    AdminExpirationSeconds = (int)adminExpiration.TotalSeconds,
-                    AdminApprovalExpirationSeconds = (int)adminApprovalExpiration.TotalSeconds,
+                    UserExpirationSeconds = (int)userRequestExpiration.TotalSeconds,
+                    AdminExpirationSeconds = (int)adminRequestExpiration.TotalSeconds,
+                    AdminApprovalExpirationSeconds = (int)afterAdminApprovalExpiration.TotalSeconds,
                 },
                 commandType: CommandType.StoredProcedure);
         }

@@ -15,16 +15,17 @@ public class AuthRequestRepository : Repository<Core.Auth.Entities.AuthRequest, 
     public AuthRequestRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.AuthRequests)
     { }
-    public async Task<int> DeleteExpiredAsync(TimeSpan userExpiration, TimeSpan adminExpiration, TimeSpan adminApprovalExpiration)
+    public async Task<int> DeleteExpiredAsync(
+        TimeSpan userRequestExpiration, TimeSpan adminRequestExpiration, TimeSpan afterAdminApprovalExpiration)
     {
 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var expiredRequests = await dbContext.AuthRequests
-                .Where(a => (a.Type != AuthRequestType.AdminApproval && a.CreationDate.AddSeconds(userExpiration.TotalSeconds) < DateTime.UtcNow)
-                    || (a.Type == AuthRequestType.AdminApproval && a.Approved != true && a.CreationDate.AddSeconds(adminExpiration.TotalSeconds) < DateTime.UtcNow)
-                    || (a.Type == AuthRequestType.AdminApproval && a.Approved == true && a.ResponseDate.Value.AddSeconds(adminApprovalExpiration.TotalSeconds) < DateTime.UtcNow))
+                .Where(a => (a.Type != AuthRequestType.AdminApproval && a.CreationDate.AddSeconds(userRequestExpiration.TotalSeconds) < DateTime.UtcNow)
+                    || (a.Type == AuthRequestType.AdminApproval && a.Approved != true && a.CreationDate.AddSeconds(adminRequestExpiration.TotalSeconds) < DateTime.UtcNow)
+                    || (a.Type == AuthRequestType.AdminApproval && a.Approved == true && a.ResponseDate.Value.AddSeconds(afterAdminApprovalExpiration.TotalSeconds) < DateTime.UtcNow))
                 .ToListAsync();
             dbContext.AuthRequests.RemoveRange(expiredRequests);
             return await dbContext.SaveChangesAsync();
