@@ -38,6 +38,10 @@ public class AuthRequestRepositoryTests
         var adminApprovedExpiredAuthRequest = await authRequestRepository.CreateAsync(
             CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddDays(-6), true, CreateExpiredDate(_adminApprovalExpiration)));
 
+        // An AdminApproval request that was rejected within it's allowed lifetime but has no gone past it's expiration time, should be deleted.
+        var adminRejectedExpiredAuthRequest = await authRequestRepository.CreateAsync(
+            CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, CreateExpiredDate(_adminExpiration), false, DateTime.UtcNow.AddHours(-1)));
+
         // A User AuthRequest that was created just a minute ago.
         var notExpiredUserAuthRequest = await authRequestRepository.CreateAsync(
             CreateAuthRequest(user.Id, AuthRequestType.Unlock, DateTime.UtcNow.AddMinutes(-1)));
@@ -58,6 +62,7 @@ public class AuthRequestRepositoryTests
         Assert.Null(await authRequestRepository.GetByIdAsync(userExpiredAuthRequest.Id));
         Assert.Null(await authRequestRepository.GetByIdAsync(adminApprovalExpiredAuthRequest.Id));
         Assert.Null(await authRequestRepository.GetByIdAsync(adminApprovedExpiredAuthRequest.Id));
+        Assert.Null(await authRequestRepository.GetByIdAsync(adminRejectedExpiredAuthRequest.Id));
 
         // Ensure that all the AuthRequests that should have been left alone, were.
         Assert.NotNull(await authRequestRepository.GetByIdAsync(notExpiredUserAuthRequest.Id));
@@ -67,7 +72,7 @@ public class AuthRequestRepositoryTests
         // Ensure the repository responds with the amount of items it deleted and it deleted the right amount.
         // NOTE: On local development this might fail on it's first run because the developer could have expired AuthRequests
         // on their machine but aren't running the job that would delete them. The second run of this test should succeed.
-        Assert.Equal(3, numberOfDeleted);
+        Assert.Equal(4, numberOfDeleted);
     }
 
     private static AuthRequest CreateAuthRequest(Guid userId, AuthRequestType authRequestType, DateTime creationDate, bool? approved = null, DateTime? responseDate = null)
