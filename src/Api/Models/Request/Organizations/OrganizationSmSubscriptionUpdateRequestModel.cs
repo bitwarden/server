@@ -9,7 +9,7 @@ public class OrganizationSmSubscriptionUpdateRequestModel
     public int SeatAdjustment { get; set; }
     public int? MaxAutoscaleSeats { get; set; }
 
-    public int? ServiceAccountsAdjustment { get; set; }
+    public int? ServiceAccountAdjustment { get; set; }
     public int? MaxAutoscaleServiceAccounts { get; set; }
 
     public virtual OrganizationUpdate ToOrganizationUpdate(Guid orgIdGuid)
@@ -19,7 +19,7 @@ public class OrganizationSmSubscriptionUpdateRequestModel
             OrganizationId = orgIdGuid,
             SeatAdjustment = SeatAdjustment,
             MaxAutoscaleSeats = MaxAutoscaleSeats,
-            ServiceAccountsAdjustment = ServiceAccountsAdjustment.GetValueOrDefault(),
+            ServiceAccountsAdjustment = ServiceAccountAdjustment.GetValueOrDefault(),
             MaxAutoscaleServiceAccounts = MaxAutoscaleServiceAccounts.GetValueOrDefault()
         };
 
