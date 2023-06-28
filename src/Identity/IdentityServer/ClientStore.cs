@@ -96,11 +96,27 @@ public class ClientStore : IClientStore
             return null;
         }
 
+        switch (apiKey)
+        {
+            case ServiceAccountApiKeyDetails key:
+                var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
+                if (!org.UseSecretsManager)
+                {
+                    return null;
+                }
+                break;
+        }
+
+        if (string.IsNullOrEmpty(apiKey.ClientSecretHash))
+        {
+            apiKey.ClientSecretHash = apiKey.ClientSecret.Sha256();
+        }
+
         var client = new Client
         {
             ClientId = clientId,
             RequireClientSecret = true,
-            ClientSecrets = { new Secret(apiKey.ClientSecret.Sha256()) },
+            ClientSecrets = { new Secret(apiKey.ClientSecretHash) },
             AllowedScopes = apiKey.GetScopes(),
             AllowedGrantTypes = GrantTypes.ClientCredentials,
             AccessTokenLifetime = 3600 * 1,

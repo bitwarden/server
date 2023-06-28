@@ -1333,8 +1333,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("ClientSecret")
-                        .HasMaxLength(30)
+                    b.Property<string>("ClientSecretHash")
+                        .HasMaxLength(128)
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreationDate")
