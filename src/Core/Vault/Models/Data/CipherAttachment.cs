@@ -31,5 +31,10 @@ public class CipherAttachment
         // This is stored alongside metadata as an identifier. It does not need repeating in serialization
         [JsonIgnore]
         public string AttachmentId { get; set; }
+
+        /// <summary>
+        /// Temporary metadata used to store original metadata on migrations
+        /// </summary>
+        public MetaData TempMetadata { get; set; }
     }
 }
