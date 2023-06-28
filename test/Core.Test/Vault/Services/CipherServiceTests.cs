@@ -46,9 +46,10 @@ public class CipherServiceTests
         Organization organization, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        
+
         var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
-        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData> {
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
             [Guid.NewGuid().ToString()] = new CipherAttachment.MetaData { }
         });
 
