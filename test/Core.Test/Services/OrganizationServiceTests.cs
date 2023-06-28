@@ -13,6 +13,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -226,10 +227,8 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUp_SM_Passes(Organization organization, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    public async Task SignUp_SM_Passes(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
         signup.AdditionalSmSeats = 10;
         signup.AdditionalSeats = 10;
         signup.Plan = PlanType.EnterpriseAnnually;
@@ -238,16 +237,6 @@ public class OrganizationServiceTests
         signup.PremiumAccessAddon = false;
 
         var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan).ToList();
-
-        const int adminCount = 2;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id)
-            .Returns(adminCount);
-
-        sutProvider.GetDependency<IPaymentService>().PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-            signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-            signup.PremiumAccessAddon, signup.TaxInfo, false, signup.AdditionalSmSeats.GetValueOrDefault(),
-            signup.AdditionalServiceAccounts.GetValueOrDefault()).Returns("");
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
 
@@ -263,16 +252,29 @@ public class OrganizationServiceTests
                 referenceEvent.Storage == result.Item1.MaxStorageGb));
 
         Assert.NotNull(result);
+        Assert.NotNull(result.Item1);
+        Assert.NotNull(result.Item2);
         Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
+
+        await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
+            Arg.Any<Organization>(),
+            signup.PaymentMethodType.Value,
+            signup.PaymentToken,
+            Arg.Is<List<Plan>>(plan => plan.All(p => purchaseOrganizationPlan.Contains(p))),
+            signup.AdditionalStorageGb,
+            signup.AdditionalSeats,
+            signup.PremiumAccessAddon,
+            signup.TaxInfo,
+            false,
+            signup.AdditionalSmSeats.GetValueOrDefault(),
+            signup.AdditionalServiceAccounts.GetValueOrDefault()
+        );
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_SecretManagerValidation_ShouldThrowException(
-        Organization organization, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    public async Task SignUpAsync_SecretManagerValidation_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
         signup.AdditionalSmSeats = 10;
         signup.AdditionalSeats = 10;
         signup.Plan = PlanType.EnterpriseAnnually;
@@ -286,18 +288,6 @@ public class OrganizationServiceTests
         secretsManagerPlan.HasAdditionalServiceAccountOption = false;
         purchaseOrganizationPlan.Add(secretsManagerPlan);
 
-
-
-        const int adminCount = 2;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id)
-            .Returns(adminCount);
-
-        sutProvider.GetDependency<IPaymentService>().PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-            signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-            signup.PremiumAccessAddon, signup.TaxInfo, false, signup.AdditionalSmSeats.GetValueOrDefault(),
-            signup.AdditionalServiceAccounts.GetValueOrDefault()).Returns("");
-
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(signup));
         Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
@@ -305,11 +295,8 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_SMSeatsGreatThanPMSeat_ShouldThrowException(
-        Organization organization, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    public async Task SignUpAsync_SMSeatsGreatThanPMSeat_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
         signup.AdditionalSmSeats = 100;
         signup.AdditionalSeats = 10;
         signup.Plan = PlanType.EnterpriseAnnually;
@@ -317,18 +304,6 @@ public class OrganizationServiceTests
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.AdditionalServiceAccounts = 10;
-
-        var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan && x.BitwardenProduct == BitwardenProductType.PasswordManager).ToList();
-
-        const int adminCount = 2;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id)
-            .Returns(adminCount);
-
-        sutProvider.GetDependency<IPaymentService>().PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-            signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-            signup.PremiumAccessAddon, signup.TaxInfo, false, signup.AdditionalSmSeats.GetValueOrDefault(),
-            signup.AdditionalServiceAccounts.GetValueOrDefault()).Returns("");
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
            () => sutProvider.Sut.SignUpAsync(signup));
