@@ -9,6 +9,7 @@ using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationAuth;
@@ -18,7 +19,9 @@ public class UpdateOrganizationAuthRequestCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task UpdateOrgAuthRequest_Approved_SendEmail_Success(SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider, Guid requestId, Guid userId, bool requestApproved, string encryptedUserKey)
+    public async Task UpdateOrgAuthRequest_Approved_SendEmail_Success(
+        SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider, Guid requestId, Guid userId,
+        bool requestApproved, string encryptedUserKey)
     {
         var responseDate = DateTime.UtcNow;
         const string email = "email";
@@ -28,7 +31,9 @@ public class UpdateOrganizationAuthRequestCommandTests
         const string requestIpAddress = "127.0.0.1";
 
         sutProvider.GetDependency<IAuthRequestService>()
-            .UpdateAuthRequestAsync(requestId, userId, Arg.Is<AuthRequestUpdateRequestModel>(x => x.RequestApproved == requestApproved && x.Key == encryptedUserKey))
+            .UpdateAuthRequestAsync(requestId, userId,
+                Arg.Is<AuthRequestUpdateRequestModel>(x =>
+                    x.RequestApproved == requestApproved && x.Key == encryptedUserKey))
             .Returns(new AuthRequest()
             {
                 UserId = userId,
@@ -41,13 +46,11 @@ public class UpdateOrganizationAuthRequestCommandTests
 
         sutProvider.GetDependency<IUserRepository>()
             .GetByIdAsync(userId)
-            .Returns(new User()
-            {
-                Email = email
-            });
+            .Returns(new User() { Email = email });
 
         await sutProvider.Sut.UpdateAsync(requestId, userId, requestApproved, encryptedUserKey);
 
+        await sutProvider.GetDependency<IUserRepository>().Received(1).GetByIdAsync(userId);
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendTrustedDeviceAdminApprovalEmailAsync(email, responseDate, requestIpAddress, deviceTypeIdentifier);
     }
@@ -59,15 +62,40 @@ public class UpdateOrganizationAuthRequestCommandTests
         bool requestApproved, string encryptedUserKey)
     {
         sutProvider.GetDependency<IAuthRequestService>()
-            .UpdateAuthRequestAsync(requestId, userId, Arg.Is<AuthRequestUpdateRequestModel>(x => x.RequestApproved == requestApproved && x.Key == encryptedUserKey))
-            .Returns(new AuthRequest()
-            {
-                Approved = false
-            });
+            .UpdateAuthRequestAsync(requestId, userId,
+                Arg.Is<AuthRequestUpdateRequestModel>(x =>
+                    x.RequestApproved == requestApproved && x.Key == encryptedUserKey))
+            .Returns(new AuthRequest() { Approved = false });
 
         await sutProvider.Sut.UpdateAsync(requestId, userId, requestApproved, encryptedUserKey);
 
         await sutProvider.GetDependency<IUserRepository>().DidNotReceive().GetByIdAsync(userId);
-        await sutProvider.GetDependency<IMailService>().DidNotReceive().SendTrustedDeviceAdminApprovalEmailAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>(), Arg.Any<string>());
+        await sutProvider.GetDependency<IMailService>().DidNotReceive()
+            .SendTrustedDeviceAdminApprovalEmailAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>(),
+                Arg.Any<string>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateOrgAuthRequest_Approved_UserNotFound(
+        SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider, Guid requestId, Guid userId,
+        bool requestApproved, string encryptedUserKey)
+    {
+        sutProvider.GetDependency<IAuthRequestService>()
+            .UpdateAuthRequestAsync(requestId, userId,
+                Arg.Is<AuthRequestUpdateRequestModel>(x =>
+                    x.RequestApproved == requestApproved && x.Key == encryptedUserKey))
+            .Returns(new AuthRequest() { Approved = true, });
+
+        sutProvider.GetDependency<IUserRepository>()
+            .GetByIdAsync(userId)
+            .ReturnsNull();
+
+        await sutProvider.Sut.UpdateAsync(requestId, userId, requestApproved, encryptedUserKey);
+
+        await sutProvider.GetDependency<IUserRepository>().Received(1).GetByIdAsync(userId);
+        await sutProvider.GetDependency<IMailService>().DidNotReceive()
+            .SendTrustedDeviceAdminApprovalEmailAsync(Arg.Any<string>(), Arg.Any<DateTime>(), Arg.Any<string>(),
+                Arg.Any<string>());
     }
 }
