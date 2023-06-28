@@ -45,12 +45,8 @@ public class UpdateOrganizationAuthRequestCommand : IUpdateOrganizationAuthReque
             var deviceTypeDisplayName = updatedAuthRequest.RequestDeviceType.GetType()
                 .GetMember(updatedAuthRequest.RequestDeviceType.ToString())
                 .FirstOrDefault()?
-                .GetCustomAttribute<DisplayAttribute>()?.Name;
-            string[] identifiers =
-            {
-                deviceTypeDisplayName, updatedAuthRequest.RequestDeviceIdentifier
-            };
-            var deviceTypeIdentifier = string.Join(" - ", identifiers);
+                .GetCustomAttribute<DisplayAttribute>()?.Name ?? "Unknown";
+            var deviceTypeIdentifier = $"{deviceTypeDisplayName} - {updatedAuthRequest.RequestDeviceIdentifier}";
             await _mailService.SendTrustedDeviceAdminApprovalEmailAsync(user.Email, approvalDateTime,
                 updatedAuthRequest.RequestIpAddress, deviceTypeIdentifier);
         }
