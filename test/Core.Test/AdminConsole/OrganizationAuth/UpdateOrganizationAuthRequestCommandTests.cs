@@ -25,7 +25,7 @@ public class UpdateOrganizationAuthRequestCommandTests
         string encryptedUserKey, SutProvider<UpdateOrganizationAuthRequestCommand> sutProvider)
     {
         var expectedDeviceTypeIdentifier = $"{deviceType} - {deviceIdentifier}";
-        
+
         sutProvider.GetDependency<IAuthRequestService>()
             .UpdateAuthRequestAsync(requestId, userId,
                 Arg.Is<AuthRequestUpdateRequestModel>(x =>
@@ -39,16 +39,16 @@ public class UpdateOrganizationAuthRequestCommandTests
                 RequestDeviceIdentifier = deviceIdentifier,
                 RequestIpAddress = requestIpAddress,
             });
-        
+
         sutProvider.GetDependency<IUserRepository>()
             .GetByIdAsync(userId)
             .Returns(new User()
             {
                 Email = email
             });
-        
+
         await sutProvider.Sut.UpdateAsync(requestId, userId, requestApproved, encryptedUserKey);
-        
+
         await sutProvider.GetDependency<IUserRepository>().Received(1).GetByIdAsync(userId);
         await sutProvider.GetDependency<IMailService>().Received(1)
             .SendTrustedDeviceAdminApprovalEmailAsync(email, responseDate, requestIpAddress, expectedDeviceTypeIdentifier);
