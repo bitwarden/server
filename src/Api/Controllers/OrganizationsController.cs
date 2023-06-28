@@ -338,6 +338,18 @@ public class OrganizationsController : Controller
         var organizationUpdate = model.ToOrganizationUpdate(orgIdGuid);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
+    
+    [HttpPost("{id}/subscribe-secrets-manager")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostSubscribeSecretsManagerAsync(string id, [FromBody] OrganizationSmSubscriptionRequestModel model)
+    {
+        var orgIdGuid = new Guid(id);
+        if (!await _currentContext.EditSubscription(orgIdGuid))
+        {
+            throw new NotFoundException();
+        }
+        await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(orgIdGuid,);
+    }
 
     [HttpPost("{id}/seat")]
     [SelfHosted(NotSelfHostedOnly = true)]
