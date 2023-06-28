@@ -12,6 +12,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
@@ -359,6 +360,10 @@ public class AuthRequestServiceTests
 
         Assert.Equal("my_hash", udpatedAuthRequest.MasterPasswordHash);
 
+        // On approval, the response date should be set to current date
+        Assert.NotNull(udpatedAuthRequest.ResponseDate);
+        AssertHelper.AssertRecent(udpatedAuthRequest.ResponseDate!.Value);
+
         await sutProvider.GetDependency<IAuthRequestRepository>()
             .Received(1)
             .ReplaceAsync(udpatedAuthRequest);
@@ -435,6 +440,9 @@ public class AuthRequestServiceTests
         var udpatedAuthRequest = await sutProvider.Sut.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId, updateModel);
 
         Assert.Equal(udpatedAuthRequest.MasterPasswordHash, authRequest.MasterPasswordHash);
+        Assert.False(udpatedAuthRequest.Approved);
+        Assert.NotNull(udpatedAuthRequest.ResponseDate);
+        AssertHelper.AssertRecent(udpatedAuthRequest.ResponseDate!.Value);
 
         await sutProvider.GetDependency<IAuthRequestRepository>()
             .Received()
@@ -637,7 +645,13 @@ public class AuthRequestServiceTests
             MasterPasswordHash = "my_hash",
         };
 
-        await sutProvider.Sut.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId, updateModel);
+        var updatedAuthRequest = await sutProvider.Sut.UpdateAuthRequestAsync(authRequest.Id, authRequest.UserId, updateModel);
+
+        Assert.Equal("my_hash", updatedAuthRequest.MasterPasswordHash);
+        Assert.Equal("test_key", updatedAuthRequest.Key);
+        Assert.True(updatedAuthRequest.Approved);
+        Assert.NotNull(updatedAuthRequest.ResponseDate);
+        AssertHelper.AssertRecent(updatedAuthRequest.ResponseDate!.Value);
 
         await sutProvider.GetDependency<IEventService>()
             .Received(1)
