@@ -432,9 +432,9 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
-    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]                                                                                                                                             
-    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]                                                                                                                                               
-    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]                                                                                                                                              
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]
     [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
     public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
         bool expected,
