@@ -39,6 +39,11 @@ public class ProjectAuthorizationHandlerTests
                     .ReturnsForAnyArgs(
                         (AccessClientType.User, userId));
                 break;
+            case PermissionType.RunAsServiceAccountWithPermission:
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+                    .ReturnsForAnyArgs(
+                        (AccessClientType.ServiceAccount, userId));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }
@@ -266,7 +271,7 @@ public class ProjectAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(false);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
             .ReturnsForAnyArgs(
-                (AccessClientType.ServiceAccount, new Guid()));
+                (AccessClientType.Organization, new Guid()));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
 
@@ -281,6 +286,10 @@ public class ProjectAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
     public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
         bool expected,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project,

@@ -88,10 +88,6 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
     {
         var (accessClient, userId) =
             await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
-        if (accessClient == AccessClientType.ServiceAccount)
-        {
-            return;
-        }
 
         var access = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);
 
