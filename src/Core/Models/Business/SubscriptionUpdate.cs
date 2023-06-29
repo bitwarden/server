@@ -83,6 +83,49 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
     }
 }
 
+public class SecretsManagerSubscriptionUpdate : SubscriptionUpdate
+{
+    private readonly StaticStore.Plan _plan;
+    private readonly long? _additionalSeats;
+    private readonly long? _additionalServiceAccounts;
+    protected override List<string> PlanIds => new() {_plan.StripeSeatPlanId, _plan.StripeServiceAccountPlanId };
+    public SecretsManagerSubscriptionUpdate(StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
+    {
+        _plan = plan;
+        _additionalSeats = additionalSeats;
+        _additionalServiceAccounts = additionalServiceAccounts;
+    }
+
+    public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription) => throw new NotImplementedException();
+
+    public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
+    {
+        var updatedItems = new List<SubscriptionItemOptions>();
+        
+        foreach (var item in subscription.Items.Data)
+        {
+            updatedItems.Add(new SubscriptionItemOptions
+            {
+                Id = item.Id,
+                Quantity = item.Quantity
+            });
+        }
+        updatedItems.Add(new SubscriptionItemOptions
+        {
+            Price = _plan.StripeSeatPlanId,
+            Quantity = _additionalSeats
+        });
+        
+        updatedItems.Add(new SubscriptionItemOptions
+        {
+            Price = _plan.StripeServiceAccountPlanId,
+            Quantity = _additionalServiceAccounts
+        });
+
+        return updatedItems;
+    }
+}
+
 public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
 {
     private long? _prevServiceAccounts;

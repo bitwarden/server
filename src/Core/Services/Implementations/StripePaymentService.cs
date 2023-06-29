@@ -5,6 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Microsoft.Extensions.Logging;
+using Stripe;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
@@ -199,6 +200,24 @@ public class StripePaymentService : IPaymentService
             org.ExpirationDate = subscription.CurrentPeriodEnd;
             return null;
         }
+    }
+
+    public async Task<string> AddSecretsManagerToExistingSubscription(Organization org, StaticStore.Plan plan,
+        int additionalSeats,
+        int additionalServiceAccount = 0)
+    {
+        var subscription = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
+        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(plan,additionalSeats,additionalServiceAccount);
+        var updatedItems = secretsManagerSubscriptionUpdate.UpgradeItemsOptions(subscription);
+
+        var options = new SubscriptionUpdateOptions
+        {
+            Items = updatedItems,
+        };
+
+        var updatedSubscription = await _stripeAdapter.SubscriptionUpdateAsync(org.GatewaySubscriptionId, options);
+        return updatedSubscription.Status == "active" ? updatedSubscription.LatestInvoice.PaymentIntent.ClientSecret : null;
+
     }
 
     private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)

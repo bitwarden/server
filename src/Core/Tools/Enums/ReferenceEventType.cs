@@ -48,4 +48,6 @@ public enum ReferenceEventType
     AdjustServiceAccounts,
     [EnumMember(Value = "adjust-sm-seats")]
     AdjustSmSeats,
+    [EnumMember(Value = "add-sm-to-existing-subscription")]
+    AddSmToExistingSubscription,
 }
