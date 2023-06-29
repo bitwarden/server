@@ -2988,8 +2988,8 @@
       "billing": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "SharedWeb": "2023.3.0"
+          "Core": "2023.4.3",
+          "SharedWeb": "2023.4.3"
         }
       },
       "common": {
@@ -2997,7 +2997,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "4.17.0",
           "AutoFixture.Xunit2": "4.17.0",
-          "Core": "2023.3.0",
+          "Core": "2023.4.3",
           "Kralizek.AutoFixture.Extensions.MockHttp": "1.2.0",
           "Microsoft.NET.Test.Sdk": "17.1.0",
           "NSubstitute": "4.3.0",
@@ -3049,7 +3049,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
+          "Core": "2023.4.3",
           "Dapper": "2.0.123"
         }
       },
@@ -3057,7 +3057,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "12.0.1",
-          "Core": "2023.3.0",
+          "Core": "2023.4.3",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.12",
           "Microsoft.EntityFrameworkCore.SqlServer": "6.0.12",
           "Microsoft.EntityFrameworkCore.Sqlite": "6.0.12",
@@ -3069,9 +3069,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "Infrastructure.Dapper": "2023.3.0",
-          "Infrastructure.EntityFramework": "2023.3.0"
+          "Core": "2023.4.3",
+          "Infrastructure.Dapper": "2023.4.3",
+          "Infrastructure.EntityFramework": "2023.4.3"
         }
       }
     }
