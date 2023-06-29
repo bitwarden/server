@@ -10,6 +10,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -305,7 +306,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
-    public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
+    public async Task PutResetPasswordEnrollment(Guid orgId, Guid userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -315,7 +316,13 @@ public class OrganizationUsersController : Controller
 
         var callingUserId = user.Id;
         await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
-            new Guid(orgId), new Guid(userId), model.ResetPasswordKey, _userService, callingUserId);
+            orgId, userId, model.ResetPasswordKey, callingUserId);
+
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
+        if (orgUser.Status == OrganizationUserStatusType.Invited)
+        {
+            await _userService.AcceptUserAsync(orgUser, user, _userService);
+        }
     }
 
     [HttpPut("{id}/reset-password")]
