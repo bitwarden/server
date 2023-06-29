@@ -12,6 +12,7 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -30,6 +31,7 @@ public class OrganizationUsersController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
     private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
+    private readonly IAcceptUserCommand _acceptUserCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -40,6 +42,7 @@ public class OrganizationUsersController : Controller
         IUserService userService,
         IPolicyRepository policyRepository,
         IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
+        IAcceptUserCommand acceptUserCommand,
         ICurrentContext currentContext)
     {
         _organizationRepository = organizationRepository;
@@ -50,6 +53,7 @@ public class OrganizationUsersController : Controller
         _userService = userService;
         _policyRepository = policyRepository;
         _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
+        _acceptUserCommand = acceptUserCommand;
         _currentContext = currentContext;
     }
 
@@ -192,7 +196,7 @@ public class OrganizationUsersController : Controller
         }
 
         await _organizationService.InitPendingOrganization(user.Id, orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
-        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+        await _acceptUserCommand.AcceptAsync(organizationUserId, user, model.Token);
         await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
     }
 
@@ -214,7 +218,7 @@ public class OrganizationUsersController : Controller
             throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
         }
 
-        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+        await _acceptUserCommand.AcceptAsync(organizationUserId, user, model.Token);
 
         if (useMasterPasswordPolicy)
         {
@@ -310,7 +314,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
-    public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
+    public async Task PutResetPasswordEnrollment(Guid organizationId, Guid userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -320,13 +324,13 @@ public class OrganizationUsersController : Controller
 
         var callingUserId = user.Id;
         await _updateUserResetPasswordEnrollmentCommand.UpdateAsync(
-            new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            organizationId, userId, model.ResetPasswordKey, callingUserId);
 
-        //if (orgUser.Status == OrganizationUserStatusType.Invited)
-        //{
-        //    var user = await _userRepository.GetByIdAsync(userId);
-        //    await _organizationService.AcceptUserAsync(orgUser, user, _userService);
-        //}
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+        if (orgUser.Status == OrganizationUserStatusType.Invited)
+        {
+            await _acceptUserCommand.AcceptAsync(organizationId, user);
+        }
     }
 
     [HttpPut("{id}/reset-password")]
