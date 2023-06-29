@@ -486,7 +486,8 @@ public class OrganizationsController : Controller
 
         if (model.Type == OrganizationApiKeyType.BillingSync || model.Type == OrganizationApiKeyType.Scim)
         {
-            if (organization.PlanType == PlanType.Custom) {
+            if (organization.PlanType == PlanType.Custom) 
+            {
                 // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
                 var plan = StaticStore.GetPasswordManagerPlan(organization.PlanType);
                 if (plan.Product != ProductType.Enterprise)
