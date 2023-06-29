@@ -309,7 +309,7 @@ public class OrganizationServiceTests
            () => sutProvider.Sut.SignUpAsync(signup));
         Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats", exception.Message);
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task SignUpAsync_InvalidateServiceAccount_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
