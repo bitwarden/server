@@ -65,6 +65,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal(0, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
         Assert.Equal(5000, kdfIterations);
+        AssertUserDecryptionOptions(root);
     }
 
     [Theory, BitAutoData]
@@ -633,6 +634,16 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         Assert.Equal("invalid_grant", error);
         var errorDescription = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
         Assert.StartsWith("sso authentication", errorDescription.ToLowerInvariant());
+    }
+
+    private static void AssertUserDecryptionOptions(JsonElement tokenResponse)
+    {
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(tokenResponse, "UserDecryptionOptions", JsonValueKind.Object)
+            .EnumerateObject();
+
+        Assert.Collection(userDecryptionOptions,
+            (prop) => { Assert.Equal("HasMasterPassword", prop.Name); Assert.Equal(JsonValueKind.True, prop.Value.ValueKind); },
+            (prop) => { Assert.Equal("Object", prop.Name); Assert.Equal("userDecryptionOptions", prop.Value.GetString()); });
     }
 
     private void ReinitializeDbForTests()
