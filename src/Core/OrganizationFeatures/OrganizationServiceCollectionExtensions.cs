@@ -113,10 +113,6 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationSubscriptionUpdateCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
-        services.AddScoped<IUpdateServiceAccountAutoscalingCommand, UpdateServiceAccountAutoscalingCommand>();
-        services.AddScoped<IUpdateSeatsAutoscalingCommand, UpdateSeatsAutoscalingCommand>();
-        services.AddScoped<IAdjustServiceAccountsCommand, AdjustServiceAccountsCommand>();
-        services.AddScoped<IAdjustSeatsCommand, AdjustSeatsCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)
