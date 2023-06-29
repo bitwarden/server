@@ -287,6 +287,12 @@ public class OrganizationsController : Controller
             organization.UseTotp = model.UseTotp;
             organization.UsersGetPremium = model.UsersGetPremium;
             organization.UseSecretsManager = model.UseSecretsManager;
+
+            //secrets
+            organization.SmSeats = model.SmSeats;
+            organization.MaxAutoscaleSmSeats = model.MaxAutoscaleSmSeats;
+            organization.SmServiceAccounts = model.SmServiceAccounts;
+            organization.MaxAutoscaleSmServiceAccounts = model.MaxAutoscaleSmServiceAccounts;
         }
 
         if (_accessControlService.UserHasPermission(Permission.Org_Licensing_Edit))
