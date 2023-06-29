@@ -6,7 +6,7 @@
     ":dependencyDashboard",
     ":maintainLockFilesWeekly",
     ":pinAllExceptPeerDependencies",
-    ":prConcurrentLimit10",
+    ":prConcurrentLimit3",
     ":rebaseStalePrs",
     "schedule:weekends",
     ":separateMajorReleases"
