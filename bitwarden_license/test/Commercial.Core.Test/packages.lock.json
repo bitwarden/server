@@ -2818,7 +2818,7 @@
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.4.3"
+          "Core": "2023.5.1"
         }
       },
       "common": {
@@ -2826,7 +2826,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "4.17.0",
           "AutoFixture.Xunit2": "4.17.0",
-          "Core": "2023.4.3",
+          "Core": "2023.5.1",
           "Kralizek.AutoFixture.Extensions.MockHttp": "1.2.0",
           "Microsoft.NET.Test.Sdk": "17.1.0",
           "NSubstitute": "4.3.0",
@@ -2880,8 +2880,8 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "4.17.0",
           "AutoFixture.Xunit2": "4.17.0",
-          "Common": "2023.4.3",
-          "Core": "2023.4.3",
+          "Common": "2023.5.1",
+          "Core": "2023.5.1",
           "Kralizek.AutoFixture.Extensions.MockHttp": "1.2.0",
           "Microsoft.NET.Test.Sdk": "17.1.0",
           "Moq": "4.17.2",
