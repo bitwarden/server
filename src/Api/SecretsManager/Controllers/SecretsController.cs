@@ -8,6 +8,7 @@ using Bit.Core.Identity;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
@@ -170,9 +171,40 @@ public class SecretsController : Controller
     [HttpPost("secrets/delete")]
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var results = await _deleteSecretCommand.DeleteSecrets(ids, userId);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
+        var secrets = (await _secretRepository.GetManyByIds(ids)).ToList();
+        if (!secrets.Any() || secrets.Count != ids.Count)
+        {
+            throw new NotFoundException();
+        }
+
+        // Ensure all secrets belong to the same organization.
+        var organizationId = secrets.First().OrganizationId;
+        if (secrets.Any(secret => secret.OrganizationId != organizationId) ||
+            !_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var secretsToDelete = new List<Secret>();
+        var results = new List<(Secret Secret, string Error)>();
+
+        foreach (var secret in secrets)
+        {
+            var authorizationResult =
+                await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Delete);
+            if (authorizationResult.Succeeded)
+            {
+                secretsToDelete.Add(secret);
+                results.Add((secret, ""));
+            }
+            else
+            {
+                results.Add((secret, "access denied"));
+            }
+        }
+
+        await _deleteSecretCommand.DeleteSecrets(secretsToDelete);
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Secret.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 }
