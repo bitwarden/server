@@ -2,7 +2,6 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -10,7 +9,6 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -214,7 +212,7 @@ public class OrganizationUsersController : Controller
 
         if (useMasterPasswordPolicy)
         {
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, _userService, user.Id);
+            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
         }
     }
 
@@ -321,7 +319,7 @@ public class OrganizationUsersController : Controller
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
         if (orgUser.Status == OrganizationUserStatusType.Invited)
         {
-            await _userService.AcceptUserAsync(orgUser, user, _userService);
+            await _organizationService.AcceptUserAsync(orgId, user, _userService);
         }
     }
 
@@ -422,7 +420,7 @@ public class OrganizationUsersController : Controller
     private async Task RestoreOrRevokeUserAsync(
         Guid orgId,
         Guid id,
-        Func<OrganizationUser, Guid?, Task> statusAction)
+        Func<Core.Entities.OrganizationUser, Guid?, Task> statusAction)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -442,7 +440,7 @@ public class OrganizationUsersController : Controller
     private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> RestoreOrRevokeUsersAsync(
         Guid orgId,
         OrganizationUserBulkRequestModel model,
-        Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> statusAction)
+        Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<Core.Entities.OrganizationUser, string>>>> statusAction)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
