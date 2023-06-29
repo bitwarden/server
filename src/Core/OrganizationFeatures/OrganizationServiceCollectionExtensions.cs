@@ -11,6 +11,8 @@ using Bit.Core.OrganizationFeatures.OrganizationDomains;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSmSubscription;
+using Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -41,6 +43,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationSubscriptionUpdateCommandsQueries();
+        services.AddOrganizationSmSubscriptionCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -117,6 +120,13 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IUpdateSeatsAutoscalingCommand, UpdateSeatsAutoscalingCommand>();
         services.AddScoped<IAdjustServiceAccountsCommand, AdjustServiceAccountsCommand>();
         services.AddScoped<IAdjustSeatsCommand, AdjustSeatsCommand>();
+    }
+    
+    private static void AddOrganizationSmSubscriptionCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IGetOrganizationQuery, GetOrganizationQuery>();
+        services.AddScoped<ISecretsManagerPlanValidation, SecretsManagerPlanValidation>();
+        services.AddScoped<ISubscribeOrganziationSmCommand, SubscribeOrganziationSmCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

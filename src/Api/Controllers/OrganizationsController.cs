@@ -18,6 +18,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -52,6 +53,7 @@ public class OrganizationsController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly ISubscribeOrganziationSmCommand _subscribeOrganziationSmCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -73,7 +75,8 @@ public class OrganizationsController : Controller
         IFeatureService featureService,
         GlobalSettings globalSettings,
         ILicensingService licensingService,
-        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        ISubscribeOrganziationSmCommand subscribeOrganziationSmCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -95,6 +98,7 @@ public class OrganizationsController : Controller
         _globalSettings = globalSettings;
         _licensingService = licensingService;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _subscribeOrganziationSmCommand = subscribeOrganziationSmCommand;
     }
 
     [HttpGet("{id}")]
@@ -341,14 +345,16 @@ public class OrganizationsController : Controller
     
     [HttpPost("{id}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSubscribeSecretsManagerAsync(string id, [FromBody] OrganizationSmSubscriptionRequestModel model)
+    public async Task<PaymentResponseModel> PostSubscribeSecretsManagerAsync(string id, [FromBody] OrganizationSmSubscriptionRequestModel model)
     {
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.EditSubscription(orgIdGuid))
         {
             throw new NotFoundException();
         }
-        await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(orgIdGuid,);
+        var result = await _subscribeOrganziationSmCommand.SignUpAsync(orgIdGuid,model.AdditionalSeats,
+            model.AdditionalServiceAccounts.GetValueOrDefault());
+        return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
     }
 
     [HttpPost("{id}/seat")]
