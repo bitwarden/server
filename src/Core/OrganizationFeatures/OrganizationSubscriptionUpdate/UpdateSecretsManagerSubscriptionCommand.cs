@@ -268,7 +268,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             }
         }
 
-        var paymentIntentClientSecret = await _paymentService.AdjustServiceAccountsAsync(organization, plan, serviceAccountAdjustment);
+        var paymentIntentClientSecret = await _paymentService.AdjustServiceAccountsAsync(organization, plan, additionalServiceAccounts.GetValueOrDefault());
 
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustServiceAccounts, organization, _currentContext)
