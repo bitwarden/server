@@ -12,7 +12,7 @@ public class ProviderUserInvite<T>
 
 public static class ProviderUserInviteFactory
 {
-    public static ProviderUserInvite<string> CreateIntialInvite(IEnumerable<string> inviteeEmails, ProviderUserType type, Guid invitingUserId, Guid providerId)
+    public static ProviderUserInvite<string> CreateInitialInvite(IEnumerable<string> inviteeEmails, ProviderUserType type, Guid invitingUserId, Guid providerId)
     {
         return new ProviderUserInvite<string>
         {

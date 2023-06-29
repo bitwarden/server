@@ -126,6 +126,9 @@ jobs:
           - project_name: Scim
             base_path: ./bitwarden_license/src
             dotnet: true
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
@@ -246,6 +249,10 @@ jobs:
             base_path: ./src
             docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c # v3.3.0
@@ -287,7 +294,7 @@ jobs:
 
       - name: Retrieve github PAT secrets
         id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@34ecb67b2a357795dc893549df0795e7383ff50f
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
@@ -295,7 +302,7 @@ jobs:
       - name: Retrieve secrets
         if: ${{ env.is_publish_branch == 'true' }}
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@34ecb67b2a357795dc893549df0795e7383ff50f
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         with:
           keyvault: "bitwarden-ci"
           secrets: "docker-password,
@@ -310,17 +317,12 @@ jobs:
           DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
         run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
-      - name: Setup Docker Trust
+      - name: Setup Docker Content Trust (DCT)
         if: ${{ env.is_publish_branch == 'true' }}
-        env:
-          DCT_DELEGATION_KEY_ID: "c9bde8ec820701516491e5e03d3a6354e7bd66d05fa3df2b0062f68b116dc59c"
-          DCT_DELEGATE_KEY: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-key }}
-          DCT_REPO_PASSPHRASE: ${{ steps.retrieve-secrets.outputs.dct-delegate-2-repo-passphrase }}
-        run: |
-          mkdir -p ~/.docker/trust/private
-          echo "$DCT_DELEGATE_KEY" > ~/.docker/trust/private/$DCT_DELEGATION_KEY_ID.key
-          echo "DOCKER_CONTENT_TRUST=1" >> $GITHUB_ENV
-          echo "DOCKER_CONTENT_TRUST_REPOSITORY_PASSPHRASE=$DCT_REPO_PASSPHRASE" >> $GITHUB_ENV
+        uses: bitwarden/gh-actions/setup-docker-trust@f955298c7a982b3fb5dbb73afd582c584fd5beec
+        with:
+          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          azure-keyvault-name: "bitwarden-ci"
 
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
@@ -521,6 +523,14 @@ jobs:
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
 
+  self-host-build:
+    name: Self-host build
+    needs: build-docker
+    uses: bitwarden/self-host/.github/workflows/build-unified.yml@master
+    with:
+      server_branch: ${{ github.ref_name }}
+    secrets: inherit
+
   check-failures:
     name: Check for failures
     if: always()
@@ -533,6 +543,7 @@ jobs:
       - build-docker
       - upload
       - build-mssqlmigratorutility
+      - self-host-build
     steps:
       - name: Check if any job failed
         if: |
@@ -547,6 +558,7 @@ jobs:
           BUILD_DOCKER_STATUS: ${{ needs.build-docker.result }}
           UPLOAD_STATUS: ${{ needs.upload.result }}
           BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
+          TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.self-host-build.result }}
         run: |
           if [ "$CLOC_STATUS" = "failure" ]; then
               exit 1
@@ -562,6 +574,8 @@ jobs:
               exit 1
           elif [ "$BUILD_MSSQLMIGRATORUTILITY_STATUS" = "failure" ]; then
               exit 1
+          elif [ "$TRIGGER_SELF_HOST_BUILD_STATUS" = "failure" ]; then
+              exit 1
           fi
 
       - name: Login to Azure - CI subscription
@@ -572,7 +586,7 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@34ecb67b2a357795dc893549df0795e7383ff50f
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
         if: failure()
         with:
           keyvault: "bitwarden-ci"

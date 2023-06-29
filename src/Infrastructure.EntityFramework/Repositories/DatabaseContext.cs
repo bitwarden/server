@@ -97,7 +97,6 @@ public class DatabaseContext : DbContext
         var eUser = builder.Entity<User>();
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
-        var eAuthRequest = builder.Entity<AuthRequest>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
@@ -119,7 +118,6 @@ public class DatabaseContext : DbContext
         eUser.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
-        eAuthRequest.Property(ar => ar.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
@@ -171,7 +169,6 @@ public class DatabaseContext : DbContext
         eUser.ToTable(nameof(User));
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
-        eAuthRequest.ToTable(nameof(AuthRequest));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
 
         ConfigureDateTimeUtcQueries(builder);
