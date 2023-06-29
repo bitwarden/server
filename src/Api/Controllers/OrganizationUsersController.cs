@@ -8,8 +8,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
-using Bit.Core.OrganizationFeatures.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +27,6 @@ public class OrganizationUsersController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
-    private readonly IUpdateUserResetPasswordEnrollmentCommand _updateUserResetPasswordEnrollmentCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -39,7 +36,6 @@ public class OrganizationUsersController : Controller
         IGroupRepository groupRepository,
         IUserService userService,
         IPolicyRepository policyRepository,
-        IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
         ICurrentContext currentContext)
     {
         _organizationRepository = organizationRepository;
@@ -49,7 +45,6 @@ public class OrganizationUsersController : Controller
         _groupRepository = groupRepository;
         _userService = userService;
         _policyRepository = policyRepository;
-        _updateUserResetPasswordEnrollmentCommand = updateUserResetPasswordEnrollmentCommand;
         _currentContext = currentContext;
     }
 
@@ -218,7 +213,7 @@ public class OrganizationUsersController : Controller
 
         if (useMasterPasswordPolicy)
         {
-            await _updateUserResetPasswordEnrollmentCommand.UpdateAsync(orgId, user.Id, model.ResetPasswordKey, user.Id);
+            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(orgId, user.Id, model.ResetPasswordKey, _userService, user.Id);
         }
     }
 
@@ -319,14 +314,8 @@ public class OrganizationUsersController : Controller
         }
 
         var callingUserId = user.Id;
-        await _updateUserResetPasswordEnrollmentCommand.UpdateAsync(
-            new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
-
-        //if (orgUser.Status == OrganizationUserStatusType.Invited)
-        //{
-        //    var user = await _userRepository.GetByIdAsync(userId);
-        //    await _organizationService.AcceptUserAsync(orgUser, user, _userService);
-        //}
+        await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+            new Guid(orgId), new Guid(userId), model.ResetPasswordKey, _userService, callingUserId);
     }
 
     [HttpPut("{id}/reset-password")]
