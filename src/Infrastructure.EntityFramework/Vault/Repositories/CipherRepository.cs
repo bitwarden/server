@@ -475,7 +475,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
                     {
                         var folders = CoreHelpers.LoadClassFromJsonData<Dictionary<Guid, Guid>>(cipher.Folders);
                         folders.Remove(cipher.UserId.Value);
-                        cipher.Favorites = JsonSerializer.Serialize(folders);
+                        cipher.Folders = JsonSerializer.Serialize(folders);
                     }
                 }
 
