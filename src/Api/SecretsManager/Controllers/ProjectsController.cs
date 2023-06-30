@@ -74,9 +74,8 @@ public class ProjectsController : Controller
         {
             throw new NotFoundException();
         }
-
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createProjectCommand.CreateAsync(project, userId);
+        var result = await _createProjectCommand.CreateAsync(project, userId, _currentContext.ClientType);
 
         // Creating a project means you have read & write permission.
         return new ProjectResponseModel(result, true, true);

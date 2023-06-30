@@ -108,7 +108,6 @@ public class ProjectAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task CanCreateProject_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
@@ -130,6 +129,7 @@ public class ProjectAuthorizationHandlerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission)]
     public async Task CanCreateProject_Success(PermissionType permissionType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
@@ -191,7 +191,7 @@ public class ProjectAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(false);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
             .ReturnsForAnyArgs(
-                (AccessClientType.ServiceAccount, new Guid()));
+                (AccessClientType.Organization, new Guid()));
         var requirement = ProjectOperations.Update;
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
@@ -207,6 +207,10 @@ public class ProjectAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
     public async Task CanUpdateProject_AccessCheck(PermissionType permissionType, bool read, bool write,
         bool expected,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project,

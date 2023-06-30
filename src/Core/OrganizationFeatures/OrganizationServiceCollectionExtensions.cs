@@ -15,6 +15,8 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
+using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager;
+using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -29,6 +31,7 @@ public static class OrganizationServiceCollectionExtensions
     public static void AddOrganizationServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
+        services.AddScoped<IEnableAccessSecretsManagerCommand, EnableAccessSecretsManagerCommand>();
         services.AddTokenizers();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
