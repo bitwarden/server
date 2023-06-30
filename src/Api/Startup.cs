@@ -225,7 +225,7 @@ public class Startup
                 endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
                 {
                     ResponseWriter = HealthCheckServiceExtensions.WriteResponse
-                });   
+                });
             }
         });
 
