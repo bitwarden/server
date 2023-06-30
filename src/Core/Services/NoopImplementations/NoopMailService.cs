@@ -239,7 +239,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeIdentifier)
+    public Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip, string deviceTypeAndIdentifier)
     {
         return Task.FromResult(0);
     }
