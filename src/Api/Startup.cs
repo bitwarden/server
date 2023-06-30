@@ -138,7 +138,7 @@ public class Startup
         //health check
         if (!globalSettings.SelfHosted)
         {
-            services.AddHealthChecks(globalSettings);   
+            services.AddHealthChecks(globalSettings);
         }
 
 #if OSS

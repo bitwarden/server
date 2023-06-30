@@ -80,7 +80,7 @@ public static class ServiceCollectionExtensions
                                       + "/.well-known/openid-configuration");
 
             builder.AddUrlGroup(identityUri, "identity");
-    
+
             if (CoreHelpers.SettingHasValue(globalSettings.SqlServer.ConnectionString))
             {
                 builder.AddSqlServer(globalSettings.SqlServer.ConnectionString);
