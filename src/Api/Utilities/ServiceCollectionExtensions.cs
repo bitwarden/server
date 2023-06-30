@@ -1,5 +1,6 @@
 ﻿using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.SharedWeb.Health;
 using Microsoft.OpenApi.Models;
 
@@ -79,36 +80,36 @@ public static class ServiceCollectionExtensions
                                       + "/.well-known/openid-configuration");
 
             builder.AddUrlGroup(identityUri, "identity");
-
-            if (!string.IsNullOrEmpty(globalSettings.SqlServer.ConnectionString))
+            
+            if (CoreHelpers.SettingHasValue(globalSettings.SqlServer.ConnectionString))
             {
                 builder.AddSqlServer(globalSettings.SqlServer.ConnectionString);
             }
 
-            if (!string.IsNullOrEmpty(globalSettings.Redis.ConnectionString))
+            if (CoreHelpers.SettingHasValue(globalSettings.Redis.ConnectionString))
             {
                 builder.AddRedis(globalSettings.Redis.ConnectionString);
             }
 
-            if (!string.IsNullOrEmpty(globalSettings.Storage.ConnectionString))
+            if (CoreHelpers.SettingHasValue(globalSettings.Storage.ConnectionString))
             {
                 builder.AddAzureQueueStorage(globalSettings.Storage.ConnectionString, name: "storage_queue")
                     .AddAzureQueueStorage(globalSettings.Events.ConnectionString, name: "events_queue");
             }
 
-            if (!string.IsNullOrEmpty(globalSettings.Notifications.ConnectionString))
+            if (CoreHelpers.SettingHasValue(globalSettings.Notifications.ConnectionString))
             {
                 builder.AddAzureQueueStorage(globalSettings.Notifications.ConnectionString,
                     name: "notifications_queue");
             }
 
-            if (!string.IsNullOrEmpty(globalSettings.ServiceBus.ConnectionString))
+            if (CoreHelpers.SettingHasValue(globalSettings.ServiceBus.ConnectionString))
             {
                 builder.AddAzureServiceBusTopic(_ => globalSettings.ServiceBus.ConnectionString,
                     _ => globalSettings.ServiceBus.ApplicationCacheTopicName, name: "service_bus");
             }
 
-            if (!string.IsNullOrEmpty(globalSettings.Mail.SendGridApiKey))
+            if (CoreHelpers.SettingHasValue(globalSettings.Mail.SendGridApiKey))
             {
                 builder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
             }

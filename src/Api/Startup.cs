@@ -136,7 +136,10 @@ public class Startup
         services.AddCoreLocalizationServices();
 
         //health check
-        services.AddHealthChecks(globalSettings);
+        if (!globalSettings.SelfHosted)
+        {
+            services.AddHealthChecks(globalSettings);   
+        }
 
 #if OSS
         services.AddOosServices();
