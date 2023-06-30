@@ -88,14 +88,11 @@ public class AutoscaleServiceAccountsCommand : IAutoscaleServiceAccountsCommand
                 $"{plan.MaxAdditionalServiceAccount.Value} additional service accounts.");
         }
 
-        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newServiceAccountSlotsTotal)
+        var occupiedServiceAccountCount = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+        if (occupiedServiceAccountCount >= newServiceAccountSlotsTotal)
         {
-            var occupiedServiceAccountCount = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
-            if (occupiedServiceAccountCount > newServiceAccountSlotsTotal)
-            {
-                throw new BadRequestException($"Your organization currently has {occupiedServiceAccountCount} service account slots filled. " +
-                    $"Your new plan only has ({newServiceAccountSlotsTotal}) slots. Remove some service accounts.");
-            }
+            throw new BadRequestException($"Your organization currently has {occupiedServiceAccountCount} service account slots filled. " +
+                $"Your new plan only has ({newServiceAccountSlotsTotal}) slots. Remove some service accounts.");
         }
 
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, additionalServiceAccountSlots);
