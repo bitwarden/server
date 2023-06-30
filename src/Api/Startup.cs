@@ -218,12 +218,15 @@ public class Startup
         {
             endpoints.MapDefaultControllerRoute();
 
-            endpoints.MapHealthChecks("/healthz");
-
-            endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
+            if (!globalSettings.SelfHosted)
             {
-                ResponseWriter = HealthCheckServiceExtensions.WriteResponse
-            });
+                endpoints.MapHealthChecks("/healthz");
+
+                endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
+                {
+                    ResponseWriter = HealthCheckServiceExtensions.WriteResponse
+                });   
+            }
         });
 
         // Add Swagger
