@@ -244,45 +244,106 @@ public class SecretsControllerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async void BulkDeleteSecret_Success(PermissionType permissionType, SutProvider<SecretsController> sutProvider, List<Secret> data, Guid organizationId, Guid userId, Project mockProject)
+    [BitAutoData]
+    public async void BulkDelete_NoSecretsFound_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
-
-        if (permissionType == PermissionType.RunAsAdmin)
-        {
-            sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(true);
-        }
-        else
-        {
-            data.FirstOrDefault().Projects = new List<Project>() { mockProject };
-            sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organizationId).Returns(false);
-            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
-                .Returns((true, true));
-        }
-
-
-        var ids = data.Select(secret => secret.Id).ToList();
-        var mockResult = new List<Tuple<Secret, string>>();
-
-        foreach (var secret in data)
-        {
-            mockResult.Add(new Tuple<Secret, string>(secret, ""));
-        }
-        sutProvider.GetDependency<IDeleteSecretCommand>().DeleteSecrets(ids, userId).ReturnsForAnyArgs(mockResult);
-
-        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
-        await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
-                     .DeleteSecrets(Arg.Is(ids), userId);
-        Assert.Equal(data.Count, results.Data.Count());
+        var ids = data.Select(s => s.Id).ToList();
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<Secret>());
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteSecretCommand>().DidNotReceiveWithAnyArgs().DeleteSecrets(Arg.Any<List<Secret>>());
     }
 
     [Theory]
     [BitAutoData]
-    public async void BulkDeleteSecret_NoGuids_ThrowsArgumentNullException(SutProvider<SecretsController> sutProvider)
+    public async void BulkDelete_SecretsFoundMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data, Secret mockSecret)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(new Guid());
-        await Assert.ThrowsAsync<ArgumentNullException>(() => sutProvider.Sut.BulkDeleteAsync(new List<Guid>()));
+        data.Add(mockSecret);
+        var ids = data.Select(s => s.Id).ToList();
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<Secret> { mockSecret });
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteSecretCommand>().DidNotReceiveWithAnyArgs().DeleteSecrets(Arg.Any<List<Secret>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_OrganizationMistMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    {
+        var ids = data.Select(s => s.Id).ToList();
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteSecretCommand>().DidNotReceiveWithAnyArgs().DeleteSecrets(Arg.Any<List<Secret>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_NoAccessToSecretsManager_ThrowsNotFound(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    {
+        var ids = data.Select(s => s.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var s in data)
+        {
+            s.OrganizationId = organizationId;
+        }
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteSecretCommand>().DidNotReceiveWithAnyArgs().DeleteSecrets(Arg.Any<List<Secret>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_ReturnsAccessDeniedForSecretsWithoutAccess_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    {
+        var ids = data.Select(s => s.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var secret in data)
+        {
+            secret.OrganizationId = organizationId;
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), secret,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
+
+        Assert.Equal(data.Count, results.Data.Count());
+        Assert.Equal("access denied", results.Data.First().Error);
+
+        data.Remove(data.First());
+        await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
+            .DeleteSecrets(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var secret in data)
+        {
+            secret.OrganizationId = organizationId;
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), secret,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
+
+        await sutProvider.GetDependency<IDeleteSecretCommand>().Received(1)
+            .DeleteSecrets(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+        Assert.Equal(data.Count, results.Data.Count());
+        foreach (var result in results.Data)
+        {
+            Assert.Null(result.Error);
+        }
     }
 }

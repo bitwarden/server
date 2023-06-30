@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -144,7 +145,7 @@ public class ServiceAccountsControllerTests
     [Theory]
     [BitAutoData]
     public async void CreateAccessToken_NoAccess_Throws(SutProvider<ServiceAccountsController> sutProvider,
-        AccessTokenCreateRequestModel data, ServiceAccount serviceAccount)
+        AccessTokenCreateRequestModel data, ServiceAccount serviceAccount, string mockClientSecret)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
         sutProvider.GetDependency<IAuthorizationService>()
@@ -152,8 +153,9 @@ public class ServiceAccountsControllerTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
         var resultAccessToken = data.ToApiKey(serviceAccount.Id);
 
-        sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default)
-            .ReturnsForAnyArgs(resultAccessToken);
+        sutProvider.GetDependency<ICreateAccessTokenCommand>()
+            .CreateAsync(default)
+            .ReturnsForAnyArgs(new ApiKeyClientSecretDetails { ApiKey = resultAccessToken, ClientSecret = mockClientSecret });
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.CreateAccessTokenAsync(serviceAccount.Id, data));
@@ -164,7 +166,7 @@ public class ServiceAccountsControllerTests
     [Theory]
     [BitAutoData]
     public async void CreateAccessToken_Success(SutProvider<ServiceAccountsController> sutProvider,
-        AccessTokenCreateRequestModel data, ServiceAccount serviceAccount)
+        AccessTokenCreateRequestModel data, ServiceAccount serviceAccount, string mockClientSecret)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(serviceAccount.Id).Returns(serviceAccount);
         sutProvider.GetDependency<IAuthorizationService>()
@@ -173,7 +175,7 @@ public class ServiceAccountsControllerTests
         var resultAccessToken = data.ToApiKey(serviceAccount.Id);
 
         sutProvider.GetDependency<ICreateAccessTokenCommand>().CreateAsync(default)
-            .ReturnsForAnyArgs(resultAccessToken);
+            .ReturnsForAnyArgs(new ApiKeyClientSecretDetails { ApiKey = resultAccessToken, ClientSecret = mockClientSecret });
 
         await sutProvider.Sut.CreateAccessTokenAsync(serviceAccount.Id, data);
         await sutProvider.GetDependency<ICreateAccessTokenCommand>().Received(1)
