@@ -17,6 +17,7 @@ namespace Bit.Core.Services;
 public class HandlebarsMailService : IMailService
 {
     private const string Namespace = "Bit.Core.MailTemplates.Handlebars";
+    private const string _utcTimeZoneDisplay = "UTC";
 
     private readonly GlobalSettings _globalSettings;
     private readonly IMailDeliveryService _mailDeliveryService;
@@ -353,7 +354,7 @@ public class HandlebarsMailService : IMailService
             DeviceType = deviceType,
             TheDate = timestamp.ToLongDateString(),
             TheTime = timestamp.ToShortTimeString(),
-            TimeZone = "UTC",
+            TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip
         };
         await AddMessageContentAsync(message, "NewDeviceLoggedIn", model);
@@ -370,7 +371,7 @@ public class HandlebarsMailService : IMailService
             SiteName = _globalSettings.SiteName,
             TheDate = timestamp.ToLongDateString(),
             TheTime = timestamp.ToShortTimeString(),
-            TimeZone = "UTC",
+            TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip
         };
         await AddMessageContentAsync(message, "Auth.RecoverTwoFactor", model);
@@ -856,7 +857,7 @@ public class HandlebarsMailService : IMailService
         {
             TheDate = utcNow.ToLongDateString(),
             TheTime = utcNow.ToShortTimeString(),
-            TimeZone = "UTC",
+            TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip,
             AffectedEmail = email
 
@@ -873,7 +874,7 @@ public class HandlebarsMailService : IMailService
         {
             TheDate = utcNow.ToLongDateString(),
             TheTime = utcNow.ToShortTimeString(),
-            TimeZone = "UTC",
+            TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip,
             AffectedEmail = email
 
@@ -904,7 +905,7 @@ public class HandlebarsMailService : IMailService
         {
             TheDate = utcNow.ToLongDateString(),
             TheTime = utcNow.ToShortTimeString(),
-            TimeZone = utcNow.Kind.ToString(),
+            TimeZone = _utcTimeZoneDisplay,
             IpAddress = ip,
             DeviceType = deviceTypeIdentifier,
         };
