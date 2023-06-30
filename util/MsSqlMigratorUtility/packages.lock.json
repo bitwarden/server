@@ -2729,7 +2729,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
+          "Core": "2023.5.1",
           "Microsoft.Extensions.Logging": "6.0.0",
           "dbup-sqlserver": "5.0.8"
         }

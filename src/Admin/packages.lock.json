@@ -2834,7 +2834,7 @@
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0"
+          "Core": "2023.5.1"
         }
       },
       "core": {
@@ -2882,7 +2882,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
+          "Core": "2023.5.1",
           "Dapper": "2.0.123"
         }
       },
@@ -2890,7 +2890,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "12.0.1",
-          "Core": "2023.3.0",
+          "Core": "2023.5.1",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.12",
           "Microsoft.EntityFrameworkCore.SqlServer": "6.0.12",
           "Microsoft.EntityFrameworkCore.Sqlite": "6.0.12",
@@ -2902,7 +2902,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
+          "Core": "2023.5.1",
           "Microsoft.Extensions.Logging": "6.0.0",
           "dbup-sqlserver": "5.0.8"
         }
@@ -2910,30 +2910,30 @@
       "mysqlmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "Infrastructure.EntityFramework": "2023.3.0"
+          "Core": "2023.5.1",
+          "Infrastructure.EntityFramework": "2023.5.1"
         }
       },
       "postgresmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "Infrastructure.EntityFramework": "2023.3.0"
+          "Core": "2023.5.1",
+          "Infrastructure.EntityFramework": "2023.5.1"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "Infrastructure.Dapper": "2023.3.0",
-          "Infrastructure.EntityFramework": "2023.3.0"
+          "Core": "2023.5.1",
+          "Infrastructure.Dapper": "2023.5.1",
+          "Infrastructure.EntityFramework": "2023.5.1"
         }
       },
       "sqlitemigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.3.0",
-          "Infrastructure.EntityFramework": "2023.3.0"
+          "Core": "2023.5.1",
+          "Infrastructure.EntityFramework": "2023.5.1"
         }
       }
     }

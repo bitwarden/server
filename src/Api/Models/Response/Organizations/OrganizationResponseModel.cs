@@ -26,7 +26,7 @@ public class OrganizationResponseModel : ResponseModel
         BusinessCountry = organization.BusinessCountry;
         BusinessTaxNumber = organization.BusinessTaxNumber;
         BillingEmail = organization.BillingEmail;
-        Plan = new PlanResponseModel(StaticStore.Plans.FirstOrDefault(plan => plan.Type == organization.PlanType));
+        Plan = new PlanResponseModel(StaticStore.PasswordManagerPlans.FirstOrDefault(plan => plan.Type == organization.PlanType));
         PlanType = organization.PlanType;
         Seats = organization.Seats;
         MaxAutoscaleSeats = organization.MaxAutoscaleSeats;
@@ -48,6 +48,11 @@ public class OrganizationResponseModel : ResponseModel
         UseCustomPermissions = organization.UseCustomPermissions;
         SelfHost = organization.SelfHost;
         HasPublicAndPrivateKeys = organization.PublicKey != null && organization.PrivateKey != null;
+        UsePasswordManager = organization.UsePasswordManager;
+        SmSeats = organization.SmSeats;
+        SmServiceAccounts = organization.SmServiceAccounts;
+        MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
+        MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
     }
 
     public string Id { get; set; }
@@ -81,6 +86,11 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseCustomPermissions { get; set; }
     public bool SelfHost { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
+    public bool UsePasswordManager { get; set; }
+    public int? SmSeats { get; set; }
+    public int? SmServiceAccounts { get; set; }
+    public int? MaxAutoscaleSmSeats { get; set; }
+    public int? MaxAutoscaleSmServiceAccounts { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

@@ -41,7 +41,10 @@ SELECT
     OS.[LastSyncDate] FamilySponsorshipLastSyncDate,
     OS.[ToDelete] FamilySponsorshipToDelete,
     OS.[ValidUntil] FamilySponsorshipValidUntil,
-    OU.[AccessSecretsManager]
+    OU.[AccessSecretsManager],
+    O.[UsePasswordManager],
+    O.[SmSeats],
+    O.[SmServiceAccounts]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN
