@@ -8,9 +8,11 @@ using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
 using Bit.Core.IdentityServer;
+using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
 using Microsoft.OpenApi.Models;
 using Bit.SharedWeb.Utilities;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
 
@@ -133,6 +135,12 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
 
+        //health check
+        if (!globalSettings.SelfHosted)
+        {
+            services.AddHealthChecks(globalSettings);
+        }
+
 #if OSS
         services.AddOosServices();
 #else
@@ -206,7 +214,20 @@ public class Startup
         app.UseMiddleware<CurrentContextMiddleware>();
 
         // Add endpoints to the request pipeline.
-        app.UseEndpoints(endpoints => endpoints.MapDefaultControllerRoute());
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapDefaultControllerRoute();
+
+            if (!globalSettings.SelfHosted)
+            {
+                endpoints.MapHealthChecks("/healthz");
+
+                endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
+                {
+                    ResponseWriter = HealthCheckServiceExtensions.WriteResponse
+                });
+            }
+        });
 
         // Add Swagger
         if (Environment.IsDevelopment() || globalSettings.SelfHosted)
