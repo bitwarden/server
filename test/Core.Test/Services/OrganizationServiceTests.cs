@@ -13,6 +13,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -22,6 +23,7 @@ using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -231,11 +233,81 @@ public class OrganizationServiceTests
         signup.AdditionalSeats = 10;
         signup.Plan = PlanType.EnterpriseAnnually;
         signup.UseSecretsManager = true;
+        signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
 
+        var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan).ToList();
+
         var result = await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
+                referenceEvent.Type == ReferenceEventType.Signup &&
+                referenceEvent.PlanName == purchaseOrganizationPlan[0].Name &&
+                referenceEvent.PlanType == purchaseOrganizationPlan[0].Type &&
+                referenceEvent.Seats == result.Item1.Seats &&
+                referenceEvent.SmSeats == result.Item1.SmSeats &&
+                referenceEvent.ServiceAccounts == result.Item1.SmServiceAccounts &&
+                referenceEvent.UseSecretsManager == result.Item1.UseSecretsManager &&
+                referenceEvent.Storage == result.Item1.MaxStorageGb));
+
         Assert.NotNull(result);
+        Assert.NotNull(result.Item1);
+        Assert.NotNull(result.Item2);
         Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
+
+        await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
+            Arg.Any<Organization>(),
+            signup.PaymentMethodType.Value,
+            signup.PaymentToken,
+            Arg.Is<List<Plan>>(plan => plan.All(p => purchaseOrganizationPlan.Contains(p))),
+            signup.AdditionalStorageGb,
+            signup.AdditionalSeats,
+            signup.PremiumAccessAddon,
+            signup.TaxInfo,
+            false,
+            signup.AdditionalSmSeats.GetValueOrDefault(),
+            signup.AdditionalServiceAccounts.GetValueOrDefault()
+        );
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_SecretManagerValidation_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalSeats = 10;
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.UseSecretsManager = true;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.AdditionalServiceAccounts = 10;
+
+        var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan && x.BitwardenProduct == BitwardenProductType.PasswordManager).ToList();
+        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
+        secretsManagerPlan.HasAdditionalServiceAccountOption = false;
+        purchaseOrganizationPlan.Add(secretsManagerPlan);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpAsync(signup));
+        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_SMSeatsGreatThanPMSeat_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.AdditionalSmSeats = 100;
+        signup.AdditionalSeats = 10;
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.UseSecretsManager = true;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.AdditionalServiceAccounts = 10;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+           () => sutProvider.Sut.SignUpAsync(signup));
+        Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats", exception.Message);
     }
 
     [Theory]

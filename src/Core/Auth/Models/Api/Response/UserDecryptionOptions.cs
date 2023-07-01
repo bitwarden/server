@@ -12,18 +12,18 @@ public class UserDecryptionOptions : ResponseModel
     }
 
     /// <summary>
-    /// 
+    /// Gets or sets whether the current user has a master password that can be used to decrypt their vault.
     /// </summary>
     public bool HasMasterPassword { get; set; }
 
     /// <summary>
-    /// 
+    /// Gets or sets information regarding this users trusted device decryption setup.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public TrustedDeviceUserDecryptionOption? TrustedDeviceOption { get; set; }
 
     /// <summary>
-    /// 
+    /// Gets or set information about the current users KeyConnector setup.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public KeyConnectorUserDecryptionOption? KeyConnectorOption { get; set; }

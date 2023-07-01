@@ -330,16 +330,15 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
     }
 
-    [HttpPost("{id}/sm-subscription")]
+    [HttpPost("{id:guid}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSmSubscription(string id, [FromBody] OrganizationSmSubscriptionUpdateRequestModel model)
+    public async Task PostSmSubscription(Guid id, [FromBody] OrganizationSmSubscriptionUpdateRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.EditSubscription(orgIdGuid))
+        if (!await _currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
-        var organizationUpdate = model.ToOrganizationUpdate(orgIdGuid);
+        var organizationUpdate = model.ToOrganizationUpdate(id);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
     
