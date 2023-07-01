@@ -196,6 +196,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustSmSeats, organization, _currentContext)
             {
+                Id = organization.Id,
                 PlanName = plan.Name,
                 PlanType = plan.Type,
                 Seats = newSeatTotal,
@@ -273,6 +274,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.AdjustServiceAccounts, organization, _currentContext)
             {
+                Id = organization.Id,
                 PlanName = plan.Name,
                 PlanType = plan.Type,
                 ServiceAccounts = newServiceAccountsTotal,
