@@ -5,7 +5,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
