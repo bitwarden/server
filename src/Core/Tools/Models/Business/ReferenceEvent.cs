@@ -70,4 +70,7 @@ public class ReferenceEvent
 
     public string ClientId { get; set; }
     public Version ClientVersion { get; set; }
+    public int? SmSeats { get; set; }
+    public int? ServiceAccounts { get; set; }
+    public bool UseSecretsManager { get; set; }
 }
