@@ -1,7 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSmSubscription;
 using Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
 using Bit.Core.Repositories;
