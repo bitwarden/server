@@ -11,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -42,6 +43,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly ISubscribeOrganziationSmCommand _subscribeOrganziationSmCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -67,13 +69,14 @@ public class OrganizationsControllerTests : IDisposable
         _featureService = Substitute.For<IFeatureService>();
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
+        _subscribeOrganziationSmCommand = Substitute.For<ISubscribeOrganziationSmCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
             _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
             _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService,
-            _updateSecretsManagerSubscriptionCommand);
+            _updateSecretsManagerSubscriptionCommand, _subscribeOrganziationSmCommand);
     }
 
     public void Dispose()
