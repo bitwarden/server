@@ -13,7 +13,7 @@ public class AutoscaleSecretsManagerSeatCommand : IAutoscaleSecretsManagerSeatCo
         {
             throw new NotFoundException();
         }
-        
+
         if (maxAutoscaleSeats.HasValue && organization.SmSeats.HasValue &&
             maxAutoscaleSeats.Value < organization.SmSeats.Value)
         {
