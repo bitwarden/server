@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
 using Bit.Core.Repositories;
 

@@ -344,7 +344,7 @@ public class OrganizationsController : Controller
 
     [HttpPost("{id}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<PaymentResponseModel> PostSubscribeSecretsManagerAsync(string id, [FromBody] OrganizationSmSubscriptionRequestModel model)
+    public async Task<OrganizationResponseModel> PostSubscribeSecretsManagerAsync(string id, [FromBody] OrganizationSmSubscriptionRequestModel model)
     {
         var orgIdGuid = new Guid(id);
         if (!await _currentContext.EditSubscription(orgIdGuid))
@@ -353,7 +353,8 @@ public class OrganizationsController : Controller
         }
         var result = await _subscribeOrganziationSmCommand.SignUpAsync(orgIdGuid, model.AdditionalSeats,
             model.AdditionalServiceAccounts.GetValueOrDefault());
-        return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
+
+        return new OrganizationResponseModel(result.Item1);
     }
 
     [HttpPost("{id}/seat")]
