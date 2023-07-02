@@ -12,8 +12,8 @@ public interface IPaymentService
         string paymentToken, List<Plan> plans, short additionalStorageGb, int additionalSeats,
         bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false, int additionalSmSeats = 0,
         int additionalServiceAccount = 0);
-    Task<string> AddSecretsManagerToExistingSubscription(Organization org, Plan plan, int additionalSmSeats,
-        int additionalServiceAccount = 0);
+    Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
+        int additionalServiceAccount = 0, DateTime? prorationDate = null);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
     Task<string> UpgradeFreeOrganizationAsync(Organization org, List<Plan> plans,
@@ -41,6 +41,6 @@ public interface IPaymentService
     Task<TaxRate> CreateTaxRateAsync(TaxRate taxRate);
     Task UpdateTaxRateAsync(TaxRate taxRate);
     Task ArchiveTaxRateAsync(TaxRate taxRate);
-    
-    
+
+
 }

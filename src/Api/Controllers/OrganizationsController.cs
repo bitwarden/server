@@ -341,7 +341,7 @@ public class OrganizationsController : Controller
         var organizationUpdate = model.ToOrganizationUpdate(id);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
-    
+
     [HttpPost("{id}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<PaymentResponseModel> PostSubscribeSecretsManagerAsync(string id, [FromBody] OrganizationSmSubscriptionRequestModel model)
@@ -351,7 +351,7 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-        var result = await _subscribeOrganziationSmCommand.SignUpAsync(orgIdGuid,model.AdditionalSeats,
+        var result = await _subscribeOrganziationSmCommand.SignUpAsync(orgIdGuid, model.AdditionalSeats,
             model.AdditionalServiceAccounts.GetValueOrDefault());
         return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
     }

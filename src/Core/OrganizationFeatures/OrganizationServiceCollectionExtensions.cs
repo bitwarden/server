@@ -117,12 +117,12 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
     }
-    
+
     private static void AddOrganizationSmSubscriptionCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<IGetOrganizationQuery, GetOrganizationQuery>();
         services.AddScoped<ISecretsManagerPlanValidation, SecretsManagerPlanValidation>();
-        services.AddScoped<ISubscribeOrganziationSmCommand, SubscribeOrganziationSmCommand>();
+        services.AddScoped<ISubscribeOrganziationSmCommand, SubscribeOrganizationSmCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

@@ -202,22 +202,11 @@ public class StripePaymentService : IPaymentService
         }
     }
 
-    public async Task<string> AddSecretsManagerToExistingSubscription(Organization org, StaticStore.Plan plan,
+    public async Task<string> AddSecretsManagerToSubscription(Organization org, StaticStore.Plan plan,
         int additionalSeats,
-        int additionalServiceAccount = 0)
+        int additionalServiceAccount = 0, DateTime? prorationDate = null)
     {
-        var subscription = await _stripeAdapter.SubscriptionGetAsync(org.GatewaySubscriptionId);
-        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(plan,additionalSeats,additionalServiceAccount);
-        var updatedItems = secretsManagerSubscriptionUpdate.UpgradeItemsOptions(subscription);
-
-        var options = new SubscriptionUpdateOptions
-        {
-            Items = updatedItems,
-        };
-
-        var updatedSubscription = await _stripeAdapter.SubscriptionUpdateAsync(org.GatewaySubscriptionId, options);
-        return updatedSubscription.Status == "active" ? updatedSubscription.LatestInvoice.PaymentIntent.ClientSecret : null;
-
+        return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerSubscriptionUpdate(plan, additionalSeats, additionalServiceAccount), prorationDate);
     }
 
     private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
