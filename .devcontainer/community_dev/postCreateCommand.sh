@@ -5,24 +5,12 @@ git config --global --add safe.directory /workspace
 
 get_installation_id_and_key() {
     pushd ./dev >/dev/null || exit
-    read -r -p "Would you like to automatically grab a Bitwarden installation id and key? [y/N] " response
-    if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
-        echo "Retrieving an installation id and key..."
-        read -r -p "Enter your email address: " USER_EMAIL
-        INSTALLATION_RESPONSE="$(curl -s --location --request POST 'https://api.bitwarden.com/installations' --header 'Content-Type: application/json' --data-raw "{\"email\": \"$USER_EMAIL\"}")"
-        INSTALLATION_ID="$(echo "$INSTALLATION_RESPONSE" | jq -r '.id')"
-        INSTALLATION_KEY="$(echo "$INSTALLATION_RESPONSE" | jq -r '.key')"
-        jq ".globalSettings.installation.id = \"$INSTALLATION_ID\" |
-            .globalSettings.installation.key = \"$INSTALLATION_KEY\"" \
-            secrets.json.example >secrets.json # create/overwrite secrets.json
-    else
-        echo "Please enter your installation id and key from https://bitwarden.com/host"
-        read -r -p "Installation id: " INSTALLATION_ID
-        read -r -p "Installation key: " INSTALLATION_KEY
-        jq ".globalSettings.installation.id = \"$INSTALLATION_ID\" |
-            .globalSettings.installation.key = \"$INSTALLATION_KEY\"" \
-            secrets.json.example >secrets.json # create/overwrite secrets.json
-    fi
+    echo "Please enter your installation id and key from https://bitwarden.com/host:"
+    read -r -p "Installation id: " INSTALLATION_ID
+    read -r -p "Installation key: " INSTALLATION_KEY
+    jq ".globalSettings.installation.id = \"$INSTALLATION_ID\" |
+        .globalSettings.installation.key = \"$INSTALLATION_KEY\"" \
+        secrets.json.example >secrets.json # create/overwrite secrets.json
     popd >/dev/null || exit
 }
 
