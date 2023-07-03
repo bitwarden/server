@@ -445,5 +445,75 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
     }
+    
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public async Task UpdateSecretsManagerSubscription_ThrowsBadRequestException_WhenMaxAutoscaleSeatsBelowSeatCount(
+        PlanType planType,
+        Guid organizationId,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organization = new Organization
+        {
+            Id = organizationId,
+            SmSeats = 5,
+            SmServiceAccounts = 200,
+            MaxAutoscaleSmSeats = 4,
+            MaxAutoscaleSmServiceAccounts = 300,
+            PlanType = planType,
+            GatewayCustomerId = "1",
+            GatewaySubscriptionId = "2"
+        };
+        
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        var update = new OrganizationUpdate
+        {
+            OrganizationId = organizationId,
+            MaxAutoscaleSeats = 4,
+            SeatAdjustment = 1,
+            MaxAutoscaleServiceAccounts = 300,
+            ServiceAccountsAdjustment = 5
+        };
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(update));
+    }
+    
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public async Task UpdateSecretsManagerSubscription_ThrowsBadRequestException_WhenMaxSeatLimitExceeded(
+        PlanType planType,
+        Guid organizationId,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+         var organization = new Organization
+        {
+            Id = organizationId,
+            SmSeats = 10,
+            PlanType = planType,
+            MaxAutoscaleSmSeats = 10
+        };
+         
+         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+             .Returns(organization);
+         
+
+         var update = new OrganizationUpdate
+         {
+             OrganizationId = organizationId,
+             MaxAutoscaleSeats = 10,
+             SeatAdjustment = 1
+         };
+         
+         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(update));
+    }
+
 
 }
