@@ -10,6 +10,7 @@ using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -207,7 +208,7 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfIterations", user.KdfIterations);
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
-        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, GetSubject(context)));
+        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
 
         if (sendRememberToken)
         {
@@ -587,7 +588,7 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <summary>
     /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
     /// </summary>
-    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, ClaimsPrincipal subject)
+    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, Device device, ClaimsPrincipal subject)
     {
         var ssoConfigurationData = await GetSsoConfigurationDataAsync(subject);
 
@@ -606,9 +607,17 @@ public abstract class BaseRequestValidator<T> where T : class
         // Only add the trusted device specific option when the flag is turned on
         if (FeatureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext) && ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
         {
+            string? encryptedPublicKey = null;
+            string? encryptedUserKey = null;
+            if (device.IsTrusted())
+            {
+                encryptedPublicKey = device.EncryptedPublicKey;
+                encryptedUserKey = device.EncryptedUserKey;
+            }
             var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
-            userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval);
+            userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval,
+                encryptedPublicKey, encryptedUserKey);
         }
 
         return userDecryptionOption;
