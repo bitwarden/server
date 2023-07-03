@@ -393,7 +393,7 @@ jobs:
     needs: build-docker
     steps:
       - name: Set up dotnet
-        uses: actions/setup-dotnet@9211491ffb35dd6a6657ca4f45d43dfe6e97c829 # v3.0.3
+        uses: actions/setup-dotnet@607fce577a46308457984d59e4954e075820f10a # v3.0.3
         with:
           dotnet-version: "6.0.x"
 
