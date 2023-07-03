@@ -107,7 +107,7 @@ BEGIN
         [SmSeats],
         [SmServiceAccounts],
         [MaxAutoscaleSmSeats],
-        [MaxAutoscaleSmServiceAccounts]
+        [MaxAutoscaleSmServiceAccounts],
         [SecretsManagerBeta]
     )
     VALUES
