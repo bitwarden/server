@@ -44,7 +44,7 @@ jobs:
         shell: pwsh
 
       - name: Upload DACPAC
-        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535 # v3.1.2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: sql.dacpac
           path: Sql.dacpac
@@ -70,7 +70,7 @@ jobs:
         shell: pwsh
 
       - name: Upload Report
-        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535 # v3.1.2
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: report.xml
           path: |
