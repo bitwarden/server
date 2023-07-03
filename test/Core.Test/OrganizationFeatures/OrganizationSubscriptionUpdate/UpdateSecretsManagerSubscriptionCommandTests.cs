@@ -587,4 +587,45 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Assert.Contains("Organization has no Service Account limit, no need to adjust Service Account", exception.Message);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task AutoscaleSeatsAsync_ThrowsBadRequestException_WhenMaxAutoscaleSeatsExceedPlanMaxUsers(
+        PlanType planType,
+        Guid organizationId,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organization = new Organization
+        {
+            Id = organizationId,
+            SmSeats = 3,
+            SmServiceAccounts = 100,
+            PlanType = planType,
+            GatewayCustomerId = "1",
+            GatewaySubscriptionId = "2",
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+
+        plan.AllowSeatAutoscale = true;
+        plan.MaxUsers = 10;
+        plan.HasAdditionalSeatsOption = true;
+        plan.HasAdditionalServiceAccountOption = true;
+
+        var organizationUpdate = new OrganizationUpdate
+        {
+            OrganizationId = organizationId,
+            MaxAutoscaleSeats = 15,
+            SeatAdjustment = 5,
+            MaxAutoscaleServiceAccounts = 200,
+            ServiceAccountsAdjustment = 100
+        };
+
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
+        Assert.Contains("Your plan has a Secrets Manager seat limit of 10, but you have specified a max autoscale count of 15.Reduce your max autoscale seat count.", exception.Message);
+    }
+
 }
