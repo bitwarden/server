@@ -286,9 +286,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewaySubscriptionId = "2"
         };
 
-
-
-
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organizationId)
             .Returns(organization);
@@ -384,9 +381,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewayCustomerId = "1",
             GatewaySubscriptionId = "2"
         };
-
-
-
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdAsync(organizationId)
