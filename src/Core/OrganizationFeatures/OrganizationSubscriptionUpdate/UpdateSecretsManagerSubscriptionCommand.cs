@@ -56,7 +56,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         if (organization == null)
         {
-            throw new NotFoundException();
+            throw new NotFoundException("Organization is not found");
         }
 
         if (!organization.UseSecretsManager)
@@ -98,8 +98,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             await SendEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, "Seats");
         }
 
-        if (organization.SmServiceAccounts.HasValue && organization.MaxAutoscaleSmServiceAccounts.HasValue && organization.SmServiceAccounts == organization.MaxAutoscaleSmServiceAccounts
-            && update.ServiceAccountsAdjustment > 0)
+        if (organization.SmServiceAccounts.HasValue && organization.MaxAutoscaleSmServiceAccounts.HasValue && organization.SmServiceAccounts == organization.MaxAutoscaleSmServiceAccounts)
         {
             await SendEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, "Service Accounts");
         }
@@ -266,7 +265,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 PreviousServiceAccounts = organization.SmServiceAccounts
             });
 
-        organization.SmServiceAccounts = additionalServiceAccounts;
+        organization.SmServiceAccounts = newServiceAccountsTotal;
 
         return paymentIntentClientSecret;
     }

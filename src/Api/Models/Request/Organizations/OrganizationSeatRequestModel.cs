@@ -7,8 +7,6 @@ public class OrganizationSeatRequestModel : IValidatableObject
 {
     [Required]
     public int? SeatAdjustment { get; set; }
-    [Required]
-    public BitwardenProductType BitwardenProductType { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
