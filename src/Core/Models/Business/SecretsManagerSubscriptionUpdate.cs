@@ -1,6 +1,4 @@
-﻿using Bit.Core.Enums;
-
-namespace Bit.Core.Models.Business;
+﻿namespace Bit.Core.Models.Business;
 
 public class SecretsManagerSubscriptionUpdate
 {

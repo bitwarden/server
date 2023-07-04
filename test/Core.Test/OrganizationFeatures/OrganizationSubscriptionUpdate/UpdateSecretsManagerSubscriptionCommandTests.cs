@@ -36,8 +36,11 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             SeatAdjustment = 0
         };
 
-        await Assert.ThrowsAsync<NotFoundException>(
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
+
+        Assert.Contains("Organization is not found", exception.Message);
+
     }
 
     [Theory]
