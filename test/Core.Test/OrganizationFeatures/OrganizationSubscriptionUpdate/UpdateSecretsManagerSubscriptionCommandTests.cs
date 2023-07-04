@@ -38,7 +38,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         };
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate)); 
+            () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
         Assert.Contains("Organization is not found", exception.Message);
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
