@@ -47,7 +47,7 @@ public class LaunchDarklyFeatureServiceTests
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.UserId.Returns(Guid.NewGuid());
 
-        Assert.False(sutProvider.Sut.IsEnabled(FeatureFlagKeys.SecretsManager, currentContext));
+        Assert.False(sutProvider.Sut.IsEnabled("somekey", currentContext));
     }
 
     [Fact(Skip = "For local development")]
@@ -61,7 +61,7 @@ public class LaunchDarklyFeatureServiceTests
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.UserId.Returns(Guid.NewGuid());
 
-        Assert.False(sutProvider.Sut.IsEnabled(FeatureFlagKeys.SecretsManager, currentContext));
+        Assert.False(sutProvider.Sut.IsEnabled("somekey", currentContext));
     }
 
     [Fact(Skip = "For local development")]
@@ -75,7 +75,7 @@ public class LaunchDarklyFeatureServiceTests
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.UserId.Returns(Guid.NewGuid());
 
-        Assert.Equal(0, sutProvider.Sut.GetIntVariation(FeatureFlagKeys.SecretsManager, currentContext));
+        Assert.Equal(0, sutProvider.Sut.GetIntVariation("somekey", currentContext));
     }
 
     [Fact(Skip = "For local development")]
@@ -89,7 +89,7 @@ public class LaunchDarklyFeatureServiceTests
         var currentContext = Substitute.For<ICurrentContext>();
         currentContext.UserId.Returns(Guid.NewGuid());
 
-        Assert.Null(sutProvider.Sut.GetStringVariation(FeatureFlagKeys.SecretsManager, currentContext));
+        Assert.Null(sutProvider.Sut.GetStringVariation("somekey", currentContext));
     }
 
     [Fact(Skip = "For local development")]

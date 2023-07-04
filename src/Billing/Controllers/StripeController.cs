@@ -1,4 +1,5 @@
 ﻿using Bit.Billing.Constants;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -39,6 +40,7 @@ public class StripeController : Controller
     private readonly IReferenceEventService _referenceEventService;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IUserRepository _userRepository;
+    private readonly ICurrentContext _currentContext;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -55,7 +57,8 @@ public class StripeController : Controller
         IReferenceEventService referenceEventService,
         ILogger<StripeController> logger,
         ITaxRateRepository taxRateRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICurrentContext currentContext)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -79,6 +82,7 @@ public class StripeController : Controller
             PublicKey = globalSettings.Braintree.PublicKey,
             PrivateKey = globalSettings.Braintree.PrivateKey
         };
+        _currentContext = currentContext;
     }
 
     [HttpPost("webhook")]
@@ -127,12 +131,12 @@ public class StripeController : Controller
             if (subCanceled || subUnpaid || subIncompleteExpired)
             {
                 // org
-                if (organizationId != null && organizationId != Guid.Empty)
+                if (organizationId != Guid.Empty)
                 {
                     await _organizationService.DisableAsync(organizationId, subscription.CurrentPeriodEnd);
                 }
                 // user
-                else if (userId != null && userId != Guid.Empty)
+                else if (userId != Guid.Empty)
                 {
                     await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
                 }
@@ -141,11 +145,11 @@ public class StripeController : Controller
             if (subActive)
             {
 
-                if (organizationId != null && organizationId != Guid.Empty)
+                if (organizationId != Guid.Empty)
                 {
                     await _organizationService.EnableAsync(organizationId);
                 }
-                else if (userId != null && userId != Guid.Empty)
+                else if (userId != Guid.Empty)
                 {
                     await _userService.EnablePremiumAsync(userId,
                         subscription.CurrentPeriodEnd);
@@ -155,7 +159,7 @@ public class StripeController : Controller
             if (subUpdated)
             {
                 // org
-                if (organizationId != null && organizationId != Guid.Empty)
+                if (organizationId != Guid.Empty)
                 {
                     await _organizationService.UpdateExpirationDateAsync(organizationId,
                         subscription.CurrentPeriodEnd);
@@ -165,7 +169,7 @@ public class StripeController : Controller
                     }
                 }
                 // user
-                else if (userId != null && userId != Guid.Empty)
+                else if (userId != Guid.Empty)
                 {
                     await _userService.UpdatePremiumExpirationAsync(userId,
                         subscription.CurrentPeriodEnd);
@@ -413,13 +417,13 @@ public class StripeController : Controller
                     // org
                     if (ids.Item1.HasValue)
                     {
-                        if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.StripePlanId == i.Plan.Id)))
+                        if (subscription.Items.Any(i => StaticStore.PasswordManagerPlans.Any(p => p.StripePlanId == i.Plan.Id)))
                         {
                             await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
 
                             var organization = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
                             await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, organization)
+                                new ReferenceEvent(ReferenceEventType.Rebilled, organization, _currentContext)
                                 {
                                     PlanName = organization?.Plan,
                                     PlanType = organization?.PlanType,
@@ -437,7 +441,7 @@ public class StripeController : Controller
 
                             var user = await _userRepository.GetByIdAsync(ids.Item2.Value);
                             await _referenceEventService.RaiseEventAsync(
-                                new ReferenceEvent(ReferenceEventType.Rebilled, user)
+                                new ReferenceEvent(ReferenceEventType.Rebilled, user, _currentContext)
                                 {
                                     PlanName = PremiumPlanId,
                                     Storage = user?.MaxStorageGb,

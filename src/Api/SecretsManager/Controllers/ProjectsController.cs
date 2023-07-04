@@ -8,13 +8,14 @@ using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
-[SecretsManager]
 [Authorize("secrets")]
+[SelfHosted(NotSelfHostedOnly = true)]
 public class ProjectsController : Controller
 {
     private readonly ICurrentContext _currentContext;
@@ -72,9 +73,8 @@ public class ProjectsController : Controller
         {
             throw new NotFoundException();
         }
-
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createProjectCommand.CreateAsync(project, userId);
+        var result = await _createProjectCommand.CreateAsync(project, userId, _currentContext.ClientType);
 
         // Creating a project means you have read & write permission.
         return new ProjectResponseModel(result, true, true);

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Net;
+using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
@@ -8,6 +9,7 @@ using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.Services.Implementations;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -130,6 +132,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDeviceService, DeviceService>();
         services.AddSingleton<IAppleIapService, AppleIapService>();
         services.AddScoped<ISsoConfigService, SsoConfigService>();
+        services.AddScoped<IAuthRequestService, AuthRequestService>();
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
@@ -527,18 +530,36 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    public static void UseForwardedHeaders(this IApplicationBuilder app, GlobalSettings globalSettings)
+    public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
     {
         var options = new ForwardedHeadersOptions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
+
+        if (!globalSettings.UnifiedDeployment)
+        {
+            // Trust the X-Forwarded-Host header of the nginx docker container
+            try
+            {
+                var nginxIp = Dns.GetHostEntry("nginx")?.AddressList.FirstOrDefault();
+                if (nginxIp != null)
+                {
+                    options.KnownProxies.Add(nginxIp);
+                }
+            }
+            catch
+            {
+                // Ignore DNS errors
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
         {
             var proxies = globalSettings.KnownProxies.Split(',');
             foreach (var proxy in proxies)
             {
-                if (System.Net.IPAddress.TryParse(proxy.Trim(), out var ip))
+                if (IPAddress.TryParse(proxy.Trim(), out var ip))
                 {
                     options.KnownProxies.Add(ip);
                 }

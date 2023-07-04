@@ -9,6 +9,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -19,6 +20,7 @@ namespace Bit.Api.Controllers;
 [Authorize("Application")]
 public class OrganizationUsersController : Controller
 {
+    private readonly IEnableAccessSecretsManagerCommand _enableAccessSecretsManagerCommand;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
@@ -29,6 +31,7 @@ public class OrganizationUsersController : Controller
     private readonly ICurrentContext _currentContext;
 
     public OrganizationUsersController(
+        IEnableAccessSecretsManagerCommand enableAccessSecretsManagerCommand,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
@@ -38,6 +41,7 @@ public class OrganizationUsersController : Controller
         IPolicyRepository policyRepository,
         ICurrentContext currentContext)
     {
+        _enableAccessSecretsManagerCommand = enableAccessSecretsManagerCommand;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
@@ -51,7 +55,7 @@ public class OrganizationUsersController : Controller
     [HttpGet("{id}")]
     public async Task<OrganizationUserDetailsResponseModel> Get(string id, bool includeGroups = false)
     {
-        var organizationUser = await _organizationUserRepository.GetByIdWithCollectionsAsync(new Guid(id));
+        var organizationUser = await _organizationUserRepository.GetDetailsByIdWithCollectionsAsync(new Guid(id));
         if (organizationUser == null || !await _currentContext.ManageUsers(organizationUser.Item1.OrganizationId))
         {
             throw new NotFoundException();
@@ -392,38 +396,6 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
 
-    [Obsolete("2022-07-22 Moved to {id}/revoke endpoint")]
-    [HttpPatch("{id}/deactivate")]
-    [HttpPut("{id}/deactivate")]
-    public async Task Deactivate(Guid orgId, Guid id)
-    {
-        await RevokeAsync(orgId, id);
-    }
-
-    [Obsolete("2022-07-22 Moved to /revoke endpoint")]
-    [HttpPatch("deactivate")]
-    [HttpPut("deactivate")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkDeactivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkRevokeAsync(orgId, model);
-    }
-
-    [Obsolete("2022-07-22 Moved to {id}/restore endpoint")]
-    [HttpPatch("{id}/activate")]
-    [HttpPut("{id}/activate")]
-    public async Task Activate(Guid orgId, Guid id)
-    {
-        await RestoreAsync(orgId, id);
-    }
-
-    [Obsolete("2022-07-22 Moved to /restore endpoint")]
-    [HttpPatch("activate")]
-    [HttpPut("activate")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkActivate(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
-    {
-        return await BulkRestoreAsync(orgId, model);
-    }
-
     [HttpPatch("{id}/revoke")]
     [HttpPut("{id}/revoke")]
     public async Task RevokeAsync(Guid orgId, Guid id)
@@ -450,6 +422,29 @@ public class OrganizationUsersController : Controller
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _organizationService.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
+    }
+
+    [HttpPatch("enable-secrets-manager")]
+    [HttpPut("enable-secrets-manager")]
+    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnableSecretsManagerAsync(Guid orgId,
+        [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        if (!await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var orgUsers = (await _organizationUserRepository.GetManyAsync(model.Ids))
+            .Where(ou => ou.OrganizationId == orgId).ToList();
+        if (orgUsers.Count == 0)
+        {
+            throw new BadRequestException("Users invalid.");
+        }
+
+        var results = await _enableAccessSecretsManagerCommand.EnableUsersAsync(orgUsers);
+
+        return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
+            new OrganizationUserBulkResponseModel(r.organizationUser.Id, r.error)));
     }
 
     private async Task RestoreOrRevokeUserAsync(

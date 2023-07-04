@@ -7,7 +7,7 @@
     "Bit.Api.IntegrationTest": {
       "commandName": "Project",
       "launchBrowser": true,
-      "applicationUrl": "http://localhost:48749",
+      "applicationUrl": "http://localhost:33506",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

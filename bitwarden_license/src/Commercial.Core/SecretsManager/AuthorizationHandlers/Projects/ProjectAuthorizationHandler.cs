@@ -2,23 +2,23 @@
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.Projects;
 
 public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperationRequirement, Project>
 {
+    private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IProjectRepository _projectRepository;
-    private readonly IUserService _userService;
 
-    public ProjectAuthorizationHandler(ICurrentContext currentContext, IUserService userService,
+    public ProjectAuthorizationHandler(ICurrentContext currentContext, IAccessClientQuery accessClientQuery,
         IProjectRepository projectRepository)
     {
         _currentContext = currentContext;
-        _userService = userService;
+        _accessClientQuery = accessClientQuery;
         _projectRepository = projectRepository;
     }
 
@@ -40,19 +40,19 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
                 await CanUpdateProjectAsync(context, requirement, resource);
                 break;
             default:
-                throw new ArgumentException("Unsupported project operation requirement type provided.", nameof(requirement));
+                throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement));
         }
     }
 
     private async Task CanCreateProjectAsync(AuthorizationHandlerContext context,
         ProjectOperationRequirement requirement, Project resource)
     {
-        var accessClient = await GetAccessClientAsync(resource.OrganizationId);
+        var (accessClient, _) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
         var hasAccess = accessClient switch
         {
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => true,
-            AccessClientType.ServiceAccount => false,
+            AccessClientType.ServiceAccount => true,
             _ => false,
         };
 
@@ -65,24 +65,14 @@ public class ProjectAuthorizationHandler : AuthorizationHandler<ProjectOperation
     private async Task CanUpdateProjectAsync(AuthorizationHandlerContext context,
         ProjectOperationRequirement requirement, Project resource)
     {
-        var accessClient = await GetAccessClientAsync(resource.OrganizationId);
-        if (accessClient == AccessClientType.ServiceAccount)
-        {
-            return;
-        }
+        var (accessClient, userId) =
+            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
 
-        var userId = _userService.GetProperUserId(context.User).Value;
         var access = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);
 
         if (access.Write)
         {
             context.Succeed(requirement);
         }
-    }
-
-    private async Task<AccessClientType> GetAccessClientAsync(Guid organizationId)
-    {
-        var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
-        return AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
     }
 }

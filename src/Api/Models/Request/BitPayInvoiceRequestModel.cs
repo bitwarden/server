@@ -59,7 +59,7 @@ public class BitPayInvoiceRequestModel : IValidatableObject
     {
         if (!UserId.HasValue && !OrganizationId.HasValue)
         {
-            yield return new ValidationResult("User or Ooganization is required.");
+            yield return new ValidationResult("User or Organization is required.");
         }
     }
 }

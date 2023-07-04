@@ -4,6 +4,7 @@
             const selectEl = document.getElementById('@(nameof(Model.PlanType))');
             const selectText = selectEl.options[selectEl.selectedIndex].text;
             document.getElementById('@(nameof(Model.Plan))').value = selectText;
+            togglePlanSettings(selectEl.options[selectEl.selectedIndex].value);
         });
         document.getElementById('gateway-customer-link').addEventListener('click', () => {
             const gateway = document.getElementById('@(nameof(Model.Gateway))');
@@ -31,5 +32,83 @@
                     'subscriptions/' + subId.value, '_blank');
             }
         });
+        document.getElementById('@(nameof(Model.UseSecretsManager))').addEventListener('change', (event) => {
+            document.getElementById('organization-secrets-configuration').hidden  = !event.target.checked;
+            
+            if (event.target.checked) {
+                return;
+            }
+            
+            document.getElementById('@(nameof(Model.SmSeats))').value = '';
+            document.getElementById('@(nameof(Model.MaxAutoscaleSmSeats))').value = '';
+            document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '';
+            document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
+        });
     })();
+    
+    function togglePlanSettings(planType) {
+        document.getElementById('@(nameof(Model.PlanType))').value = planType;
+        switch(planType) {
+            case '@((byte)Bit.Core.Enums.PlanType.TeamsMonthly)':
+            case '@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)':
+                // Plan                
+                document.getElementById('@(nameof(Model.Seats))').value = '10';
+                document.getElementById('@(nameof(Model.MaxCollections))').value = '';
+                document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                // Secrets
+                if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '50';
+                }
+                // Features
+                document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
+                document.getElementById('@(nameof(Model.UseSso))').checked = false;
+                document.getElementById('@(nameof(Model.UseGroups))').checked = true;
+                document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
+                document.getElementById('@(nameof(Model.UseEvents))').checked = true;
+                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
+                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;                
+                document.getElementById('@(nameof(Model.UseTotp))').checked = true;
+                document.getElementById('@(nameof(Model.Use2fa))').checked = true;
+                document.getElementById('@(nameof(Model.UseApi))').checked = true;
+                document.getElementById('@(nameof(Model.SelfHost))').checked = false;
+                document.getElementById('@(nameof(Model.UseResetPassword))').checked = false;
+                document.getElementById('@(nameof(Model.UseScim))').checked = false;
+                // Licensing
+                document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+                document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+            break;
+            
+            case '@((byte)Bit.Core.Enums.PlanType.EnterpriseMonthly)':
+            case '@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)':
+                // Plan
+                document.getElementById('@(nameof(Model.Seats))').value = '10';
+                document.getElementById('@(nameof(Model.MaxCollections))').value = '';
+                document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                // Secrets
+                if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '200';
+                }
+                // Features
+                document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
+                document.getElementById('@(nameof(Model.UseSso))').checked = true;
+                document.getElementById('@(nameof(Model.UseGroups))').checked = true;
+                document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
+                document.getElementById('@(nameof(Model.UseEvents))').checked = true;
+                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
+                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = true;
+                document.getElementById('@(nameof(Model.UseTotp))').checked = true;
+                document.getElementById('@(nameof(Model.Use2fa))').checked = true;
+                document.getElementById('@(nameof(Model.UseApi))').checked = true;
+                document.getElementById('@(nameof(Model.SelfHost))').checked = true;
+                document.getElementById('@(nameof(Model.UseResetPassword))').checked = true;
+                document.getElementById('@(nameof(Model.UseScim))').checked = true;
+                // Licensing
+                document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+                document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+            break;
+        }
+        
+    }
 </script>
