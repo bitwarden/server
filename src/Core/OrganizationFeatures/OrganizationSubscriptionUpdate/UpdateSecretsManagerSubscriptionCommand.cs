@@ -3,6 +3,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
@@ -49,52 +50,45 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _referenceEventService = referenceEventService;
     }
 
-    public async Task UpdateSecretsManagerSubscription(OrganizationUpdate update)
+    public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
     {
         var organization = await _organizationRepository.GetByIdAsync(update.OrganizationId);
 
         if (organization == null)
         {
-            throw new NotFoundException();
+            throw new NotFoundException("Organization is not found");
         }
 
-        var newSeatCount = organization.SmSeats.HasValue
-            ? organization.SmSeats.Value + update.SeatAdjustment
-            : update.SeatAdjustment;
-
-
-        if (update.MaxAutoscaleSeats.HasValue && newSeatCount > update.MaxAutoscaleSeats.Value)
+        if (!organization.UseSecretsManager)
         {
-            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+            throw new BadRequestException("Organization has no access to Secrets Manager.");
         }
 
-        var newServiceAccountCount = organization.SmServiceAccounts.HasValue
-            ? organization.SmServiceAccounts + update.ServiceAccountsAdjustment
-            : update.ServiceAccountsAdjustment;
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
 
-        if (update.MaxAutoscaleServiceAccounts.HasValue && newServiceAccountCount > update.MaxAutoscaleServiceAccounts.Value)
+        if (plan == null)
         {
-            throw new BadRequestException("Cannot set max service account autoscaling below service account count.");
+            throw new BadRequestException("Existing plan not found.");
         }
 
         if (update.SeatAdjustment != 0)
         {
-            await AdjustSeatsAsync(organization, update.SeatAdjustment);
+            await AdjustSeatsAsync(organization, update, plan);
         }
 
         if (update.ServiceAccountsAdjustment != 0)
         {
-            await AdjustServiceAccountsAsync(organization, update.ServiceAccountsAdjustment.GetValueOrDefault());
+            await AdjustServiceAccountsAsync(organization, update, plan);
         }
 
         if (update.MaxAutoscaleSeats != organization.MaxAutoscaleSmSeats)
         {
-            UpdateSeatsAutoscaling(organization, update.MaxAutoscaleSeats);
+            UpdateSeatsAutoscaling(organization, update.MaxAutoscaleSeats, plan);
         }
 
         if (update.MaxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts)
         {
-            UpdateServiceAccountAutoscaling(organization, update.MaxAutoscaleServiceAccounts);
+            UpdateServiceAccountAutoscaling(organization, update.MaxAutoscaleServiceAccounts, plan);
         }
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
@@ -104,8 +98,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             await SendEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, "Seats");
         }
 
-        if (organization.SmServiceAccounts.HasValue && organization.MaxAutoscaleSmServiceAccounts.HasValue && organization.SmServiceAccounts == organization.MaxAutoscaleSmServiceAccounts
-            && update.ServiceAccountsAdjustment > 0)
+        if (organization.SmServiceAccounts.HasValue && organization.MaxAutoscaleSmServiceAccounts.HasValue && organization.SmServiceAccounts == organization.MaxAutoscaleSmServiceAccounts)
         {
             await SendEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, "Service Accounts");
         }
@@ -117,7 +110,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
                     OrganizationUserType.Owner))
-                .Where(u => u.AccessSecretsManager)
                 .Select(u => u.Email).Distinct();
 
             await _mailService.SendOrganizationMaxSeatLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
@@ -130,8 +122,15 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     }
 
-    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment)
+    private async Task<string> AdjustSeatsAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
+        var newSeatCount = organization.SmSeats.GetValueOrDefault() + update.SeatAdjustment;
+
+        if (update.MaxAutoscaleSeats.HasValue && newSeatCount > update.MaxAutoscaleSeats.Value)
+        {
+            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+        }
+
         if (organization.SmSeats == null)
         {
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
@@ -147,33 +146,22 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("No subscription found.");
         }
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
-
         if (!plan.HasAdditionalSeatsOption)
         {
             throw new BadRequestException("Plan does not allow additional Secrets Manager seats.");
         }
 
-        var newSeatTotal = organization.SmSeats.HasValue
-            ? organization.SmSeats.Value + seatAdjustment
-            : seatAdjustment;
-
-        if (plan.BaseSeats > newSeatTotal)
+        if (plan.BaseSeats > newSeatCount)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} Secrets Manager  seats.");
         }
 
-        if (newSeatTotal <= 0)
+        if (newSeatCount <= 0)
         {
             throw new BadRequestException("You must have at least 1 Secrets Manager seat.");
         }
 
-        var additionalSeats = newSeatTotal - plan.BaseSeats;
+        var additionalSeats = newSeatCount - plan.BaseSeats;
 
         if (plan.MaxAdditionalSeats.HasValue && additionalSeats > plan.MaxAdditionalSeats.Value)
         {
@@ -181,13 +169,13 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                                           $"{plan.MaxAdditionalSeats.Value} additional Secrets Manager seats.");
         }
 
-        if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newSeatTotal)
+        if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newSeatCount)
         {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > newSeatTotal)
+            var currentSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+            if (currentSeats > newSeatCount)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                                              $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+                throw new BadRequestException($"Your organization currently has {currentSeats} Secrets Manager seats. " +
+                                              $"Your new plan only allows ({newSeatCount}) Secrets Manager seats. Remove some Secrets Manager users.");
             }
         }
 
@@ -199,20 +187,27 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 Id = organization.Id,
                 PlanName = plan.Name,
                 PlanType = plan.Type,
-                Seats = newSeatTotal,
+                Seats = newSeatCount,
                 PreviousSeats = organization.SmSeats
             });
 
-        organization.SmSeats = (short?)newSeatTotal;
+        organization.SmSeats = (short?)newSeatCount;
 
         return paymentIntentClientSecret;
     }
 
-    private async Task<string> AdjustServiceAccountsAsync(Organization organization, int serviceAccountAdjustment)
+    private async Task<string> AdjustServiceAccountsAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
+        var newServiceAccountsTotal = organization.SmServiceAccounts.GetValueOrDefault() + update.ServiceAccountsAdjustment;
+
+        if (update.MaxAutoscaleServiceAccounts.HasValue && newServiceAccountsTotal > update.MaxAutoscaleServiceAccounts.Value)
+        {
+            throw new BadRequestException("Cannot set max Service Accounts autoscaling below Service Accounts count.");
+        }
+
         if (organization.SmServiceAccounts == null)
         {
-            throw new BadRequestException("Organization has no Service Account limit, no need to adjust Service Account");
+            throw new BadRequestException("Organization has no Service Accounts limit, no need to adjust Service Accounts");
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -225,30 +220,19 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("No subscription found.");
         }
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
-
         if (!plan.HasAdditionalServiceAccountOption)
         {
-            throw new BadRequestException("Plan does not allow additional Service Account.");
+            throw new BadRequestException("Plan does not allow additional Service Accounts.");
         }
-
-        var newServiceAccountsTotal = organization.SmServiceAccounts.HasValue
-            ? organization.SmServiceAccounts.Value + serviceAccountAdjustment
-            : serviceAccountAdjustment;
 
         if (plan.BaseServiceAccount > newServiceAccountsTotal)
         {
-            throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} Service Account.");
+            throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} Service Accounts.");
         }
 
         if (newServiceAccountsTotal <= 0)
         {
-            throw new BadRequestException("You must have at least 1 Service Account.");
+            throw new BadRequestException("You must have at least 1 Service Accounts.");
         }
 
         var additionalServiceAccounts = newServiceAccountsTotal - plan.BaseServiceAccount;
@@ -256,16 +240,16 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (plan.MaxAdditionalServiceAccount.HasValue && additionalServiceAccounts > plan.MaxAdditionalServiceAccount.Value)
         {
             throw new BadRequestException($"Organization plan allows a maximum of " +
-                                          $"{plan.MaxAdditionalServiceAccount.Value} additional Service Account.");
+                                          $"{plan.MaxAdditionalServiceAccount.Value} additional Service Accounts.");
         }
 
         if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newServiceAccountsTotal)
         {
-            var occupiedServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
-            if (occupiedServiceAccounts > newServiceAccountsTotal)
+            var currentServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+            if (currentServiceAccounts > newServiceAccountsTotal)
             {
-                throw new BadRequestException($"Your organization currently has {occupiedServiceAccounts} seats filled. " +
-                                              $"Your new plan only has ({occupiedServiceAccounts}) seats. Remove some users.");
+                throw new BadRequestException($"Your organization currently has {currentServiceAccounts} Service Accounts. " +
+                                              $"Your new plan only allows ({newServiceAccountsTotal}) Service Accounts. Remove some Service Accounts.");
             }
         }
 
@@ -286,19 +270,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         return paymentIntentClientSecret;
     }
 
-    private void UpdateSeatsAutoscaling(Organization organization, int? maxAutoscaleSeats)
+    private void UpdateSeatsAutoscaling(Organization organization, int? maxAutoscaleSeats, Plan plan)
     {
         if (maxAutoscaleSeats.HasValue && organization.SmSeats.HasValue &&
             maxAutoscaleSeats.Value < organization.SmSeats.Value)
         {
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
-        }
-
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
         }
 
         if (!plan.AllowSeatAutoscale)
@@ -312,42 +289,34 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException(string.Concat(
                 $"Your plan has a Secrets Manager seat limit of {plan.MaxUsers}, ",
                 $"but you have specified a max autoscale count of {maxAutoscaleSeats}.",
-                "Reduce your max autoscale seat count."));
+                "Reduce your max autoscale count."));
         }
 
         organization.MaxAutoscaleSmSeats = maxAutoscaleSeats;
     }
 
-    private void UpdateServiceAccountAutoscaling(Organization organization, int? maxAutoscaleServiceAccounts)
+    private void UpdateServiceAccountAutoscaling(Organization organization, int? maxAutoscaleServiceAccounts, Plan plan)
     {
         if (maxAutoscaleServiceAccounts.HasValue &&
             organization.SmServiceAccounts.HasValue &&
             maxAutoscaleServiceAccounts.Value < organization.SmServiceAccounts.Value)
         {
             throw new BadRequestException(
-                $"Cannot set max service account autoscaling below current service account count.");
-        }
-
-
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
+                $"Cannot set max Service Accounts autoscaling below current Service Accounts count.");
         }
 
         if (!plan.AllowServiceAccountsAutoscale)
         {
-            throw new BadRequestException("Your plan does not allow service accounts autoscaling.");
+            throw new BadRequestException("Your plan does not allow Service Accounts autoscaling.");
         }
 
         if (plan.MaxServiceAccounts.HasValue && maxAutoscaleServiceAccounts.HasValue &&
             maxAutoscaleServiceAccounts > plan.MaxServiceAccounts)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a service account limit of {plan.MaxServiceAccounts}, ",
+                $"Your plan has a Service Accounts limit of {plan.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {maxAutoscaleServiceAccounts}.",
-                "Reduce your max autoscale seat count."));
+                "Reduce your max autoscale count."));
         }
         organization.MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
     }

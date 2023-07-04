@@ -326,15 +326,15 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
     }
 
-    [HttpPost("{id:guid}/sm-subscription")]
+    [HttpPost("{id}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSmSubscription(Guid id, [FromBody] OrganizationSmSubscriptionUpdateRequestModel model)
+    public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
         if (!await _currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
-        var organizationUpdate = model.ToOrganizationUpdate(id);
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(id);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
 
@@ -348,7 +348,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value, null);
+        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
