@@ -3,7 +3,7 @@ using Bit.Core.Models.Business;
 
 namespace Bit.Api.Models.Request.Organizations;
 
-public class OrganizationSmSubscriptionUpdateRequestModel
+public class SecretsManagerSubscriptionUpdateRequestModel
 {
     [Required]
     public int SeatAdjustment { get; set; }
@@ -20,7 +20,7 @@ public class OrganizationSmSubscriptionUpdateRequestModel
             SeatAdjustment = SeatAdjustment,
             MaxAutoscaleSeats = MaxAutoscaleSeats,
             ServiceAccountsAdjustment = ServiceAccountAdjustment,
-            MaxAutoscaleServiceAccounts = MaxAutoscaleServiceAccounts.GetValueOrDefault()
+            MaxAutoscaleServiceAccounts = MaxAutoscaleServiceAccounts
         };
 
         return orgUpdate;

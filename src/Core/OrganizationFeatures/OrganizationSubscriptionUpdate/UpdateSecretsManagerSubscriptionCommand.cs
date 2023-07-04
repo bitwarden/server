@@ -49,7 +49,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _referenceEventService = referenceEventService;
     }
 
-    public async Task UpdateSecretsManagerSubscription(OrganizationUpdate update)
+    public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
     {
         var organization = await _organizationRepository.GetByIdAsync(update.OrganizationId);
 

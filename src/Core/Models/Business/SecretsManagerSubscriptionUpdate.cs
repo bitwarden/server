@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Business;
 
-public class OrganizationUpdate
+public class SecretsManagerSubscriptionUpdate
 {
     public Guid OrganizationId { get; set; }
     public int SeatAdjustment { get; set; }

@@ -29,7 +29,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns((Organization)null);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = null,
@@ -59,7 +59,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 10,
@@ -91,7 +91,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 15,
@@ -126,7 +126,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 15,
@@ -162,7 +162,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 15,
@@ -198,7 +198,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 15,
@@ -246,7 +246,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organization.Id,
             MaxAutoscaleSeats = 15,
@@ -293,7 +293,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organization.Id,
             MaxAutoscaleSeats = 15,
@@ -343,7 +343,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organization.Id,
             MaxAutoscaleSeats = 15,
@@ -391,7 +391,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 15,
@@ -475,7 +475,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var update = new OrganizationUpdate
+        var update = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 4,
@@ -511,7 +511,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetOccupiedSmSeatCountByOrganizationIdAsync(organizationId).Returns(8);
 
-        var update = new OrganizationUpdate
+        var update = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 7,
@@ -546,7 +546,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         plan.MaxAdditionalSeats = 2;
         plan.HasAdditionalSeatsOption = true;
 
-        var update = new OrganizationUpdate
+        var update = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 21,
@@ -577,7 +577,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
         plan.HasAdditionalSeatsOption = true;
 
-        var update = new OrganizationUpdate
+        var update = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 21,
@@ -614,7 +614,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         plan.HasAdditionalSeatsOption = true;
         plan.HasAdditionalServiceAccountOption = true;
 
-        var organizationUpdate = new OrganizationUpdate
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 15,
