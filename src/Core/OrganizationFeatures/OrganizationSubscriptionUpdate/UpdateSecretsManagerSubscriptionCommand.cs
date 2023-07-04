@@ -336,16 +336,16 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Existing plan not found.");
         }
 
-        if (!plan.AllowSeatAutoscale)
+        if (!plan.AllowServiceAccountsAutoscale)
         {
-            throw new BadRequestException("Your plan does not allow seat autoscaling.");
+            throw new BadRequestException("Your plan does not allow service accounts autoscaling.");
         }
 
         if (plan.MaxServiceAccounts.HasValue && maxAutoscaleServiceAccounts.HasValue &&
             maxAutoscaleServiceAccounts > plan.MaxServiceAccounts)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a service account limit of {plan.MaxUsers}, ",
+                $"Your plan has a service account limit of {plan.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {maxAutoscaleServiceAccounts}.",
                 "Reduce your max autoscale seat count."));
         }
