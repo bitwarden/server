@@ -38,19 +38,14 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         };
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
-
+            () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate)); 
         Assert.Contains("Organization is not found", exception.Message);
-
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
-
         await sutProvider.GetDependency<IMailService>().DidNotReceive().SendOrganizationMaxSeatLimitReachedEmailAsync(Arg.Any<Organization>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
     }
 
@@ -89,14 +84,12 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
-            .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
+        await sutProvider.GetDependency<IPaymentService>().DidNotReceive().AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
         await sutProvider.GetDependency<IMailService>().DidNotReceive().SendOrganizationMaxSeatLimitReachedEmailAsync(Arg.Any<Organization>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
-
     }
 
     [Theory]
