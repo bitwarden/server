@@ -311,6 +311,23 @@ public class OrganizationServiceTests
     }
 
     [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_InvalidateServiceAccount_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalSeats = 10;
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.UseSecretsManager = true;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.AdditionalServiceAccounts = -10;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpAsync(signup));
+        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+    }
+
+    [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
     public async Task UpgradePlan_SM_Passes(Organization organization, OrganizationUpgrade upgrade,
         SutProvider<OrganizationService> sutProvider)

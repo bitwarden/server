@@ -41,6 +41,10 @@ public class SecretAuthorizationHandlerTests
                 sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
                     (clientType, userId));
                 break;
+            case PermissionType.RunAsServiceAccountWithPermission:
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId).ReturnsForAnyArgs(
+                    (AccessClientType.ServiceAccount, userId));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }
@@ -105,7 +109,6 @@ public class SecretAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task CanCreateSecret_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
@@ -114,7 +117,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Create;
         SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId, clientType);
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
                 (true, true));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -182,6 +185,8 @@ public class SecretAuthorizationHandlerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false)]
     public async Task CanCreateSecret_DoesNotSucceed(PermissionType permissionType, bool read, bool write,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
         Guid userId,
@@ -190,7 +195,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Create;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).ReturnsForAnyArgs(
                 (read, write));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -207,6 +212,8 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsAdmin, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true)]
     public async Task CanCreateSecret_Success(PermissionType permissionType, bool read, bool write,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
         Guid userId,
@@ -215,7 +222,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Create;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).ReturnsForAnyArgs(
                 (read, write));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -243,7 +250,6 @@ public class SecretAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task CanUpdateSecret_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
@@ -252,7 +258,7 @@ public class SecretAuthorizationHandlerTests
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId, clientType);
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
                 (true, true));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -327,6 +333,15 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false, false)]
     public async Task CanUpdateSecret_DoesNotSucceed(PermissionType permissionType, bool read, bool write,
         bool projectRead, bool projectWrite,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
@@ -335,10 +350,10 @@ public class SecretAuthorizationHandlerTests
     {
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
-        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default).Returns(
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>()).Returns(
             (read, write));
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
                 (projectRead, projectWrite));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -355,6 +370,8 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsAdmin, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true)]
     public async Task CanUpdateSecret_Success(PermissionType permissionType, bool read, bool write,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
         Guid userId,
@@ -362,10 +379,10 @@ public class SecretAuthorizationHandlerTests
     {
         var requirement = SecretOperations.Update;
         SetupPermission(sutProvider, permissionType, secret.OrganizationId, userId);
-        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, default).Returns(
+        sutProvider.GetDependency<ISecretRepository>().AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>()).Returns(
             (read, write));
         sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, default).Returns(
+            .AccessToProjectAsync(secret.Projects!.FirstOrDefault()!.Id, userId, Arg.Any<AccessClientType>()).Returns(
                 (read, write));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, secret);
@@ -410,31 +427,15 @@ public class SecretAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task CanDeleteSecret_ServiceAccountClient_DoesNotSucceed(
-        SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret, Guid userId,
-        ClaimsPrincipal claimsPrincipal)
-    {
-        var requirement = SecretOperations.Delete;
-        SetupPermission(sutProvider, PermissionType.RunAsUserWithPermission, secret.OrganizationId, userId,
-            AccessClientType.ServiceAccount);
-        sutProvider.GetDependency<ISecretRepository>()
-            .AccessToSecretAsync(secret.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((true, true));
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, secret);
-
-        await sutProvider.Sut.HandleAsync(authzContext);
-
-        Assert.False(authzContext.HasSucceeded);
-    }
-
-    [Theory]
     [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
     public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
         bool expected,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,

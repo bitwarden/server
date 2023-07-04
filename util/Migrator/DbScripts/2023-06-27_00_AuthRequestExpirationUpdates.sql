@@ -1,4 +1,10 @@
-﻿-- UserExpirationSeconds to 15 minutes (15 * 60)
+IF OBJECT_ID('[dbo].[AuthRequest_DeleteIfExpired]') IS NOT NULL
+    BEGIN
+        DROP PROCEDURE [dbo].[AuthRequest_DeleteIfExpired]
+    END
+GO
+
+-- UserExpirationSeconds to 15 minutes (15 * 60)
 -- AdminExpirationSeconds to 7 days (7 * 24 * 60 * 60)
 -- AdminApprovalExpirationSeconds to 12 hour (12 * 60 * 60)
 
