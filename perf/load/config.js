@@ -15,15 +15,35 @@ export const options = {
       name: "Config",
     },
   },
-  stages: [
-    { duration: "30s", target: 10 },
-    { duration: "1m", target: 20 },
-    { duration: "2m", target: 25 },
-    { duration: "30s", target: 0 },
-  ],
+  scenarios: {
+    constant_load: {
+      executor: "constant-arrival-rate",
+      rate: 1,
+      timeUnit: "1s", // 1 request / second
+      duration: "10m",
+      preAllocatedVUs: 5,
+    },
+    ramping_load: {
+      executor: "ramping-arrival-rate",
+      startRate: 60,
+      timeUnit: "1m", // 1 request / second to start
+      stages: [
+        { duration: "30s", target: 60 },
+        { duration: "2m", target: 150 },
+        { duration: "1m", target: 90 },
+        { duration: "2m", target: 200 },
+        { duration: "2m", target: 120 },
+        { duration: "1m", target: 180 },
+        { duration: "30s", target: 250 },
+        { duration: "30s", target: 90 },
+        { duration: "30s", target: 0 },
+      ],
+      preAllocatedVUs: 40,
+    },
+  },
   thresholds: {
     http_req_failed: ["rate<0.01"],
-    http_req_duration: ["p(95)<1000"],
+    http_req_duration: ["p(95)<750"],
   },
 };
 

@@ -16,15 +16,35 @@ export const options = {
       name: "Groups",
     },
   },
-  stages: [
-    { duration: "30s", target: 10 },
-    { duration: "1m", target: 20 },
-    { duration: "2m", target: 25 },
-    { duration: "30s", target: 0 },
-  ],
+  scenarios: {
+    constant_load: {
+      executor: "constant-arrival-rate",
+      rate: 30,
+      timeUnit: "1m", // 0.5 requests / second
+      duration: "10m",
+      preAllocatedVUs: 5,
+    },
+    ramping_load: {
+      executor: "ramping-arrival-rate",
+      startRate: 30,
+      timeUnit: "1m", // 0.5 requests / second to start
+      stages: [
+        { duration: "30s", target: 30 },
+        { duration: "2m", target: 75 },
+        { duration: "1m", target: 60 },
+        { duration: "2m", target: 100 },
+        { duration: "2m", target: 90 },
+        { duration: "1m", target: 120 },
+        { duration: "30s", target: 150 },
+        { duration: "30s", target: 60 },
+        { duration: "30s", target: 0 },
+      ],
+      preAllocatedVUs: 20,
+    },
+  },
   thresholds: {
     http_req_failed: ["rate<0.01"],
-    http_req_duration: ["p(95)<1500"],
+    http_req_duration: ["p(95)<900"],
   },
 };
 

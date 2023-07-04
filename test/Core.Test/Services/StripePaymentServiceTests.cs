@@ -164,7 +164,6 @@ public class StripePaymentServiceTests
         Assert.Equal("S-1", organization.GatewaySubscriptionId);
         Assert.True(organization.Enabled);
         Assert.Equal(DateTime.Today.AddDays(10), organization.ExpirationDate);
-        var res = organization.SubscriberName();
         await stripeAdapter.Received().CustomerCreateAsync(Arg.Is<Stripe.CustomerCreateOptions>(c =>
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&

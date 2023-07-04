@@ -4,4 +4,5 @@ public enum PermissionType
 {
     RunAsAdmin,
     RunAsUserWithPermission,
+    RunAsServiceAccountWithPermission
 }

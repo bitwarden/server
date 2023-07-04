@@ -2796,7 +2796,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.4.3",
+          "Core": "2023.5.1",
           "Dapper": "2.0.123"
         }
       },
@@ -2804,7 +2804,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "12.0.1",
-          "Core": "2023.4.3",
+          "Core": "2023.5.1",
           "Microsoft.EntityFrameworkCore.Relational": "6.0.12",
           "Microsoft.EntityFrameworkCore.SqlServer": "6.0.12",
           "Microsoft.EntityFrameworkCore.Sqlite": "6.0.12",
@@ -2816,9 +2816,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "2023.4.3",
-          "Infrastructure.Dapper": "2023.4.3",
-          "Infrastructure.EntityFramework": "2023.4.3"
+          "Core": "2023.5.1",
+          "Infrastructure.Dapper": "2023.5.1",
+          "Infrastructure.EntityFramework": "2023.5.1"
         }
       }
     }
