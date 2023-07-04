@@ -42,6 +42,39 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData]
+    public async Task UpdateSecretsManagerSubscription_NoSecretsManagerAccess_ThrowsException(
+        Guid organizationId,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organization = new Organization
+        {
+            Id = organizationId,
+            SmSeats = 10,
+            SmServiceAccounts = 5,
+            UseSecretsManager = false,
+            MaxAutoscaleSmSeats = 20,
+            MaxAutoscaleSmServiceAccounts = 10
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organizationId)
+            .Returns(organization);
+
+        var organizationUpdate = new SecretsManagerSubscriptionUpdate
+        {
+            OrganizationId = organizationId,
+            SeatAdjustment = 1,
+            MaxAutoscaleSeats = 1
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
+
+        Assert.Contains("Organization has no access to Secrets Manager.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task UpdateSecretsManagerSubscription_SeatsAdustmentGreaterThanMaxAutoscaleSeats_ThrowsException(
         Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
@@ -50,6 +83,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         {
             Id = organizationId,
             SmSeats = 10,
+            UseSecretsManager = true,
             SmServiceAccounts = 5,
             MaxAutoscaleSmSeats = 20,
             MaxAutoscaleSmServiceAccounts = 10
@@ -82,6 +116,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         {
             Id = organizationId,
             SmSeats = 10,
+            UseSecretsManager = true,
             SmServiceAccounts = 5,
             MaxAutoscaleSmSeats = 20,
             MaxAutoscaleSmServiceAccounts = 10
@@ -117,6 +152,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             Id = organizationId,
             SmSeats = 10,
             SmServiceAccounts = 5,
+            UseSecretsManager = true,
             MaxAutoscaleSmSeats = 20,
             MaxAutoscaleSmServiceAccounts = 15,
             PlanType = PlanType.EnterpriseAnnually
@@ -151,6 +187,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         {
             Id = organizationId,
             SmSeats = 10,
+            UseSecretsManager = true,
             SmServiceAccounts = 5,
             MaxAutoscaleSmSeats = 20,
             MaxAutoscaleSmServiceAccounts = 15,
@@ -187,6 +224,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         {
             Id = organizationId,
             SmSeats = null,
+            UseSecretsManager = true,
             SmServiceAccounts = 5,
             MaxAutoscaleSmSeats = 20,
             MaxAutoscaleSmServiceAccounts = 15,
@@ -231,6 +269,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         {
             Id = organizationId,
             SmSeats = 10,
+            UseSecretsManager = true,
             SmServiceAccounts = 200,
             MaxAutoscaleSmSeats = 20,
             MaxAutoscaleSmServiceAccounts = 300,
@@ -277,6 +316,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var organization = new Organization
         {
             Id = organizationId,
+            UseSecretsManager = true,
             SmSeats = 10,
             SmServiceAccounts = 200,
             MaxAutoscaleSmSeats = 20,
@@ -327,6 +367,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var organization = new Organization
         {
             Id = organizationId,
+            UseSecretsManager = true,
             SmSeats = 10,
             SmServiceAccounts = 200,
             MaxAutoscaleSmSeats = 20,
@@ -376,6 +417,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var organization = new Organization
         {
             Id = organizationId,
+            UseSecretsManager = true,
             SmSeats = 10,
             SmServiceAccounts = 200,
             MaxAutoscaleSmSeats = 20,
@@ -463,6 +505,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var organization = new Organization
         {
             Id = organizationId,
+            UseSecretsManager = true,
             SmSeats = 5,
             SmServiceAccounts = 200,
             MaxAutoscaleSmSeats = 4,
@@ -497,6 +540,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var organization = new Organization
         {
             Id = organizationId,
+            UseSecretsManager = true,
             SmSeats = 10,
             GatewayCustomerId = "1",
             GatewaySubscriptionId = "2"
@@ -533,6 +577,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var organization = new Organization
         {
             Id = organizationId,
+            UseSecretsManager = true,
             SmSeats = 10,
             GatewayCustomerId = "1",
             GatewaySubscriptionId = "2"
@@ -566,6 +611,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         {
             Id = organizationId,
             SmSeats = 10,
+            UseSecretsManager = true,
             GatewayCustomerId = "1",
             GatewaySubscriptionId = "2",
             SmServiceAccounts = null
@@ -598,6 +644,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         {
             Id = organizationId,
             SmSeats = 3,
+            UseSecretsManager = true,
             SmServiceAccounts = 100,
             PlanType = planType,
             GatewayCustomerId = "1",

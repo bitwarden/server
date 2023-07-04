@@ -58,19 +58,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new NotFoundException();
         }
 
-        var newSeatCount = organization.SmSeats.HasValue
-            ? organization.SmSeats.Value + update.SeatAdjustment
-            : update.SeatAdjustment;
-
-
-        if (update.MaxAutoscaleSeats.HasValue && newSeatCount > update.MaxAutoscaleSeats.Value)
+        if (!organization.UseSecretsManager)
         {
-            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+            throw new BadRequestException("Organization has no access to Secrets Manager.");
         }
 
-        var newServiceAccountCount = organization.SmServiceAccounts.HasValue
-            ? organization.SmServiceAccounts + update.ServiceAccountsAdjustment
-            : update.ServiceAccountsAdjustment;
+        var newServiceAccountCount = organization.SmServiceAccounts.GetValueOrDefault() + update.ServiceAccountsAdjustment;
 
         if (update.MaxAutoscaleServiceAccounts.HasValue && newServiceAccountCount > update.MaxAutoscaleServiceAccounts.Value)
         {
@@ -79,7 +72,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         if (update.SeatAdjustment != 0)
         {
-            await AdjustSeatsAsync(organization, update.SeatAdjustment);
+            await AdjustSeatsAsync(organization, update);
         }
 
         if (update.ServiceAccountsAdjustment != 0)
@@ -130,8 +123,15 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     }
 
-    private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment)
+    private async Task<string> AdjustSeatsAsync(Organization organization, SecretsManagerSubscriptionUpdate update)
     {
+        var newSeatCount = organization.SmSeats.GetValueOrDefault() + update.SeatAdjustment;
+
+        if (update.MaxAutoscaleSeats.HasValue && newSeatCount > update.MaxAutoscaleSeats.Value)
+        {
+            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+        }
+
         if (organization.SmSeats == null)
         {
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
@@ -159,21 +159,17 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Plan does not allow additional Secrets Manager seats.");
         }
 
-        var newSeatTotal = organization.SmSeats.HasValue
-            ? organization.SmSeats.Value + seatAdjustment
-            : seatAdjustment;
-
-        if (plan.BaseSeats > newSeatTotal)
+        if (plan.BaseSeats > newSeatCount)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} Secrets Manager  seats.");
         }
 
-        if (newSeatTotal <= 0)
+        if (newSeatCount <= 0)
         {
             throw new BadRequestException("You must have at least 1 Secrets Manager seat.");
         }
 
-        var additionalSeats = newSeatTotal - plan.BaseSeats;
+        var additionalSeats = newSeatCount - plan.BaseSeats;
 
         if (plan.MaxAdditionalSeats.HasValue && additionalSeats > plan.MaxAdditionalSeats.Value)
         {
@@ -181,13 +177,13 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                                           $"{plan.MaxAdditionalSeats.Value} additional Secrets Manager seats.");
         }
 
-        if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newSeatTotal)
+        if (!organization.SmSeats.HasValue || organization.SmSeats.Value > newSeatCount)
         {
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > newSeatTotal)
+            if (occupiedSeats > newSeatCount)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                                              $"Your new plan only has ({newSeatTotal}) seats. Remove some users.");
+                                              $"Your new plan only has ({newSeatCount}) seats. Remove some users.");
             }
         }
 
@@ -199,11 +195,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 Id = organization.Id,
                 PlanName = plan.Name,
                 PlanType = plan.Type,
-                Seats = newSeatTotal,
+                Seats = newSeatCount,
                 PreviousSeats = organization.SmSeats
             });
 
-        organization.SmSeats = (short?)newSeatTotal;
+        organization.SmSeats = (short?)newSeatCount;
 
         return paymentIntentClientSecret;
     }
