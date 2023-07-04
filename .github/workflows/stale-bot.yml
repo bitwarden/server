@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: 'Run stale action'
-        uses: actions/stale@3cc123766321e9f15a6676375c154ccffb12a358  # v5.0.0
+        uses: actions/stale@f7176fd3007623b69d27091f9b9d4ab7995f0a06 # v5.2.1
         with:
           stale-issue-label: 'needs-reply'
           stale-pr-label: 'needs-changes'
