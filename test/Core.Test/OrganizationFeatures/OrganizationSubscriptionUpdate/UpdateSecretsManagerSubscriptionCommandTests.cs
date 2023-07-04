@@ -39,15 +39,15 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
-        
+
         Assert.Contains("Organization is not found", exception.Message);
-        
+
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
@@ -85,13 +85,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
              () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
 
         Assert.Contains("Organization has no access to Secrets Manager.", exception.Message);
-        
+
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
@@ -130,13 +130,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
 
         Assert.Contains("Cannot set max seat autoscaling below seat count.", exception.Message);
-        
+
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
@@ -184,17 +184,17 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
 
         Assert.Contains("Cannot set max Service Accounts autoscaling below Service Accounts count", exception.Message);
-        
+
         var additionalSeats = newSeatCount - plan.BaseSeats;
-        
+
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustSeatsAsync(organization, plan, additionalSeats);
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(Arg.Any<ReferenceEvent>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
         await sutProvider.GetDependency<IMailService>().DidNotReceive().SendOrganizationMaxSeatLimitReachedEmailAsync(Arg.Any<Organization>(), Arg.Any<int>(), Arg.Any<IEnumerable<string>>());
@@ -234,13 +234,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
 
         Assert.Contains("No payment method found.", exception.Message);
-        
+
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
@@ -283,13 +283,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
 
         Assert.Contains("No subscription found.", exception.Message);
-        
+
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
@@ -332,13 +332,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
 
         Assert.Contains("Organization has no Secrets Manager seat limit, no need to adjust seats", exception.Message);
-        
+
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
@@ -392,13 +392,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
         Assert.Contains("Existing plan not found", exception.Message, StringComparison.InvariantCultureIgnoreCase);
-        
+
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
@@ -454,13 +454,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         plan.HasAdditionalSeatsOption = false;
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
         Assert.Contains("Plan does not allow additional Secrets Manager seats.", exception.Message, StringComparison.InvariantCultureIgnoreCase);
-        
+
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
 
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        
+
         await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive().RaiseEventAsync(Arg.Any<ReferenceEvent>());
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
 
