@@ -12,6 +12,5 @@ BEGIN
     UPDATE [dbo].[Organization]
     SET [SecretsManagerBeta] = 1
     WHERE [UseSecretsManager] = 1
-    GO
 END
 GO
