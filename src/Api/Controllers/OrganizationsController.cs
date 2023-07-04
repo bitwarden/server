@@ -334,7 +334,7 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-        var organizationUpdate = model.ToOrganizationUpdate(id);
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(id);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
 

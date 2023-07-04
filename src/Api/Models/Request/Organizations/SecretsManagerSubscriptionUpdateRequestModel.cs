@@ -8,11 +8,10 @@ public class SecretsManagerSubscriptionUpdateRequestModel
     [Required]
     public int SeatAdjustment { get; set; }
     public int? MaxAutoscaleSeats { get; set; }
-
     public int ServiceAccountAdjustment { get; set; }
     public int? MaxAutoscaleServiceAccounts { get; set; }
 
-    public virtual SecretsManagerSubscriptionUpdate ToOrganizationUpdate(Guid orgIdGuid)
+    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Guid orgIdGuid)
     {
         var orgUpdate = new SecretsManagerSubscriptionUpdate
         {

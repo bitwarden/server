@@ -8,6 +8,6 @@ public class SecretsManagerSubscriptionUpdate
     public int SeatAdjustment { get; set; }
     public int? MaxAutoscaleSeats { get; set; }
 
-    public int? ServiceAccountsAdjustment { get; set; }
+    public int ServiceAccountsAdjustment { get; set; }
     public int? MaxAutoscaleServiceAccounts { get; set; }
 }
