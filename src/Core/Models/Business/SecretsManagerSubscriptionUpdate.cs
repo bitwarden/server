@@ -10,5 +10,4 @@ public class OrganizationUpdate
 
     public int? ServiceAccountsAdjustment { get; set; }
     public int? MaxAutoscaleServiceAccounts { get; set; }
-    public BitwardenProductType BitwardenProduct { get; set; }
 }
