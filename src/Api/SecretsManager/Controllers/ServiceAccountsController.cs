@@ -56,8 +56,8 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
-    public async Task<ListResponseModel<ServiceAccountResponseModel>> ListByOrganizationAsync(
-        [FromRoute] Guid organizationId)
+    public async Task<ListResponseModel<ServiceAccountSecretsDetailsResponseModel>> ListByOrganizationAsync(
+        [FromRoute] Guid organizationId, [FromQuery] bool includeAccessToSecrets = false)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
@@ -68,11 +68,24 @@ public class ServiceAccountsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var serviceAccounts =
-            await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
+        IEnumerable<ServiceAccountSecretsDetailsResponseModel> responses;
+        if (includeAccessToSecrets)
+        {
+            var serviceAccounts =
+                await _serviceAccountRepository.GetManyByOrganizationIdWithSecretsDetailsAsync(organizationId, userId,
+                    accessClient);
+            responses = serviceAccounts.Select(serviceAccount =>
+                new ServiceAccountSecretsDetailsResponseModel(serviceAccount));
+        }
+        else
+        {
+            var serviceAccounts =
+                await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
+            responses = serviceAccounts.Select(serviceAccount =>
+                new ServiceAccountSecretsDetailsResponseModel(serviceAccount));
+        }
 
-        var responses = serviceAccounts.Select(serviceAccount => new ServiceAccountResponseModel(serviceAccount));
-        return new ListResponseModel<ServiceAccountResponseModel>(responses);
+        return new ListResponseModel<ServiceAccountSecretsDetailsResponseModel>(responses);
     }
 
     [HttpGet("{id}")]

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Models.Api;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
@@ -34,4 +35,23 @@ public class ServiceAccountResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
 
     public DateTime RevisionDate { get; set; }
+}
+
+public class ServiceAccountSecretsDetailsResponseModel : ServiceAccountResponseModel
+{
+    public ServiceAccountSecretsDetailsResponseModel(ServiceAccountSecretsDetails serviceAccountDetails) : base(serviceAccountDetails.ServiceAccount)
+    {
+        if (serviceAccountDetails == null)
+        {
+            throw new ArgumentNullException(nameof(serviceAccountDetails));
+        }
+
+        AccessToSecrets = serviceAccountDetails.AccessToSecrets;
+    }
+
+    public ServiceAccountSecretsDetailsResponseModel(ServiceAccount serviceAccount) : base(serviceAccount)
+    {
+    }
+
+    public int AccessToSecrets { get; set; }
 }

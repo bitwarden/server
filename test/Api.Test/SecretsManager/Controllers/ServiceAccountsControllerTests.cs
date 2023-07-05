@@ -41,6 +41,38 @@ public class ServiceAccountsControllerTests
     }
 
     [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    public async void GetServiceAccountsByOrganization_CallsDifferentRepoMethods(bool includeAccessToSecrets, SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccount resultServiceAccount, ServiceAccountSecretsDetails mockResult)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default, default, default)
+            .ReturnsForAnyArgs(new List<ServiceAccount> { resultServiceAccount });
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdWithSecretsDetailsAsync(default, default, default)
+            .ReturnsForAnyArgs(new List<ServiceAccountSecretsDetails> { mockResult });
+
+        var result = await sutProvider.Sut.ListByOrganizationAsync(resultServiceAccount.OrganizationId, includeAccessToSecrets);
+
+        if (includeAccessToSecrets)
+        {
+            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
+                .GetManyByOrganizationIdWithSecretsDetailsAsync(Arg.Is(AssertHelper.AssertPropertyEqual(mockResult.ServiceAccount.OrganizationId)),
+                    Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+        }
+        else
+        {
+            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
+                .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)),
+                    Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+        }
+        
+        Assert.NotEmpty(result.Data);
+        Assert.Single(result.Data);
+    }
+    
+    [Theory]
     [BitAutoData]
     public async void GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccount resultServiceAccount)
