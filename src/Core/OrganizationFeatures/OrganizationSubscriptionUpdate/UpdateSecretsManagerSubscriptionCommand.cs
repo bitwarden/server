@@ -138,16 +138,16 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (organization.SmSeats.HasValue && organization.MaxAutoscaleSmSeats.HasValue && organization.SmSeats == organization.MaxAutoscaleSmSeats)
         {
-            await SendEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, "Seats");
+            await SendSeatLimitEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, "Seats");
         }
 
         if (organization.SmServiceAccounts.HasValue && organization.MaxAutoscaleSmServiceAccounts.HasValue && organization.SmServiceAccounts == organization.MaxAutoscaleSmServiceAccounts)
         {
-            await SendEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, "Service Accounts");
+            await SendServiceAccountLimitEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, "Service Accounts");
         }
     }
 
-    private async Task SendEmailAsync(Organization organization, int MaxAutoscaleValue, string adjustingProduct)
+    private async Task SendSeatLimitEmailAsync(Organization organization, int MaxAutoscaleValue, string adjustingProduct)
     {
         try
         {
@@ -155,7 +155,25 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                     OrganizationUserType.Owner))
                 .Select(u => u.Email).Distinct();
 
-            await _mailService.SendOrganizationMaxSeatLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
+            await _mailService.SendOrganizationMaxSecretsManagerSeatLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
+
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, $"Error encountered notifying organization owners of {adjustingProduct} limit reached.");
+        }
+
+    }
+
+    private async Task SendServiceAccountLimitEmailAsync(Organization organization, int MaxAutoscaleValue, string adjustingProduct)
+    {
+        try
+        {
+            var ownerEmails = (await _organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id,
+                    OrganizationUserType.Owner))
+                .Select(u => u.Email).Distinct();
+
+            await _mailService.SendOrganizationMaxSecretsManagerServiceAccountLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
 
         }
         catch (Exception e)

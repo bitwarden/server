@@ -55,4 +55,6 @@ public interface IMailService
     Task SendFailedLoginAttemptsEmailAsync(string email, DateTime utcNow, string ip);
     Task SendFailedTwoFactorAttemptsEmailAsync(string email, DateTime utcNow, string ip);
     Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName);
+    Task SendOrganizationMaxSecretsManagerSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
+    Task SendOrganizationMaxSecretsManagerServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
 }

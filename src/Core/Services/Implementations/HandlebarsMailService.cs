@@ -896,6 +896,36 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendOrganizationMaxSecretsManagerSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
+        IEnumerable<string> ownerEmails)
+    {
+        var message = CreateDefaultMessage($"{organization.Name} Secrets Manager Seat Limit Reached", ownerEmails);
+        var model = new OrganizationSeatsMaxReachedViewModel
+        {
+            OrganizationId = organization.Id,
+            MaxSeatCount = maxSeatCount,
+        };
+
+        await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
+        message.Category = "OrganizationSmSeatsMaxReached";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendOrganizationMaxSecretsManagerServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
+        IEnumerable<string> ownerEmails)
+    {
+        var message = CreateDefaultMessage($"{organization.Name} Secrets Manager Service Accounts Limit Reached", ownerEmails);
+        var model = new OrganizationServiceAccountsMaxReachedViewModel
+        {
+            OrganizationId = organization.Id,
+            MaxServiceAccountsCount = maxSeatCount,
+        };
+
+        await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
+        message.Category = "OrganizationSmServiceAccountsMaxReached";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     private static string GetUserIdentifier(string email, string userName)
     {
         return string.IsNullOrEmpty(userName) ? email : CoreHelpers.SanitizeForEmail(userName, false);
