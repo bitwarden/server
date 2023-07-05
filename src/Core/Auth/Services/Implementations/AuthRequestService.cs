@@ -117,10 +117,12 @@ public class AuthRequestService : IAuthRequestService
                 throw new BadRequestException("User does not belong to any organizations.");
             }
 
+            // A user event will automatically create logs for each organization/provider this user belongs to.
+            await _eventService.LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
+
             AuthRequest? firstAuthRequest = null;
             foreach (var organizationUser in organizationUsers)
             {
-                await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_RequestedDeviceApproval);
                 var createdAuthRequest = await CreateAuthRequestAsync(model, user, organizationUser.OrganizationId);
                 firstAuthRequest ??= createdAuthRequest;
             }

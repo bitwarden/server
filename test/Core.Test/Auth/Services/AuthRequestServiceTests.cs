@@ -251,6 +251,10 @@ public class AuthRequestServiceTests
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAuthRequestAsync(createModel));
     }
 
+    /// <summary>
+    /// Story: If a user happens to exist to more than one organization, we will send the device approval request to
+    /// each of them. 
+    /// </summary>
     [Theory, BitAutoData]
     public async Task CreateAuthRequestAsync_AdminApproval_CreatesForEachOrganization(
         SutProvider<AuthRequestService> sutProvider,
@@ -298,8 +302,20 @@ public class AuthRequestServiceTests
         Assert.Equal(organizationUser1.OrganizationId, authRequest.OrganizationId);
 
         await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<AuthRequest>(o => o.OrganizationId == organizationUser1.OrganizationId));
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
+            .Received(1)
+            .CreateAsync(Arg.Is<AuthRequest>(o => o.OrganizationId == organizationUser2.OrganizationId));
+
+        await sutProvider.GetDependency<IAuthRequestRepository>()
             .Received(2)
             .CreateAsync(Arg.Any<AuthRequest>());
+
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_RequestedDeviceApproval);
     }
 
     /// <summary>
