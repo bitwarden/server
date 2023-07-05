@@ -28,7 +28,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IReferenceEventService _referenceEventService;
-    private readonly IStaticStoreWrapper _staticStore;
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationRepository organizationRepository,
@@ -39,8 +38,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository,
-        IReferenceEventService referenceEventService,
-        IStaticStoreWrapper staticStore)
+        IReferenceEventService referenceEventService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -51,7 +49,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _logger = logger;
         _serviceAccountRepository = serviceAccountRepository;
         _referenceEventService = referenceEventService;
-        _staticStore = staticStore;
     }
 
     public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
@@ -92,7 +89,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private Plan GetPlanForOrganization(Organization organization)
     {
-        var plan = _staticStore.SecretsManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
         if (plan == null)
         {
             throw new BadRequestException("Existing plan not found.");
@@ -352,17 +349,17 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
 
-        if (!plan.AllowSeatAutoscale)
-        {
-            throw new BadRequestException("Your plan does not allow Secrets Manager seat autoscaling.");
-        }
-
         if (plan.MaxUsers.HasValue && maxAutoscaleSeats > plan.MaxUsers)
         {
             throw new BadRequestException(string.Concat(
                 $"Your plan has a Secrets Manager seat limit of {plan.MaxUsers}, ",
                 $"but you have specified a max autoscale count of {maxAutoscaleSeats}.",
                 "Reduce your max autoscale count."));
+        }
+
+        if (!plan.AllowSeatAutoscale)
+        {
+            throw new BadRequestException("Your plan does not allow Secrets Manager seat autoscaling.");
         }
 
         organization.MaxAutoscaleSmSeats = maxAutoscaleSeats;
