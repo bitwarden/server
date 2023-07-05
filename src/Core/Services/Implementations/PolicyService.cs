@@ -81,6 +81,11 @@ public class PolicyService : IPolicyService
                 {
                     await RequiredBySsoTrustedDeviceEncryptionAsync(org);
                 }
+
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
+                }
                 break;
 
             case PolicyType.MaximumVaultTimeout:
