@@ -16,7 +16,7 @@ public class StaticStoreWrapperTests
         var staticStoreWrapper = new StaticStoreWrapper();
         var actualPlans = staticStoreWrapper.SecretsManagerPlans;
 
-       Assert.Equal(expectedPlans.Count, actualPlans.Count);
+        Assert.Equal(expectedPlans.Count, actualPlans.Count);
         for (var i = 0; i < expectedPlans.Count; i++)
         {
             Assert.Equal(expectedPlans[i].Type, actualPlans[i].Type);
