@@ -28,6 +28,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IReferenceEventService _referenceEventService;
+    private readonly IStaticStoreWrapper _staticStore;
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationRepository organizationRepository,
@@ -38,7 +39,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository,
-        IReferenceEventService referenceEventService)
+        IReferenceEventService referenceEventService,
+        IStaticStoreWrapper staticStore)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -49,6 +51,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _logger = logger;
         _serviceAccountRepository = serviceAccountRepository;
         _referenceEventService = referenceEventService;
+        _staticStore = staticStore;
     }
 
     public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
@@ -87,9 +90,9 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await SendEmailIfAutoscaleLimitReached(organization);
     }
 
-    private static Plan GetPlanForOrganization(Organization organization)
+    private Plan GetPlanForOrganization(Organization organization)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
+        var plan = _staticStore.SecretsManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
         if (plan == null)
         {
             throw new BadRequestException("Existing plan not found.");

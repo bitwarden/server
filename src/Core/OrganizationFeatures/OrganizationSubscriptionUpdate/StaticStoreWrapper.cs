@@ -1,6 +1,15 @@
-﻿namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
+﻿using Bit.Core.Models.StaticStore;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
+using Bit.Core.Utilities;
 
-public class StaticStoreWrapper
+namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
+
+public class StaticStoreWrapper : IStaticStoreWrapper
 {
-    
+    public List<Plan> SecretsManagerPlans { get; }
+
+    public StaticStoreWrapper()
+    {
+        SecretsManagerPlans = StaticStore.SecretManagerPlans.ToList();
+    }
 }

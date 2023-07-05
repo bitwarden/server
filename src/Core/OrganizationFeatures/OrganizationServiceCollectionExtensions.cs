@@ -116,6 +116,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationSubscriptionUpdateCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
+        services.AddScoped<IStaticStoreWrapper, StaticStoreWrapper>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)
