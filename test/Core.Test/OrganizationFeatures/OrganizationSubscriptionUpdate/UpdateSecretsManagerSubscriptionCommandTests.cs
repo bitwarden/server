@@ -518,8 +518,8 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                     org.MaxAutoscaleSmServiceAccounts == organizationUpdate.MaxAutoscaleServiceAccounts));
         }
 
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, Arg.Any<IEnumerable<string>>());
-        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, Arg.Any<IEnumerable<string>>());
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationMaxSecretsManagerSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, Arg.Any<IEnumerable<string>>());
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationMaxSecretsManagerServiceAccountLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, Arg.Any<IEnumerable<string>>());
     }
 
     [Theory]

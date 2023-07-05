@@ -111,7 +111,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     }
 
     private async Task FinalizeSubscriptionAdjustmentAsync(Organization organization,
-        Plan plan, Tuple<int, int> adjustSeatsResponse, Tuple<int, int> adjustServiceAccountsResponse)
+        Plan plan, Tuple<int, int>? adjustSeatsResponse, Tuple<int, int>? adjustServiceAccountsResponse)
     {
         if (adjustSeatsResponse != null)
         {
