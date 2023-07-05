@@ -53,6 +53,7 @@ public class OrganizationResponseModel : ResponseModel
         SmServiceAccounts = organization.SmServiceAccounts;
         MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public string Id { get; set; }
@@ -91,6 +92,7 @@ public class OrganizationResponseModel : ResponseModel
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    public bool SecretsManagerBeta { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
