@@ -445,6 +445,41 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task SaveAsync_PolicyRequiredForAccountRecovery_NotEnabled_ThrowsBadRequestAsync(
+        [PolicyFixtures.Policy(Enums.PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
+    {
+        policy.Enabled = true;
+        policy.SetDataModel(new ResetPasswordDataModel());
+
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
+        {
+            Id = policy.OrganizationId,
+            UsePolicies = true,
+        });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.SingleOrg)
+            .Returns(Task.FromResult(new Policy { Enabled = false }));
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogPolicyEventAsync(default, default, default);
+    }
+
+
+    [Theory, BitAutoData]
     public async Task SaveAsync_SingleOrg_AccountRecoveryEnabled_ThrowsBadRequest(
         [PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
