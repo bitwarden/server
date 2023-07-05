@@ -66,35 +66,9 @@ public class AuthRequestService : IAuthRequestService
             return null;
         }
 
-        switch (authRequest.Type)
+        if (!IsAuthRequestValid(authRequest))
         {
-            case AuthRequestType.AuthenticateAndUnlock:
-            case AuthRequestType.Unlock:
-                if (DateTime.UtcNow > authRequest.CreationDate.Add(_globalSettings.PasswordlessAuth.UserRequestExpiration))
-                {
-                    return null;
-                }
-                break;
-            case AuthRequestType.AdminApproval:
-                // If an AdminApproval type has been approved it's expiration time is based on how long it's been since approved.
-                if (authRequest.Approved is true)
-                {
-                    Debug.Assert(authRequest.ResponseDate.HasValue, "The response date should have been set when the request was updated.");
-                    if (DateTime.UtcNow > authRequest.ResponseDate.Value.Add(_globalSettings.PasswordlessAuth.AfterAdminApprovalExpiration))
-                    {
-                        return null;
-                    }
-                }
-                else
-                {
-                    if (DateTime.UtcNow > authRequest.CreationDate.Add(_globalSettings.PasswordlessAuth.AdminRequestExpiration))
-                    {
-                        return null;
-                    }
-                }
-                break;
-            default:
-                return null;
+            return null;
         }
 
         return authRequest;
@@ -197,16 +171,16 @@ public class AuthRequestService : IAuthRequestService
         switch (authRequest.Type)
         {
             case AuthRequestType.AdminApproval:
-                // AdminApproval has a different expiration time, by default is 6 days compared to 
+                // AdminApproval has a different expiration time, by default is 7 days compared to 
                 // non-AdminApproval ones having a default of 15 minutes.
-                if (DateTime.UtcNow > authRequest.CreationDate.Add(_globalSettings.PasswordlessAuth.AdminRequestExpiration))
+                if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.AdminRequestExpiration))
                 {
                     throw new NotFoundException();
                 }
                 break;
             case AuthRequestType.AuthenticateAndUnlock:
             case AuthRequestType.Unlock:
-                if (DateTime.UtcNow > authRequest.CreationDate.Add(_globalSettings.PasswordlessAuth.UserRequestExpiration))
+                if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.UserRequestExpiration))
                 {
                     throw new NotFoundException();
                 }
@@ -260,5 +234,36 @@ public class AuthRequestService : IAuthRequestService
         }
 
         return authRequest;
+    }
+
+    private bool IsAuthRequestValid(AuthRequest authRequest)
+    {
+        return authRequest.Type switch
+        {
+            AuthRequestType.AuthenticateAndUnlock or AuthRequestType.Unlock
+                => !IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.UserRequestExpiration),
+            AuthRequestType.AdminApproval => IsAdminApprovalAuthRequestValid(authRequest),
+            _ => false,
+        };
+    }
+
+    private bool IsAdminApprovalAuthRequestValid(AuthRequest authRequest)
+    {
+        Debug.Assert(authRequest.Type == AuthRequestType.AdminApproval, "This method should only be called on AdminApproval type");
+        // If an AdminApproval type has been approved it's expiration time is based on how long it's been since approved.
+        if (authRequest.Approved is true)
+        {
+            Debug.Assert(authRequest.ResponseDate.HasValue, "The response date should have been set when the request was updated.");
+            return !IsDateExpired(authRequest.ResponseDate.Value, _globalSettings.PasswordlessAuth.AfterAdminApprovalExpiration);
+        }
+        else
+        {
+            return !IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.AdminRequestExpiration);
+        }
+    }
+
+    private static bool IsDateExpired(DateTime savedDate, TimeSpan allowedLifetime)
+    {
+        return DateTime.UtcNow > savedDate.Add(allowedLifetime);
     }
 }
