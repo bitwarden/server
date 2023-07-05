@@ -33,8 +33,9 @@ public class ApiClient : Client
         }
         else if (id == "desktop")
         {
-            RedirectUris = new[] { "bitwarden://sso-callback" };
+            RedirectUris = new[] { $"{globalSettings.BaseServiceUri.Vault}/sso-connector.html" };
             PostLogoutRedirectUris = new[] { "bitwarden://logged-out" };
+            AllowedCorsOrigins = new[] { globalSettings.BaseServiceUri.Vault };
         }
         else if (id == "connector")
         {
