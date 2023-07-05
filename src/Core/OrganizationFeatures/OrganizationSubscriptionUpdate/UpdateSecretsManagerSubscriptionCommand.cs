@@ -72,12 +72,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             adjustServiceAccountsResponse = await AdjustServiceAccountsAsync(organization, update, plan);
         }
 
-        if (update.MaxAutoscaleSeats.HasValue && update.MaxAutoscaleSeats != organization.MaxAutoscaleSmSeats)
+        if (update.MaxAutoscaleSeats.HasValue && update.MaxAutoscaleSeats != organization.MaxAutoscaleSmSeats.GetValueOrDefault())
         {
             UpdateSeatsAutoscaling(organization, update.MaxAutoscaleSeats.Value, plan);
         }
 
-        if (update.MaxAutoscaleServiceAccounts.HasValue && update.MaxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts)
+        if (update.MaxAutoscaleServiceAccounts.HasValue && update.MaxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault())
         {
             UpdateServiceAccountAutoscaling(organization, update.MaxAutoscaleServiceAccounts.Value, plan);
         }
