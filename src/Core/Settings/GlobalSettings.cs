@@ -143,6 +143,7 @@ public class GlobalSettings : IGlobalSettings
             _globalSettings = globalSettings;
         }
 
+        public string CloudRegion { get; set; }
         public string Vault { get; set; }
         public string VaultWithHash => $"{Vault}/#";
 
