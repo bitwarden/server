@@ -67,11 +67,11 @@ public class ServiceAccountsControllerTests
                 .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)),
                     Arg.Any<Guid>(), Arg.Any<AccessClientType>());
         }
-        
+
         Assert.NotEmpty(result.Data);
         Assert.Single(result.Data);
     }
-    
+
     [Theory]
     [BitAutoData]
     public async void GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider,
