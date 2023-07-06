@@ -49,9 +49,5 @@ public class ServiceAccountSecretsDetailsResponseModel : ServiceAccountResponseM
         AccessToSecrets = serviceAccountDetails.AccessToSecrets;
     }
 
-    public ServiceAccountSecretsDetailsResponseModel(ServiceAccount serviceAccount) : base(serviceAccount)
-    {
-    }
-
     public int AccessToSecrets { get; set; }
 }

@@ -8,6 +8,7 @@ using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -33,60 +34,28 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         var result = await sutProvider.Sut.ListByOrganizationAsync(id);
 
-        await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+        await sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().Received(1)
+            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
+                Arg.Any<Guid>(), Arg.Any<AccessClientType>(), Arg.Any<bool>());
 
         Assert.Empty(result.Data);
     }
 
     [Theory]
-    [BitAutoData(false)]
-    [BitAutoData(true)]
-    public async void GetServiceAccountsByOrganization_CallsDifferentRepoMethods(bool includeAccessToSecrets, SutProvider<ServiceAccountsController> sutProvider,
-        ServiceAccount resultServiceAccount, ServiceAccountSecretsDetails mockResult)
-    {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default, default, default)
-            .ReturnsForAnyArgs(new List<ServiceAccount> { resultServiceAccount });
-        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdWithSecretsDetailsAsync(default, default, default)
-            .ReturnsForAnyArgs(new List<ServiceAccountSecretsDetails> { mockResult });
-
-        var result = await sutProvider.Sut.ListByOrganizationAsync(resultServiceAccount.OrganizationId, includeAccessToSecrets);
-
-        if (includeAccessToSecrets)
-        {
-            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-                .GetManyByOrganizationIdWithSecretsDetailsAsync(Arg.Is(AssertHelper.AssertPropertyEqual(mockResult.ServiceAccount.OrganizationId)),
-                    Arg.Any<Guid>(), Arg.Any<AccessClientType>());
-        }
-        else
-        {
-            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-                .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)),
-                    Arg.Any<Guid>(), Arg.Any<AccessClientType>());
-        }
-
-        Assert.NotEmpty(result.Data);
-        Assert.Single(result.Data);
-    }
-
-    [Theory]
     [BitAutoData]
     public async void GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider,
-        ServiceAccount resultServiceAccount)
+        ServiceAccountSecretsDetails resultServiceAccount)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default, default, default)
-            .ReturnsForAnyArgs(new List<ServiceAccount> { resultServiceAccount });
+        sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().GetManyByOrganizationIdAsync(default, default, default, default)
+            .ReturnsForAnyArgs(new List<ServiceAccountSecretsDetails> { resultServiceAccount });
 
-        var result = await sutProvider.Sut.ListByOrganizationAsync(resultServiceAccount.OrganizationId);
+        var result = await sutProvider.Sut.ListByOrganizationAsync(resultServiceAccount.ServiceAccount.OrganizationId);
 
-        await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)),
-                Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+        await sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().Received(1)
+            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.ServiceAccount.OrganizationId)),
+                Arg.Any<Guid>(), Arg.Any<AccessClientType>(), Arg.Any<bool>());
         Assert.NotEmpty(result.Data);
         Assert.Single(result.Data);
     }

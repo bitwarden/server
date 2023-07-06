@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -25,6 +26,7 @@ public class ServiceAccountsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
+    private readonly IServiceAccountSecretsDetailsQuery _serviceAccountSecretsDetailsQuery;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
     private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
@@ -37,6 +39,7 @@ public class ServiceAccountsController : Controller
         IAuthorizationService authorizationService,
         IServiceAccountRepository serviceAccountRepository,
         IApiKeyRepository apiKeyRepository,
+        IServiceAccountSecretsDetailsQuery serviceAccountSecretsDetailsQuery,
         ICreateAccessTokenCommand createAccessTokenCommand,
         ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand,
@@ -48,6 +51,7 @@ public class ServiceAccountsController : Controller
         _authorizationService = authorizationService;
         _serviceAccountRepository = serviceAccountRepository;
         _apiKeyRepository = apiKeyRepository;
+        _serviceAccountSecretsDetailsQuery = serviceAccountSecretsDetailsQuery;
         _createServiceAccountCommand = createServiceAccountCommand;
         _updateServiceAccountCommand = updateServiceAccountCommand;
         _deleteServiceAccountsCommand = deleteServiceAccountsCommand;
@@ -68,23 +72,10 @@ public class ServiceAccountsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        IEnumerable<ServiceAccountSecretsDetailsResponseModel> responses;
-        if (includeAccessToSecrets)
-        {
-            var serviceAccounts =
-                await _serviceAccountRepository.GetManyByOrganizationIdWithSecretsDetailsAsync(organizationId, userId,
-                    accessClient);
-            responses = serviceAccounts.Select(serviceAccount =>
-                new ServiceAccountSecretsDetailsResponseModel(serviceAccount));
-        }
-        else
-        {
-            var serviceAccounts =
-                await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
-            responses = serviceAccounts.Select(serviceAccount =>
-                new ServiceAccountSecretsDetailsResponseModel(serviceAccount));
-        }
-
+        var results =
+            await _serviceAccountSecretsDetailsQuery.GetManyByOrganizationIdAsync(organizationId, userId, accessClient,
+                includeAccessToSecrets);
+        var responses = results.Select(r => new ServiceAccountSecretsDetailsResponseModel(r));
         return new ListResponseModel<ServiceAccountSecretsDetailsResponseModel>(responses);
     }
 
