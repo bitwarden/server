@@ -239,13 +239,13 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationMaxSecretsManagerSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
+    public Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
         return Task.FromResult(0);
     }
 
-    public Task SendOrganizationMaxSecretsManagerServiceAccountLimitReachedEmailAsync(Organization organization,
+    public Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization,
         int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {

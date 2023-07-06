@@ -138,16 +138,16 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (organization.SmSeats.HasValue && organization.MaxAutoscaleSmSeats.HasValue && organization.SmSeats == organization.MaxAutoscaleSmSeats)
         {
-            await SendSeatLimitEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, "Seats");
+            await SendSeatLimitEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value);
         }
 
         if (organization.SmServiceAccounts.HasValue && organization.MaxAutoscaleSmServiceAccounts.HasValue && organization.SmServiceAccounts == organization.MaxAutoscaleSmServiceAccounts)
         {
-            await SendServiceAccountLimitEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, "Service Accounts");
+            await SendServiceAccountLimitEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value);
         }
     }
 
-    private async Task SendSeatLimitEmailAsync(Organization organization, int MaxAutoscaleValue, string adjustingProduct)
+    private async Task SendSeatLimitEmailAsync(Organization organization, int MaxAutoscaleValue)
     {
         try
         {
@@ -155,17 +155,17 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                     OrganizationUserType.Owner))
                 .Select(u => u.Email).Distinct();
 
-            await _mailService.SendOrganizationMaxSecretsManagerSeatLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
+            await _mailService.SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
 
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Error encountered notifying organization owners of {adjustingProduct} limit reached.");
+            _logger.LogError(e, $"Error encountered notifying organization owners of Seats limit reached.");
         }
 
     }
 
-    private async Task SendServiceAccountLimitEmailAsync(Organization organization, int MaxAutoscaleValue, string adjustingProduct)
+    private async Task SendServiceAccountLimitEmailAsync(Organization organization, int MaxAutoscaleValue)
     {
         try
         {
@@ -173,12 +173,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                     OrganizationUserType.Owner))
                 .Select(u => u.Email).Distinct();
 
-            await _mailService.SendOrganizationMaxSecretsManagerServiceAccountLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
+            await _mailService.SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
 
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Error encountered notifying organization owners of {adjustingProduct} limit reached.");
+            _logger.LogError(e, $"Error encountered notifying organization owners of Service Accounts limit reached.");
         }
 
     }
