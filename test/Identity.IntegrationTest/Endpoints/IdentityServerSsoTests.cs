@@ -243,6 +243,93 @@ public class IdentityServerSsoTests
 
         var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+
+        // This asserts that device keys are not coming back in the response because this should be a new device.
+        // if we ever add new properties that come back from here it is fine to change the expected number of properties
+        // but it should still be asserted in some way that keys are not amongst them.
+        Assert.Single(trustedDeviceOption.EnumerateObject());
+    }
+
+    /// <summary>
+    /// Story: When a user signs in with SSO on a device they have already signed in with we need to return the keys
+    /// back to them for the current device if it has been trusted before.
+    /// </summary>
+    [Fact]
+    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_DeviceAlreadyTrusted_ReturnsOneOption()
+    {
+        // Arrange
+        var challenge = new string('c', 50);
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+        }, challenge);
+
+        await UpdateUserAsync(factory, user => user.MasterPassword = null);
+
+        var deviceRepository = factory.Services.GetRequiredService<IDeviceRepository>();
+
+        var deviceIdentifier = $"test_id_{Guid.NewGuid()}";
+
+        var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
+
+        const string expectedPrivateKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
+        const string expectedUserKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
+
+        var device = await deviceRepository.CreateAsync(new Device
+        {
+            Type = DeviceType.FirefoxBrowser,
+            Identifier = deviceIdentifier,
+            Name = "Thing",
+            UserId = user.Id,
+            EncryptedPrivateKey = expectedPrivateKey,
+            EncryptedPublicKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
+            EncryptedUserKey = expectedUserKey,
+        });
+
+        // Act
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "10" },
+            { "deviceIdentifier", deviceIdentifier },
+            { "deviceName", "firefox" },
+            { "twoFactorToken", "TEST"},
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }));
+
+        // Assert
+        // If the organization has selected TrustedDeviceEncryption but the user still has their master password
+        // they can decrypt with either option
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = responseBody.RootElement;
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+
+        // Expected to look like:
+        // "UserDecryptionOptions": {
+        //   "Object": "userDecryptionOptions"
+        //   "HasMasterPassword": false,
+        //   "TrustedDeviceOption": {
+        //     "HasAdminApproval": true,
+        //     "EncryptedPrivateKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
+        //     "EncryptedUserKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA=="
+        //   }
+        // }
+
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+
+        var actualPrivateKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedPrivateKey", JsonValueKind.String).GetString();
+        Assert.Equal(expectedPrivateKey, actualPrivateKey);
+        var actualUserKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedUserKey", JsonValueKind.String).GetString();
+        Assert.Equal(expectedUserKey, actualUserKey);
     }
 
     [Fact]
