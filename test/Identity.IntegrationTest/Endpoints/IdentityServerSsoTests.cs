@@ -243,6 +243,11 @@ public class IdentityServerSsoTests
 
         var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+
+        // This asserts that device keys are not coming back in the response because this should be a new device.
+        // if we ever add new properties that come back from here it is fine to change the expected number of properties
+        // but it should still be asserted in some way that keys are not amongst them.
+        Assert.Single(trustedDeviceOption.EnumerateObject());
     }
 
     /// <summary>
@@ -267,7 +272,7 @@ public class IdentityServerSsoTests
 
         var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(TestEmail);
 
-        const string expectedPublicKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
+        const string expectedPrivateKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
         const string expectedUserKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==";
 
         var device = await deviceRepository.CreateAsync(new Device
@@ -276,8 +281,8 @@ public class IdentityServerSsoTests
             Identifier = deviceIdentifier,
             Name = "Thing",
             UserId = user.Id,
-            EncryptedPrivateKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
-            EncryptedPublicKey = expectedPublicKey,
+            EncryptedPrivateKey = expectedPrivateKey,
+            EncryptedPublicKey = "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
             EncryptedUserKey = expectedUserKey,
         });
 
@@ -313,7 +318,7 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
-        //     "EncryptedPublicKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
+        //     "EncryptedPrivateKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
         //     "EncryptedUserKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA=="
         //   }
         // }
@@ -321,8 +326,8 @@ public class IdentityServerSsoTests
         var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
 
-        var actualPublickKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedPublicKey", JsonValueKind.String).GetString();
-        Assert.Equal(expectedPublicKey, actualPublickKey);
+        var actualPrivateKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedPrivateKey", JsonValueKind.String).GetString();
+        Assert.Equal(expectedPrivateKey, actualPrivateKey);
         var actualUserKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedUserKey", JsonValueKind.String).GetString();
         Assert.Equal(expectedUserKey, actualUserKey);
     }

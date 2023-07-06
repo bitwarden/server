@@ -607,17 +607,17 @@ public abstract class BaseRequestValidator<T> where T : class
         // Only add the trusted device specific option when the flag is turned on
         if (FeatureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext) && ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
         {
-            string? encryptedPublicKey = null;
+            string? encryptedPrivateKey = null;
             string? encryptedUserKey = null;
             if (device.IsTrusted())
             {
-                encryptedPublicKey = device.EncryptedPublicKey;
+                encryptedPrivateKey = device.EncryptedPrivateKey;
                 encryptedUserKey = device.EncryptedUserKey;
             }
             var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
             userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval,
-                encryptedPublicKey, encryptedUserKey);
+                encryptedPrivateKey, encryptedUserKey);
         }
 
         return userDecryptionOption;
