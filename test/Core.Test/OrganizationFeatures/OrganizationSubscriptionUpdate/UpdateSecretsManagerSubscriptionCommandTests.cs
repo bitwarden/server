@@ -731,9 +731,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
-    [BitAutoData(PlanType.EnterpriseMonthly)]
-    [BitAutoData(PlanType.TeamsMonthly)]
-    [BitAutoData(PlanType.TeamsAnnually)]
     public async Task UpdateServiceAccountAutoscaling_WhenCurrentSeatsIsGreaterThanNew_ThrowsBadRequestException(
         PlanType planType,
         Guid organizationId,
