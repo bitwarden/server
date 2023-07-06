@@ -6,7 +6,6 @@ using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
@@ -92,11 +91,16 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSmServiceAccounts = 10,
             PlanType = PlanType.EnterpriseAnnually,
         };
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
         var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 10,
-            SeatAdjustment = 15
+            SeatAdjustment = 15,
+            NewTotalSeats = organization.SmSeats.GetValueOrDefault() + 10,
+            NewAdditionalSeats = (organization.SmSeats.GetValueOrDefault() + 10) - plan.BaseSeats,
+            NewTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + 5,
+            NewAdditionalServiceAccounts = (organization.SmServiceAccounts.GetValueOrDefault() + 5) - (int)plan.BaseServiceAccount
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
@@ -124,13 +128,18 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewayCustomerId = "1",
             GatewaySubscriptionId = "9"
         };
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
         var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 15,
             SeatAdjustment = 1,
             MaxAutoscaleServiceAccounts = 10,
-            ServiceAccountsAdjustment = 11
+            ServiceAccountsAdjustment = 11,
+            NewTotalSeats = organization.SmSeats.GetValueOrDefault() + 1,
+            NewAdditionalSeats = (organization.SmSeats.GetValueOrDefault() + 1) - plan.BaseSeats,
+            NewTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + 11,
+            NewAdditionalServiceAccounts = (organization.SmServiceAccounts.GetValueOrDefault() + 11) - (int)plan.BaseServiceAccount
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
@@ -377,69 +386,50 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewaySubscriptionId = "2"
         };
 
-        var previousSeats = organization.SmSeats;
-        var previousServiceAccounts = organization.SmServiceAccounts;
-
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
         var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 15,
             SeatAdjustment = 5,
             MaxAutoscaleServiceAccounts = 300,
-            ServiceAccountsAdjustment = 100
+            ServiceAccountsAdjustment = 100,
+            NewTotalSeats = organization.SmSeats.GetValueOrDefault() + 5,
+            NewAdditionalSeats = (organization.SmSeats.GetValueOrDefault() + 5) - plan.BaseSeats,
+            NewTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + 100,
+            NewAdditionalServiceAccounts = (organization.SmServiceAccounts.GetValueOrDefault() + 100) - (int)plan.BaseServiceAccount
         };
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
+
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
-
-        var additionalSeats = (organization.SmSeats + organizationUpdate.SeatAdjustment) - plan.BaseSeats;
-        var additionalServiceAccounts =
-            (organization.SmServiceAccounts + organizationUpdate.ServiceAccountsAdjustment) - plan.BaseServiceAccount;
-        var newSeatTotal = organization.SmSeats.GetValueOrDefault() + organizationUpdate.SeatAdjustment;
-
-        var newServiceAccountsTotal = organization.SmServiceAccounts.GetValueOrDefault() + organizationUpdate.ServiceAccountsAdjustment;
 
         await sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate);
         if (organizationUpdate.ServiceAccountsAdjustment != 0)
         {
             await sutProvider.GetDependency<IPaymentService>().Received(1)
-                .AdjustSeatsAsync(organization, plan, additionalSeats.GetValueOrDefault());
+                .AdjustSeatsAsync(organization, plan, organizationUpdate.NewAdditionalSeats);
 
-            await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
-                Arg.Is<ReferenceEvent>(referenceEvent =>
-                    referenceEvent.Type == ReferenceEventType.AdjustSmSeats &&
-                    referenceEvent.Id == organization.Id &&
-                    referenceEvent.PlanName == plan.Name &&
-                    referenceEvent.PlanType == plan.Type &&
-                    referenceEvent.Seats == newSeatTotal &&
-                    referenceEvent.PreviousSeats == previousSeats));
+            // TODO: call ReferenceEventService - see AC-1481
         }
 
         if (organizationUpdate.SeatAdjustment != 0)
         {
             await sutProvider.GetDependency<IPaymentService>().Received(1)
-                .AdjustServiceAccountsAsync(organization, plan, additionalServiceAccounts.GetValueOrDefault());
+                .AdjustServiceAccountsAsync(organization, plan, organizationUpdate.NewAdditionalServiceAccounts);
 
-            await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
-                Arg.Is<ReferenceEvent>(referenceEvent =>
-                    referenceEvent.Type == ReferenceEventType.AdjustServiceAccounts &&
-                    referenceEvent.Id == organization.Id &&
-                    referenceEvent.PlanName == plan.Name &&
-                    referenceEvent.PlanType == plan.Type &&
-                    referenceEvent.ServiceAccounts == newServiceAccountsTotal &&
-                    referenceEvent.PreviousServiceAccounts == previousServiceAccounts));
+            // TODO: call ReferenceEventService - see AC-1481
         }
 
         if (organizationUpdate.SeatAdjustment != 0)
         {
             await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org => org.SmSeats == newSeatTotal));
+                Arg.Is<Organization>(org => org.SmSeats == organizationUpdate.NewTotalSeats));
         }
 
         if (organizationUpdate.ServiceAccountsAdjustment != 0)
         {
             await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
                 Arg.Is<Organization>(org =>
-                    org.SmServiceAccounts == newServiceAccountsTotal));
+                    org.SmServiceAccounts == organizationUpdate.NewTotalServiceAccounts));
         }
 
         if (organizationUpdate.MaxAutoscaleSeats != organization.MaxAutoscaleSmSeats)
@@ -478,13 +468,18 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewayCustomerId = "1",
             GatewaySubscriptionId = "2"
         };
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
         var update = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 4,
             SeatAdjustment = 1,
             MaxAutoscaleServiceAccounts = 300,
-            ServiceAccountsAdjustment = 5
+            ServiceAccountsAdjustment = 5,
+            NewTotalSeats = organization.SmSeats.GetValueOrDefault() + 1,
+            NewAdditionalSeats = (organization.SmSeats.GetValueOrDefault() + 1) - plan.BaseSeats,
+            NewTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + 5,
+            NewAdditionalServiceAccounts = (organization.SmServiceAccounts.GetValueOrDefault() + 5) - (int)plan.BaseServiceAccount
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
@@ -509,14 +504,18 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewaySubscriptionId = "2",
             PlanType = PlanType.EnterpriseAnnually
         };
-
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
         var update = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 7,
             SeatAdjustment = -3,
             MaxAutoscaleServiceAccounts = 300,
-            ServiceAccountsAdjustment = 5
+            ServiceAccountsAdjustment = 5,
+            NewTotalSeats = organization.SmSeats.GetValueOrDefault() - 3,
+            NewAdditionalSeats = (organization.SmSeats.GetValueOrDefault() - 3) - plan.BaseSeats,
+            NewTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + 5,
+            NewAdditionalServiceAccounts = (organization.SmServiceAccounts.GetValueOrDefault() + 5) - (int)plan.BaseServiceAccount
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
@@ -544,13 +543,18 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             SmServiceAccounts = null,
             PlanType = PlanType.EnterpriseAnnually
         };
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
         var update = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
             MaxAutoscaleSeats = 21,
             SeatAdjustment = 10,
             MaxAutoscaleServiceAccounts = 250,
-            ServiceAccountsAdjustment = 1
+            ServiceAccountsAdjustment = 1,
+            NewTotalSeats = organization.SmSeats.GetValueOrDefault() + 10,
+            NewAdditionalSeats = (organization.SmSeats.GetValueOrDefault() + 10) - plan.BaseSeats,
+            NewTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + 1,
+            NewAdditionalServiceAccounts = (organization.SmServiceAccounts.GetValueOrDefault() + 1) - (int)plan.BaseServiceAccount
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
@@ -673,8 +677,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
-        await sutProvider.GetDependency<IReferenceEventService>().DidNotReceive()
-            .RaiseEventAsync(Arg.Any<ReferenceEvent>());
+        // TODO: call ReferenceEventService - see AC-1481
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
         await sutProvider.GetDependency<IMailService>().DidNotReceive()

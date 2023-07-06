@@ -17,7 +17,7 @@ public class SecretsManagerSubscriptionUpdateRequestModel
     {
         var newTotalSeats = organization.SmSeats.GetValueOrDefault() + SeatAdjustment;
         var newTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + ServiceAccountAdjustment;
-        
+
         var orgUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organization.Id,
@@ -25,10 +25,10 @@ public class SecretsManagerSubscriptionUpdateRequestModel
             MaxAutoscaleSeats = MaxAutoscaleSeats,
             ServiceAccountsAdjustment = ServiceAccountAdjustment,
             MaxAutoscaleServiceAccounts = MaxAutoscaleServiceAccounts,
-            
+
             NewTotalSeats = newTotalSeats,
             NewAdditionalSeats = newTotalSeats - plan.BaseSeats,
-            
+
             NewTotalServiceAccounts = newTotalServiceAccounts,
             NewAdditionalServiceAccounts = newTotalServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault(),
         };

@@ -1,5 +1,4 @@
 ﻿#nullable enable
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -9,9 +8,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
@@ -23,32 +19,26 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationService _organizationService;
-    private readonly ICurrentContext _currentContext;
     private readonly IMailService _mailService;
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
-    private readonly IReferenceEventService _referenceEventService;
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IPaymentService paymentService,
-        ICurrentContext currentContext,
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
-        IServiceAccountRepository serviceAccountRepository,
-        IReferenceEventService referenceEventService)
+        IServiceAccountRepository serviceAccountRepository)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
         _organizationService = organizationService;
-        _currentContext = currentContext;
         _mailService = mailService;
         _logger = logger;
         _serviceAccountRepository = serviceAccountRepository;
-        _referenceEventService = referenceEventService;
     }
 
     public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
@@ -117,9 +107,9 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         if (update.AdjustingServiceAccounts)
         {
-                await ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(organization, plan, update);
+            await ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(organization, plan, update);
         }
-        
+
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
     }
 
@@ -174,14 +164,14 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private async Task AdjustSeatsAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
-        if (update.MaxAutoscaleSeats.HasValue && update.NewTotalSeats > update.MaxAutoscaleSeats.Value)
-        {
-            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
-        }
-
         if (organization.SmSeats == null)
         {
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
+        }
+
+        if (update.MaxAutoscaleSeats.HasValue && update.NewTotalSeats > update.MaxAutoscaleSeats.Value)
+        {
+            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -229,7 +219,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
         SecretsManagerSubscriptionUpdate update)
     {
-        var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, update.NewAdditionalSeats);
+        await _paymentService.AdjustSeatsAsync(organization, plan, update.NewAdditionalSeats);
 
         // TODO: call ReferenceEventService - see AC-1481
 
@@ -238,14 +228,14 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private async Task AdjustServiceAccountsAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
-        if (update.MaxAutoscaleServiceAccounts.HasValue && update.NewTotalServiceAccounts > update.MaxAutoscaleServiceAccounts.Value)
-        {
-            throw new BadRequestException("Cannot set max Service Accounts autoscaling below Service Accounts count.");
-        }
-
         if (organization.SmServiceAccounts == null)
         {
             throw new BadRequestException("Organization has no Service Accounts limit, no need to adjust Service Accounts");
+        }
+
+        if (update.MaxAutoscaleServiceAccounts.HasValue && update.NewTotalServiceAccounts > update.MaxAutoscaleServiceAccounts.Value)
+        {
+            throw new BadRequestException("Cannot set max Service Accounts autoscaling below Service Accounts count.");
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -273,9 +263,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("You must have at least 1 Service Accounts.");
         }
 
-        var additionalServiceAccounts = update.NewTotalServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault();
-
-        if (plan.MaxAdditionalServiceAccount.HasValue && additionalServiceAccounts > plan.MaxAdditionalServiceAccount.Value)
+        if (plan.MaxAdditionalServiceAccount.HasValue && update.NewAdditionalServiceAccounts > plan.MaxAdditionalServiceAccount.Value)
         {
             throw new BadRequestException($"Organization plan allows a maximum of " +
                                           $"{plan.MaxAdditionalServiceAccount.Value} additional Service Accounts.");
@@ -295,12 +283,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private async Task ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(Organization organization, Plan plan,
         SecretsManagerSubscriptionUpdate update)
     {
-        var paymentIntentClientSecret =
-            await _paymentService.AdjustServiceAccountsAsync(organization, plan,
+        await _paymentService.AdjustServiceAccountsAsync(organization, plan,
                 update.NewAdditionalServiceAccounts);
 
         // TODO: call ReferenceEventService - see AC-1481
-        
+
         organization.SmServiceAccounts = update.NewTotalServiceAccounts;
     }
 

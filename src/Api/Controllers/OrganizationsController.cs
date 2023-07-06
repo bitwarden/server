@@ -335,18 +335,18 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-        
+
         if (!await _currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
-        
+
         var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
         if (secretsManagerPlan == null)
         {
             throw new NotFoundException("Invalid Secrets Manager plan.");
         }
-        
+
         var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, secretsManagerPlan);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
