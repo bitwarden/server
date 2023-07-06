@@ -230,15 +230,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, update.NewAdditionalSeats);
 
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustSmSeats, organization, _currentContext)
-            {
-                Id = organization.Id,
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                Seats = update.NewTotalSeats,
-                PreviousSeats = organization.SmSeats
-            });
+        // TODO: call ReferenceEventService - see AC-1481
 
         organization.SmSeats = update.NewTotalSeats;
         
@@ -307,15 +299,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             await _paymentService.AdjustServiceAccountsAsync(organization, plan,
                 update.NewAdditionalServiceAccounts);
 
-        await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustServiceAccounts, organization, _currentContext)
-            {
-                Id = organization.Id,
-                PlanName = plan.Name,
-                PlanType = plan.Type,
-                ServiceAccounts = update.NewTotalServiceAccounts,
-                PreviousServiceAccounts = organization.SmServiceAccounts
-            });
+        // TODO: call ReferenceEventService - see AC-1481
+        
         organization.SmServiceAccounts = update.NewTotalServiceAccounts;
         return paymentIntentClientSecret;
     }
