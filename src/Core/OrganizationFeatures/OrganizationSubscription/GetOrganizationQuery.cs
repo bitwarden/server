@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationSubscription.Interface;
 using Bit.Core.Repositories;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSmSubscription;
+namespace Bit.Core.OrganizationFeatures.OrganizationSubscription;
 
 public class GetOrganizationQuery : IGetOrganizationQuery
 {

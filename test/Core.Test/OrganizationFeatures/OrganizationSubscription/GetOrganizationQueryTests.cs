@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.OrganizationFeatures.OrganizationSmSubscription;
 using Bit.Core.OrganizationFeatures.OrganizationSubscription;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -7,7 +6,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSmSubscription;
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscription;
 
 [SutProviderCustomize]
 public class GetOrganizationQueryTests

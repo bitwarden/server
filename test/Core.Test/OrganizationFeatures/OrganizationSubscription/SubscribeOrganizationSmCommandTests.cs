@@ -1,21 +1,17 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationSmSubscription;
 using Bit.Core.OrganizationFeatures.OrganizationSubscription;
 using Bit.Core.OrganizationFeatures.OrganizationSubscription.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Enums;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSmSubscription;
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscription;
 [SutProviderCustomize]
 public class SubscribeOrganizationSmCommandTests
 {
@@ -66,17 +62,7 @@ public class SubscribeOrganizationSmCommandTests
         await sutProvider.GetDependency<IPaymentService>().Received()
             .AddSecretsManagerToSubscription(organization, plan, additionalSeats, additionalServiceAccounts);
 
-        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
-            Arg.Is<ReferenceEvent>(referenceEvent =>
-                referenceEvent.Type == ReferenceEventType.AddSmToExistingSubscription &&
-                referenceEvent.Id == organization.Id &&
-                referenceEvent.PlanName == plan.Name &&
-                referenceEvent.PlanType == plan.Type &&
-                referenceEvent.SmSeats == organization.SmSeats &&
-                referenceEvent.ServiceAccounts == organization.SmServiceAccounts &&
-                referenceEvent.UseSecretsManager == organization.UseSecretsManager
-            )
-        );
+        // TODO: call ReferenceEventService - see AC-1481
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
 

@@ -11,7 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationSubscription.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

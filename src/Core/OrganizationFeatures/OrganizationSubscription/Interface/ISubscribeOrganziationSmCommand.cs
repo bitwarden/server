@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Entities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
+namespace Bit.Core.OrganizationFeatures.OrganizationSubscription.Interface;
 
 public interface ISubscribeOrganziationSmCommand
 {

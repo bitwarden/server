@@ -2,13 +2,12 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.OrganizationFeatures.OrganizationSmSubscription;
 using Bit.Core.OrganizationFeatures.OrganizationSubscription;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationSmSubscription;
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscription;
 [SutProviderCustomize]
 public class SecretsManagerPlanValidationTests
 {
