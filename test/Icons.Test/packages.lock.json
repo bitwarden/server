@@ -2959,14 +2959,14 @@
         "type": "Project",
         "dependencies": {
           "AngleSharp": "[0.16.1, )",
-          "Core": "[2023.5.0, )",
-          "SharedWeb": "[2023.5.0, )"
+          "Core": "[2023.5.1, )",
+          "SharedWeb": "[2023.5.1, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.5.0, )",
+          "Core": "[2023.5.1, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -2974,7 +2974,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.5.0, )",
+          "Core": "[2023.5.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -2986,9 +2986,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.5.0, )",
-          "Infrastructure.Dapper": "[2023.5.0, )",
-          "Infrastructure.EntityFramework": "[2023.5.0, )"
+          "Core": "[2023.5.1, )",
+          "Infrastructure.Dapper": "[2023.5.1, )",
+          "Infrastructure.EntityFramework": "[2023.5.1, )"
         }
       }
     }

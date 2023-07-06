@@ -2915,89 +2915,89 @@
       "api": {
         "type": "Project",
         "dependencies": {
-          "AspNetCore.HealthChecks.AzureServiceBus": "[6.1.0, )",
-          "AspNetCore.HealthChecks.AzureStorage": "[6.1.2, )",
-          "AspNetCore.HealthChecks.Network": "[6.0.4, )",
-          "AspNetCore.HealthChecks.Redis": "[6.0.4, )",
-          "AspNetCore.HealthChecks.SendGrid": "[6.0.2, )",
-          "AspNetCore.HealthChecks.SqlServer": "[6.0.2, )",
-          "AspNetCore.HealthChecks.Uris": "[6.0.3, )",
-          "Azure.Messaging.EventGrid": "[4.10.0, )",
-          "Commercial.Core": "[2023.5.0, )",
-          "Commercial.Infrastructure.EntityFramework": "[2023.5.0, )",
-          "Core": "[2023.5.0, )",
-          "SharedWeb": "[2023.5.0, )",
-          "Swashbuckle.AspNetCore": "[6.5.0, )"
+          "AspNetCore.HealthChecks.AzureServiceBus": "6.1.0",
+          "AspNetCore.HealthChecks.AzureStorage": "6.1.2",
+          "AspNetCore.HealthChecks.Network": "6.0.4",
+          "AspNetCore.HealthChecks.Redis": "6.0.4",
+          "AspNetCore.HealthChecks.SendGrid": "6.0.2",
+          "AspNetCore.HealthChecks.SqlServer": "6.0.2",
+          "AspNetCore.HealthChecks.Uris": "6.0.3",
+          "Azure.Messaging.EventGrid": "4.10.0",
+          "Commercial.Core": "2023.5.1",
+          "Commercial.Infrastructure.EntityFramework": "2023.5.1",
+          "Core": "2023.5.1",
+          "SharedWeb": "2023.5.1",
+          "Swashbuckle.AspNetCore": "6.5.0"
         }
       },
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.5.0, )"
+          "Core": "2023.5.1"
         }
       },
       "commercial.infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.5.0, )",
-          "Infrastructure.EntityFramework": "[2023.5.0, )"
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "12.0.1",
+          "Core": "2023.5.1",
+          "Infrastructure.EntityFramework": "2023.5.1"
         }
       },
       "core": {
         "type": "Project",
         "dependencies": {
-          "AWSSDK.SQS": "[3.7.2.47, )",
-          "AWSSDK.SimpleEmail": "[3.7.0.150, )",
-          "AspNetCoreRateLimit": "[4.0.2, )",
-          "AspNetCoreRateLimit.Redis": "[1.0.1, )",
-          "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.3.2, )",
-          "Azure.Storage.Blobs": "[12.14.1, )",
-          "Azure.Storage.Queues": "[12.12.0, )",
-          "BitPay.Light": "[1.0.1907, )",
-          "Braintree": "[5.12.0, )",
-          "DnsClient": "[1.7.0, )",
-          "Fido2.AspNet": "[3.0.1, )",
-          "Handlebars.Net": "[2.1.2, )",
-          "IdentityServer4": "[4.1.2, )",
-          "IdentityServer4.AccessTokenValidation": "[3.0.1, )",
-          "LaunchDarkly.ServerSdk": "[7.0.0, )",
-          "MailKit": "[3.2.0, )",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "[6.0.4, )",
-          "Microsoft.Azure.Cosmos.Table": "[1.0.8, )",
-          "Microsoft.Azure.NotificationHubs": "[4.1.0, )",
-          "Microsoft.Azure.ServiceBus": "[5.2.0, )",
-          "Microsoft.Data.SqlClient": "[5.0.1, )",
-          "Microsoft.Extensions.Caching.StackExchangeRedis": "[6.0.6, )",
-          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[6.0.1, )",
-          "Microsoft.Extensions.Configuration.UserSecrets": "[6.0.1, )",
-          "Microsoft.Extensions.Identity.Stores": "[6.0.4, )",
-          "Newtonsoft.Json": "[13.0.1, )",
-          "Otp.NET": "[1.2.2, )",
-          "Quartz": "[3.4.0, )",
-          "SendGrid": "[9.27.0, )",
-          "Sentry.Serilog": "[3.16.0, )",
-          "Serilog.AspNetCore": "[5.0.0, )",
-          "Serilog.Extensions.Logging": "[3.1.0, )",
-          "Serilog.Extensions.Logging.File": "[2.0.0, )",
-          "Serilog.Sinks.AzureCosmosDB": "[2.0.0, )",
-          "Serilog.Sinks.SyslogMessages": "[2.0.6, )",
-          "Stripe.net": "[40.0.0, )",
-          "YubicoDotNetClient": "[1.2.0, )"
+          "AWSSDK.SQS": "3.7.2.47",
+          "AWSSDK.SimpleEmail": "3.7.0.150",
+          "AspNetCoreRateLimit": "4.0.2",
+          "AspNetCoreRateLimit.Redis": "1.0.1",
+          "Azure.Extensions.AspNetCore.DataProtection.Blobs": "1.3.2",
+          "Azure.Storage.Blobs": "12.14.1",
+          "Azure.Storage.Queues": "12.12.0",
+          "BitPay.Light": "1.0.1907",
+          "Braintree": "5.12.0",
+          "DnsClient": "1.7.0",
+          "Fido2.AspNet": "3.0.1",
+          "Handlebars.Net": "2.1.2",
+          "IdentityServer4": "4.1.2",
+          "IdentityServer4.AccessTokenValidation": "3.0.1",
+          "LaunchDarkly.ServerSdk": "7.0.0",
+          "MailKit": "3.2.0",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "6.0.4",
+          "Microsoft.Azure.Cosmos.Table": "1.0.8",
+          "Microsoft.Azure.NotificationHubs": "4.1.0",
+          "Microsoft.Azure.ServiceBus": "5.2.0",
+          "Microsoft.Data.SqlClient": "5.0.1",
+          "Microsoft.Extensions.Caching.StackExchangeRedis": "6.0.6",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "6.0.1",
+          "Microsoft.Extensions.Configuration.UserSecrets": "6.0.1",
+          "Microsoft.Extensions.Identity.Stores": "6.0.4",
+          "Newtonsoft.Json": "13.0.1",
+          "Otp.NET": "1.2.2",
+          "Quartz": "3.4.0",
+          "SendGrid": "9.27.0",
+          "Sentry.Serilog": "3.16.0",
+          "Serilog.AspNetCore": "5.0.0",
+          "Serilog.Extensions.Logging": "3.1.0",
+          "Serilog.Extensions.Logging.File": "2.0.0",
+          "Serilog.Sinks.AzureCosmosDB": "2.0.0",
+          "Serilog.Sinks.SyslogMessages": "2.0.6",
+          "Stripe.net": "40.0.0",
+          "YubicoDotNetClient": "1.2.0"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.5.0, )",
-          "Dapper": "[2.0.123, )"
+          "Core": "2023.5.1",
+          "Dapper": "2.0.123"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.5.0, )",
+          "Core": "[2023.5.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -3009,9 +3009,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.5.0, )",
-          "Infrastructure.Dapper": "[2023.5.0, )",
-          "Infrastructure.EntityFramework": "[2023.5.0, )"
+          "Core": "2023.5.1",
+          "Infrastructure.Dapper": "2023.5.1",
+          "Infrastructure.EntityFramework": "2023.5.1"
         }
       }
     }
