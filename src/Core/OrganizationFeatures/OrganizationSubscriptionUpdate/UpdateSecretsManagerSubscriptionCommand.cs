@@ -226,15 +226,14 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
     }
 
-    private async Task<string> ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan, SecretsManagerSubscriptionUpdate update)
+    private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
+        SecretsManagerSubscriptionUpdate update)
     {
         var paymentIntentClientSecret = await _paymentService.AdjustSeatsAsync(organization, plan, update.NewAdditionalSeats);
 
         // TODO: call ReferenceEventService - see AC-1481
 
         organization.SmSeats = update.NewTotalSeats;
-        
-        return paymentIntentClientSecret;
     }
 
     private async Task AdjustServiceAccountsAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
@@ -293,7 +292,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
     }
 
-    private async Task<string> ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(Organization organization, Plan plan, SecretsManagerSubscriptionUpdate update)
+    private async Task ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(Organization organization, Plan plan,
+        SecretsManagerSubscriptionUpdate update)
     {
         var paymentIntentClientSecret =
             await _paymentService.AdjustServiceAccountsAsync(organization, plan,
@@ -302,7 +302,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // TODO: call ReferenceEventService - see AC-1481
         
         organization.SmServiceAccounts = update.NewTotalServiceAccounts;
-        return paymentIntentClientSecret;
     }
 
     private void UpdateSeatsAutoscaling(Organization organization, int maxAutoscaleSeats, Plan plan)
