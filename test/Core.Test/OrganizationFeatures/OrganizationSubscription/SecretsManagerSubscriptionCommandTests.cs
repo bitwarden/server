@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscription;
 [SutProviderCustomize]
-public class SubscribeOrganizationSmCommandTests
+public class SecretsManagerSubscriptionCommandTests
 {
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]

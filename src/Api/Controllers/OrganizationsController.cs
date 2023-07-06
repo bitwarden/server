@@ -53,7 +53,7 @@ public class OrganizationsController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
-    private readonly ISubscribeOrganziationSmCommand _subscribeOrganziationSmCommand;
+    private readonly ISecretsManagerSubscriptionCommand _secretsManagerSubscriptionCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -76,7 +76,7 @@ public class OrganizationsController : Controller
         GlobalSettings globalSettings,
         ILicensingService licensingService,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        ISubscribeOrganziationSmCommand subscribeOrganziationSmCommand)
+        ISecretsManagerSubscriptionCommand secretsManagerSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -98,7 +98,7 @@ public class OrganizationsController : Controller
         _globalSettings = globalSettings;
         _licensingService = licensingService;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
-        _subscribeOrganziationSmCommand = subscribeOrganziationSmCommand;
+        _secretsManagerSubscriptionCommand = secretsManagerSubscriptionCommand;
     }
 
     [HttpGet("{id}")]
@@ -351,7 +351,7 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-        var result = await _subscribeOrganziationSmCommand.SignUpAsync(orgIdGuid, model.AdditionalSeats,
+        var result = await _secretsManagerSubscriptionCommand.SignUpAsync(orgIdGuid, model.AdditionalSeats,
             model.AdditionalServiceAccounts.GetValueOrDefault());
 
         return new OrganizationResponseModel(result.Item1);

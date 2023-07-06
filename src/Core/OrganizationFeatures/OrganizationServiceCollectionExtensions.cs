@@ -125,7 +125,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<IGetOrganizationQuery, GetOrganizationQuery>();
         services.AddScoped<ISecretsManagerPlanValidation, SecretsManagerPlanValidation>();
-        services.AddScoped<ISubscribeOrganziationSmCommand, SubscribeOrganizationSmCommand>();
+        services.AddScoped<ISecretsManagerSubscriptionCommand, SecretsManagerSubscriptionCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

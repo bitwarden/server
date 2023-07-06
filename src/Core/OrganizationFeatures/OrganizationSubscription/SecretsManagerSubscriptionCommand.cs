@@ -8,7 +8,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscription;
 
-public class SubscribeOrganizationSmCommand : ISubscribeOrganziationSmCommand
+public class SecretsManagerSubscriptionCommand : ISecretsManagerSubscriptionCommand
 {
     private readonly IGetOrganizationQuery _getOrganizationQuery;
     private readonly ISecretsManagerPlanValidation _secretsManagerPlanValidation;
@@ -16,7 +16,7 @@ public class SubscribeOrganizationSmCommand : ISubscribeOrganziationSmCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public SubscribeOrganizationSmCommand(
+    public SecretsManagerSubscriptionCommand(
         IGetOrganizationQuery organizationQuery,
         ISecretsManagerPlanValidation secretsManagerPlanValidation,
         IPaymentService paymentService,
