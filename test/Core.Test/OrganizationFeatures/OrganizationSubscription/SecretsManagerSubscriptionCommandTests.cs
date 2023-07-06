@@ -21,7 +21,7 @@ public class SubscribeOrganizationSmCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public async Task SignUpAsync_ReturnsSuccessAndClientSecret_WhenOrganizationAndPlanExist(PlanType planType,
-        SutProvider<SubscribeOrganizationSmCommand> sutProvider)
+        SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
     {
         var organizationId = Guid.NewGuid();
         var additionalSeats = 10;
@@ -79,7 +79,7 @@ public class SubscribeOrganizationSmCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_ThrowsNotFoundException_WhenOrganizationIsNull(SutProvider<SubscribeOrganizationSmCommand> sutProvider)
+    public async Task SignUpAsync_ThrowsNotFoundException_WhenOrganizationIsNull(SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
     {
         var organizationId = Guid.NewGuid();
         var additionalSeats = 10;
@@ -93,7 +93,7 @@ public class SubscribeOrganizationSmCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_ThrowsGatewayException_WhenGatewayCustomerIdIsNullOrWhitespace(SutProvider<SubscribeOrganizationSmCommand> sutProvider)
+    public async Task SignUpAsync_ThrowsGatewayException_WhenGatewayCustomerIdIsNullOrWhitespace(SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
     {
         var organizationId = Guid.NewGuid();
         var additionalSeats = 10;
