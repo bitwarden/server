@@ -330,11 +330,24 @@ public class OrganizationsController : Controller
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+        
         if (!await _currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
-        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(id);
+        
+        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (secretsManagerPlan == null)
+        {
+            throw new NotFoundException("Invalid Secrets Manager plan.");
+        }
+        
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, secretsManagerPlan);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
 
