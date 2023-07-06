@@ -82,6 +82,8 @@ public class Startup
             });
         }
 
+        services.AddOosServices();
+
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
