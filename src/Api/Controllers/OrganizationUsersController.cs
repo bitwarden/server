@@ -2,7 +2,6 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -309,7 +308,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
-    public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
+    public async Task PutResetPasswordEnrollment(Guid orgId, Guid userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -317,16 +316,14 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.ResetPasswordKey != null && !await _userService.VerifySecretAsync(user, model.Secret))
+        var callingUserId = user.Id;
+        await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+            orgId, userId, model.ResetPasswordKey, callingUserId);
+
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
+        if (orgUser.Status == OrganizationUserStatusType.Invited)
         {
-            await Task.Delay(2000);
-            throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-        }
-        else
-        {
-            var callingUserId = user.Id;
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
-               new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            await _organizationService.AcceptUserAsync(orgId, user, _userService);
         }
     }
 
@@ -450,7 +447,7 @@ public class OrganizationUsersController : Controller
     private async Task RestoreOrRevokeUserAsync(
         Guid orgId,
         Guid id,
-        Func<OrganizationUser, Guid?, Task> statusAction)
+        Func<Core.Entities.OrganizationUser, Guid?, Task> statusAction)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -470,7 +467,7 @@ public class OrganizationUsersController : Controller
     private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> RestoreOrRevokeUsersAsync(
         Guid orgId,
         OrganizationUserBulkRequestModel model,
-        Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> statusAction)
+        Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<Core.Entities.OrganizationUser, string>>>> statusAction)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
