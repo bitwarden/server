@@ -328,14 +328,26 @@ public class OrganizationsController : Controller
 
     [HttpPost("{id}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSmSubscription(string id, [FromBody] OrganizationSmSubscriptionUpdateRequestModel model)
+    public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.EditSubscription(orgIdGuid))
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
         {
             throw new NotFoundException();
         }
-        var organizationUpdate = model.ToOrganizationUpdate(orgIdGuid);
+
+        if (!await _currentContext.EditSubscription(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (secretsManagerPlan == null)
+        {
+            throw new NotFoundException("Invalid Secrets Manager plan.");
+        }
+
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, secretsManagerPlan);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
 
@@ -349,7 +361,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value, null);
+        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 

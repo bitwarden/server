@@ -39,6 +39,11 @@ public class ProjectAuthorizationHandlerTests
                     .ReturnsForAnyArgs(
                         (AccessClientType.User, userId));
                 break;
+            case PermissionType.RunAsServiceAccountWithPermission:
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+                    .ReturnsForAnyArgs(
+                        (AccessClientType.ServiceAccount, userId));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }
@@ -103,7 +108,6 @@ public class ProjectAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task CanCreateProject_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
@@ -125,6 +129,7 @@ public class ProjectAuthorizationHandlerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission)]
     public async Task CanCreateProject_Success(PermissionType permissionType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
@@ -199,6 +204,8 @@ public class ProjectAuthorizationHandlerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false)]
     public async Task CanUpdateProject_ShouldNotSucceed(PermissionType permissionType, bool read, bool write,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal,
         Guid userId)
@@ -221,6 +228,8 @@ public class ProjectAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsAdmin, false, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true)]
     public async Task CanUpdateProject_Success(PermissionType permissionType, bool read, bool write,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal,
         Guid userId)

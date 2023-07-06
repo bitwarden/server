@@ -60,6 +60,7 @@ public class PlanResponseModel : ResponseModel
         HasAdditionalServiceAccountOption = plan.HasAdditionalServiceAccountOption;
         MaxProjects = plan.MaxProjects;
         BitwardenProduct = plan.BitwardenProduct;
+        StripeServiceAccountPlanId = plan.StripeServiceAccountPlanId;
     }
 
     public PlanType Type { get; set; }
@@ -106,7 +107,7 @@ public class PlanResponseModel : ResponseModel
     public decimal SeatPrice { get; set; }
     public decimal AdditionalStoragePricePerGb { get; set; }
     public decimal PremiumAccessOptionPrice { get; set; }
-
+    public string StripeServiceAccountPlanId { get; set; }
     public decimal? AdditionalPricePerServiceAccount { get; set; }
     public short? BaseServiceAccount { get; set; }
     public short? MaxServiceAccounts { get; set; }
