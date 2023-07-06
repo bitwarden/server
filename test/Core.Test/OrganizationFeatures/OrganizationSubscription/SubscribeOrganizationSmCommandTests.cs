@@ -2,7 +2,8 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSmSubscription;
-using Bit.Core.OrganizationFeatures.OrganizationSmSubscription.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationSubscription;
+using Bit.Core.OrganizationFeatures.OrganizationSubscription.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;

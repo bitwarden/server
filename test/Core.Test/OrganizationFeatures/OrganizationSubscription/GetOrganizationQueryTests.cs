@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSmSubscription;
+using Bit.Core.OrganizationFeatures.OrganizationSubscription;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
