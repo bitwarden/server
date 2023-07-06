@@ -1455,9 +1455,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("No user email.");
         }
 
-        if (!user.UsesKeyConnector)
+        if (user.MasterPassword != null)
         {
-            throw new BadRequestException("Not using Key Connector.");
+            throw new BadRequestException("OTP Verification not allowed if user has a password");
         }
 
         var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
@@ -1473,8 +1473,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        return user.UsesKeyConnector
-            ? await VerifyOTPAsync(user, secret)
-            : await CheckPasswordAsync(user, secret);
+        return user.HasMasterPassword()
+            ? await CheckPasswordAsync(user, secret)
+            : await VerifyOTPAsync(user, secret);
     }
 }
