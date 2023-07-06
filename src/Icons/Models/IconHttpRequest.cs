@@ -37,7 +37,7 @@ public class IconHttpRequest
 
     private async Task<HttpResponseMessage> FetchAsync()
     {
-        if (!IconUri.TryCreate(_uri, out var iconUri) || !iconUri!.IsValid)
+        if (!IconUri.TryCreate(_uri, out var iconUri) || !iconUri.IsValid)
         {
             return NotFound;
         }

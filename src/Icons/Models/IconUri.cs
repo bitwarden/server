@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Sockets;
 using Bit.Icons.Extensions;
@@ -59,7 +60,7 @@ public class IconUri
         Host = uri.Host;
     }
 
-    public static bool TryCreate(Uri uri, out IconUri? iconUri)
+    public static bool TryCreate(Uri uri, [NotNullWhen(true)] out IconUri? iconUri)
     {
         try
         {
