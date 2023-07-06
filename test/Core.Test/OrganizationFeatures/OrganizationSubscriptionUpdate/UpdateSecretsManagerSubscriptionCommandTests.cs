@@ -6,8 +6,6 @@ using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Tools.Models.Business;
-using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -397,7 +395,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             NewTotalSeats = organization.SmSeats.GetValueOrDefault() + 5,
             NewAdditionalSeats = (organization.SmSeats.GetValueOrDefault() + 5) - plan.BaseSeats,
             NewTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + 100,
-            NewAdditionalServiceAccounts = (organization.SmServiceAccounts.GetValueOrDefault() + 100) - (int)plan.BaseServiceAccount
+            NewAdditionalServiceAccounts = (organization.SmServiceAccounts.GetValueOrDefault() + 100) - (int)plan.BaseServiceAccount,
+            AutoscaleSeats = 15 != organization.MaxAutoscaleSeats.GetValueOrDefault(),
+            AutoscaleServiceAccounts = 200 != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault()
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
@@ -587,7 +587,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSeats = 15,
             SeatAdjustment = 0,
             MaxAutoscaleServiceAccounts = 200,
-            ServiceAccountsAdjustment = 0
+            ServiceAccountsAdjustment = 0,
+            AutoscaleSeats = 15 != organization.MaxAutoscaleSeats.GetValueOrDefault(),
+            AutoscaleServiceAccounts = 200 != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault()
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
@@ -623,7 +625,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSeats = 1,
             SeatAdjustment = 0,
             MaxAutoscaleServiceAccounts = 300,
-            ServiceAccountsAdjustment = 0
+            ServiceAccountsAdjustment = 0,
+            AutoscaleSeats = 1 != organization.MaxAutoscaleSeats.GetValueOrDefault(),
+            AutoscaleServiceAccounts = 200 != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault()
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
@@ -660,7 +664,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             MaxAutoscaleSeats = null,
             SeatAdjustment = 0,
             MaxAutoscaleServiceAccounts = 300,
-            ServiceAccountsAdjustment = 0
+            ServiceAccountsAdjustment = 0,
+            AutoscaleSeats = false,
+            AutoscaleServiceAccounts = 300 != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault()
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);

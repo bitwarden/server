@@ -49,22 +49,22 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         var plan = GetPlanForOrganization(organization);
 
-        if (update.SeatAdjustment != 0)
+        if (update.AdjustingSeats)
         {
             await AdjustSeatsAsync(organization, update, plan);
         }
 
-        if (update.ServiceAccountsAdjustment != 0)
+        if (update.AdjustingServiceAccounts)
         {
             await AdjustServiceAccountsAsync(organization, update, plan);
         }
 
-        if (update.MaxAutoscaleSeats.HasValue && update.MaxAutoscaleSeats != organization.MaxAutoscaleSmSeats.GetValueOrDefault())
+        if (update.AutoscaleSeats)
         {
             UpdateSeatsAutoscaling(organization, update.MaxAutoscaleSeats.Value, plan);
         }
 
-        if (update.MaxAutoscaleServiceAccounts.HasValue && update.MaxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault())
+        if (update.AutoscaleServiceAccounts)
         {
             UpdateServiceAccountAutoscaling(organization, update.MaxAutoscaleServiceAccounts.Value, plan);
         }
@@ -103,14 +103,43 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (update.AdjustingSeats)
         {
             await ProcessChargesAndRaiseEventsForAdjustSeatsAsync(organization, plan, update);
+            organization.SmSeats = update.NewTotalSeats;
         }
 
         if (update.AdjustingServiceAccounts)
         {
             await ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(organization, plan, update);
+            organization.SmServiceAccounts = update.NewTotalServiceAccounts;
+        }
+
+        if (update.AutoscaleSeats)
+        {
+            organization.MaxAutoscaleSmSeats = update.MaxAutoscaleSeats;
+        }
+
+        if (update.AutoscaleServiceAccounts)
+        {
+            organization.MaxAutoscaleSmServiceAccounts = update.MaxAutoscaleServiceAccounts;
         }
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+    }
+
+    private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
+        SecretsManagerSubscriptionUpdate update)
+    {
+        await _paymentService.AdjustSeatsAsync(organization, plan, update.NewAdditionalSeats);
+
+        // TODO: call ReferenceEventService - see AC-1481
+    }
+
+    private async Task ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(Organization organization, Plan plan,
+        SecretsManagerSubscriptionUpdate update)
+    {
+        await _paymentService.AdjustServiceAccountsAsync(organization, plan,
+            update.NewAdditionalServiceAccounts);
+
+        // TODO: call ReferenceEventService - see AC-1481
     }
 
     private async Task SendEmailIfAutoscaleLimitReached(Organization organization)
@@ -216,16 +245,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
     }
 
-    private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
-        SecretsManagerSubscriptionUpdate update)
-    {
-        await _paymentService.AdjustSeatsAsync(organization, plan, update.NewAdditionalSeats);
-
-        // TODO: call ReferenceEventService - see AC-1481
-
-        organization.SmSeats = update.NewTotalSeats;
-    }
-
     private async Task AdjustServiceAccountsAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
         if (organization.SmServiceAccounts == null)
@@ -280,17 +299,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
     }
 
-    private async Task ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(Organization organization, Plan plan,
-        SecretsManagerSubscriptionUpdate update)
-    {
-        await _paymentService.AdjustServiceAccountsAsync(organization, plan,
-                update.NewAdditionalServiceAccounts);
-
-        // TODO: call ReferenceEventService - see AC-1481
-
-        organization.SmServiceAccounts = update.NewTotalServiceAccounts;
-    }
-
     private void UpdateSeatsAutoscaling(Organization organization, int maxAutoscaleSeats, Plan plan)
     {
         if (organization.SmSeats.HasValue && maxAutoscaleSeats < organization.SmSeats.Value)
@@ -310,8 +318,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             throw new BadRequestException("Your plan does not allow Secrets Manager seat autoscaling.");
         }
-
-        organization.MaxAutoscaleSmSeats = maxAutoscaleSeats;
     }
 
     private void UpdateServiceAccountAutoscaling(Organization organization, int maxAutoscaleServiceAccounts, Plan plan)
@@ -334,6 +340,5 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 $"but you have specified a max autoscale count of {maxAutoscaleServiceAccounts}.",
                 "Reduce your max autoscale count."));
         }
-        organization.MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
     }
 }

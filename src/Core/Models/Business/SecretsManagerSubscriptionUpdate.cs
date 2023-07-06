@@ -42,4 +42,6 @@ public class SecretsManagerSubscriptionUpdate
 
     public bool AdjustingSeats => SeatAdjustment != 0;
     public bool AdjustingServiceAccounts => ServiceAccountsAdjustment != 0;
+    public bool AutoscaleSeats { get; set; }
+    public bool AutoscaleServiceAccounts { get; set; }
 }
