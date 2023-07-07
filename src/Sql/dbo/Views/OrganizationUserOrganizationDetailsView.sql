@@ -44,8 +44,7 @@ SELECT
     OU.[AccessSecretsManager],
     O.[UsePasswordManager],
     O.[SmSeats],
-    O.[SmServiceAccounts],
-    O.[SecretsManagerBeta]
+    O.[SmServiceAccounts]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

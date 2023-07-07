@@ -362,19 +362,7 @@ LEFT JOIN
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
 GO
 
--- Update the metadata for the following stored procedures and view so that the SecretsManagerBeta column is included
-IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]') IS NOT NULL
-BEGIN
-    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatus]';
-END
-GO
-
-IF OBJECT_ID('[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]') IS NOT NULL
-BEGIN
-    EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationUserOrganizationDetails_ReadByUserIdStatusOrganizationId]';
-END
-GO
-
+-- Update the metadata for the following view so that the SecretsManagerBeta column is included
 IF OBJECT_ID('[dbo].[OrganizationView]') IS NOT NULL
 BEGIN
     EXECUTE sp_refreshview N'[dbo].[OrganizationView]';
