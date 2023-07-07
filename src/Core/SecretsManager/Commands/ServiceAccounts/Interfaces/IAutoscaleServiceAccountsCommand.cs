@@ -2,5 +2,5 @@
 
 public interface IAutoscaleServiceAccountsCommand
 {
-    Task<string> AutoscaleServiceAccountsAsync(Guid organizationId, int serviceAccountsToAdd);
+    Task AutoscaleServiceAccountsAsync(Guid organizationId, int serviceAccountsToAdd);
 }
