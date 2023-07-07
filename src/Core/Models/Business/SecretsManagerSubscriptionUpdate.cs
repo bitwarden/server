@@ -7,41 +7,50 @@ public class SecretsManagerSubscriptionUpdate
     /// <summary>
     /// The seats to be added or removed from the organization
     /// </summary>
-    public int SeatAdjustment { get; set; }
+    public int SmSeatsAdjustment { get; set; }
 
     /// <summary>
     /// The total seats the organization will have after the update, including any base seats included in the plan
     /// </summary>
-    public int NewTotalSeats { get; set; }
+    public int SmSeats { get; set; }
 
     /// <summary>
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
-    public int NewAdditionalSeats { get; set; }
+    public int SmSeatsExcludingBase { get; set; }
 
-    public int? MaxAutoscaleSeats { get; set; }
+    /// <summary>
+    /// The new autoscale limit for seats, expressed as a total (not an adjustment).
+    /// This may or may not be the same as the current autoscale limit.
+    /// </summary>
+    public int? MaxAutoscaleSmSeats { get; set; }
 
     /// <summary>
     /// The service accounts to be added or removed from the organization
     /// </summary>
-    public int ServiceAccountsAdjustment { get; set; }
+    public int SmServiceAccountsAdjustment { get; set; }
 
     /// <summary>
     /// The total service accounts the organization will have after the update, including the base service accounts
     /// included in the plan
     /// </summary>
-    public int NewTotalServiceAccounts { get; set; }
+    public int SmServiceAccounts { get; set; }
 
     /// <summary>
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
-    public int NewAdditionalServiceAccounts { get; set; }
-    public int? MaxAutoscaleServiceAccounts { get; set; }
+    public int SmServiceAccountsExcludingBase { get; set; }
 
-    public bool AdjustingSeats => SeatAdjustment != 0;
-    public bool AdjustingServiceAccounts => ServiceAccountsAdjustment != 0;
-    public bool AutoscaleSeats { get; set; }
-    public bool AutoscaleServiceAccounts { get; set; }
+    /// <summary>
+    /// The new autoscale limit for service accounts, expressed as a total (not an adjustment).
+    /// This may or may not be the same as the current autoscale limit.
+    /// </summary>
+    public int? MaxAutoscaleSmServiceAccounts { get; set; }
+
+    public bool SmSeatsChanged => SmSeatsAdjustment != 0;
+    public bool SmServiceAccountsChanged => SmServiceAccountsAdjustment != 0;
+    public bool MaxAutoscaleSmSeatsChanged { get; set; }
+    public bool MaxAutoscaleSmServiceAccountsChanged { get; set; }
 }
