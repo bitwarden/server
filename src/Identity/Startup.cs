@@ -5,6 +5,7 @@ using Bit.Core;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Repositories.Noop;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
