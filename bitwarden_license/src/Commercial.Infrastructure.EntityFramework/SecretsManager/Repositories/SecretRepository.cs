@@ -298,13 +298,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        var secrets = dbContext.Secret.Where(s => s.DeletedDate != null && s.DeletedDate < currentDate.AddDays(-deleteAfterThisNumberOfDays));
-        await secrets.ForEachAsync(secret =>
-        {
-            dbContext.Attach(secret);
-            dbContext.Remove(secret);
-        });
-        
+        await dbContext.Secret.Where(s => s.DeletedDate != null && s.DeletedDate < currentDate.AddDays(-deleteAfterThisNumberOfDays)).ExecuteDeleteAsync();
+
         await dbContext.SaveChangesAsync();
     }
 
