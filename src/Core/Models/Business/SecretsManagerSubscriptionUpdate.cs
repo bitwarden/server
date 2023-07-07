@@ -42,7 +42,7 @@ public class SecretsManagerSubscriptionUpdate
     /// Usually this is what the organization is billed for
     /// </summary>
     public int SmServiceAccountsExcludingBase { get; set; }
-    
+
     /// <summary>
     /// The new autoscale limit for service accounts, expressed as a total (not an adjustment).
     /// This may or may not be the same as the current autoscale limit.
