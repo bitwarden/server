@@ -20,6 +20,10 @@ public class SecretsManagerSubscriptionUpdate
     /// </summary>
     public int NewAdditionalSeats { get; set; }
 
+    /// <summary>
+    /// The new autoscale limit for seats, expressed as a total (not an adjustment).
+    /// This may or may not be the same as the current autoscale limit.
+    /// </summary>
     public int? MaxAutoscaleSeats { get; set; }
 
     /// <summary>
@@ -38,10 +42,15 @@ public class SecretsManagerSubscriptionUpdate
     /// Usually this is what the organization is billed for
     /// </summary>
     public int NewAdditionalServiceAccounts { get; set; }
+    
+    /// <summary>
+    /// The new autoscale limit for service accounts, expressed as a total (not an adjustment).
+    /// This may or may not be the same as the current autoscale limit.
+    /// </summary>
     public int? MaxAutoscaleServiceAccounts { get; set; }
 
-    public bool AdjustingSeats => SeatAdjustment != 0;
-    public bool AdjustingServiceAccounts => ServiceAccountsAdjustment != 0;
-    public bool AutoscaleSeats { get; set; }
-    public bool AutoscaleServiceAccounts { get; set; }
+    public bool SeatAdjustmentRequired => SeatAdjustment != 0;
+    public bool ServiceAccountAdjustmentRequired => ServiceAccountsAdjustment != 0;
+    public bool AutoscaleSeatAdjustmentRequired { get; set; }
+    public bool AutoscaleServiceAccountAdjustmentRequired { get; set; }
 }

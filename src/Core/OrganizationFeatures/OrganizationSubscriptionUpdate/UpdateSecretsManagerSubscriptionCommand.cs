@@ -49,22 +49,22 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         var plan = GetPlanForOrganization(organization);
 
-        if (update.AdjustingSeats)
+        if (update.SeatAdjustmentRequired)
         {
             await ValidateSeatAdjustmentAsync(organization, update, plan);
         }
 
-        if (update.AdjustingServiceAccounts)
+        if (update.ServiceAccountAdjustmentRequired)
         {
             await ValidateServiceAccountsAdjustmentAsync(organization, update, plan);
         }
 
-        if (update.AutoscaleSeats)
+        if (update.AutoscaleSeatAdjustmentRequired)
         {
             ValidateSeatsAutoscaling(organization, update.MaxAutoscaleSeats.GetValueOrDefault(), plan);
         }
 
-        if (update.AutoscaleServiceAccounts)
+        if (update.AutoscaleServiceAccountAdjustmentRequired)
         {
             ValidateServiceAccountAutoscaling(organization, update.MaxAutoscaleServiceAccounts.GetValueOrDefault(), plan);
         }
@@ -100,24 +100,24 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private async Task FinalizeSubscriptionAdjustmentAsync(Organization organization,
         Plan plan, SecretsManagerSubscriptionUpdate update)
     {
-        if (update.AdjustingSeats)
+        if (update.SeatAdjustmentRequired)
         {
             await ProcessChargesAndRaiseEventsForAdjustSeatsAsync(organization, plan, update);
             organization.SmSeats = update.NewTotalSeats;
         }
 
-        if (update.AdjustingServiceAccounts)
+        if (update.ServiceAccountAdjustmentRequired)
         {
             await ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(organization, plan, update);
             organization.SmServiceAccounts = update.NewTotalServiceAccounts;
         }
 
-        if (update.AutoscaleSeats)
+        if (update.AutoscaleSeatAdjustmentRequired)
         {
             organization.MaxAutoscaleSmSeats = update.MaxAutoscaleSeats;
         }
 
-        if (update.AutoscaleServiceAccounts)
+        if (update.AutoscaleServiceAccountAdjustmentRequired)
         {
             organization.MaxAutoscaleSmServiceAccounts = update.MaxAutoscaleServiceAccounts;
         }

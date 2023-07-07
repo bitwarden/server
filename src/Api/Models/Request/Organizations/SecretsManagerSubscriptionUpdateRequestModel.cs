@@ -36,8 +36,8 @@ public class SecretsManagerSubscriptionUpdateRequestModel
 
             NewTotalServiceAccounts = newTotalServiceAccounts,
             NewAdditionalServiceAccounts = newTotalServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault(),
-            AutoscaleSeats = autoscaleSeats,
-            AutoscaleServiceAccounts = autoscaleServiceAccounts
+            AutoscaleSeatAdjustmentRequired = autoscaleSeats,
+            AutoscaleServiceAccountAdjustmentRequired = autoscaleServiceAccounts
         };
 
         return orgUpdate;
