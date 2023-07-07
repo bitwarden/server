@@ -86,13 +86,13 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
     }
 }
 
-public class SecretsManagerSubscriptionUpdate : SubscriptionUpdate
+public class SecretsManagerUpdate : SubscriptionUpdate
 {
     private readonly StaticStore.Plan _plan;
     private readonly long? _additionalSeats;
     private readonly long? _additionalServiceAccounts;
     protected override List<string> PlanIds => new() { _plan.StripeSeatPlanId, _plan.StripeServiceAccountPlanId };
-    public SecretsManagerSubscriptionUpdate(StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
+    public SecretsManagerUpdate(StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
     {
         _plan = plan;
         _additionalSeats = additionalSeats;
