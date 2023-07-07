@@ -4,6 +4,8 @@ using AspNetCoreRateLimit;
 using Bit.Core;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
+using Bit.Core.Repositories.Noop;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
@@ -46,7 +48,7 @@ public class Startup
         // Repositories
         services.AddDatabaseRepositories(globalSettings);
 
-        services.AddOosServices();
+        services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
 
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();

@@ -43,12 +43,15 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
     {
         _plan = plan;
         _additionalSeats = additionalSeats;
-        _previousSeats = plan.BitwardenProduct switch
+        switch (plan.BitwardenProduct)
         {
-            BitwardenProductType.PasswordManager => organization.Seats ?? 0,
-            BitwardenProductType.SecretsManager => organization.SmSeats ?? 0,
-            _ => _previousSeats
-        };
+            case BitwardenProductType.PasswordManager:
+                _previousSeats = organization.Seats.GetValueOrDefault();
+                break;
+            case BitwardenProductType.SecretsManager:
+                _previousSeats = organization.SmSeats.GetValueOrDefault();
+                break;
+        }
     }
 
     public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)

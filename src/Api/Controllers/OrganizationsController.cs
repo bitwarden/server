@@ -330,15 +330,28 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
     }
 
-    [HttpPost("{id:guid}/sm-subscription")]
+    [HttpPost("{id}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task PostSmSubscription(Guid id, [FromBody] OrganizationSmSubscriptionUpdateRequestModel model)
+    public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
         if (!await _currentContext.EditSubscription(id))
         {
             throw new NotFoundException();
         }
-        var organizationUpdate = model.ToOrganizationUpdate(id);
+
+        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (secretsManagerPlan == null)
+        {
+            throw new NotFoundException("Invalid Secrets Manager plan.");
+        }
+
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, secretsManagerPlan);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
 
@@ -367,7 +380,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value, null);
+        var result = await _organizationService.AdjustSeatsAsync(orgIdGuid, model.SeatAdjustment.Value);
         return new PaymentResponseModel { Success = true, PaymentIntentClientSecret = result };
     }
 
