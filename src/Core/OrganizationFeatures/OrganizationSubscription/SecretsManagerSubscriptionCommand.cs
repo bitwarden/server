@@ -43,6 +43,11 @@ public class SecretsManagerSubscriptionCommand : ISecretsManagerSubscriptionComm
             throw new GatewayException("Not a gateway customer.");
         }
 
+        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
+        {
+            throw new BadRequestException("No subscription found.");
+        }
+
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
 
         _secretsManagerPlanValidation.ValidateSecretsManagerPlan(plan, organization, additionalSeats, additionalServiceAccounts);
