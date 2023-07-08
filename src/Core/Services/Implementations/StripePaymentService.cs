@@ -205,7 +205,7 @@ public class StripePaymentService : IPaymentService
         int additionalSeats,
         int additionalServiceAccount = 0, DateTime? prorationDate = null)
     {
-        return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerUpdate(plan, additionalSeats, additionalServiceAccount), prorationDate);
+        return await FinalizeSubscriptionChangeAsync(org, new SubscriptionUpdateForSecretsManager(plan, additionalSeats, additionalServiceAccount), prorationDate);
     }
 
     private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
