@@ -10,5 +10,6 @@
       "extensions": ["ms-dotnettools.csharp"]
     }
   },
+  "initializeCommand": [".devcontainer/internal_dev/configure_env"],
   "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh"
 }
