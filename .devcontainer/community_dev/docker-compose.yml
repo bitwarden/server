@@ -11,9 +11,10 @@ services:
   bitwarden_mssql:
     image: mcr.microsoft.com/azure-sql-edge:latest
     restart: unless-stopped
+    env_file:
+      ../../dev/.env
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: 'd3vP@ssw0rd!' # update this in your secrets.json file if you change this!!!
       MSSQL_PID: Developer
     volumes:
       - edgesql_dev_data:/var/opt/mssql
