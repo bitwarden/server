@@ -12,13 +12,12 @@ test_env() {
 }
 
 copy_mssql_var() {
-  if grep -q "MSSQL_SA_PASSWORD" ./dev/.env; then
+  if grep -q "^MSSQL_SA_PASSWORD" ./dev/.env; then
     echo "MSSQL_SA_PASSWORD already exists in ./dev/.env"
   else
     echo "Copying MSSQL_PASSWORD to MSSQL_SA_PASSWORD"
     DB_PASSWORD=$(grep '^MSSQL_PASSWORD=' ./dev/.env)
     echo "${DB_PASSWORD/MSSQL_PASSWORD/MSSQL_SA_PASSWORD}" >> ./dev/.env
-    mv ./dev/.env.tmp ./dev/.env
   fi
 }
 
