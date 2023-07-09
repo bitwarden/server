@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  bitwarden_storage:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    restart: unless-stopped
+    volumes:
+      - ../../dev/.data/azurite:/data
+    network_mode: service:bitwarden_server

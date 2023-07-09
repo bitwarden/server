@@ -1,6 +1,6 @@
 {
   "name": "Bitwarden Community Dev",
-  "dockerComposeFile": "docker-compose.yml",
+  "dockerComposeFile": "../../.devcontainer/bitwarden_common/docker-compose.yml",
   "service": "bitwarden_server",
   "workspaceFolder": "/workspace",
   "customizations": {
@@ -10,6 +10,6 @@
       "extensions": ["ms-dotnettools.csharp"]
     }
   },
-  "initializeCommand": [".devcontainer/community_dev/configure_env"],
+  "initializeCommand": [".devcontainer/bitwarden_common/configure_env"],
   "postCreateCommand": "bash .devcontainer/community_dev/postCreateCommand.sh"
 }

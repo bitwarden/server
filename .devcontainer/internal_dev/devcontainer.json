@@ -1,7 +1,9 @@
 {
   "name": "Bitwarden Dev",
-  "dockerComposeFile": "docker-compose.yml",
-  "service": "bitwarden_server",
+  "dockerComposeFile": [
+    "../../.devcontainer/bitwarden_common/docker-compose.yml",
+    "../../.devcontainer/internal_dev/docker-compose.override.yml"
+  ],  "service": "bitwarden_server",
   "workspaceFolder": "/workspace",
   "customizations": {
     "vscode": {
@@ -10,6 +12,6 @@
       "extensions": ["ms-dotnettools.csharp"]
     }
   },
-  "initializeCommand": [".devcontainer/internal_dev/configure_env"],
+  "initializeCommand": [".devcontainer/bitwarden_common/configure_env"],
   "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh"
 }

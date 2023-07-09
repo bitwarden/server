@@ -18,7 +18,7 @@ configure_other_vars() {
     pushd ./dev >/dev/null || exit
     cp secrets.json .secrets.json.tmp
     # set DB_PASSWORD equal to .services.mssql.environment.MSSQL_SA_PASSWORD, accounting for quotes
-    DB_PASSWORD="$(grep -oP 'MSSQL_SA_PASSWORD:\s*["'"'"']?\K[^"'"'"'\s]+' $CONTAINER_CONFIG/docker-compose.yml)"
+    DB_PASSWORD="$(grep -oP 'MSSQL_SA_PASSWORD=["'"'"']?\K[^"'"'"'\s]+' $DEV_DIR/.env)"
     CERT_OUTPUT="$(./create_certificates_linux.sh)"
     #shellcheck disable=SC2086
     IDENTITY_SERVER_FINGERPRINT="$(echo $CERT_OUTPUT | awk -F 'Identity Server Dev: ' '{match($2, /[[:alnum:]]+/); print substr($2, RSTART, RLENGTH)}')"
@@ -33,14 +33,7 @@ configure_other_vars() {
         .globalSettings.identityServer.certificateThumbprint = \"$IDENTITY_SERVER_FINGERPRINT\" |
         .globalSettings.dataProtection.certificateThumbprint = \"$DATA_PROTECTION_FINGERPRINT\"" \
         .secrets.json.tmp >secrets.json
-    # # workaround for the incorrect internalService URLs being used with self-hosted dev configs
-    # cp secrets.json .secrets.json.tmp
-    # jq \
-    #     ".globalSettings.baseServiceUri.internalAdmin = \"http://localhost:62912\" |
-    #     .globalSettings.baseServiceUri.internalApi = \"http://localhost:4001\" |
-    #     .globalSettings.baseServiceUri.internalIdentity = \"http://localhost:33657\"" \
-    #     .secrets.json.tmp > secrets.json
-    # rm -f .secrets.json.tmp
+    rm -f .secrets.json.tmp
     popd >/dev/null || exit
 }
 
@@ -52,6 +45,7 @@ Proceed? [y/N] " response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
         echo "Running one-time setup script..."
         sleep 1
+        /workspace/.devcontainer/bitwarden_common/configure_env # ensure idempotence
         get_installation_id_and_key
         configure_other_vars
         pushd ./dev >/dev/null || exit
