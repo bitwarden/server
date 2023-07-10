@@ -6,6 +6,7 @@ namespace Bit.Icons.Test.Services;
 public class IconFetchingServiceTests : ServiceTestBase<IconFetchingService>
 {
     [Theory]
+    [InlineData("www.twitter.com")] // https site
     [InlineData("www.google.com")] // https site
     [InlineData("neverssl.com")] // http site
     [InlineData("neopets.com")] // uses favicon.ico
