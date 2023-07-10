@@ -55,8 +55,6 @@ Proceed? [y/N] " response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
         echo "Running one-time setup script..."
         sleep 1
-        /workspace/.devcontainer/bitwarden_common/configure_env # ensure idempotence
-        # get_installation_id_and_key # I don't think we'd need this for most internal dev work
         read -r -p \
             "Place the secrets.json and dev.pfx files from our shared Collection in the ./dev directory.
 Press <Enter> to continue."

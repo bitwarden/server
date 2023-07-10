@@ -45,7 +45,6 @@ Proceed? [y/N] " response
     if [[ "$response" =~ ^([yY][eE][sS]|[yY])+$ ]]; then
         echo "Running one-time setup script..."
         sleep 1
-        /workspace/.devcontainer/bitwarden_common/configure_env # ensure idempotence
         get_installation_id_and_key
         configure_other_vars
         pushd ./dev >/dev/null || exit
