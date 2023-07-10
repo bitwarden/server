@@ -5,6 +5,8 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -12,8 +14,6 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 

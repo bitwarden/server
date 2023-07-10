@@ -1,10 +1,10 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Models.Business;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
