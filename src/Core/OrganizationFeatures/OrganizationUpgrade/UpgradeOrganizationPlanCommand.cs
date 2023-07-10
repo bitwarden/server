@@ -28,7 +28,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly ICurrentContext _currentContext;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationService _organizationService;    
+    private readonly IOrganizationService _organizationService;
 
     public UpgradeOrganizationPlanCommand(
         IOrganizationUserRepository organizationUserRepository,
@@ -272,7 +272,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UseSecretsManager = upgrade.UseSecretsManager;
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-        
+
         if (success)
         {
             await _referenceEventService.RaiseEventAsync(
@@ -292,7 +292,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
-    
+
     private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(Models.Business.OrganizationUpgrade upgrade, Organization organization,
         Models.StaticStore.Plan newSecretsManagerPlan)
     {
@@ -329,7 +329,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             }
         }
     }
-    
+
     private async Task<Organization> GetOrgById(Guid id)
     {
         return await _organizationRepository.GetByIdAsync(id);

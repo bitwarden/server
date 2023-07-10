@@ -94,7 +94,7 @@ public class UpgradeOrganizationPlanCommandTests
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
     }
-    
+
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
     public async Task UpgradePlan_SM_Passes(Organization organization, Core.Models.Business.OrganizationUpgrade upgrade,
