@@ -15,6 +15,8 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager;
 using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 using Bit.Core.Services;
@@ -41,6 +43,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
+        services.AddOrganizationSubscriptionUpdateCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -108,6 +111,11 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
+    }
+
+    private static void AddOrganizationSubscriptionUpdateCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

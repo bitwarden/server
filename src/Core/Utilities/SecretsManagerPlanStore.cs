@@ -45,6 +45,7 @@ public static class SecretsManagerPlanStore
                 SeatPrice = 13,
                 AdditionalPricePerServiceAccount = 0.5M,
                 AllowSeatAutoscale = true,
+                AllowServiceAccountsAutoscale = true
             },
             new Plan
             {
@@ -83,6 +84,7 @@ public static class SecretsManagerPlanStore
                 SeatPrice = 144,
                 AdditionalPricePerServiceAccount = 6,
                 AllowSeatAutoscale = true,
+                AllowServiceAccountsAutoscale = true
             },
             new Plan
             {
@@ -113,6 +115,7 @@ public static class SecretsManagerPlanStore
                 SeatPrice = 7,
                 AdditionalPricePerServiceAccount = 0.5M,
                 AllowSeatAutoscale = true,
+                AllowServiceAccountsAutoscale = true
             },
             new Plan
             {
@@ -145,6 +148,7 @@ public static class SecretsManagerPlanStore
                 SeatPrice = 72,
                 AdditionalPricePerServiceAccount = 6,
                 AllowSeatAutoscale = true,
+                AllowServiceAccountsAutoscale = true
             },
             new Plan
             {
@@ -158,7 +162,7 @@ public static class SecretsManagerPlanStore
                 BaseServiceAccount = 3,
                 MaxProjects = 3,
                 MaxUsers = 2,
-                MaxServiceAccount = 3,
+                MaxServiceAccounts = 3,
                 UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
                 DisplaySortOrder = -1,
                 AllowSeatAutoscale = false,

@@ -21,6 +21,9 @@ public interface IPaymentService
         short additionalStorageGb, TaxInfo taxInfo);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
+
+    Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts,
+        DateTime? prorationDate = null);
     Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
         bool skipInAppPurchaseCheck = false);
     Task ReinstateSubscriptionAsync(ISubscriber subscriber);

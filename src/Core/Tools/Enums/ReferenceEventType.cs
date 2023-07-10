@@ -44,4 +44,8 @@ public enum ReferenceEventType
     OrganizationCreatedByAdmin,
     [EnumMember(Value = "sm-service-account-accessed-secret")]
     SmServiceAccountAccessedSecret,
+    [EnumMember(Value = "adjust-service-accounts")]
+    AdjustServiceAccounts,
+    [EnumMember(Value = "adjust-sm-seats")]
+    AdjustSmSeats,
 }

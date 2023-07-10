@@ -52,6 +52,7 @@ public class ReferenceEvent
 
     public int? Seats { get; set; }
     public int? PreviousSeats { get; set; }
+    public int? PreviousServiceAccounts { get; set; }
 
     public short? Storage { get; set; }
 
