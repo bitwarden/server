@@ -75,7 +75,7 @@ public class IconHttpRequest
 
     private async Task<HttpResponseMessage> FollowRedirectsAsync(HttpResponseMessage response, IconUri originalIconUri)
     {
-        if (_redirectsCount > _maxRedirects || response.Headers.Location == null ||
+        if (_redirectsCount >= _maxRedirects || response.Headers.Location == null ||
             !_redirectStatusCodes.Contains(response.StatusCode))
         {
             return NotFound;
