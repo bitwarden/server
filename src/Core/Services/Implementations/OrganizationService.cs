@@ -37,7 +37,6 @@ public class OrganizationService : IOrganizationService
     private readonly IDeviceRepository _deviceRepository;
     private readonly ILicensingService _licensingService;
     private readonly IEventService _eventService;
-    private readonly IInstallationRepository _installationRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
@@ -47,7 +46,6 @@ public class OrganizationService : IOrganizationService
     private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
@@ -66,7 +64,6 @@ public class OrganizationService : IOrganizationService
         IDeviceRepository deviceRepository,
         ILicensingService licensingService,
         IEventService eventService,
-        IInstallationRepository installationRepository,
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
@@ -76,7 +73,6 @@ public class OrganizationService : IOrganizationService
         IReferenceEventService referenceEventService,
         IGlobalSettings globalSettings,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IOrganizationConnectionRepository organizationConnectionRepository,
         ICurrentContext currentContext,
         ILogger<OrganizationService> logger,
         IProviderOrganizationRepository providerOrganizationRepository,
@@ -94,7 +90,6 @@ public class OrganizationService : IOrganizationService
         _deviceRepository = deviceRepository;
         _licensingService = licensingService;
         _eventService = eventService;
-        _installationRepository = installationRepository;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyRepository = policyRepository;
@@ -104,7 +99,6 @@ public class OrganizationService : IOrganizationService
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _organizationConnectionRepository = organizationConnectionRepository;
         _currentContext = currentContext;
         _logger = logger;
         _providerOrganizationRepository = providerOrganizationRepository;
