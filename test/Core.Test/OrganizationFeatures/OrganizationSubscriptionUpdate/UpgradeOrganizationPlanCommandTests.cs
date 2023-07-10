@@ -1,22 +1,23 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.OrganizationUpgrade;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Models.Business;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 using Organization = Bit.Core.Entities.Organization;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationUpgrade;
+namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
 [SutProviderCustomize]
 public class UpgradeOrganizationPlanCommandTests
 {
     [Theory, BitAutoData]
-    public async Task UpgradePlan_OrganizationIsNull_Throws(Guid organizationId, Core.Models.Business.OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_OrganizationIsNull_Throws(Guid organizationId, OrganizationUpgrade upgrade,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(Task.FromResult<Organization>(null));
@@ -25,7 +26,7 @@ public class UpgradeOrganizationPlanCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpgradePlan_GatewayCustomIdIsNull_Throws(Organization organization, Core.Models.Business.OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_GatewayCustomIdIsNull_Throws(Organization organization, OrganizationUpgrade upgrade,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         organization.GatewayCustomerId = string.Empty;
@@ -36,7 +37,7 @@ public class UpgradeOrganizationPlanCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpgradePlan_AlreadyInPlan_Throws(Organization organization, Core.Models.Business.OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_AlreadyInPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         upgrade.Plan = organization.PlanType;
@@ -47,7 +48,7 @@ public class UpgradeOrganizationPlanCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task UpgradePlan_SM_AlreadyInPlan_Throws(Organization organization, Core.Models.Business.OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_SM_AlreadyInPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         upgrade.Plan = organization.PlanType;
@@ -61,7 +62,7 @@ public class UpgradeOrganizationPlanCommandTests
     }
 
     [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
-    public async Task UpgradePlan_UpgradeFromPaidPlan_Throws(Organization organization, Core.Models.Business.OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -71,7 +72,7 @@ public class UpgradeOrganizationPlanCommandTests
     }
 
     [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
-    public async Task UpgradePlan_SM_UpgradeFromPaidPlan_Throws(Organization organization, Core.Models.Business.OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_SM_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         upgrade.UseSecretsManager = true;
@@ -85,7 +86,7 @@ public class UpgradeOrganizationPlanCommandTests
 
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_Passes(Organization organization, Core.Models.Business.OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
             SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -97,7 +98,7 @@ public class UpgradeOrganizationPlanCommandTests
 
     [Theory]
     [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_SM_Passes(Organization organization, Core.Models.Business.OrganizationUpgrade upgrade,
+    public async Task UpgradePlan_SM_Passes(Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);

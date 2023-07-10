@@ -19,7 +19,6 @@ using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
-using Bit.Core.OrganizationFeatures.OrganizationUpgrade;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;

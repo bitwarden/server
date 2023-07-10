@@ -12,8 +12,10 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationUpgrade;
+namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
 public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 {
@@ -58,7 +60,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _organizationService = organizationService;
     }
 
-    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, Models.Business.OrganizationUpgrade upgrade)
+    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
     {
         var organization = await GetOrgById(organizationId);
         if (organization == null)
@@ -293,7 +295,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 
-    private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(Models.Business.OrganizationUpgrade upgrade, Organization organization,
+    private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,
         Models.StaticStore.Plan newSecretsManagerPlan)
     {
         var newPlanSmSeats = (short)(newSecretsManagerPlan.BaseSeats +

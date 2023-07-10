@@ -19,7 +19,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
-using Bit.Core.OrganizationFeatures.OrganizationUpgrade;
 using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager;
 using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 using Bit.Core.Services;
