@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Api.Models.Request.Organizations;
 
@@ -16,7 +15,7 @@ public class SecretsManagerSubscriptionUpdateRequestModel
     public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
     {
         var orgUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, 
+            organization,
             SeatAdjustment, MaxAutoscaleSeats,
             ServiceAccountAdjustment, MaxAutoscaleServiceAccounts);
 

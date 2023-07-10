@@ -73,13 +73,13 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         await SendEmailIfAutoscaleLimitReached(organization);
     }
-    
+
     public async Task AdjustSecretsManagerServiceAccountsAsync(Guid organizationId, int smServiceAccountsAdjustment)
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        
+
         ValidateOrganization(organization);
-        
+
         await UpdateSecretsManagerSubscription(new SecretsManagerSubscriptionUpdate(organization, smServiceAccountsAdjustment));
     }
 
