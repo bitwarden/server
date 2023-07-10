@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
+﻿namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 
 public interface IUpgradeOrganizationPlanCommand
 {

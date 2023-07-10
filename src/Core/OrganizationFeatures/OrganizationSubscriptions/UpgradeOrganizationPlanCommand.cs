@@ -6,7 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -15,7 +15,7 @@ using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
+namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 {
