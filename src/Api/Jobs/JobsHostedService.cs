@@ -93,6 +93,10 @@ public class JobsHostedService : BaseJobsHostedService
         services.AddTransient<ValidateUsersJob>();
         services.AddTransient<ValidateOrganizationsJob>();
         services.AddTransient<ValidateOrganizationDomainJob>();
+    }
+
+    public static void AddCommercialSecretsManagerJobServices(IServiceCollection services)
+    {
         services.AddTransient<EmptySecretsManagerTrashJob>();
     }
 }
