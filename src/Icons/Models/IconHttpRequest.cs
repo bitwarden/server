@@ -15,29 +15,31 @@ public class IconHttpRequest
     private readonly ILogger<IIconFetchingService> _logger;
     private readonly HttpClient _httpClient;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IUriService _uriService;
     private readonly int _redirectsCount;
     private readonly Uri _uri;
     private static HttpResponseMessage NotFound => new(HttpStatusCode.NotFound);
 
-    private IconHttpRequest(Uri uri, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, int redirectsCount)
+    private IconHttpRequest(Uri uri, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService, int redirectsCount)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
         _httpClient = _httpClientFactory.CreateClient("Icons");
+        _uriService = uriService;
         _redirectsCount = redirectsCount;
         _uri = uri;
     }
 
-    public static async Task<IconHttpResponse> FetchAsync(Uri uri, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory)
+    public static async Task<IconHttpResponse> FetchAsync(Uri uri, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService)
     {
-        var pageIcons = new IconHttpRequest(uri, logger, httpClientFactory, 0);
+        var pageIcons = new IconHttpRequest(uri, logger, httpClientFactory, uriService, 0);
         var httpResponse = await pageIcons.FetchAsync();
-        return new IconHttpResponse(httpResponse, logger, httpClientFactory);
+        return new IconHttpResponse(httpResponse, logger, httpClientFactory, uriService);
     }
 
     private async Task<HttpResponseMessage> FetchAsync()
     {
-        if (!IconUri.TryCreate(_uri, out var iconUri) || !iconUri.IsValid)
+        if (!_uriService.TryGetUri(_uri, out var iconUri) || !iconUri!.IsValid)
         {
             return NotFound;
         }
@@ -82,7 +84,7 @@ public class IconHttpRequest
         using var responseForRedirect = response;
         var redirectUri = DetermineRedirectUri(responseForRedirect.Headers.Location, originalIconUri);
 
-        return await new IconHttpRequest(redirectUri, _logger, _httpClientFactory, _redirectsCount + 1).FetchAsync();
+        return await new IconHttpRequest(redirectUri, _logger, _httpClientFactory, _uriService, _redirectsCount + 1).FetchAsync();
     }
 
     private static Uri DetermineRedirectUri(Uri responseUri, IconUri originalIconUri)

@@ -121,7 +121,7 @@ public class IconLink
     /// <summary>
     /// Fetches the icon from the Href. Will always fail unless first validated with IsUsable().
     /// </summary>
-    public async Task<Icon?> FetchAsync(ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory)
+    public async Task<Icon?> FetchAsync(ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService)
     {
         if (!_validated)
         {
@@ -134,7 +134,7 @@ public class IconLink
             return null;
         }
 
-        using var response = await IconHttpRequest.FetchAsync(uri, logger, httpClientFactory);
+        using var response = await IconHttpRequest.FetchAsync(uri, logger, httpClientFactory, uriService);
         if (!response.IsSuccessStatusCode)
         {
             return null;

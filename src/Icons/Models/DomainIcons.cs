@@ -11,6 +11,7 @@ public class DomainIcons : IEnumerable<Icon>
 {
     private readonly ILogger<IIconFetchingService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IUriService _uriService;
     private readonly List<Icon> _icons = new();
 
     public string Domain { get; }
@@ -24,16 +25,17 @@ public class DomainIcons : IEnumerable<Icon>
     public IEnumerator<Icon> GetEnumerator() => ((IEnumerable<Icon>)_icons).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_icons).GetEnumerator();
 
-    private DomainIcons(string domain, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory)
+    private DomainIcons(string domain, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _uriService = uriService;
         Domain = domain;
     }
 
-    public static async Task<DomainIcons> FetchAsync(string domain, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IHtmlParser parser)
+    public static async Task<DomainIcons> FetchAsync(string domain, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IHtmlParser parser, IUriService uriService)
     {
-        var pageIcons = new DomainIcons(domain, logger, httpClientFactory);
+        var pageIcons = new DomainIcons(domain, logger, httpClientFactory, uriService);
         await pageIcons.FetchIconsAsync(parser);
         return pageIcons;
     }
@@ -50,7 +52,7 @@ public class DomainIcons : IEnumerable<Icon>
         var host = uri.Host;
 
         // first try https
-        using (var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory))
+        using (var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory, _uriService))
         {
             if (response.IsSuccessStatusCode)
             {
@@ -61,7 +63,7 @@ public class DomainIcons : IEnumerable<Icon>
 
         // then try http
         uri = uri.ChangeScheme("http");
-        using (var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory))
+        using (var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory, _uriService))
         {
             if (response.IsSuccessStatusCode)
             {
@@ -76,7 +78,7 @@ public class DomainIcons : IEnumerable<Icon>
         if (dotCount > 1 && DomainName.TryParseBaseDomain(Domain, out var baseDomain) &&
             Uri.TryCreate($"https://{baseDomain}", UriKind.Absolute, out uri))
         {
-            using var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory);
+            using var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory, _uriService);
             if (response.IsSuccessStatusCode)
             {
                 _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain, parser));
@@ -87,7 +89,7 @@ public class DomainIcons : IEnumerable<Icon>
         // Then try www
         if (dotCount < 2 && Uri.TryCreate($"https://www.{host}", UriKind.Absolute, out uri))
         {
-            using var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory);
+            using var response = await IconHttpRequest.FetchAsync(uri, _logger, _httpClientFactory, _uriService);
             if (response.IsSuccessStatusCode)
             {
                 _icons.AddRange(await response.RetrieveIconsAsync(uri, Domain, parser));

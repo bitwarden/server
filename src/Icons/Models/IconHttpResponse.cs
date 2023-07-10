@@ -15,6 +15,7 @@ public class IconHttpResponse : IEnumerable<Icon>, IDisposable
     private readonly HttpResponseMessage _response;
     private readonly ILogger<IIconFetchingService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IUriService _uriService;
     private readonly List<Icon> _icons = new();
 
     public HttpStatusCode StatusCode => _response.StatusCode;
@@ -31,11 +32,12 @@ public class IconHttpResponse : IEnumerable<Icon>, IDisposable
     public IEnumerator<Icon> GetEnumerator() => ((IEnumerable<Icon>)_icons).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_icons).GetEnumerator();
 
-    public IconHttpResponse(HttpResponseMessage response, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory)
+    public IconHttpResponse(HttpResponseMessage response, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService)
     {
         _response = response;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _uriService = uriService;
     }
 
     public async Task<IEnumerable<Icon>> RetrieveIconsAsync(Uri requestUri, string domain, IHtmlParser parser)
@@ -69,7 +71,7 @@ public class IconHttpResponse : IEnumerable<Icon>, IDisposable
             .OrderBy(l => l.Priority)
             .Take(_maxRetrievedIcons)
             .ToArray() ?? Array.Empty<IconLink>();
-        var results = await Task.WhenAll(links.Select(l => l.FetchAsync(_logger, _httpClientFactory)));
+        var results = await Task.WhenAll(links.Select(l => l.FetchAsync(_logger, _httpClientFactory, _uriService)));
         return results.Where(r => r != null).Select(r => r!);
     }
 
