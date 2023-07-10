@@ -12,6 +12,5 @@
       "extensions": ["ms-dotnettools.csharp"]
     }
   },
-  "initializeCommand": [".devcontainer/bitwarden_common/configure_env"],
   "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh"
 }
