@@ -14,19 +14,19 @@ namespace Bit.Commercial.Core.Test.SecretsManager.Queries.ServiceAccounts;
 public class CountNewServiceAccountSlotsRequiredQueryTests
 {
     [Theory]
-    [BitAutoData(5, 2)]
-    [BitAutoData(5, 0)]
-    [BitAutoData(5, 6)]
+    [BitAutoData(2, 0)]
+    [BitAutoData(0, 0)]
+    [BitAutoData(6, 3)]
     public async Task CountNewServiceAccountSlotsRequiredAsync_ReturnsCorrectCount(
-        int organizationSmServiceAccounts,
-        int currentServiceAccounts,
         int serviceAccountsToAdd,
+        int expectedNewServiceAccountsRequired,
         Organization organization,
         SutProvider<CountNewServiceAccountSlotsRequiredQuery> sutProvider)
     {
-        var availableServiceAccountSlots = Math.Max(0, organizationSmServiceAccounts - currentServiceAccounts);
-        var expectedAvailableServiceAccounts = Math.Max(0, serviceAccountsToAdd - availableServiceAccountSlots);
+        var organizationSmServiceAccounts = 5;
+        var currentServiceAccounts = 2;
 
+        organization.UseSecretsManager = true;
         organization.SmServiceAccounts = organizationSmServiceAccounts;
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -39,7 +39,7 @@ public class CountNewServiceAccountSlotsRequiredQueryTests
 
         var result = await sutProvider.Sut.CountNewServiceAccountSlotsRequiredAsync(organization.Id, serviceAccountsToAdd);
 
-        Assert.Equal(expectedAvailableServiceAccounts, result);
+        Assert.Equal(expectedNewServiceAccountsRequired, result);
 
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
             .GetServiceAccountCountByOrganizationIdAsync(organization.Id);
@@ -56,6 +56,7 @@ public class CountNewServiceAccountSlotsRequiredQueryTests
     {
         const int expectedRequiredServiceAccountsToScale = 0;
 
+        organization.UseSecretsManager = true;
         organization.SmServiceAccounts = null;
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -80,5 +81,19 @@ public class CountNewServiceAccountSlotsRequiredQueryTests
         SutProvider<CountNewServiceAccountSlotsRequiredQuery> sutProvider)
     {
         await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CountNewServiceAccountSlotsRequiredAsync(organizationId, serviceAccountsToAdd));
+    }
+
+    [Theory, BitAutoData]
+    public async Task CountNewServiceAccountSlotsRequiredAsync_WithOrganizationUseSecretsManagerFalse_ThrowsNotFound(
+        Organization organization, int serviceAccountsToAdd,
+        SutProvider<CountNewServiceAccountSlotsRequiredQuery> sutProvider)
+    {
+        organization.UseSecretsManager = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        await Assert.ThrowsAsync<NotFoundException>(async () => await sutProvider.Sut.CountNewServiceAccountSlotsRequiredAsync(organization.Id, serviceAccountsToAdd));
     }
 }

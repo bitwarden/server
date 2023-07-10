@@ -21,7 +21,7 @@ public class CountNewServiceAccountSlotsRequiredQuery : ICountNewServiceAccountS
     public async Task<int> CountNewServiceAccountSlotsRequiredAsync(Guid organizationId, int serviceAccountsToAdd)
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
-        if (organization == null)
+        if (organization == null || !organization.UseSecretsManager)
         {
             throw new NotFoundException();
         }
