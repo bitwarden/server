@@ -217,6 +217,10 @@ public class PolicyServiceTests
             UsePolicies = true,
         });
 
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.SingleOrg)
+            .Returns(Task.FromResult(new Policy { Enabled = true }));
+
         var utcNow = DateTime.UtcNow;
 
         await sutProvider.Sut.SaveAsync(policy, Substitute.For<IUserService>(), Substitute.For<IOrganizationService>(), Guid.NewGuid());
