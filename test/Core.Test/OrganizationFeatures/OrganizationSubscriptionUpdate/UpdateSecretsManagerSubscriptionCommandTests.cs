@@ -21,22 +21,16 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [Theory]
     [BitAutoData]
     public async Task UpdateSecretsManagerSubscription_NoOrganization_Throws(
-        Guid organizationId,
+        SecretsManagerSubscriptionUpdate secretsManagerSubscriptionUpdate,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationId)
+            .GetByIdAsync(secretsManagerSubscriptionUpdate.OrganizationId)
             .Returns((Organization)null);
 
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate
-        {
-            OrganizationId = organizationId,
-            MaxAutoscaleSmSeats = null,
-            SmSeatsAdjustment = 0
-        };
-
         var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
+            () => sutProvider.Sut.UpdateSecretsManagerSubscription(secretsManagerSubscriptionUpdate));
+        
         Assert.Contains("Organization is not found", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
@@ -44,12 +38,12 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [Theory]
     [BitAutoData]
     public async Task UpdateSecretsManagerSubscription_NoSecretsManagerAccess_ThrowsException(
-        Guid organizationId,
+        SecretsManagerSubscriptionUpdate secretsManagerSubscriptionUpdate,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         var organization = new Organization
         {
-            Id = organizationId,
+            Id = secretsManagerSubscriptionUpdate.OrganizationId,
             SmSeats = 10,
             SmServiceAccounts = 5,
             UseSecretsManager = false,
@@ -58,18 +52,12 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         };
 
         sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organizationId)
+            .GetByIdAsync(secretsManagerSubscriptionUpdate.OrganizationId)
             .Returns(organization);
 
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate
-        {
-            OrganizationId = organizationId,
-            SmSeatsAdjustment = 1,
-            MaxAutoscaleSmSeats = 1
-        };
-
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-             () => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
+             () => sutProvider.Sut.UpdateSecretsManagerSubscription(secretsManagerSubscriptionUpdate));
+        
         Assert.Contains("Organization has no access to Secrets Manager.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
@@ -727,6 +715,48 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Assert.Contains("Your organization currently has 301 Service Accounts. Your plan only allows (300) Service Accounts. Remove some Service Accounts", exception.Message);
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1).GetServiceAccountCountByOrganizationIdAsync(organization.Id);
         await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    public async Task AdjustSecretsManagerServiceAccountsAsync_WithEnterpriseOrTeamsPlans_Success(PlanType planType, Guid organizationId, SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = planType,
+            GatewayCustomerId = "1",
+            GatewaySubscriptionId = "2",
+            UseSecretsManager = true,
+            SmSeats = plan.BaseSeats + 10,
+            MaxAutoscaleSmSeats = 20,
+            SmServiceAccounts = plan.BaseServiceAccount + 10,
+            MaxAutoscaleSmServiceAccounts = 20
+        };
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        
+        var smServiceAccountsAdjustment = 10;
+        var expectedSmServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + smServiceAccountsAdjustment;
+        var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault();
+        
+        await sutProvider.Sut.AdjustSecretsManagerServiceAccountsAsync(organization.Id, smServiceAccountsAdjustment);
+        
+        await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustServiceAccountsAsync(
+            Arg.Is<Organization>(o => o.Id == organizationId), 
+            plan, 
+            expectedSmServiceAccountsExcludingBase);
+        // TODO: call ReferenceEventService - see AC-1481
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
+            Arg.Is<Organization>(o =>
+                o.Id == organizationId
+                && o.SmSeats == organization.SmSeats
+                && o.MaxAutoscaleSmSeats == organization.MaxAutoscaleSmSeats
+                && o.SmServiceAccounts == expectedSmServiceAccounts
+                && o.MaxAutoscaleSmServiceAccounts == organization.MaxAutoscaleSmServiceAccounts));
     }
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)

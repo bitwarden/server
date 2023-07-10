@@ -1,4 +1,8 @@
-﻿namespace Bit.Core.Models.Business;
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.StaticStore;
+
+namespace Bit.Core.Models.Business;
 
 public class SecretsManagerSubscriptionUpdate
 {
@@ -53,4 +57,47 @@ public class SecretsManagerSubscriptionUpdate
     public bool SmServiceAccountsChanged => SmServiceAccountsAdjustment != 0;
     public bool MaxAutoscaleSmSeatsChanged { get; set; }
     public bool MaxAutoscaleSmServiceAccountsChanged { get; set; }
+
+    public SecretsManagerSubscriptionUpdate()
+    {
+        
+    }
+
+    public SecretsManagerSubscriptionUpdate(
+        Organization organization, 
+        int seatAdjustment, int? maxAutoscaleSeats, 
+        int serviceAccountAdjustment, int? maxAutoscaleServiceAccounts)
+    {
+        var secretsManagerPlan = Utilities.StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (secretsManagerPlan == null)
+        {
+            throw new NotFoundException("Invalid Secrets Manager plan.");
+        }
+        
+        var newTotalSeats = organization.SmSeats.GetValueOrDefault() + seatAdjustment;
+        var autoscaleSeats = maxAutoscaleSeats.HasValue && maxAutoscaleSeats != organization.MaxAutoscaleSmSeats.GetValueOrDefault();
+        
+        var newTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + serviceAccountAdjustment;
+        var autoscaleServiceAccounts = maxAutoscaleServiceAccounts.HasValue && maxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault();
+
+        OrganizationId = organization.Id;
+
+        SmSeats = newTotalSeats;
+        SmSeatsAdjustment = seatAdjustment;
+        SmSeatsExcludingBase = newTotalSeats - secretsManagerPlan.BaseSeats;
+        MaxAutoscaleSmSeats = maxAutoscaleSeats;
+
+        SmServiceAccounts = newTotalServiceAccounts;
+        SmServiceAccountsAdjustment = serviceAccountAdjustment;
+        SmServiceAccountsExcludingBase = newTotalServiceAccounts - secretsManagerPlan.BaseServiceAccount.GetValueOrDefault();
+        MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
+
+        MaxAutoscaleSmSeatsChanged = autoscaleSeats;
+        MaxAutoscaleSmServiceAccountsChanged = autoscaleServiceAccounts;
+    }
+
+    public SecretsManagerSubscriptionUpdate(Organization organization, int serviceAccountAdjustment)
+        : this(organization, 0, null, serviceAccountAdjustment, null)
+    {
+    }
 }

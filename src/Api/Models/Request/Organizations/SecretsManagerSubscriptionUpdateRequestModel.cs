@@ -13,35 +13,12 @@ public class SecretsManagerSubscriptionUpdateRequestModel
     public int ServiceAccountAdjustment { get; set; }
     public int? MaxAutoscaleServiceAccounts { get; set; }
 
-    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization, Plan plan)
+    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
     {
-        var newTotalSeats = organization.SmSeats.GetValueOrDefault() + SeatAdjustment;
-        var newTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + ServiceAccountAdjustment;
-        var autoscaleSeats = MaxAutoscaleSeats.HasValue && MaxAutoscaleSeats !=
-                             organization.MaxAutoscaleSmSeats.GetValueOrDefault();
-        var autoscaleServiceAccounts = MaxAutoscaleServiceAccounts.HasValue &&
-                                       MaxAutoscaleServiceAccounts !=
-                                       organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault();
-
-        var orgUpdate = new SecretsManagerSubscriptionUpdate
-        {
-            OrganizationId = organization.Id,
-
-            SmSeatsAdjustment = SeatAdjustment,
-            SmSeats = newTotalSeats,
-            SmSeatsExcludingBase = newTotalSeats - plan.BaseSeats,
-
-            MaxAutoscaleSmSeats = MaxAutoscaleSeats,
-
-            SmServiceAccountsAdjustment = ServiceAccountAdjustment,
-            SmServiceAccounts = newTotalServiceAccounts,
-            SmServiceAccountsExcludingBase = newTotalServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault(),
-
-            MaxAutoscaleSmServiceAccounts = MaxAutoscaleServiceAccounts,
-
-            MaxAutoscaleSmSeatsChanged = autoscaleSeats,
-            MaxAutoscaleSmServiceAccountsChanged = autoscaleServiceAccounts
-        };
+        var orgUpdate = new SecretsManagerSubscriptionUpdate(
+            organization, 
+            SeatAdjustment, MaxAutoscaleSeats,
+            ServiceAccountAdjustment, MaxAutoscaleServiceAccounts);
 
         return orgUpdate;
     }
