@@ -8,8 +8,8 @@ public interface ICaptchaValidationService
 {
     string SiteKey { get; }
     string SiteKeyResponseKeyName { get; }
-    bool RequireCaptchaValidation(ICurrentContext currentContext, User user = null);
-    Task<CaptchaResponse> ValidateCaptchaResponseAsync(string captchResponse, string clientIpAddress,
-        User user = null);
+    bool RequireCaptchaValidation(ICurrentContext currentContext, CustomValidatorRequestContext validatorContext);
+    Task<CaptchaResponse> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress,
+        CustomValidatorRequestContext validatorContext);
     string GenerateCaptchaBypassToken(User user);
 }

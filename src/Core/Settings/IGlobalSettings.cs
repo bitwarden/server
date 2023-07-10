@@ -22,4 +22,5 @@ public interface IGlobalSettings
     IPasswordlessAuthSettings PasswordlessAuth { get; set; }
     IDomainVerificationSettings DomainVerification { get; set; }
     ILaunchDarklySettings LaunchDarkly { get; set; }
+    ICaptchaSettings Captcha { get; set; }
 }

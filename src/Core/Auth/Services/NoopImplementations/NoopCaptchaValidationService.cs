@@ -8,10 +8,10 @@ public class NoopCaptchaValidationService : ICaptchaValidationService
 {
     public string SiteKeyResponseKeyName => null;
     public string SiteKey => null;
-    public bool RequireCaptchaValidation(ICurrentContext currentContext, User user = null) => false;
+    public bool RequireCaptchaValidation(ICurrentContext currentContext, CustomValidatorRequestContext validatorContext) => false;
     public string GenerateCaptchaBypassToken(User user) => "";
     public Task<CaptchaResponse> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress,
-        User user = null)
+        CustomValidatorRequestContext validatorContext)
     {
         return Task.FromResult(new CaptchaResponse { Success = true });
     }

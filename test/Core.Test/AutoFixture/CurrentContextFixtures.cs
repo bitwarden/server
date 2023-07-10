@@ -6,7 +6,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 
 namespace Bit.Core.Test.AutoFixture.CurrentContextFixtures;
 
-internal class CurrentContext : ICustomization
+internal class CurrentContextCustomization : ICustomization
 {
     public void Customize(IFixture fixture)
     {
@@ -37,7 +37,7 @@ internal class CurrentContextBuilder : ISpecimenBuilder
     }
 }
 
-internal class CurrentContextCustomize : BitCustomizeAttribute
+internal class CurrentContextCustomizeAttribute : BitCustomizeAttribute
 {
-    public override ICustomization GetCustomization() => new CurrentContext();
+    public override ICustomization GetCustomization() => new CurrentContextCustomization();
 }

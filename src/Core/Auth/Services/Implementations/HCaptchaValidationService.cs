@@ -14,14 +14,14 @@ public class HCaptchaValidationService : ICaptchaValidationService
 {
     private readonly ILogger<HCaptchaValidationService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly GlobalSettings _globalSettings;
+    private readonly IGlobalSettings _globalSettings;
     private readonly IDataProtectorTokenFactory<HCaptchaTokenable> _tokenizer;
 
     public HCaptchaValidationService(
         ILogger<HCaptchaValidationService> logger,
         IHttpClientFactory httpClientFactory,
         IDataProtectorTokenFactory<HCaptchaTokenable> tokenizer,
-        GlobalSettings globalSettings)
+        IGlobalSettings globalSettings)
     {
         _logger = logger;
         _httpClientFactory = httpClientFactory;
@@ -35,7 +35,7 @@ public class HCaptchaValidationService : ICaptchaValidationService
     public string GenerateCaptchaBypassToken(User user) => _tokenizer.Protect(new HCaptchaTokenable(user));
 
     public async Task<CaptchaResponse> ValidateCaptchaResponseAsync(string captchaResponse, string clientIpAddress,
-        User user = null)
+        CustomValidatorRequestContext validatorContext)
     {
         var response = new CaptchaResponse { Success = false };
         if (string.IsNullOrWhiteSpace(captchaResponse))
@@ -43,7 +43,7 @@ public class HCaptchaValidationService : ICaptchaValidationService
             return response;
         }
 
-        if (user != null && ValidateCaptchaBypassToken(captchaResponse, user))
+        if (!AtFailedLoginCeiling(validatorContext) && ValidateCaptchaBypassToken(captchaResponse, validatorContext))
         {
             response.Success = true;
             return response;
@@ -89,22 +89,33 @@ public class HCaptchaValidationService : ICaptchaValidationService
         return response;
     }
 
-    public bool RequireCaptchaValidation(ICurrentContext currentContext, User user = null)
+    public bool RequireCaptchaValidation(ICurrentContext currentContext, CustomValidatorRequestContext validatorContext)
     {
+        var user = validatorContext.User;
         if (user == null)
         {
             return currentContext.IsBot || _globalSettings.Captcha.ForceCaptchaRequired;
         }
 
-        var failedLoginCeiling = _globalSettings.Captcha.MaximumFailedLoginAttempts;
-        var failedLoginCount = user?.FailedLoginCount ?? 0;
+        if (AtFailedLoginCeiling(validatorContext))
+        {
+            return true;
+        }
+
+        if (validatorContext.KnownDevice)
+        {
+            return false;
+        }
+
         var requireOnCloud = !_globalSettings.SelfHosted && !user.EmailVerified &&
             user.CreationDate < DateTime.UtcNow.AddHours(-24);
         return currentContext.IsBot ||
                _globalSettings.Captcha.ForceCaptchaRequired ||
-               requireOnCloud ||
-               failedLoginCeiling > 0 && failedLoginCount >= failedLoginCeiling;
+               requireOnCloud;
     }
+
+    private bool AtFailedLoginCeiling(CustomValidatorRequestContext validatorContext) =>
+        (validatorContext.User?.FailedLoginCount ?? 0) >= _globalSettings.Captcha.MaximumFailedLoginAttempts;
 
     private static bool TokenIsValidApiKey(string bypassToken, User user) =>
         !string.IsNullOrWhiteSpace(bypassToken) && user != null && user.ApiKey == bypassToken;
@@ -115,8 +126,8 @@ public class HCaptchaValidationService : ICaptchaValidationService
             data.Valid && data.TokenIsValid(user);
     }
 
-    private bool ValidateCaptchaBypassToken(string bypassToken, User user) =>
-        TokenIsValidApiKey(bypassToken, user) || TokenIsValidCaptchaBypassToken(bypassToken, user);
+    private bool ValidateCaptchaBypassToken(string bypassToken, CustomValidatorRequestContext validatorContext) =>
+        validatorContext.User != null && (TokenIsValidApiKey(bypassToken, validatorContext.User) || TokenIsValidCaptchaBypassToken(bypassToken, validatorContext.User));
 
     public class HCaptchaResponse : IDisposable
     {

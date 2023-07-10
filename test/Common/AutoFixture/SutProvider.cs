@@ -66,6 +66,13 @@ public class SutProvider<TSut> : ISutProvider
         }
     }
 
+    /// <summary>
+    /// Creates a new instance of the given type using the SutProvider's inner Fixture.
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
+    public T Create<T>() => _fixture.Create<T>();
+
     public void Reset()
     {
         _dependencies = new Dictionary<Type, Dictionary<string, object>>();

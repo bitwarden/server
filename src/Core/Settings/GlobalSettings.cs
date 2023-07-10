@@ -44,7 +44,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool EnableCloudCommunication { get; set; } = false;
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
-    public virtual CaptchaSettings Captcha { get; set; } = new CaptchaSettings();
+    public virtual ICaptchaSettings Captcha { get; set; } = new CaptchaSettings();
     public virtual IInstallationSettings Installation { get; set; } = new InstallationSettings();
     public virtual IBaseServiceUriSettings BaseServiceUri { get; set; }
     public virtual string DatabaseProvider { get; set; }
@@ -498,7 +498,7 @@ public class GlobalSettings : IGlobalSettings
         public bool EnforceSsoPolicyForAllUsers { get; set; }
     }
 
-    public class CaptchaSettings
+    public class CaptchaSettings : ICaptchaSettings
     {
         public bool ForceCaptchaRequired { get; set; } = false;
         public string HCaptchaSecretKey { get; set; }

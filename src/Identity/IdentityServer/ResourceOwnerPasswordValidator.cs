@@ -73,8 +73,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             KnownDevice = await KnownDeviceAsync(user, context.Request)
         };
         string bypassToken = null;
-        if (!validatorContext.KnownDevice &&
-            _captchaValidationService.RequireCaptchaValidation(_currentContext, user))
+        if (_captchaValidationService.RequireCaptchaValidation(_currentContext, validatorContext))
         {
             var captchaResponse = context.Request.Raw["captchaResponse"]?.ToString();
 
@@ -89,7 +88,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
             }
 
             validatorContext.CaptchaResponse = await _captchaValidationService.ValidateCaptchaResponseAsync(
-                captchaResponse, _currentContext.IpAddress, user);
+                captchaResponse, _currentContext.IpAddress, validatorContext);
             if (!validatorContext.CaptchaResponse.Success)
             {
                 await BuildErrorResultAsync("Captcha is invalid. Please refresh and try again", false, context, null);
