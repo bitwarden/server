@@ -11,8 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationSubscription.Interface;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -43,6 +42,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly ISecretsManagerSubscriptionCommand _secretsManagerSubscriptionCommand;
 
     private readonly OrganizationsController _sut;
@@ -69,6 +69,7 @@ public class OrganizationsControllerTests : IDisposable
         _featureService = Substitute.For<IFeatureService>();
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
+        _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
         _secretsManagerSubscriptionCommand = Substitute.For<ISecretsManagerSubscriptionCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
@@ -76,7 +77,8 @@ public class OrganizationsControllerTests : IDisposable
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
             _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
             _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService,
-            _updateSecretsManagerSubscriptionCommand, _secretsManagerSubscriptionCommand);
+            _updateSecretsManagerSubscriptionCommand, _upgradeOrganizationPlanCommand,
+             _secretsManagerSubscriptionCommand);
     }
 
     public void Dispose()
