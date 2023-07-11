@@ -34,9 +34,9 @@ public class SecretsManagerSubscriptionUpdateRequestModel
 
             MaxAutoscaleSmServiceAccounts = MaxAutoscaleServiceAccounts,
 
-            MaxAutoscaleSmSeatsChanged = 
+            MaxAutoscaleSmSeatsChanged =
                 MaxAutoscaleSeats.GetValueOrDefault() != organization.MaxAutoscaleSmSeats.GetValueOrDefault(),
-            MaxAutoscaleSmServiceAccountsChanged = 
+            MaxAutoscaleSmServiceAccountsChanged =
                 MaxAutoscaleServiceAccounts.GetValueOrDefault() != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault()
         };
 
