@@ -224,7 +224,7 @@ public class StripePaymentService : IPaymentService
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
     public async Task<string> UpgradeFreeOrganizationAsync(Organization org, List<StaticStore.Plan> plans,
-        OrganizationUpgrade upgrade) 
+        OrganizationUpgrade upgrade)
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
         {

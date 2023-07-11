@@ -503,7 +503,7 @@ public class StripePaymentServiceTests
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
             s.Items.Count == 4 &&
             s.Items.Count(i => i.Plan == passwordManagerPlan.StripeSeatPlanId && i.Quantity == additionalSeats) == 1 &&
-            s.Items.Count(i => i.Plan == passwordManagerPlan.StripeStoragePlanId && i.Quantity == additionalStorage)  == 1 &&
+            s.Items.Count(i => i.Plan == passwordManagerPlan.StripeStoragePlanId && i.Quantity == additionalStorage) == 1 &&
             s.Items.Count(i => i.Plan == secretsManagerPlan.StripeSeatPlanId && i.Quantity == additionalSmSeats) == 1 &&
             s.Items.Count(i => i.Plan == secretsManagerPlan.StripeServiceAccountPlanId && i.Quantity == additionalServiceAccounts) == 1
         ));
@@ -610,7 +610,7 @@ public class StripePaymentServiceTests
         stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
 
         var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
-        
+
         var upgrade = new OrganizationUpgrade()
         {
             AdditionalStorageGb = 0,
@@ -658,7 +658,7 @@ public class StripePaymentServiceTests
 
         var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
         var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plans, upgrade);
-        
+
         Assert.Null(result);
     }
 }
