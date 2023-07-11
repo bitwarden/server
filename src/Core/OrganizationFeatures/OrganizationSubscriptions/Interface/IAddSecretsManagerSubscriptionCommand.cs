@@ -1,6 +1,9 @@
-﻿namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+﻿using Bit.Core.Entities;
 
-public class IAddSecretsManagerSubscriptionCommand
+namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+
+public interface IAddSecretsManagerSubscriptionCommand
 {
-    
+    Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Guid organizationId, int additionalSeats,
+        int additionalServiceAccounts);
 }
