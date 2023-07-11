@@ -127,15 +127,14 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
                 await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
                     OrganizationUserType.Owner);
 
-            if (ownerUsers.Count > 0)
+            if (ownerUsers.Any())
             {
-                orgUser = ownerUsers.FirstOrDefault(x => x.Type == OrganizationUserType.Owner);
-                if (orgUser != null)
+                foreach (var onwerUser in ownerUsers)
                 {
-                    orgUser.AccessSecretsManager = true;
+                    onwerUser.AccessSecretsManager = true;
                 }
-
-                await _organizationUserRepository.ReplaceAsync(orgUser);
+                
+                await _organizationUserRepository.ReplaceManyAsync(ownerUsers);
             }
 
             return new Tuple<Organization, OrganizationUser>(organization, orgUser);
