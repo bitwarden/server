@@ -2,6 +2,7 @@
 
 using System.Net;
 using AngleSharp.Html.Parser;
+using Bit.Icons.Services;
 
 namespace Bit.Icons.Extensions;
 
@@ -33,5 +34,12 @@ public static class ServiceCollectionExtension
     {
         services.AddSingleton<HtmlParser>();
         services.AddSingleton<IHtmlParser>(s => s.GetRequiredService<HtmlParser>());
+    }
+
+    public static void AddServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IUriService, UriService>();
+        services.AddSingleton<IDomainMappingService, DomainMappingService>();
+        services.AddSingleton<IIconFetchingService, IconFetchingService>();
     }
 }

@@ -44,9 +44,7 @@ public class Startup
         });
 
         // Services
-        services.AddSingleton<IDomainMappingService, DomainMappingService>();
-        services.AddSingleton<IIconFetchingService, IconFetchingService>();
-        services.AddSingleton<IUriService, UriService>();
+        services.AddServices();
 
         // Mvc
         services.AddMvc();
