@@ -53,11 +53,11 @@ public class MockedHttpResponse : IMockedHttpResponse
         return await RespondToAsync(request, new HttpResponseBuilder());
     }
 
-    private Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request, HttpResponseBuilder currentBuilder)
+    private async Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request, HttpResponseBuilder currentBuilder)
     {
         NumberOfResponses++;
         var nextBuilder = _responder(request, currentBuilder);
-        return _childResponse == null ? nextBuilder.ToHttpResponseAsync() : _childResponse.RespondToAsync(request, nextBuilder);
+        return await (_childResponse == null ? nextBuilder.ToHttpResponseAsync() : _childResponse.RespondToAsync(request, nextBuilder));
     }
 
     private MockedHttpResponse AddChild(Func<HttpRequestMessage, HttpResponseBuilder, HttpResponseBuilder> responder)

@@ -14,7 +14,7 @@ public class MockedHttpMessageHandler : HttpMessageHandler
     /// <returns>A Matcher that responds with 404 Not Found</returns>
     public MockedHttpResponse Fallback { get; set; } = new(HttpStatusCode.NotFound);
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var matcher = _matchers.FirstOrDefault(x => x.Matches(request));
         if (matcher == null)
@@ -22,7 +22,7 @@ public class MockedHttpMessageHandler : HttpMessageHandler
             return Fallback.RespondToAsync(request);
         }
 
-        return matcher.RespondToAsync(request);
+        return await matcher.RespondToAsync(request);
     }
 
     /// <summary>

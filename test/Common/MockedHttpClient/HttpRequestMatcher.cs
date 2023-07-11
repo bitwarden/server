@@ -86,10 +86,10 @@ public class HttpRequestMatcher : IHttpRequestMatcher
     /// Called to produce an HttpResponseMessage for the given request. This is probably something you want to leave alone
     /// </summary>
     /// <param name="request"></param>
-    public Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request)
+    public async Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request)
     {
         NumberOfMatches++;
-        return _childMatcher == null ? _mockedResponse.RespondToAsync(request) : _childMatcher.RespondToAsync(request);
+        return await ( _childMatcher == null ? _mockedResponse.RespondToAsync(request) : _childMatcher.RespondToAsync(request));
     }
 
     private HttpRequestMatcher AddChild(Func<HttpRequestMessage, bool> matcher)
