@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Business;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
+namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 
 public interface IUpdateSecretsManagerSubscriptionCommand
 {
