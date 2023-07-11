@@ -1,4 +1,6 @@
-﻿using Bit.Core.Models.Business.Tokenables;
+﻿using Bit.Core.AdminConsole.OrganizationAuth;
+using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
@@ -45,8 +47,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
-        services.AddOrganizationSubscriptionUpdateCommandsQueries();
-        services.AddOrganizationSmSubscriptionCommandsQueries();
+        services.AddOrganizationAuthCommands();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -116,18 +117,6 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
     }
 
-    private static void AddOrganizationSubscriptionUpdateCommandsQueries(this IServiceCollection services)
-    {
-        services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
-    }
-
-    private static void AddOrganizationSmSubscriptionCommandsQueries(this IServiceCollection services)
-    {
-        services.AddScoped<IGetOrganizationQuery, GetOrganizationQuery>();
-        services.AddScoped<ISecretsManagerPlanValidation, SecretsManagerPlanValidation>();
-        services.AddScoped<ISecretsManagerSubscriptionCommand, SecretsManagerSubscriptionCommand>();
-    }
-
     private static void AddTokenizers(this IServiceCollection services)
     {
         services.AddSingleton<IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>(serviceProvider =>
@@ -139,3 +128,4 @@ public static class OrganizationServiceCollectionExtensions
         );
     }
 }
+

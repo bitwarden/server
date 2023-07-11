@@ -3,7 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -524,7 +524,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(update));
-        Assert.Contains("Your organization currently has 8 Secrets Manager seats. Your plan only allows (7) Secrets Manager seats. Remove some Secrets Manager users", exception.Message);
+        Assert.Contains("Your organization currently has 8 Secrets Manager seats. Your plan only allows 7 Secrets Manager seats. Remove some Secrets Manager users", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -724,7 +724,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .Returns(currentServiceAccounts);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
-        Assert.Contains("Your organization currently has 301 Service Accounts. Your plan only allows (300) Service Accounts. Remove some Service Accounts", exception.Message);
+        Assert.Contains("Your organization currently has 301 Service Accounts. Your plan only allows 300 Service Accounts. Remove some Service Accounts", exception.Message);
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1).GetServiceAccountCountByOrganizationIdAsync(organization.Id);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
