@@ -14,18 +14,18 @@ namespace Bit.Commercial.Core.Test.SecretsManager.Queries.ServiceAccounts;
 public class CountNewServiceAccountSlotsRequiredQueryTests
 {
     [Theory]
-    [BitAutoData(2, 0)]
-    [BitAutoData(0, 0)]
-    [BitAutoData(6, 3)]
+    [BitAutoData(2, 5, 2, 0)]
+    [BitAutoData(0, 5, 2, 0)]
+    [BitAutoData(6, 5, 2, 3)]
+    [BitAutoData(2, 5, 10, 7)]
     public async Task CountNewServiceAccountSlotsRequiredAsync_ReturnsCorrectCount(
         int serviceAccountsToAdd,
+        int organizationSmServiceAccounts,
+        int currentServiceAccounts,
         int expectedNewServiceAccountsRequired,
         Organization organization,
         SutProvider<CountNewServiceAccountSlotsRequiredQuery> sutProvider)
     {
-        var organizationSmServiceAccounts = 5;
-        var currentServiceAccounts = 2;
-
         organization.UseSecretsManager = true;
         organization.SmServiceAccounts = organizationSmServiceAccounts;
 
@@ -41,8 +41,11 @@ public class CountNewServiceAccountSlotsRequiredQueryTests
 
         Assert.Equal(expectedNewServiceAccountsRequired, result);
 
-        await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+        if (serviceAccountsToAdd > 0)
+        {
+            await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
+                .GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+        }
     }
 
     [Theory]

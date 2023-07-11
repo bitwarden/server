@@ -26,14 +26,19 @@ public class CountNewServiceAccountSlotsRequiredQuery : ICountNewServiceAccountS
             throw new NotFoundException();
         }
 
-        if (!organization.SmServiceAccounts.HasValue)
+        if (!organization.SmServiceAccounts.HasValue || serviceAccountsToAdd == 0)
         {
             return 0;
         }
 
         var serviceAccountCount = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organizationId);
-        var availableServiceAccountSlots = Math.Max(0, organization.SmServiceAccounts.Value - serviceAccountCount);
+        var availableServiceAccountSlots = organization.SmServiceAccounts.Value - serviceAccountCount;
 
-        return Math.Max(0, serviceAccountsToAdd - availableServiceAccountSlots);
+        if (availableServiceAccountSlots >= serviceAccountsToAdd)
+        {
+            return 0;
+        }
+
+        return serviceAccountsToAdd - availableServiceAccountSlots;
     }
 }
