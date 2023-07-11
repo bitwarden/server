@@ -447,7 +447,7 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             SmSeats = (short)(secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault()),
-            SmServiceAccounts = signup.AdditionalServiceAccounts.GetValueOrDefault(),
+            SmServiceAccounts = secretsManagerPlan.BaseServiceAccount + signup.AdditionalServiceAccounts.GetValueOrDefault(),
             UseSecretsManager = signup.UseSecretsManager
         };
 
