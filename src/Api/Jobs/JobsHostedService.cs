@@ -68,13 +68,16 @@ public class JobsHostedService : BaseJobsHostedService
             new Tuple<Type, ITrigger>(typeof(ValidateUsersJob), everyTopOfTheSixthHourTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationsJob), everyTwelfthHourAndThirtyMinutesTrigger),
             new Tuple<Type, ITrigger>(typeof(ValidateOrganizationDomainJob), validateOrganizationDomainTrigger),
-            new Tuple<Type, ITrigger>(typeof(EmptySecretsManagerTrashJob), smTrashCleanupTrigger),
         };
 
         if (_globalSettings.SelfHosted && _globalSettings.EnableCloudCommunication)
         {
             jobs.Add(new Tuple<Type, ITrigger>(typeof(SelfHostedSponsorshipSyncJob), randomDailySponsorshipSyncTrigger));
         }
+
+#if !OSS
+        jobs.Add(new Tuple<Type, ITrigger>(typeof(EmptySecretsManagerTrashJob), smTrashCleanupTrigger));
+#endif
 
         Jobs = jobs;
 
