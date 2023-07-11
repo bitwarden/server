@@ -58,7 +58,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(organization.Id,
             OrganizationUserType.Owner).Returns(organizationUsers);
 
-        var result = await sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts);
+        var result = await sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts);
 
         await sutProvider.GetDependency<IPaymentService>().Received()
             .AddSecretsManagerToSubscription(organization, plan, additionalSeats, additionalServiceAccounts);
@@ -110,7 +110,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns((Organization)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.SignUpAsync(null, additionalSeats, additionalServiceAccounts));
     }
 
     [Theory]
@@ -125,7 +125,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
             .Returns(organization);
 
-        var exception = await Assert.ThrowsAsync<GatewayException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<GatewayException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Not a gateway customer.", exception.Message);
     }
 
@@ -151,7 +151,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = 1;
         var additionalServiceAccounts = 0;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Invalid Secrets Manager plan selected.", exception.Message);
     }
 
@@ -179,7 +179,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = 0;
         var additionalServiceAccounts = 5;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
     }
 
@@ -204,7 +204,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = -5;
         var additionalServiceAccounts = 5;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
     }
 
@@ -229,7 +229,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = -1;
         var additionalServiceAccounts = 5;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You can't subtract Secrets Manager seats!", exception.Message);
     }
 
@@ -254,7 +254,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = 2;
         var additionalServiceAccounts = 5;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
     }
 
@@ -282,7 +282,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = 10;
         var additionalServiceAccounts = 5;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats.", exception.Message);
     }
 
@@ -312,7 +312,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = 5;
         var additionalServiceAccounts = -5;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You can't subtract Service Accounts!", exception.Message);
     }
 
@@ -339,7 +339,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = 2;
         var additionalServiceAccounts = 0;
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Plan does not allow additional users.", exception.Message);
     }
 }

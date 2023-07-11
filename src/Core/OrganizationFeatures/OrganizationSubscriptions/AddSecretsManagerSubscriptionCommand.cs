@@ -24,10 +24,9 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
     }
-    public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Guid organizationId, int additionalSeats,
+    public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization, int additionalSeats,
         int additionalServiceAccounts)
     {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
         ValidateOrganization(organization);
 
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
