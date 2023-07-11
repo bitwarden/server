@@ -122,7 +122,6 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         {
             await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
-            OrganizationUser orgUser = null;
             var ownerUsers =
                 await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
                     OrganizationUserType.Owner);
