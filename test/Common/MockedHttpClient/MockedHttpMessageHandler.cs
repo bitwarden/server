@@ -19,10 +19,10 @@ public class MockedHttpMessageHandler : HttpMessageHandler
         var matcher = _matchers.FirstOrDefault(x => x.Matches(request));
         if (matcher == null)
         {
-            return Task.FromResult(Fallback.RespondTo(request));
+            return Fallback.RespondToAsync(request);
         }
 
-        return Task.FromResult(matcher.RespondTo(request));
+        return matcher.RespondToAsync(request);
     }
 
     /// <summary>

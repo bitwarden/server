@@ -48,16 +48,16 @@ public class MockedHttpResponse : IMockedHttpResponse
         return AddChild((_, builder) => builder.WithContent(content));
     }
 
-    public HttpResponseMessage RespondTo(HttpRequestMessage request)
+    public async Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request)
     {
-        return RespondTo(request, new HttpResponseBuilder());
+        return await RespondToAsync(request, new HttpResponseBuilder());
     }
 
-    private HttpResponseMessage RespondTo(HttpRequestMessage request, HttpResponseBuilder currentBuilder)
+    private Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request, HttpResponseBuilder currentBuilder)
     {
         NumberOfResponses++;
         var nextBuilder = _responder(request, currentBuilder);
-        return _childResponse == null ? nextBuilder.ToHttpResponse() : _childResponse.RespondTo(request, nextBuilder);
+        return _childResponse == null ? nextBuilder.ToHttpResponseAsync() : _childResponse.RespondToAsync(request, nextBuilder);
     }
 
     private MockedHttpResponse AddChild(Func<HttpRequestMessage, HttpResponseBuilder, HttpResponseBuilder> responder)

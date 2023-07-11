@@ -3,5 +3,5 @@
 public interface IMockedHttpResponse
 {
     int NumberOfResponses { get; }
-    HttpResponseMessage RespondTo(HttpRequestMessage request);
+    Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request);
 }

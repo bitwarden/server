@@ -6,5 +6,5 @@ public interface IHttpRequestMatcher
 {
     int NumberOfMatches { get; }
     bool Matches(HttpRequestMessage request);
-    HttpResponseMessage RespondTo(HttpRequestMessage request);
+    Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request);
 }
