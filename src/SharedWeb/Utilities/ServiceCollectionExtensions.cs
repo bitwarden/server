@@ -21,6 +21,7 @@ using Bit.Core.Resources;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Bit.Core.Tools;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Services;
@@ -136,6 +137,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISendService, SendService>();
         services.AddLoginServices();
         services.AddScoped<IOrganizationDomainService, OrganizationDomainService>();
+        services.AddToolsServices();
     }
 
     public static void AddTokenizers(this IServiceCollection services)

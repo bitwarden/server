@@ -80,6 +80,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual IPasswordlessAuthSettings PasswordlessAuth { get; set; } = new PasswordlessAuthSettings();
     public virtual IDomainVerificationSettings DomainVerification { get; set; } = new DomainVerificationSettings();
     public virtual ILaunchDarklySettings LaunchDarkly { get; set; } = new LaunchDarklySettings();
+    public virtual ITwoFactorDirectorySettings TwoFactorDirectory { get; set; } = new TwoFactorDirectorySettings();
 
     public string BuildExternalUri(string explicitValue, string name)
     {
@@ -550,5 +551,11 @@ public class GlobalSettings : IGlobalSettings
         public string SdkKey { get; set; }
         public string FlagDataFilePath { get; set; } = "flags.json";
         public Dictionary<string, string> FlagValues { get; set; } = new Dictionary<string, string>();
+    }
+    
+    private class TwoFactorDirectorySettings : ITwoFactorDirectorySettings
+    {
+        public string Uri { get; set; } = "https://api.2fa.directory/v3/totp.json";
+        public int CacheExpirationHours { get; set; } = 24;
     }
 }
