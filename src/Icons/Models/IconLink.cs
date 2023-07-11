@@ -10,7 +10,7 @@ namespace Bit.Icons.Models;
 public class IconLink
 {
     private static readonly HashSet<string> _iconRels = new() { "icon", "apple-touch-icon", "shortcut icon" };
-    private static readonly HashSet<string> _blacklistedRels = new() { "preload", "image_src", "preconnect", "canonical", "alternate", "stylesheet" };
+    private static readonly HashSet<string> _blocklistedRels = new() { "preload", "image_src", "preconnect", "canonical", "alternate", "stylesheet" };
     private static readonly HashSet<string> _iconExtensions = new() { ".ico", ".png", ".jpg", ".jpeg" };
     private const string _pngMediaType = "image/png";
     private static readonly byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
@@ -103,7 +103,7 @@ public class IconLink
         {
             _validated = true;
         }
-        if (Rel == null || !_blacklistedRels.Contains(Rel.Value.ToLower()))
+        if (Rel == null || !_blocklistedRels.Contains(Rel.Value.ToLower()))
         {
             try
             {

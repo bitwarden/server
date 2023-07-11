@@ -1,4 +1,5 @@
-using System.Net;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Text;
 
 namespace Bit.Test.Common.MockedHttpClient;
@@ -37,6 +38,10 @@ public class MockedHttpResponse : IMockedHttpResponse
     public MockedHttpResponse WithContent(string mediaType, string content)
     {
         return WithContent(new StringContent(content, Encoding.UTF8, mediaType));
+    }
+    public MockedHttpResponse WithContent(string mediaType, byte[] content)
+    {
+        return WithContent(new ByteArrayContent(content) { Headers = { ContentType = new MediaTypeHeaderValue(mediaType) } });
     }
     public MockedHttpResponse WithContent(HttpContent content)
     {

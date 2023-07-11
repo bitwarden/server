@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Bit.Icons.Models;
 using Bit.Icons.Services;
 using Bit.Test.Common.MockedHttpClient;
@@ -15,7 +15,6 @@ public class IconHttpRequestTests
     public async Task FetchAsync_FollowsTwoRedirectsAsync()
     {
         var handler = new MockedHttpMessageHandler();
-
 
         var request = handler
             .Fallback

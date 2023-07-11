@@ -1,4 +1,4 @@
-namespace Bit.Test.Common.MockedHttpClient;
+﻿namespace Bit.Test.Common.MockedHttpClient;
 
 public interface IMockedHttpResponse
 {

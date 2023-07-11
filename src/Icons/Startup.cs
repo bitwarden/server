@@ -1,5 +1,4 @@
 ﻿using System.Globalization;
-using System.Net;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Icons.Extensions;

@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 
 namespace Bit.Test.Common.MockedHttpClient;
 
@@ -6,6 +6,7 @@ public class HttpResponseBuilder
 {
     public HttpStatusCode StatusCode { get; set; }
     public IEnumerable<KeyValuePair<string, string>> Headers { get; set; } = new List<KeyValuePair<string, string>>();
+    public IEnumerable<string> HeadersToRemove { get; set; } = new List<string>();
     public HttpContent Content { get; set; }
 
     public HttpResponseMessage ToHttpResponse()
@@ -29,6 +30,7 @@ public class HttpResponseBuilder
         {
             StatusCode = statusCode,
             Headers = Headers,
+            HeadersToRemove = HeadersToRemove,
             Content = Content,
         };
     }
@@ -39,6 +41,7 @@ public class HttpResponseBuilder
         {
             StatusCode = StatusCode,
             Headers = Headers.Append(new KeyValuePair<string, string>(name, value)),
+            HeadersToRemove = HeadersToRemove,
             Content = Content,
         };
     }
@@ -49,6 +52,7 @@ public class HttpResponseBuilder
         {
             StatusCode = StatusCode,
             Headers = Headers,
+            HeadersToRemove = HeadersToRemove,
             Content = content,
         };
     }

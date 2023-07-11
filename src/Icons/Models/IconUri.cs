@@ -1,6 +1,5 @@
 ﻿#nullable enable
 
-using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Bit.Icons.Extensions;
 
