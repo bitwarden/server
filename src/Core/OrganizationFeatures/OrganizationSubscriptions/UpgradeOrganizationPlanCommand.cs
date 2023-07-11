@@ -225,9 +225,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                 : StaticStore.Plans.Where(p => p.Type == upgrade.Plan && p.BitwardenProduct == BitwardenProductType.PasswordManager).ToList();
 
             paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
-                organizationUpgradePlan,
-                upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo
-                , upgrade.AdditionalSmSeats.GetValueOrDefault(), upgrade.AdditionalServiceAccounts.GetValueOrDefault());
+                organizationUpgradePlan, upgrade);
             success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
         }
         else

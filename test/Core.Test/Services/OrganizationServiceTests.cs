@@ -194,20 +194,16 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_SecretManagerValidation_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    public async Task SignUpAsync_SecretManager_AdditionalServiceAccounts_NotAllowedByPlan_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
-        signup.AdditionalSmSeats = 10;
-        signup.AdditionalSeats = 10;
-        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.AdditionalSmSeats = 0;
+        signup.AdditionalSeats = 0;
+        signup.Plan = PlanType.Free;
         signup.UseSecretsManager = true;
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
         signup.AdditionalServiceAccounts = 10;
-
-        var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan && x.BitwardenProduct == BitwardenProductType.PasswordManager).ToList();
-        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually);
-        secretsManagerPlan.HasAdditionalServiceAccountOption = false;
-        purchaseOrganizationPlan.Add(secretsManagerPlan);
+        signup.AdditionalStorageGb = 0;
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SignUpAsync(signup));

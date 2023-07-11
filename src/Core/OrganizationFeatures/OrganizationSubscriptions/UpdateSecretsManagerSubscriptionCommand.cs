@@ -240,7 +240,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             if (currentSeats > update.SmSeats)
             {
                 throw new BadRequestException($"Your organization currently has {currentSeats} Secrets Manager seats. " +
-                                              $"Your plan only allows ({update.SmSeats}) Secrets Manager seats. Remove some Secrets Manager users.");
+                                              $"Your plan only allows {update.SmSeats} Secrets Manager seats. Remove some Secrets Manager users.");
             }
         }
     }
@@ -294,7 +294,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             if (currentServiceAccounts > update.SmServiceAccounts)
             {
                 throw new BadRequestException($"Your organization currently has {currentServiceAccounts} Service Accounts. " +
-                                              $"Your plan only allows ({update.SmServiceAccounts}) Service Accounts. Remove some Service Accounts.");
+                                              $"Your plan only allows {update.SmServiceAccounts} Service Accounts. Remove some Service Accounts.");
             }
         }
     }
