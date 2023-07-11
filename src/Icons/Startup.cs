@@ -2,7 +2,6 @@
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Icons.Extensions;
-using Bit.Icons.Services;
 using Bit.SharedWeb.Utilities;
 using Microsoft.Net.Http.Headers;
 
