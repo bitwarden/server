@@ -81,7 +81,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         int additionalSeats, int additionalServiceAccounts, OrganizationUser organizationUser)
     {
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
-            .AddSecretsManagerToSubscription(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>(),Arg.Any<int>());
+            .AddSecretsManagerToSubscription(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>(), Arg.Any<int>());
         // TODO: call ReferenceEventService - see AC-1481
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive()
             .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
@@ -292,7 +292,7 @@ public class AddSecretsManagerSubscriptionCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public async Task ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingServiceAccounts(
-        PlanType planType, 
+        PlanType planType,
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
     {
         var organizationId = Guid.NewGuid();

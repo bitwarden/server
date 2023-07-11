@@ -133,7 +133,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
                 {
                     onwerUser.AccessSecretsManager = true;
                 }
-                
+
                 await _organizationUserRepository.ReplaceManyAsync(ownerUsers);
             }
 

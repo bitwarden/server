@@ -356,7 +356,7 @@ public class OrganizationsController : Controller
         var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, secretsManagerPlan);
         await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
-    
+
     [HttpPost("{id}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
     public async Task<OrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscriptionAddRequestModel model)
