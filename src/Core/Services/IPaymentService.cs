@@ -14,9 +14,7 @@ public interface IPaymentService
         int additionalServiceAccount = 0);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
-    Task<string> UpgradeFreeOrganizationAsync(Organization org, List<Plan> plans,
-       short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo,
-       int additionalSmSeats = 0, int additionalServiceAccounts = 0);
+    Task<string> UpgradeFreeOrganizationAsync(Organization org, List<Plan> plans, OrganizationUpgrade upgrade);
     Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
         short additionalStorageGb, TaxInfo taxInfo);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);

@@ -224,8 +224,7 @@ public class StripePaymentService : IPaymentService
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
     public async Task<string> UpgradeFreeOrganizationAsync(Organization org, List<StaticStore.Plan> plans,
-        short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo,
-        int additionalSmSeats = 0, int additionalServiceAccounts = 0)
+        OrganizationUpgrade upgrade) 
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
         {
@@ -241,6 +240,7 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Could not find customer payment profile.");
         }
 
+        var taxInfo = upgrade.TaxInfo;
         if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
         {
             var taxRateSearch = new TaxRate
@@ -258,7 +258,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plans, upgrade);
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
         var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,

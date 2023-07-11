@@ -443,6 +443,8 @@ public class StripePaymentServiceTests
     public async void PurchaseOrganizationAsync_SM_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var passwordManagerPlan = plans.Single(p => p.BitwardenProduct == BitwardenProductType.PasswordManager);
+        var secretsManagerPlan = plans.Single(p => p.BitwardenProduct == BitwardenProductType.SecretsManager);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -465,8 +467,12 @@ public class StripePaymentServiceTests
         var braintreeGateway = sutProvider.GetDependency<IBraintreeGateway>();
         braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
 
+        var additionalStorage = (short)2;
+        var additionalSeats = 10;
+        var additionalSmSeats = 5;
+        var additionalServiceAccounts = 20;
         var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plans,
-            2, 10, false, taxInfo, false, 10, 10);
+            additionalStorage, additionalSeats, false, taxInfo, false, additionalSmSeats, additionalServiceAccounts);
 
         Assert.Null(result);
         Assert.Equal(GatewayType.Stripe, organization.Gateway);
@@ -495,7 +501,11 @@ public class StripePaymentServiceTests
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count > 0
+            s.Items.Count == 4 &&
+            s.Items.Count(i => i.Plan == passwordManagerPlan.StripeSeatPlanId && i.Quantity == additionalSeats) == 1 &&
+            s.Items.Count(i => i.Plan == passwordManagerPlan.StripeStoragePlanId && i.Quantity == additionalStorage)  == 1 &&
+            s.Items.Count(i => i.Plan == secretsManagerPlan.StripeSeatPlanId && i.Quantity == additionalSmSeats) == 1 &&
+            s.Items.Count(i => i.Plan == secretsManagerPlan.StripeServiceAccountPlanId && i.Quantity == additionalServiceAccounts) == 1
         ));
     }
 
@@ -600,7 +610,17 @@ public class StripePaymentServiceTests
         stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
 
         var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
-        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plans, 0, 0, false, taxInfo);
+        
+        var upgrade = new OrganizationUpgrade()
+        {
+            AdditionalStorageGb = 0,
+            AdditionalSeats = 0,
+            PremiumAccessAddon = false,
+            TaxInfo = taxInfo,
+            AdditionalSmSeats = 0,
+            AdditionalServiceAccounts = 0
+        };
+        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plans, upgrade);
 
         Assert.Null(result);
     }
@@ -626,10 +646,19 @@ public class StripePaymentServiceTests
         });
         stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
 
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
-        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plans, 0, 0,
-            false, taxInfo);
+        var upgrade = new OrganizationUpgrade()
+        {
+            AdditionalStorageGb = 1,
+            AdditionalSeats = 10,
+            PremiumAccessAddon = false,
+            TaxInfo = taxInfo,
+            AdditionalSmSeats = 5,
+            AdditionalServiceAccounts = 50
+        };
 
+        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plans, upgrade);
+        
         Assert.Null(result);
     }
 }
