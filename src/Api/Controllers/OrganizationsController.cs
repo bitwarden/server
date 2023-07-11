@@ -374,7 +374,7 @@ public class OrganizationsController : Controller
         var result = await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSeats,
             model.AdditionalServiceAccounts);
 
-        return new OrganizationResponseModel(result.Item1);
+        return new OrganizationResponseModel(result);
     }
 
     [HttpPost("{id}/seat")]

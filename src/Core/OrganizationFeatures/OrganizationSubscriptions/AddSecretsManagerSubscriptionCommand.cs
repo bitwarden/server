@@ -26,7 +26,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
     }
-    public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization, int additionalSeats,
+    public async Task<Organization> SignUpAsync(Organization organization, int additionalSeats,
         int additionalServiceAccounts)
     {
         ValidateOrganization(organization);
@@ -116,7 +116,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         }
     }
 
-    private async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization)
+    private async Task<Organization> SignUpAsync(Organization organization)
     {
         try
         {
@@ -137,7 +137,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
                 await _organizationUserRepository.ReplaceManyAsync(ownerUsers);
             }
 
-            return new Tuple<Organization, OrganizationUser>(organization, orgUser);
+            return organization;
         }
         catch
         {
@@ -146,7 +146,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
                 organization.SmSeats = 0;
                 organization.SmServiceAccounts = 0;
                 organization.UseSecretsManager = false;
-                await _organizationRepository.ReplaceAsync(organization);
+                await _organizationService.ReplaceAndUpdateCacheAsync(organization);
             }
 
             throw;

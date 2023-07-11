@@ -65,38 +65,12 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         // TODO: call ReferenceEventService - see AC-1481
 
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(organizationUser);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceManyAsync(organizationUsers);
 
         Assert.NotNull(result);
-        Assert.NotNull(result.Item1);
-        Assert.NotNull(result.Item2);
-        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
+        Assert.IsType<Organization>(result);
         Assert.Equal(additionalServiceAccounts, organization.SmServiceAccounts);
         Assert.True(organization.UseSecretsManager);
-    }
-
-    private static async Task VerifyDependencyNotCalledAsync(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider, Organization organization, Plan plan,
-        int additionalSeats, int additionalServiceAccounts, OrganizationUser organizationUser)
-    {
-        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
-            .AddSecretsManagerToSubscription(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>(), Arg.Any<int>());
-        // TODO: call ReferenceEventService - see AC-1481
-        await sutProvider.GetDependency<IOrganizationService>().DidNotReceive()
-            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
-        await sutProvider.GetDependency<IMailService>().DidNotReceive()
-            .SendOrganizationMaxSeatLimitReachedEmailAsync(Arg.Any<Organization>(), Arg.Any<int>(),
-                Arg.Any<IEnumerable<string>>());
-
-        await sutProvider.GetDependency<IPaymentService>().Received()
-            .AddSecretsManagerToSubscription(organization, plan, additionalSeats, additionalServiceAccounts);
-
-        // TODO: call ReferenceEventService - see AC-1481
-
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(organizationUser);
     }
 
     [Theory]
@@ -111,6 +85,7 @@ public class AddSecretsManagerSubscriptionCommandTests
             .Returns((Organization)null);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.SignUpAsync(null, additionalSeats, additionalServiceAccounts));
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -127,6 +102,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<GatewayException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Not a gateway customer.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -153,6 +129,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Invalid Secrets Manager plan selected.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -181,6 +158,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -206,6 +184,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -231,6 +210,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You can't subtract Secrets Manager seats!", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -256,6 +236,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -284,6 +265,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -314,6 +296,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
@@ -341,5 +324,18 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Plan does not allow additional users.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    private static async Task VerifyDependencyNotCalledAsync(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
+            .AddSecretsManagerToSubscription(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>(), Arg.Any<int>());
+
+        // TODO: call ReferenceEventService - see AC-1481
+
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive().ReplaceManyAsync(Arg.Any<ICollection<OrganizationUser>>());
     }
 }
