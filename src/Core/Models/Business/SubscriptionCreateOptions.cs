@@ -7,7 +7,7 @@ namespace Bit.Core.Models.Business;
 public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
 {
     public OrganizationSubscriptionOptionsBase(Organization org, List<StaticStore.Plan> plans, TaxInfo taxInfo, int additionalSeats,
-        int additionalStorageGb, bool premiumAccessAddon, int additionalSmSeats = 0, int additionalServiceAccounts = 0)
+        int additionalStorageGb, bool premiumAccessAddon, int additionalSmSeats, int additionalServiceAccounts)
     {
         Items = new List<SubscriptionItemOptions>();
         Metadata = new Dictionary<string, string>
@@ -95,9 +95,9 @@ public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionO
 {
     public OrganizationPurchaseSubscriptionOptions(
         Organization org, List<StaticStore.Plan> plans,
-        TaxInfo taxInfo, int additionalSeats = 0,
-        int additionalStorageGb = 0, bool premiumAccessAddon = false,
-        int additionalSmSeats = 0, int additionalServiceAccounts = 0) :
+        TaxInfo taxInfo, int additionalSeats,
+        int additionalStorageGb, bool premiumAccessAddon,
+        int additionalSmSeats, int additionalServiceAccounts) :
         base(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon, additionalSmSeats, additionalServiceAccounts)
     {
         OffSession = true;
@@ -109,10 +109,10 @@ public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOp
 {
     public OrganizationUpgradeSubscriptionOptions(
         string customerId, Organization org,
-        List<StaticStore.Plan> plans, TaxInfo taxInfo,
-        int additionalSeats = 0, int additionalStorageGb = 0,
-        bool premiumAccessAddon = false, int additionalSmSeats = 0, int additionalServiceAccounts = 0) :
-        base(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon, additionalSmSeats, additionalServiceAccounts)
+        List<StaticStore.Plan> plans, OrganizationUpgrade upgrade) :
+        base(org, plans, upgrade.TaxInfo, upgrade.AdditionalSeats, upgrade.AdditionalStorageGb,
+        upgrade.PremiumAccessAddon, upgrade.AdditionalSmSeats.GetValueOrDefault(),
+        upgrade.AdditionalServiceAccounts.GetValueOrDefault())
     {
         Customer = customerId;
     }
