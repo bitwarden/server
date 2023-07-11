@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscription;
 using Bit.Core.OrganizationFeatures.OrganizationSubscription.Interface;
 using Bit.Core.Repositories;
@@ -34,7 +35,8 @@ public class SecretsManagerSubscriptionCommandTests
             PlanType = planType,
             SmSeats = 0,
             SmServiceAccounts = 0,
-            UseSecretsManager = false
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
         };
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
         var paymentIntentClientSecret = "CLIENT_SECRET";
@@ -74,7 +76,28 @@ public class SecretsManagerSubscriptionCommandTests
         Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
         Assert.Equal(additionalServiceAccounts, organization.SmServiceAccounts);
         Assert.True(organization.UseSecretsManager);
+    }
 
+    private static async Task VerifyDependencyNotCalledAsync(SutProvider<SecretsManagerSubscriptionCommand> sutProvider, Organization organization, Plan plan,
+        int additionalSeats, int additionalServiceAccounts, OrganizationUser organizationUser)
+    {
+        await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
+            .AddSecretsManagerToSubscription(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>(),Arg.Any<int>());
+        // TODO: call ReferenceEventService - see AC-1481
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceive()
+            .ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await sutProvider.GetDependency<IMailService>().DidNotReceive()
+            .SendOrganizationMaxSeatLimitReachedEmailAsync(Arg.Any<Organization>(), Arg.Any<int>(),
+                Arg.Any<IEnumerable<string>>());
+        
+        await sutProvider.GetDependency<IPaymentService>().Received()
+            .AddSecretsManagerToSubscription(organization, plan, additionalSeats, additionalServiceAccounts);
+
+        // TODO: call ReferenceEventService - see AC-1481
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(organizationUser);
     }
 
     [Theory]
@@ -105,5 +128,217 @@ public class SecretsManagerSubscriptionCommandTests
 
         var exception = await Assert.ThrowsAsync<GatewayException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Not a gateway customer.", exception.Message);
+    }
+    
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    public async void ValidateSecretsManagerPlan_ThrowsException_WhenInvalidPlanSelected(PlanType planType, SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = "123",
+            PlanType = planType,
+            SmSeats = 0,
+            SmServiceAccounts = 0,
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
+        };
+
+        sutProvider.GetDependency<IGetOrganizationQuery>().GetOrgById(organizationId)
+            .Returns(organization);
+        var additionalSeats = 1;
+        var additionalServiceAccounts = 0;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        Assert.Contains("Invalid Secrets Manager plan selected.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public async Task ValidateSecretsManagerPlan_ThrowsException_WhenNoSecretsManagerSeats(PlanType planType, SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = "123",
+            PlanType = planType,
+            SmSeats = 0,
+            SmServiceAccounts = 0,
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
+        };
+        sutProvider.GetDependency<IGetOrganizationQuery>().GetOrgById(organizationId)
+            .Returns(organization);
+        var additionalSeats = 0;
+        var additionalServiceAccounts = 5;
+    
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
+    }
+    
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public async Task ValidateSecretsManagerPlan_ThrowsException_WhenAddingSeatWithNoAdditionalSeat(PlanType planType, SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = "123",
+            PlanType = planType,
+            SmSeats = 5,
+            SmServiceAccounts = 0,
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
+        };
+        sutProvider.GetDependency<IGetOrganizationQuery>().GetOrgById(organizationId)
+            .Returns(organization);
+        var additionalSeats = -5;
+        var additionalServiceAccounts = 5;
+    
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
+    }
+    
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public async Task ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingSeats(PlanType planType, SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = "123",
+            PlanType = planType,
+            SmSeats = 5,
+            SmServiceAccounts = 0,
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
+        };
+        sutProvider.GetDependency<IGetOrganizationQuery>().GetOrgById(organizationId)
+            .Returns(organization);
+        var additionalSeats = -1;
+        var additionalServiceAccounts = 5;
+    
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        Assert.Contains("You can't subtract Secrets Manager seats!", exception.Message);
+    }
+    
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateSecretsManagerPlan_ThrowsException_WhenPlanDoesNotAllowAdditionalServiceAccounts(SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == PlanType.Free);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = "123",
+            PlanType = PlanType.Free,
+            SmSeats = 5,
+            SmServiceAccounts = 0,
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
+        };
+        sutProvider.GetDependency<IGetOrganizationQuery>().GetOrgById(organizationId)
+            .Returns(organization);
+        var additionalSeats = 2;
+        var additionalServiceAccounts = 5;
+    
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+    }
+    
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public async Task ValidateSecretsManagerPlan_ThrowsException_WhenMoreSeatsThanPasswordManagerSeats(PlanType planType, SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == PlanType.Free);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = "123",
+            PlanType = planType,
+            SmSeats = 5,
+            Seats = 5,
+            SmServiceAccounts = 0,
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
+        };
+        sutProvider.GetDependency<IGetOrganizationQuery>().GetOrgById(organizationId).Returns(organization);
+        var additionalSeats = 10;
+        var additionalServiceAccounts = 5;
+    
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats.", exception.Message);
+    }
+    
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public async Task ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingServiceAccounts(PlanType planType, SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == PlanType.Free);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = "123",
+            PlanType = planType,
+            SmSeats = 5,
+            Seats = 5,
+            SmServiceAccounts = 0,
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
+        };
+        sutProvider.GetDependency<IGetOrganizationQuery>().GetOrgById(organizationId).Returns(organization);
+        var additionalSeats = 5;
+        var additionalServiceAccounts = -5;
+    
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+    }
+    
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public async Task ValidateSecretsManagerPlan_ThrowsException_WhenPlanDoesNotAllowAdditionalUsers(
+        PlanType planType,
+        SutProvider<SecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var organizationId = Guid.NewGuid();
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == PlanType.Free);
+        var organization = new Organization
+        {
+            Id = organizationId,
+            GatewayCustomerId = "123",
+            PlanType = planType,
+            SmSeats = 5,
+            Seats = 5,
+            SmServiceAccounts = 0,
+            UseSecretsManager = false,
+            GatewaySubscriptionId = "1"
+        };
+        sutProvider.GetDependency<IGetOrganizationQuery>().GetOrgById(organizationId).Returns(organization);
+        var additionalSeats = 2;
+        var additionalServiceAccounts = 0;
+        
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organizationId, additionalSeats, additionalServiceAccounts));
+        Assert.Contains("Plan does not allow additional users.", exception.Message);
     }
 }
