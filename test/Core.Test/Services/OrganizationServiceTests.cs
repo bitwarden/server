@@ -174,6 +174,8 @@ public class OrganizationServiceTests
                 o.Seats == passwordManagerPlan.BaseSeats + signup.AdditionalSeats
                 && o.SmSeats == secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats
                 && o.SmServiceAccounts == secretsManagerPlan.BaseServiceAccount + signup.AdditionalServiceAccounts));
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
+            Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
         await sutProvider.GetDependency<IReferenceEventService>().Received(1)
             .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>

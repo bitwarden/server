@@ -604,6 +604,7 @@ public class OrganizationService : IOrganizationService
                     OrganizationId = organization.Id,
                     UserId = ownerId,
                     Key = ownerKey,
+                    AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
                     AccessAll = true,
