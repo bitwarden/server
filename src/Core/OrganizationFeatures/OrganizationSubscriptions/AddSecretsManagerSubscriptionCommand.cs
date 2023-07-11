@@ -14,15 +14,17 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-
+    private readonly IOrganizationService _organizationService;
     public AddSecretsManagerSubscriptionCommand(
         IPaymentService paymentService,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationService organizationService)
     {
         _paymentService = paymentService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
+        _organizationService = organizationService;
     }
     public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(Organization organization, int additionalSeats,
         int additionalServiceAccounts)
@@ -118,7 +120,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
     {
         try
         {
-            await _organizationRepository.ReplaceAsync(organization);
+            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
             OrganizationUser orgUser = null;
             var ownerUsers =
