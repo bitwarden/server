@@ -17,11 +17,6 @@ public class SecretsManagerSubscriptionUpdateRequestModel
     {
         var newTotalSeats = organization.SmSeats.GetValueOrDefault() + SeatAdjustment;
         var newTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + ServiceAccountAdjustment;
-        var autoscaleSeats = MaxAutoscaleSeats.HasValue && MaxAutoscaleSeats !=
-                             organization.MaxAutoscaleSmSeats.GetValueOrDefault();
-        var autoscaleServiceAccounts = MaxAutoscaleServiceAccounts.HasValue &&
-                                       MaxAutoscaleServiceAccounts !=
-                                       organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault();
 
         var orgUpdate = new SecretsManagerSubscriptionUpdate
         {
@@ -39,8 +34,10 @@ public class SecretsManagerSubscriptionUpdateRequestModel
 
             MaxAutoscaleSmServiceAccounts = MaxAutoscaleServiceAccounts,
 
-            MaxAutoscaleSmSeatsChanged = autoscaleSeats,
-            MaxAutoscaleSmServiceAccountsChanged = autoscaleServiceAccounts
+            MaxAutoscaleSmSeatsChanged = 
+                MaxAutoscaleSeats.GetValueOrDefault() != organization.MaxAutoscaleSmSeats.GetValueOrDefault(),
+            MaxAutoscaleSmServiceAccountsChanged = 
+                MaxAutoscaleServiceAccounts.GetValueOrDefault() != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault()
         };
 
         return orgUpdate;
