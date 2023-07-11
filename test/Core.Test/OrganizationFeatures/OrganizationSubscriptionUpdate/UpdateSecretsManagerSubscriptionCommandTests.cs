@@ -372,13 +372,19 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int organizationServiceAccounts = 200;
+        const int seatAdjustment = 5;
+        const int maxAutoscaleSeats = 15;
+        const int serviceAccountAdjustment = 100;
+        const int maxAutoScaleServiceAccounts = 300;
+
         var organization = new Organization
         {
             Id = organizationId,
             UseSecretsManager = true,
             SmSeats = 10,
-            SmServiceAccounts = 200,
             MaxAutoscaleSmSeats = 20,
+            SmServiceAccounts = organizationServiceAccounts,
             MaxAutoscaleSmServiceAccounts = 350,
             PlanType = planType,
             GatewayCustomerId = "1",
@@ -389,28 +395,23 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var organizationUpdate = new SecretsManagerSubscriptionUpdate
         {
             OrganizationId = organizationId,
-            MaxAutoscaleSmSeats = 15,
-            SmSeatsAdjustment = 5,
-            MaxAutoscaleSmServiceAccounts = 300,
-            SmServiceAccountsAdjustment = 100,
-            SmSeats = organization.SmSeats.GetValueOrDefault() + 5,
-            SmSeatsExcludingBase = (organization.SmSeats.GetValueOrDefault() + 5) - plan.BaseSeats,
-            SmServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + 100,
-            SmServiceAccountsExcludingBase = (organization.SmServiceAccounts.GetValueOrDefault() + 100) - (int)plan.BaseServiceAccount,
-            MaxAutoscaleSmSeatsChanged = 15 != organization.MaxAutoscaleSeats.GetValueOrDefault(),
+            SmSeatsAdjustment = seatAdjustment,
+            SmSeats = organization.SmSeats.GetValueOrDefault() + seatAdjustment,
+            SmSeatsExcludingBase = (organization.SmSeats.GetValueOrDefault() + seatAdjustment) - plan.BaseSeats,
+            MaxAutoscaleSmSeats = maxAutoscaleSeats,
+
+            SmServiceAccountsAdjustment = serviceAccountAdjustment,
+            SmServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + serviceAccountAdjustment,
+            SmServiceAccountsExcludingBase = (organization.SmServiceAccounts.GetValueOrDefault() + serviceAccountAdjustment) - (int)plan.BaseServiceAccount,
+            MaxAutoscaleSmServiceAccounts = maxAutoScaleServiceAccounts,
+
+            MaxAutoscaleSmSeatsChanged = maxAutoscaleSeats != organization.MaxAutoscaleSeats.GetValueOrDefault(),
             MaxAutoscaleSmServiceAccountsChanged = 200 != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault()
         };
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
         await sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate);
-        if (organizationUpdate.SmServiceAccountsAdjustment != 0)
-        {
-            await sutProvider.GetDependency<IPaymentService>().Received(1)
-                .AdjustSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
-
-            // TODO: call ReferenceEventService - see AC-1481
-        }
 
         if (organizationUpdate.SmSeatsAdjustment != 0)
         {
@@ -418,19 +419,21 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 .AdjustServiceAccountsAsync(organization, plan, organizationUpdate.SmServiceAccountsExcludingBase);
 
             // TODO: call ReferenceEventService - see AC-1481
-        }
 
-        if (organizationUpdate.SmSeatsAdjustment != 0)
-        {
             await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
                 Arg.Is<Organization>(org => org.SmSeats == organizationUpdate.SmSeats));
         }
 
         if (organizationUpdate.SmServiceAccountsAdjustment != 0)
         {
+            await sutProvider.GetDependency<IPaymentService>().Received(1)
+                .AdjustSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
+
+            // TODO: call ReferenceEventService - see AC-1481
+
             await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
                 Arg.Is<Organization>(org =>
-                    org.SmServiceAccounts == organizationUpdate.SmServiceAccounts));
+                    org.SmServiceAccounts == (organizationServiceAccounts + organizationUpdate.SmServiceAccountsAdjustment)));
         }
 
         if (organizationUpdate.MaxAutoscaleSmSeats != organization.MaxAutoscaleSmSeats)

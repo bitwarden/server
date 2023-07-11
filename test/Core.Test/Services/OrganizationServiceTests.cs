@@ -147,19 +147,33 @@ public class OrganizationServiceTests
 
 
     [Theory]
-    [BitAutoData]
-    public async Task SignUp_SM_Passes(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    public async Task SignUp_SM_Passes(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
-        signup.AdditionalSmSeats = 10;
-        signup.AdditionalSeats = 10;
-        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.Plan = planType;
+
+        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(signup.Plan);
+        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(signup.Plan);
+
         signup.UseSecretsManager = true;
+        signup.AdditionalSeats = 15;
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalServiceAccounts = 20;
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
 
         var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan).ToList();
 
         var result = await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o =>
+                o.Seats == passwordManagerPlan.BaseSeats + signup.AdditionalSeats
+                && o.SmSeats == secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats
+                && o.SmServiceAccounts == secretsManagerPlan.BaseServiceAccount + signup.AdditionalServiceAccounts));
 
         await sutProvider.GetDependency<IReferenceEventService>().Received(1)
             .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>

@@ -5,6 +5,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -96,16 +97,33 @@ public class UpgradeOrganizationPlanCommandTests
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
     }
 
-    [Theory]
-    [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_SM_Passes(Organization organization, OrganizationUpgrade upgrade,
+    [Theory, FreeOrganizationUpgradeCustomize]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    public async Task UpgradePlan_SM_Passes(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
+        upgrade.Plan = planType;
+
+        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(upgrade.Plan);
+        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(upgrade.Plan);
+
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        upgrade.AdditionalSeats = 15;
         upgrade.AdditionalSmSeats = 10;
-        upgrade.AdditionalSeats = 10;
+        upgrade.AdditionalServiceAccounts = 20;
+
         var result = await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
+
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
+            Arg.Is<Organization>(o =>
+                o.Seats == passwordManagerPlan.BaseSeats + upgrade.AdditionalSeats
+                && o.SmSeats == secretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats
+                && o.SmServiceAccounts == secretsManagerPlan.BaseServiceAccount + upgrade.AdditionalServiceAccounts));
+
         Assert.True(result.Item1);
         Assert.NotNull(result.Item2);
     }
