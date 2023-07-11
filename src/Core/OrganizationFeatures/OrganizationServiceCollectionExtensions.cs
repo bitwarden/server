@@ -47,6 +47,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
+        services.AddOrganizationAuthCommands();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)

@@ -76,6 +76,7 @@ public class OrganizationsController : Controller
         GlobalSettings globalSettings,
         ILicensingService licensingService,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
         ISecretsManagerSubscriptionCommand secretsManagerSubscriptionCommand)
     {
