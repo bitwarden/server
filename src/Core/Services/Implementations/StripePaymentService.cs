@@ -4,6 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
+using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
@@ -25,6 +26,7 @@ public class StripePaymentService : IPaymentService
     private readonly Braintree.IBraintreeGateway _btGateway;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
+    private readonly GlobalSettings _globalSettings;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -33,7 +35,8 @@ public class StripePaymentService : IPaymentService
         ILogger<StripePaymentService> logger,
         ITaxRateRepository taxRateRepository,
         IStripeAdapter stripeAdapter,
-        Braintree.IBraintreeGateway braintreeGateway)
+        Braintree.IBraintreeGateway braintreeGateway,
+        GlobalSettings globalSettings)
     {
         _transactionRepository = transactionRepository;
         _userRepository = userRepository;
@@ -42,6 +45,7 @@ public class StripePaymentService : IPaymentService
         _taxRateRepository = taxRateRepository;
         _stripeAdapter = stripeAdapter;
         _btGateway = braintreeGateway;
+        _globalSettings = globalSettings;
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
@@ -51,9 +55,12 @@ public class StripePaymentService : IPaymentService
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
         string stipeCustomerPaymentMethodId = null;
-        var stripeCustomerMetadata = new Dictionary<string, string>();
+        var stripeCustomerMetadata = new Dictionary<string, string>
+        {
+            { "region", _globalSettings.BaseServiceUri.CloudRegion }
+        };
         var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
-            paymentMethodType == PaymentMethodType.BankAccount;
+                                  paymentMethodType == PaymentMethodType.BankAccount;
 
         if (stripePaymentMethod && !string.IsNullOrWhiteSpace(paymentToken))
         {
@@ -388,7 +395,7 @@ public class StripePaymentService : IPaymentService
 
         if (customer == null && !string.IsNullOrWhiteSpace(paymentToken))
         {
-            var stripeCustomerMetadata = new Dictionary<string, string>();
+            var stripeCustomerMetadata = new Dictionary<string, string> { { "region", _globalSettings.BaseServiceUri.CloudRegion } };
             if (paymentMethodType == PaymentMethodType.PayPal)
             {
                 var randomSuffix = Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false);
@@ -1185,9 +1192,12 @@ public class StripePaymentService : IPaymentService
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
         string stipeCustomerPaymentMethodId = null;
-        var stripeCustomerMetadata = new Dictionary<string, string>();
+        var stripeCustomerMetadata = new Dictionary<string, string>
+        {
+            { "region", _globalSettings.BaseServiceUri.CloudRegion }
+        };
         var stripePaymentMethod = paymentMethodType == PaymentMethodType.Card ||
-            paymentMethodType == PaymentMethodType.BankAccount;
+                                  paymentMethodType == PaymentMethodType.BankAccount;
         var inAppPurchase = paymentMethodType == PaymentMethodType.AppleInApp ||
             paymentMethodType == PaymentMethodType.GoogleInApp;
 
