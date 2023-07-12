@@ -32,7 +32,6 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<IAuthorizationHandler, SecretAuthorizationHandler>();
         services.AddScoped<IAuthorizationHandler, ServiceAccountAuthorizationHandler>();
         services.AddScoped<IAccessClientQuery, AccessClientQuery>();
-        services.AddScoped<ICountNewServiceAccountSlotsRequiredQuery, CountNewServiceAccountSlotsRequiredQuery>();
         services.AddScoped<ICreateSecretCommand, CreateSecretCommand>();
         services.AddScoped<IUpdateSecretCommand, UpdateSecretCommand>();
         services.AddScoped<IDeleteSecretCommand, DeleteSecretCommand>();
