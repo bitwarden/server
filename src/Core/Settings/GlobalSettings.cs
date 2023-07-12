@@ -554,9 +554,9 @@ public class GlobalSettings : IGlobalSettings
         public Dictionary<string, string> FlagValues { get; set; } = new Dictionary<string, string>();
     }
     
-    private class TwoFactorDirectorySettings : ITwoFactorDirectorySettings
+    public class TwoFactorDirectorySettings : ITwoFactorDirectorySettings
     {
-        public string Uri { get; set; } = "https://api.2fa.directory/v3/totp.json";
+        public Uri Uri { get; set; } = new("https://api.2fa.directory/v3/totp.json");
         public int CacheExpirationHours { get; set; } = 24;
     }
 }
