@@ -481,9 +481,7 @@ public class OrganizationService : IOrganizationService
                 PlanType = passwordManagerPlan.Type,
                 Seats = returnValue.Item1.Seats,
                 Storage = returnValue.Item1.MaxStorageGb,
-                SmSeats = returnValue.Item1.SmSeats,
-                ServiceAccounts = returnValue.Item1.SmServiceAccounts,
-                UseSecretsManager = returnValue.Item1.UseSecretsManager
+                // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
         return returnValue;
     }
