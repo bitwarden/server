@@ -37,7 +37,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
+    public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
     {
         var organization = update.Organization;
 
@@ -70,9 +70,13 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await SendEmailIfAutoscaleLimitReached(organization);
     }
 
-    public async Task AdjustSecretsManagerServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
+    public async Task AdjustServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
     {
-        await UpdateSecretsManagerSubscription(new SecretsManagerSubscriptionUpdate(organization, smServiceAccountsAdjustment));
+        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
+            organization, seatAdjustment: 0, maxAutoscaleSeats: null,
+            serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: null);
+
+        await UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate);
     }
 
     private Plan GetPlanForOrganization(Organization organization)

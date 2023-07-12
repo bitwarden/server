@@ -91,9 +91,4 @@ public class SecretsManagerSubscriptionUpdate
         MaxAutoscaleSmSeatsChanged = maxAutoscaleSeats.HasValue && maxAutoscaleSeats != organization.MaxAutoscaleSmSeats.GetValueOrDefault();
         MaxAutoscaleSmServiceAccountsChanged = maxAutoscaleServiceAccounts.HasValue && maxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault();
     }
-
-    public SecretsManagerSubscriptionUpdate(Organization organization, int serviceAccountAdjustment)
-        : this(organization, seatAdjustment: 0, maxAutoscaleSeats: null, serviceAccountAdjustment, maxAutoscaleServiceAccounts: null)
-    {
-    }
 }

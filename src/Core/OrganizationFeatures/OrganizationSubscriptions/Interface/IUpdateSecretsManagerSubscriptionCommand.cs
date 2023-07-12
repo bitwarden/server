@@ -5,6 +5,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 
 public interface IUpdateSecretsManagerSubscriptionCommand
 {
-    Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update);
-    Task AdjustSecretsManagerServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment);
+    Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update);
+    Task AdjustServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment);
 }

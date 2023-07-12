@@ -345,7 +345,7 @@ public class OrganizationsController : Controller
         }
 
         var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization);
-        await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
+        await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
     }
 
     [HttpPost("{id}/seat")]
