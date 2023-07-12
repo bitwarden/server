@@ -3,7 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -302,13 +302,19 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int organizationServiceAccounts = 200;
+        const int seatAdjustment = 5;
+        const int maxAutoscaleSeats = 15;
+        const int serviceAccountAdjustment = 100;
+        const int maxAutoScaleServiceAccounts = 300;
+
         var organization = new Organization
         {
             Id = organizationId,
             UseSecretsManager = true,
             SmSeats = 10,
             MaxAutoscaleSmSeats = 20,
-            SmServiceAccounts = 100,
+            SmServiceAccounts = organizationServiceAccounts,
             MaxAutoscaleSmServiceAccounts = 350,
             PlanType = planType,
             GatewayCustomerId = "1",
@@ -317,7 +323,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
         var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 5, maxAutoscaleSeats: 15, serviceAccountAdjustment: 100, maxAutoscaleServiceAccounts: 200);
+            organization, seatAdjustment: seatAdjustment, maxAutoscaleSeats: maxAutoscaleSeats, serviceAccountAdjustment: serviceAccountAdjustment, maxAutoscaleServiceAccounts: maxAutoScaleServiceAccounts);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(organization);
 
@@ -343,7 +349,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
             await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
                 Arg.Is<Organization>(org =>
-                    org.SmServiceAccounts == organizationUpdate.SmServiceAccounts));
+                    org.SmServiceAccounts == (organizationServiceAccounts + organizationUpdate.SmServiceAccountsAdjustment)));
         }
 
         if (organizationUpdate.MaxAutoscaleSmSeats != organization.MaxAutoscaleSmSeats)
@@ -414,7 +420,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetOccupiedSmSeatCountByOrganizationIdAsync(organizationId).Returns(8);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(update));
-        Assert.Contains("Your organization currently has 8 Secrets Manager seats. Your plan only allows (7) Secrets Manager seats. Remove some Secrets Manager users", exception.Message);
+        Assert.Contains("Your organization currently has 8 Secrets Manager seats. Your plan only allows 7 Secrets Manager seats. Remove some Secrets Manager users", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -567,7 +573,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .Returns(currentServiceAccounts);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSecretsManagerSubscription(organizationUpdate));
-        Assert.Contains($"Your organization currently has {currentServiceAccounts} Service Accounts. Your plan only allows ({organizationUpdate.SmServiceAccounts}) Service Accounts. Remove some Service Accounts", exception.Message);
+        Assert.Contains("Your organization currently has 301 Service Accounts. Your plan only allows 201 Service Accounts. Remove some Service Accounts", exception.Message);
         await sutProvider.GetDependency<IServiceAccountRepository>().Received(1).GetServiceAccountCountByOrganizationIdAsync(organization.Id);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }

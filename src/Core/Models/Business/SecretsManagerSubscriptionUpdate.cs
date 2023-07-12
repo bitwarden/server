@@ -69,12 +69,7 @@ public class SecretsManagerSubscriptionUpdate
         }
 
         var newTotalSeats = organization.SmSeats.GetValueOrDefault() + seatAdjustment;
-        var autoscaleSeatsChanged = maxAutoscaleSeats.HasValue
-                                    && maxAutoscaleSeats != organization.MaxAutoscaleSmSeats.GetValueOrDefault();
-
         var newTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + serviceAccountAdjustment;
-        var autoscaleServiceAccountsChanged = maxAutoscaleServiceAccounts.HasValue
-                                              && maxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault();
 
         OrganizationId = organization.Id;
 
@@ -88,8 +83,8 @@ public class SecretsManagerSubscriptionUpdate
         SmServiceAccountsExcludingBase = newTotalServiceAccounts - secretsManagerPlan.BaseServiceAccount.GetValueOrDefault();
         MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
 
-        MaxAutoscaleSmSeatsChanged = autoscaleSeatsChanged;
-        MaxAutoscaleSmServiceAccountsChanged = autoscaleServiceAccountsChanged;
+        MaxAutoscaleSmSeatsChanged = maxAutoscaleSeats.HasValue && maxAutoscaleSeats != organization.MaxAutoscaleSmSeats.GetValueOrDefault();
+        MaxAutoscaleSmServiceAccountsChanged = maxAutoscaleServiceAccounts.HasValue && maxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault();
     }
 
     public SecretsManagerSubscriptionUpdate(Organization organization, int serviceAccountAdjustment)

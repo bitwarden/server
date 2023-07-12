@@ -4,14 +4,14 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
-namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptionUpdate;
+namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubscriptionCommand
 {
@@ -61,12 +61,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         if (update.MaxAutoscaleSmSeatsChanged)
         {
-            ValidateMaxAutoscaleSmSeatsUpdateAsync(organization, update.MaxAutoscaleSmSeats.GetValueOrDefault(), plan);
+            ValidateMaxAutoscaleSmSeatsUpdateAsync(organization, update.MaxAutoscaleSmSeats, plan);
         }
 
         if (update.MaxAutoscaleSmServiceAccountsChanged)
         {
-            ValidateMaxAutoscaleSmServiceAccountUpdate(organization, update.MaxAutoscaleSmServiceAccounts.GetValueOrDefault(), plan);
+            ValidateMaxAutoscaleSmServiceAccountUpdate(organization, update.MaxAutoscaleSmServiceAccounts, plan);
         }
 
         await FinalizeSubscriptionAdjustmentAsync(organization, plan, update);
@@ -249,7 +249,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             if (currentSeats > update.SmSeats)
             {
                 throw new BadRequestException($"Your organization currently has {currentSeats} Secrets Manager seats. " +
-                                              $"Your plan only allows ({update.SmSeats}) Secrets Manager seats. Remove some Secrets Manager users.");
+                                              $"Your plan only allows {update.SmSeats} Secrets Manager seats. Remove some Secrets Manager users.");
             }
         }
     }
@@ -303,19 +303,25 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             if (currentServiceAccounts > update.SmServiceAccounts)
             {
                 throw new BadRequestException($"Your organization currently has {currentServiceAccounts} Service Accounts. " +
-                                              $"Your plan only allows ({update.SmServiceAccounts}) Service Accounts. Remove some Service Accounts.");
+                                              $"Your plan only allows {update.SmServiceAccounts} Service Accounts. Remove some Service Accounts.");
             }
         }
     }
 
-    private void ValidateMaxAutoscaleSmSeatsUpdateAsync(Organization organization, int maxAutoscaleSeats, Plan plan)
+    private void ValidateMaxAutoscaleSmSeatsUpdateAsync(Organization organization, int? maxAutoscaleSeats, Plan plan)
     {
-        if (organization.SmSeats.HasValue && maxAutoscaleSeats < organization.SmSeats.Value)
+        if (!maxAutoscaleSeats.HasValue)
+        {
+            // autoscale limit has been turned off, no validation required
+            return;
+        }
+
+        if (organization.SmSeats.HasValue && maxAutoscaleSeats.Value < organization.SmSeats.Value)
         {
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
 
-        if (plan.MaxUsers.HasValue && maxAutoscaleSeats > plan.MaxUsers)
+        if (plan.MaxUsers.HasValue && maxAutoscaleSeats.Value > plan.MaxUsers)
         {
             throw new BadRequestException(string.Concat(
                 $"Your plan has a Secrets Manager seat limit of {plan.MaxUsers}, ",
@@ -329,9 +335,15 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
     }
 
-    private void ValidateMaxAutoscaleSmServiceAccountUpdate(Organization organization, int maxAutoscaleServiceAccounts, Plan plan)
+    private void ValidateMaxAutoscaleSmServiceAccountUpdate(Organization organization, int? maxAutoscaleServiceAccounts, Plan plan)
     {
-        if (organization.SmServiceAccounts.HasValue && maxAutoscaleServiceAccounts < organization.SmServiceAccounts.Value)
+        if (!maxAutoscaleServiceAccounts.HasValue)
+        {
+            // autoscale limit has been turned off, no validation required
+            return;
+        }
+
+        if (organization.SmServiceAccounts.HasValue && maxAutoscaleServiceAccounts.Value < organization.SmServiceAccounts.Value)
         {
             throw new BadRequestException(
                 $"Cannot set max Service Accounts autoscaling below current Service Accounts count.");
@@ -342,7 +354,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Your plan does not allow Service Accounts autoscaling.");
         }
 
-        if (plan.MaxServiceAccounts.HasValue && maxAutoscaleServiceAccounts > plan.MaxServiceAccounts)
+        if (plan.MaxServiceAccounts.HasValue && maxAutoscaleServiceAccounts.Value > plan.MaxServiceAccounts)
         {
             throw new BadRequestException(string.Concat(
                 $"Your plan has a Service Accounts limit of {plan.MaxServiceAccounts}, ",
