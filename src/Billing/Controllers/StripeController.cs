@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Stripe;
+using Event = Stripe.Event;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Billing.Controllers;
@@ -41,6 +42,7 @@ public class StripeController : Controller
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IUserRepository _userRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly GlobalSettings _globalSettings;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -83,6 +85,7 @@ public class StripeController : Controller
             PrivateKey = globalSettings.Braintree.PrivateKey
         };
         _currentContext = currentContext;
+        _globalSettings = globalSettings;
     }
 
     [HttpPost("webhook")]
@@ -112,6 +115,12 @@ public class StripeController : Controller
         {
             _logger.LogWarning("Getting test events in production.");
             return new BadRequestResult();
+        }
+
+        // If the customer and server cloud regions don't match, early return 200 to avoid unnecessary errors
+        if (!await ValidateCloudRegionAsync(parsedEvent))
+        {
+            return new OkResult();
         }
 
         var subDeleted = parsedEvent.Type.Equals(HandledStripeWebhook.SubscriptionDeleted);
@@ -471,6 +480,71 @@ public class StripeController : Controller
         return new OkResult();
     }
 
+    /// <summary>
+    /// Ensures that the customer associated with the parsed event's data is in the correct region for this server.
+    /// We use the customer instead of the subscription given that all subscriptions have customers, but not all
+    /// customers have subscriptions
+    /// </summary>
+    /// <param name="parsedEvent"></param>
+    /// <returns>true if the customer's region and the server's region match, otherwise false</returns>
+    /// <exception cref="Exception"></exception>
+    private async Task<bool> ValidateCloudRegionAsync(Event parsedEvent)
+    {
+        string customerRegion;
+
+        var serverRegion = _globalSettings.BaseServiceUri.CloudRegion;
+        var eventType = parsedEvent.Type;
+
+        switch (eventType)
+        {
+            case HandledStripeWebhook.SubscriptionDeleted:
+            case HandledStripeWebhook.SubscriptionUpdated:
+                {
+                    var subscription = await GetSubscriptionAsync(parsedEvent, true, new List<string>
+                {
+                    "customer"
+                });
+                    customerRegion = GetCustomerRegionFromMetadata(subscription.Customer.Metadata);
+                    break;
+                }
+            case HandledStripeWebhook.ChargeSucceeded:
+            case HandledStripeWebhook.ChargeRefunded:
+                {
+                    var charge = await GetChargeAsync(parsedEvent, true, new List<string> { "customer" });
+                    customerRegion = GetCustomerRegionFromMetadata(charge.Customer.Metadata);
+                    break;
+                }
+            case HandledStripeWebhook.UpcomingInvoice:
+            case HandledStripeWebhook.PaymentSucceeded:
+            case HandledStripeWebhook.PaymentFailed:
+            case HandledStripeWebhook.InvoiceCreated:
+                {
+                    var invoice = await GetInvoiceAsync(parsedEvent, true, new List<string> { "customer" });
+                    customerRegion = GetCustomerRegionFromMetadata(invoice.Customer.Metadata);
+                    break;
+                }
+            default:
+                {
+                    // For all Stripe events that we're not listening to, just return 200
+                    return false;
+                }
+        }
+
+        return customerRegion == serverRegion;
+    }
+
+    /// <summary>
+    /// Gets the region from the customer metadata. If no region is present, defaults to "US"
+    /// </summary>
+    /// <param name="customerMetadata"></param>
+    /// <returns></returns>
+    private static string GetCustomerRegionFromMetadata(Dictionary<string, string> customerMetadata)
+    {
+        return !customerMetadata.ContainsKey("region")
+            ? "US"
+            : customerMetadata["region"];
+    }
+
     private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
     {
         if (metaData == null || !metaData.Any())
@@ -732,7 +806,7 @@ public class StripeController : Controller
             invoice.BillingReason == "subscription_cycle" && invoice.SubscriptionId != null;
     }
 
-    private async Task<Charge> GetChargeAsync(Stripe.Event parsedEvent, bool fresh = false)
+    private async Task<Charge> GetChargeAsync(Event parsedEvent, bool fresh = false, List<string> expandOptions = null)
     {
         if (!(parsedEvent.Data.Object is Charge eventCharge))
         {
@@ -743,7 +817,8 @@ public class StripeController : Controller
             return eventCharge;
         }
         var chargeService = new ChargeService();
-        var charge = await chargeService.GetAsync(eventCharge.Id);
+        var chargeGetOptions = new ChargeGetOptions { Expand = expandOptions };
+        var charge = await chargeService.GetAsync(eventCharge.Id, chargeGetOptions);
         if (charge == null)
         {
             throw new Exception("Charge is null. " + eventCharge.Id);
@@ -751,7 +826,7 @@ public class StripeController : Controller
         return charge;
     }
 
-    private async Task<Invoice> GetInvoiceAsync(Stripe.Event parsedEvent, bool fresh = false)
+    private async Task<Invoice> GetInvoiceAsync(Stripe.Event parsedEvent, bool fresh = false, List<string> expandOptions = null)
     {
         if (!(parsedEvent.Data.Object is Invoice eventInvoice))
         {
@@ -762,7 +837,8 @@ public class StripeController : Controller
             return eventInvoice;
         }
         var invoiceService = new InvoiceService();
-        var invoice = await invoiceService.GetAsync(eventInvoice.Id);
+        var invoiceGetOptions = new InvoiceGetOptions { Expand = expandOptions };
+        var invoice = await invoiceService.GetAsync(eventInvoice.Id, invoiceGetOptions);
         if (invoice == null)
         {
             throw new Exception("Invoice is null. " + eventInvoice.Id);
@@ -770,9 +846,10 @@ public class StripeController : Controller
         return invoice;
     }
 
-    private async Task<Subscription> GetSubscriptionAsync(Stripe.Event parsedEvent, bool fresh = false)
+    private async Task<Subscription> GetSubscriptionAsync(Stripe.Event parsedEvent, bool fresh = false,
+        List<string> expandOptions = null)
     {
-        if (!(parsedEvent.Data.Object is Subscription eventSubscription))
+        if (parsedEvent.Data.Object is not Subscription eventSubscription)
         {
             throw new Exception("Subscription is null (from parsed event). " + parsedEvent.Id);
         }
@@ -781,7 +858,8 @@ public class StripeController : Controller
             return eventSubscription;
         }
         var subscriptionService = new SubscriptionService();
-        var subscription = await subscriptionService.GetAsync(eventSubscription.Id);
+        var subscriptionGetOptions = new SubscriptionGetOptions { Expand = expandOptions };
+        var subscription = await subscriptionService.GetAsync(eventSubscription.Id, subscriptionGetOptions);
         if (subscription == null)
         {
             throw new Exception("Subscription is null. " + eventSubscription.Id);
