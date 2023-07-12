@@ -305,42 +305,20 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate);
 
-        if (organizationUpdate.SmSeatsAdjustment != 0)
-        {
-            await sutProvider.GetDependency<IPaymentService>().Received(1)
-                .AdjustServiceAccountsAsync(organization, plan, organizationUpdate.SmServiceAccountsExcludingBase);
+        await sutProvider.GetDependency<IPaymentService>().Received(1)
+            .AdjustSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
+        await sutProvider.GetDependency<IPaymentService>().Received(1)
+            .AdjustServiceAccountsAsync(organization, plan, organizationUpdate.SmServiceAccountsExcludingBase);
 
-            // TODO: call ReferenceEventService - see AC-1481
+        // TODO: call ReferenceEventService - see AC-1481
 
-            await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org => org.SmSeats == organizationUpdate.SmSeats));
-        }
-
-        if (organizationUpdate.SmServiceAccountsAdjustment != 0)
-        {
-            await sutProvider.GetDependency<IPaymentService>().Received(1)
-                .AdjustSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
-
-            // TODO: call ReferenceEventService - see AC-1481
-
-            await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org =>
-                    org.SmServiceAccounts == (organizationServiceAccounts + organizationUpdate.SmServiceAccountsAdjustment)));
-        }
-
-        if (organizationUpdate.MaxAutoscaleSmSeats != organization.MaxAutoscaleSmSeats)
-        {
-            await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
-               Arg.Is<Organization>(org =>
-                   org.MaxAutoscaleSmSeats == organizationUpdate.MaxAutoscaleSmServiceAccounts));
-        }
-
-        if (organizationUpdate.MaxAutoscaleSmServiceAccounts != organization.MaxAutoscaleSmServiceAccounts)
-        {
-            await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
-                Arg.Is<Organization>(org =>
-                    org.MaxAutoscaleSmServiceAccounts == organizationUpdate.MaxAutoscaleSmServiceAccounts));
-        }
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
+            Arg.Is<Organization>(org =>
+                org.Id == organizationId
+                && org.SmSeats == organizationUpdate.SmSeats
+                && org.MaxAutoscaleSmSeats == organizationUpdate.MaxAutoscaleSmSeats
+                && org.SmServiceAccounts == (organizationServiceAccounts + organizationUpdate.SmServiceAccountsAdjustment)
+                && org.MaxAutoscaleSmServiceAccounts == organizationUpdate.MaxAutoscaleSmServiceAccounts));
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, Arg.Any<IEnumerable<string>>());
         await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, Arg.Any<IEnumerable<string>>());
