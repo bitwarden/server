@@ -472,18 +472,6 @@
           "Newtonsoft.Json": "12.0.3"
         }
       },
-      "Microsoft.Azure.ServiceBus": {
-        "type": "Transitive",
-        "resolved": "5.2.0",
-        "contentHash": "wyZNJggyFNtKxd+HgvcTiuRYuTjDGi+pgE4RcBvFbfvNiarKr5AOlE4Ne7on1eUJZuMuEa19wN5dj694HlP60A==",
-        "dependencies": {
-          "Microsoft.Azure.Amqp": "2.4.11",
-          "Microsoft.Azure.Services.AppAuthentication": "[1.0.3, 2.0.0)",
-          "Newtonsoft.Json": "10.0.3",
-          "System.Diagnostics.DiagnosticSource": "4.5.1",
-          "System.IdentityModel.Tokens.Jwt": "5.4.0"
-        }
-      },
       "Microsoft.Azure.Services.AppAuthentication": {
         "type": "Transitive",
         "resolved": "1.6.2",
@@ -2829,7 +2817,6 @@
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[6.0.4, )",
           "Microsoft.Azure.Cosmos.Table": "[1.0.8, )",
           "Microsoft.Azure.NotificationHubs": "[4.1.0, )",
-          "Microsoft.Azure.ServiceBus": "[5.2.0, )",
           "Microsoft.Data.SqlClient": "[5.0.1, )",
           "Microsoft.Extensions.Caching.StackExchangeRedis": "[6.0.6, )",
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[6.0.1, )",
