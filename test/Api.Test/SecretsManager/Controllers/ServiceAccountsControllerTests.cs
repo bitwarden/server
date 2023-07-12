@@ -2,12 +2,16 @@
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -15,6 +19,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.SecretsManager.Controllers;
@@ -90,12 +95,70 @@ public class ServiceAccountsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider,
+    public async void CreateServiceAccount_OrgDoesntExist_Throws(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountCreateRequestModel data, Guid organizationId)
     {
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organizationId),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Is(organizationId)).ReturnsNull();
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var resultServiceAccount = data.ToServiceAccount(organizationId);
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
+            .ReturnsForAnyArgs(resultServiceAccount);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+    }
+
+    [Theory]
+    [BitAutoData(0)]
+    [BitAutoData(1)]
+    [BitAutoData(2)]
+    public async void CreateServiceAccount_NewServiceAccountSlotsRequired_CheckCallsUpdate(int newSlotsRequired, SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccountCreateRequestModel data, Guid organizationId, Organization mockOrg)
+    {
+        mockOrg.Id = organizationId;
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organizationId),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Is(organizationId)).Returns(mockOrg);
+        sutProvider.GetDependency<ICountNewServiceAccountSlotsRequiredQuery>()
+            .CountNewServiceAccountSlotsRequiredAsync(Arg.Is(organizationId), Arg.Is(1))
+            .ReturnsForAnyArgs(newSlotsRequired);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var resultServiceAccount = data.ToServiceAccount(organizationId);
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
+            .ReturnsForAnyArgs(resultServiceAccount);
+
+        await sutProvider.Sut.CreateAsync(organizationId, data);
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
+            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+
+        if (newSlotsRequired > 0)
+        {
+            await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+                .AdjustServiceAccountsAsync(Arg.Is(mockOrg), Arg.Is(newSlotsRequired));
+        }
+        else
+        {
+            await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+                .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<int>());
+        }
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccountCreateRequestModel data, Guid organizationId, Organization mockOrg)
+    {
+        mockOrg.Id = organizationId;
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organizationId),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Is(organizationId)).Returns(mockOrg);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         var resultServiceAccount = data.ToServiceAccount(organizationId);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
