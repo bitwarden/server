@@ -4,9 +4,12 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -25,6 +28,9 @@ public class ServiceAccountsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly ICountNewServiceAccountSlotsRequiredQuery _countNewServiceAccountSlotsRequiredQuery;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
     private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
@@ -37,6 +43,9 @@ public class ServiceAccountsController : Controller
         IAuthorizationService authorizationService,
         IServiceAccountRepository serviceAccountRepository,
         IApiKeyRepository apiKeyRepository,
+        IOrganizationRepository organizationRepository,
+        ICountNewServiceAccountSlotsRequiredQuery countNewServiceAccountSlotsRequiredQuery,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         ICreateAccessTokenCommand createAccessTokenCommand,
         ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand,
@@ -48,11 +57,14 @@ public class ServiceAccountsController : Controller
         _authorizationService = authorizationService;
         _serviceAccountRepository = serviceAccountRepository;
         _apiKeyRepository = apiKeyRepository;
+        _organizationRepository = organizationRepository;
+        _countNewServiceAccountSlotsRequiredQuery = countNewServiceAccountSlotsRequiredQuery;
         _createServiceAccountCommand = createServiceAccountCommand;
         _updateServiceAccountCommand = updateServiceAccountCommand;
         _deleteServiceAccountsCommand = deleteServiceAccountsCommand;
         _revokeAccessTokensCommand = revokeAccessTokensCommand;
         _createAccessTokenCommand = createAccessTokenCommand;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
@@ -102,6 +114,22 @@ public class ServiceAccountsController : Controller
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
+        }
+
+        var org = await _organizationRepository.GetByIdAsync(organizationId);
+        if (org == null)
+        {
+            throw new NotFoundException();
+        }
+
+        // FIXME put the slot check/adjustment in an IF block based on the organization's SM beta flag
+
+        var newServiceAccountSlotsRequired = await _countNewServiceAccountSlotsRequiredQuery
+            .CountNewServiceAccountSlotsRequiredAsync(organizationId, 1);
+        if (newServiceAccountSlotsRequired > 0)
+        {
+            await _updateSecretsManagerSubscriptionCommand.AdjustServiceAccountsAsync(org,
+                newServiceAccountSlotsRequired);
         }
 
         var userId = _userService.GetProperUserId(User).Value;
