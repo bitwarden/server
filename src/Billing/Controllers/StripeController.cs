@@ -500,10 +500,7 @@ public class StripeController : Controller
             case HandledStripeWebhook.SubscriptionDeleted:
             case HandledStripeWebhook.SubscriptionUpdated:
                 {
-                    var subscription = await GetSubscriptionAsync(parsedEvent, true, new List<string>
-                {
-                    "customer"
-                });
+                    var subscription = await GetSubscriptionAsync(parsedEvent, true, new List<string> { "customer" });
                     customerRegion = GetCustomerRegionFromMetadata(subscription.Customer.Metadata);
                     break;
                 }
@@ -540,9 +537,9 @@ public class StripeController : Controller
     /// <returns></returns>
     private static string GetCustomerRegionFromMetadata(Dictionary<string, string> customerMetadata)
     {
-        return !customerMetadata.ContainsKey("region")
-            ? "US"
-            : customerMetadata["region"];
+        return customerMetadata.TryGetValue("region", out var value)
+            ? value
+            : "US";
     }
 
     private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
