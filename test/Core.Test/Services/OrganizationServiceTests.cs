@@ -184,7 +184,7 @@ public class OrganizationServiceTests
                 referenceEvent.PlanType == purchaseOrganizationPlan[0].Type &&
                 referenceEvent.Seats == result.Item1.Seats &&
                 referenceEvent.Storage == result.Item1.MaxStorageGb));
-                // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
+        // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
 
         Assert.NotNull(result);
         Assert.NotNull(result.Item1);
