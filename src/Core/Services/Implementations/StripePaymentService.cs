@@ -26,7 +26,7 @@ public class StripePaymentService : IPaymentService
     private readonly Braintree.IBraintreeGateway _btGateway;
     private readonly ITaxRateRepository _taxRateRepository;
     private readonly IStripeAdapter _stripeAdapter;
-    private readonly GlobalSettings _globalSettings;
+    private readonly IGlobalSettings _globalSettings;
 
     public StripePaymentService(
         ITransactionRepository transactionRepository,
@@ -36,7 +36,7 @@ public class StripePaymentService : IPaymentService
         ITaxRateRepository taxRateRepository,
         IStripeAdapter stripeAdapter,
         Braintree.IBraintreeGateway braintreeGateway,
-        GlobalSettings globalSettings)
+        IGlobalSettings globalSettings)
     {
         _transactionRepository = transactionRepository;
         _userRepository = userRepository;
