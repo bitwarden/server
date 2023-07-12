@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -15,7 +14,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubscriptionCommand
 {
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationService _organizationService;
@@ -24,7 +22,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public UpdateSecretsManagerSubscriptionCommand(
-        IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IPaymentService paymentService,
@@ -32,7 +29,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository)
     {
-        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
         _organizationService = organizationService;
@@ -43,7 +39,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
     {
-        var organization = await _organizationRepository.GetByIdAsync(update.OrganizationId);
+        var organization = update.Organization;
 
         ValidateOrganization(organization);
 
@@ -74,12 +70,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await SendEmailIfAutoscaleLimitReached(organization);
     }
 
-    public async Task AdjustSecretsManagerServiceAccountsAsync(Guid organizationId, int smServiceAccountsAdjustment)
+    public async Task AdjustSecretsManagerServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
     {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
-
-        ValidateOrganization(organization);
-
         await UpdateSecretsManagerSubscription(new SecretsManagerSubscriptionUpdate(organization, smServiceAccountsAdjustment));
     }
 
@@ -97,7 +89,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (organization == null)
         {
-            throw new NotFoundException("Organization is not found");
+            throw new NotFoundException("Organization is not found.");
         }
 
         if (!organization.UseSecretsManager)
