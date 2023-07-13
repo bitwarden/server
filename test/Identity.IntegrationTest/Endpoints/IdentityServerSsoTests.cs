@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Entities;
@@ -250,7 +250,7 @@ public class IdentityServerSsoTests
         // but it should still be asserted in some way that keys are not amongst them.
         Assert.Collection(trustedDeviceOption.EnumerateObject(),
             p => { Assert.Equal("HasAdminApproval", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); },
-            p => { Assert.Equal("HasApprovingDevices", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); });
+            p => { Assert.Equal("HasLoginApprovingDevice", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); });
     }
 
     /// <summary>
@@ -323,7 +323,7 @@ public class IdentityServerSsoTests
         // but it should still be asserted in some way that keys are not amongst them.
         Assert.Collection(trustedDeviceOption.EnumerateObject(),
             p => { Assert.Equal("HasAdminApproval", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); },
-            p => { Assert.Equal("HasApprovingDevices", p.Name); Assert.Equal(JsonValueKind.True, p.Value.ValueKind); });
+            p => { Assert.Equal("HasLoginApprovingDevice", p.Name); Assert.Equal(JsonValueKind.True, p.Value.ValueKind); });
     }
 
     /// <summary>
