@@ -617,14 +617,16 @@ public abstract class BaseRequestValidator<T> where T : class
             }
 
             var allDevices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
-            var hasApprovingDevices = allDevices
-                .Where(d => d.Identifier != device.Identifier && ApprovingDeviceTypes.Types.Contains(d.Type))
+            // Checks if the current user has any devices that are capable of approving login with device requests except for
+            // their current device.
+            var hasLoginApprovingDevice = allDevices
+                .Where(d => d.Identifier != device.Identifier && LoginApprovingDeviceTypes.Types.Contains(d.Type))
                 .Any();
 
             var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
             userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval,
-                hasApprovingDevices,
+                hasLoginApprovingDevice,
                 encryptedPrivateKey,
                 encryptedUserKey);
         }
