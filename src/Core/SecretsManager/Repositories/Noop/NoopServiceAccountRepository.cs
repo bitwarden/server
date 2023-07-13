@@ -1,8 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
-using Bit.Core.SecretsManager.Repositories;
 
-namespace Bit.Core.Repositories.Noop;
+namespace Bit.Core.SecretsManager.Repositories.Noop;
 
 public class NoopServiceAccountRepository : IServiceAccountRepository
 {
