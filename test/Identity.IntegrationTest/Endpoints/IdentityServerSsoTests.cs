@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
 using Bit.Core.Auth.Entities;
@@ -255,7 +255,7 @@ public class IdentityServerSsoTests
 
     /// <summary>
     /// If a user has a device that is able to accept login with device requests, we should return that state
-    /// with the user decyprtion options.
+    /// with the user decryption options.
     /// </summary>
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasApprovingDevices_ReturnsTrue()

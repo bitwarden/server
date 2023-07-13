@@ -619,6 +619,7 @@ public abstract class BaseRequestValidator<T> where T : class
             var allDevices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
             // Checks if the current user has any devices that are capable of approving login with device requests except for
             // their current device.
+            // NOTE: this doesn't check for if the users have configured the devices to be capable of approving requests as that is a client side setting.
             var hasLoginApprovingDevice = allDevices
                 .Where(d => d.Identifier != device.Identifier && LoginApprovingDeviceTypes.Types.Contains(d.Type))
                 .Any();
