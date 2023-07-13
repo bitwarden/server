@@ -32,12 +32,17 @@ public class UserDecryptionOptions : ResponseModel
 public class TrustedDeviceUserDecryptionOption
 {
     public bool HasAdminApproval { get; }
+    public bool HasApprovingDevices { get; }
     public string? EncryptedPrivateKey { get; }
     public string? EncryptedUserKey { get; }
 
-    public TrustedDeviceUserDecryptionOption(bool hasAdminApproval, string? encryptedPrivateKey, string? encryptedUserKey)
+    public TrustedDeviceUserDecryptionOption(bool hasAdminApproval,
+        bool hasApprovingDevices,
+        string? encryptedPrivateKey,
+        string? encryptedUserKey)
     {
         HasAdminApproval = hasAdminApproval;
+        HasApprovingDevices = hasApprovingDevices;
         EncryptedPrivateKey = encryptedPrivateKey;
         EncryptedUserKey = encryptedUserKey;
     }

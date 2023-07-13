@@ -237,7 +237,8 @@ public class IdentityServerSsoTests
         //   "Object": "userDecryptionOptions"
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
-        //     "HasAdminApproval": true
+        //     "HasAdminApproval": true,
+        //     "HasApprovingDevices": false
         //   }
         // }
 
@@ -247,7 +248,82 @@ public class IdentityServerSsoTests
         // This asserts that device keys are not coming back in the response because this should be a new device.
         // if we ever add new properties that come back from here it is fine to change the expected number of properties
         // but it should still be asserted in some way that keys are not amongst them.
-        Assert.Single(trustedDeviceOption.EnumerateObject());
+        Assert.Collection(trustedDeviceOption.EnumerateObject(),
+            p => { Assert.Equal("HasAdminApproval", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); },
+            p => { Assert.Equal("HasApprovingDevices", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); });
+    }
+
+    /// <summary>
+    /// If a user has a device that is able to accept login with device requests, we should return that state
+    /// with the user decyprtion options.
+    /// </summary>
+    [Fact]
+    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasApprovingDevices_ReturnsTrue()
+    {
+        // Arrange
+        var challenge = new string('c', 50);
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+        }, challenge);
+
+        await UpdateUserAsync(factory, user => user.MasterPassword = null);
+        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+        var user = await userRepository.GetByEmailAsync(TestEmail);
+
+        var deviceRepository = factory.Services.GetRequiredService<IDeviceRepository>();
+        await deviceRepository.CreateAsync(new Device
+        {
+            Identifier = "my_other_device",
+            Type = DeviceType.Android,
+            Name = "Android",
+            UserId = user.Id,
+        });
+
+        // Act
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "10" },
+            { "deviceIdentifier", "test_id" },
+            { "deviceName", "firefox" },
+            { "twoFactorToken", "TEST"},
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }));
+
+        // Assert
+        // If the organization has selected TrustedDeviceEncryption but the user still has their master password
+        // they can decrypt with either option
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = responseBody.RootElement;
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+
+        // Expected to look like:
+        // "UserDecryptionOptions": {
+        //   "Object": "userDecryptionOptions"
+        //   "HasMasterPassword": false,
+        //   "TrustedDeviceOption": {
+        //     "HasAdminApproval": true,
+        //     "HasApprovingDevices": true
+        //   }
+        // }
+
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
+
+        // This asserts that device keys are not coming back in the response because this should be a new device.
+        // if we ever add new properties that come back from here it is fine to change the expected number of properties
+        // but it should still be asserted in some way that keys are not amongst them.
+        Assert.Collection(trustedDeviceOption.EnumerateObject(),
+            p => { Assert.Equal("HasAdminApproval", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); },
+            p => { Assert.Equal("HasApprovingDevices", p.Name); Assert.Equal(JsonValueKind.True, p.Value.ValueKind); });
     }
 
     /// <summary>

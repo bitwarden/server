@@ -23,6 +23,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
+using Bit.Identity.Utilities;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
 
@@ -614,10 +615,18 @@ public abstract class BaseRequestValidator<T> where T : class
                 encryptedPrivateKey = device.EncryptedPrivateKey;
                 encryptedUserKey = device.EncryptedUserKey;
             }
+
+            var allDevices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
+            var hasApprovingDevices = allDevices
+                .Where(d => d.Identifier != device.Identifier && ApprovingDeviceTypes.Types.Contains(d.Type))
+                .Any();
+
             var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
             userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval,
-                encryptedPrivateKey, encryptedUserKey);
+                hasApprovingDevices,
+                encryptedPrivateKey,
+                encryptedUserKey);
         }
 
         return userDecryptionOption;
