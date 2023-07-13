@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Auth.Models.Api.Request;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -76,10 +77,7 @@ public class DeviceService : IDeviceService
 
         foreach (var device in existingDevices)
         {
-            // TODO: Use extension method
-            if (string.IsNullOrEmpty(device.EncryptedPrivateKey) ||
-                string.IsNullOrEmpty(device.EncryptedPublicKey) ||
-                string.IsNullOrEmpty(device.EncryptedUserKey))
+            if (!device.IsTrusted())
             {
                 // You can't update the trust of a device that isn't trusted to begin with
                 // should we throw and consider this a BadRequest? If we want to consider it a invalid request

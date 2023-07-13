@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Utilities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
@@ -19,10 +20,7 @@ public class DeviceResponseModel : ResponseModel
         Type = device.Type;
         Identifier = device.Identifier;
         CreationDate = device.CreationDate;
-        // TODO: Use helper added in another PR
-        IsTrusted = !string.IsNullOrEmpty(device.EncryptedUserKey) &&
-            !string.IsNullOrEmpty(device.EncryptedPublicKey) &&
-            !string.IsNullOrEmpty(device.EncryptedPrivateKey);
+        IsTrusted = device.IsTrusted();
     }
 
     public string Id { get; set; }
