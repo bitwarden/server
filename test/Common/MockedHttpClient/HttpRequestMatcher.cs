@@ -89,7 +89,7 @@ public class HttpRequestMatcher : IHttpRequestMatcher
     public async Task<HttpResponseMessage> RespondToAsync(HttpRequestMessage request)
     {
         NumberOfMatches++;
-        return await ( _childMatcher == null ? _mockedResponse.RespondToAsync(request) : _childMatcher.RespondToAsync(request));
+        return await (_childMatcher == null ? _mockedResponse.RespondToAsync(request) : _childMatcher.RespondToAsync(request));
     }
 
     private HttpRequestMatcher AddChild(Func<HttpRequestMessage, bool> matcher)
