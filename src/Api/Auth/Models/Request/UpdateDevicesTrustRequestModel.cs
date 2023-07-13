@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Request;
 
