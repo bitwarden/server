@@ -116,6 +116,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqliteMigrations", "util\Sq
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsSqlMigratorUtility", "util\MsSqlMigratorUtility\MsSqlMigratorUtility.csproj", "{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions.Hosting", "src\Extensions.Hosting\Extensions.Hosting.csproj", "{7D359D33-A7B6-456E-9E79-AAA99A525889}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -284,6 +286,10 @@ Global
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D359D33-A7B6-456E-9E79-AAA99A525889}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D359D33-A7B6-456E-9E79-AAA99A525889}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D359D33-A7B6-456E-9E79-AAA99A525889}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D359D33-A7B6-456E-9E79-AAA99A525889}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -329,6 +335,7 @@ Global
 		{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{07143DFA-F242-47A4-A15E-39C9314D4140} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
+		{7D359D33-A7B6-456E-9E79-AAA99A525889} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84D}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}
