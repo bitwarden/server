@@ -5,14 +5,18 @@ root = true
 
 # Don't use tabs for indentation.
 [*]
-end_of_line = lf
 indent_style = space
+tab_width = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+guidelines = 120
 # (Please don't specify an indent_size here; that has too many unintended consequences.)
 
 # Code files
 [*.{cs,csx,vb,vbx}]
 indent_size = 4
-insert_final_newline = true
 charset = utf-8-bom
 
 # Xml project files
