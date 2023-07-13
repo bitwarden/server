@@ -6,7 +6,6 @@ root = true
 # Don't use tabs for indentation.
 [*]
 indent_style = space
-tab_width = 4
 end_of_line = lf
 charset = utf-8
 trim_trailing_whitespace = true
@@ -124,7 +123,3 @@ csharp_style_namespace_declarations = file_scoped:warning
 # Switch expression
 dotnet_diagnostic.CS8509.severity = error # missing switch case for named enum value
 dotnet_diagnostic.CS8524.severity = none # missing switch case for unnamed enum value
-
-# All files
-[*]
-guidelines = 120
