@@ -261,4 +261,108 @@ public class ServiceAccountsControllerTests
         await sutProvider.GetDependency<IRevokeAccessTokensCommand>().Received(1)
             .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_NoServiceAccountsFound_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<ServiceAccount>());
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_ServiceAccountsFoundMisMatch_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data, ServiceAccount mockSa)
+    {
+        data.Add(mockSa);
+        var ids = data.Select(sa => sa.Id).ToList();
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<ServiceAccount> { mockSa });
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_OrganizationMistMatch_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_NoAccessToSecretsManager_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var sa in data)
+        {
+            sa.OrganizationId = organizationId;
+        }
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_ReturnsAccessDeniedForProjectsWithoutAccess_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var sa in data)
+        {
+            sa.OrganizationId = organizationId;
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), sa,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
+
+        Assert.Equal(data.Count, results.Data.Count());
+        Assert.Equal("access denied", results.Data.First().Error);
+
+        data.Remove(data.First());
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().Received(1)
+            .DeleteServiceAccounts(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var sa in data)
+        {
+            sa.OrganizationId = organizationId;
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), sa,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
+
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().Received(1)
+            .DeleteServiceAccounts(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+        Assert.Equal(data.Count, results.Data.Count());
+        foreach (var result in results.Data)
+        {
+            Assert.Null(result.Error);
+        }
+    }
 }

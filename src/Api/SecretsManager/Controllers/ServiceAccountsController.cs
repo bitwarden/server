@@ -8,6 +8,7 @@ using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -134,10 +135,40 @@ public class ServiceAccountsController : Controller
     [HttpPost("delete")]
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccounts = (await _serviceAccountRepository.GetManyByIds(ids)).ToList();
+        if (!serviceAccounts.Any() || serviceAccounts.Count != ids.Count)
+        {
+            throw new NotFoundException();
+        }
 
-        var results = await _deleteServiceAccountsCommand.DeleteServiceAccounts(ids, userId);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
+        // Ensure all service accounts belong to the same organization
+        var organizationId = serviceAccounts.First().OrganizationId;
+        if (serviceAccounts.Any(sa => sa.OrganizationId != organizationId) ||
+            !_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var serviceAccountsToDelete = new List<ServiceAccount>();
+        var results = new List<(ServiceAccount ServiceAccount, string Error)>();
+
+        foreach (var serviceAccount in serviceAccounts)
+        {
+            var authorizationResult =
+                await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Delete);
+            if (authorizationResult.Succeeded)
+            {
+                serviceAccountsToDelete.Add(serviceAccount);
+                results.Add((serviceAccount, ""));
+            }
+            else
+            {
+                results.Add((serviceAccount, "access denied"));
+            }
+        }
+
+        await _deleteServiceAccountsCommand.DeleteServiceAccounts(serviceAccountsToDelete);
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.ServiceAccount.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
