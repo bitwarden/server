@@ -19,9 +19,10 @@ public class DeviceResponseModel : ResponseModel
         Type = device.Type;
         Identifier = device.Identifier;
         CreationDate = device.CreationDate;
-        EncryptedUserKey = device.EncryptedUserKey;
-        EncryptedPublicKey = device.EncryptedPublicKey;
-        EncryptedPrivateKey = device.EncryptedPrivateKey;
+        // TODO: Use helper added in another PR
+        IsTrusted = !string.IsNullOrEmpty(device.EncryptedUserKey) &&
+            !string.IsNullOrEmpty(device.EncryptedPublicKey) &&
+            !string.IsNullOrEmpty(device.EncryptedPrivateKey);
     }
 
     public string Id { get; set; }
@@ -29,7 +30,5 @@ public class DeviceResponseModel : ResponseModel
     public DeviceType Type { get; set; }
     public string Identifier { get; set; }
     public DateTime CreationDate { get; set; }
-    public string EncryptedUserKey { get; }
-    public string EncryptedPublicKey { get; }
-    public string EncryptedPrivateKey { get; }
+    public bool IsTrusted { get; set; }
 }
