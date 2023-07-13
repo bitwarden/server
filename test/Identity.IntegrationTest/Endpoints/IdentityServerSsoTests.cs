@@ -238,7 +238,7 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
-        //     "HasApprovingDevices": false
+        //     "HasLoginApprovingDevice": false
         //   }
         // }
 
@@ -258,7 +258,7 @@ public class IdentityServerSsoTests
     /// with the user decryption options.
     /// </summary>
     [Fact]
-    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasApprovingDevices_ReturnsTrue()
+    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasLoggingApprovingDevice_ReturnsTrue()
     {
         // Arrange
         var challenge = new string('c', 50);
@@ -312,7 +312,7 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
-        //     "HasApprovingDevices": true
+        //     "HasLoginApprovingDevice": true
         //   }
         // }
 
