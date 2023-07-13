@@ -8,9 +8,11 @@ public static class ApprovingDeviceTypes
     {
         DeviceType.Android,
         DeviceType.iOS,
+        DeviceType.AndroidAmazon,
         DeviceType.LinuxDesktop,
         DeviceType.MacOsDesktop,
         DeviceType.WindowsDesktop,
+        DeviceType.UWP,
     };
 
     public static IReadOnlyCollection<DeviceType> Types => _deviceTypes;
