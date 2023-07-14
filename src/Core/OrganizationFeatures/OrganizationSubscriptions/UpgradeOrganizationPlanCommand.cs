@@ -284,9 +284,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                     OldPlanType = existingPasswordManagerPlan.Type,
                     Seats = organization.Seats,
                     Storage = organization.MaxStorageGb,
-                    SmSeats = organization.SmSeats,
-                    ServiceAccounts = organization.SmServiceAccounts,
-                    UseSecretsManager = organization.UseSecretsManager
+                    // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
                 });
         }
 
