@@ -1,10 +1,11 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Utilities;
+using Pipelines.Sockets.Unofficial.Arenas;
 
 namespace Bit.Api.SecretsManager.Models.Request;
 
-public class AccessTokenCreateRequestModel
+public class AccessTokenCreateRequestModel : IValidatableObject
 {
     [Required]
     [EncryptedString]
@@ -33,5 +34,14 @@ public class AccessTokenCreateRequestModel
             Scope = "[\"api.secrets\"]",
             EncryptedPayload = EncryptedPayload,
         };
+    }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (ExpireAt <= DateTime.Now)
+        {
+            yield return new ValidationResult(
+               $"Please select an expiration date that is in the future.");
+        }
     }
 }
