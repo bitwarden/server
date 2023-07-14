@@ -553,7 +553,7 @@ public class GlobalSettings : IGlobalSettings
         public string FlagDataFilePath { get; set; } = "flags.json";
         public Dictionary<string, string> FlagValues { get; set; } = new Dictionary<string, string>();
     }
-    
+
     public class TwoFactorDirectorySettings : ITwoFactorDirectorySettings
     {
         public Uri Uri { get; set; } = new("https://api.2fa.directory/v3/totp.json");

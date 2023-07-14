@@ -1,10 +1,10 @@
-using System.Text.Json;
+﻿using System.Text.Json;
+using Bit.Core.Exceptions;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Models.Api.Response;
 using Bit.Core.Tools.Queries.Interfaces;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Caching.Distributed;
-using Bit.Core.Exceptions;
-using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.Tools.Queries;
@@ -80,8 +80,8 @@ public class GetInactiveTwoFactorQuery : IGetInactiveTwoFactorQuery
         {
             // Each nested array has two values: a floating "name" value [index: 0] and an object with desired data [index: 1]
             data.AddRange(from element in jsonDocument.RootElement.EnumerateArray()
-                where element.ValueKind == JsonValueKind.Array && element.GetArrayLength() == 2
-                select element[1].Deserialize<TwoFactorDirectoryTotpResponseModel>());
+                          where element.ValueKind == JsonValueKind.Array && element.GetArrayLength() == 2
+                          select element[1].Deserialize<TwoFactorDirectoryTotpResponseModel>());
         }
 
         return data;

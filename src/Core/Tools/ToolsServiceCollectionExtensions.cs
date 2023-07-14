@@ -1,4 +1,4 @@
-using Bit.Core.Tools.Queries;
+﻿using Bit.Core.Tools.Queries;
 using Bit.Core.Tools.Queries.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,7 +11,7 @@ public static class ToolsServiceCollectionExtensions
         // TODO Add other Tools services/commands/queries
         services.AddReportsQueries();
     }
-    
+
     private static void AddReportsQueries(this IServiceCollection services)
     {
         services.AddScoped<IGetInactiveTwoFactorQuery, GetInactiveTwoFactorQuery>();

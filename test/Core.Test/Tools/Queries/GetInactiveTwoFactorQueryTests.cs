@@ -1,16 +1,16 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Mime;
 using System.Text;
+using System.Text.Json;
+using Bit.Core.Exceptions;
+using Bit.Core.Settings;
 using Bit.Core.Tools.Queries;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
-using Xunit;
-using System.Text.Json;
-using Bit.Core.Exceptions;
-using Bit.Core.Settings;
 using NSubstitute.ReturnsExtensions;
+using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
 
 namespace Bit.Core.Test.Tools.Queries;
@@ -51,7 +51,8 @@ public class GetInactiveTwoFactorQueryTests
         sutProvider.GetDependency<IGlobalSettings>().TwoFactorDirectory.Returns(
             new GlobalSettings.TwoFactorDirectorySettings()
             {
-                CacheExpirationHours = 1, Uri = new Uri("http://localhost")
+                CacheExpirationHours = 1,
+                Uri = new Uri("http://localhost")
             });
 
         await sutProvider.Sut.GetInactiveTwoFactorAsync();
@@ -59,7 +60,7 @@ public class GetInactiveTwoFactorQueryTests
         await sutProvider.GetDependency<IDistributedCache>().Received(1).SetAsync(Arg.Any<string>(),
             Arg.Any<byte[]>(), Arg.Any<DistributedCacheEntryOptions>());
     }
-    
+
     [Theory]
     [BitAutoData]
     public async Task GetInactiveTwoFactor_FromApi_Failure(SutProvider<GetInactiveTwoFactorQuery> sutProvider)
@@ -81,9 +82,10 @@ public class GetInactiveTwoFactorQueryTests
         sutProvider.GetDependency<IGlobalSettings>().TwoFactorDirectory.Returns(
             new GlobalSettings.TwoFactorDirectorySettings()
             {
-                CacheExpirationHours = 1, Uri = new Uri("http://localhost")
+                CacheExpirationHours = 1,
+                Uri = new Uri("http://localhost")
             });
-        
+
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.GetInactiveTwoFactorAsync());
     }
 

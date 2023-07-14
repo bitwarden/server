@@ -1,4 +1,4 @@
-namespace Bit.Core.Tools.Queries.Interfaces;
+﻿namespace Bit.Core.Tools.Queries.Interfaces;
 
 public interface IGetInactiveTwoFactorQuery
 {
