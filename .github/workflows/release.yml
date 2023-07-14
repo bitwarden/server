@@ -134,7 +134,7 @@ jobs:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Deploy App
-        uses: azure/webapps-deploy@fb8292eb575db1bb18a90627e8959cd51dbb355c # v2.2.10
+        uses: azure/webapps-deploy@85270a1854658d167ab239bce43949edb336fa7c # v2.2.9
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
           publish-profile: ${{ steps.retrieve-secrets.outputs.publish-profile }}
