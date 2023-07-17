@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Utilities;
-using Pipelines.Sockets.Unofficial.Arenas;
 
 namespace Bit.Api.SecretsManager.Models.Request;
 
