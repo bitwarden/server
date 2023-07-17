@@ -16,8 +16,8 @@ public class SecretsManagerSubscriptionUpdateRequestModel
     {
         var orgUpdate = new SecretsManagerSubscriptionUpdate(
             organization,
-            SeatAdjustment, MaxAutoscaleSeats,
-            ServiceAccountAdjustment, MaxAutoscaleServiceAccounts);
+            seatAdjustment: SeatAdjustment, maxAutoscaleSeats: MaxAutoscaleSeats,
+            serviceAccountAdjustment: ServiceAccountAdjustment, maxAutoscaleServiceAccounts: MaxAutoscaleServiceAccounts);
 
         return orgUpdate;
     }

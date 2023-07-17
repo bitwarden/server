@@ -88,7 +88,7 @@ public class SecretsManagerSubscriptionUpdate
         SmServiceAccountsExcludingBase = newTotalServiceAccounts - secretsManagerPlan.BaseServiceAccount.GetValueOrDefault();
         MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
 
-        MaxAutoscaleSmSeatsChanged = maxAutoscaleSeats.HasValue && maxAutoscaleSeats != organization.MaxAutoscaleSmSeats.GetValueOrDefault();
-        MaxAutoscaleSmServiceAccountsChanged = maxAutoscaleServiceAccounts.HasValue && maxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault();
+        MaxAutoscaleSmSeatsChanged = maxAutoscaleSeats != organization.MaxAutoscaleSmSeats;
+        MaxAutoscaleSmServiceAccountsChanged = maxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts;
     }
 }

@@ -73,8 +73,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     public async Task AdjustServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
     {
         var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 0, maxAutoscaleSeats: null,
-            serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: null);
+            organization, seatAdjustment: 0, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
+            serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts);
 
         await UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate);
     }
