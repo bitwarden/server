@@ -99,16 +99,16 @@ public class IconLink
             return false;
         }
 
-        if (Rel != null && _iconRels.Contains(Rel.Value.ToLower()))
+        if (Rel != null && _iconRels.Contains(Rel.Value, StringComparer.InvariantCultureIgnoreCase))
         {
             _validated = true;
         }
-        if (Rel == null || !_blocklistedRels.Contains(Rel.Value.ToLower()))
+        if (Rel == null || !_blocklistedRels.Contains(Rel.Value, StringComparer.InvariantCultureIgnoreCase))
         {
             try
             {
                 var extension = Path.GetExtension(Href.Value);
-                if (_iconExtensions.Contains(extension.ToLower()))
+                if (_iconExtensions.Contains(extension, StringComparer.InvariantCultureIgnoreCase))
                 {
                     _validated = true;
                 }
