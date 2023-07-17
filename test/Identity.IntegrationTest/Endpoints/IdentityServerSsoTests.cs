@@ -273,7 +273,7 @@ public class IdentityServerSsoTests
     /// with the user decryption options.
     /// </summary>
     [Fact]
-    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasLoggingApprovingDevice_ReturnsTrue()
+    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasLoginApprovingDevice_ReturnsTrue()
     {
         // Arrange
         var challenge = new string('c', 50);
