@@ -344,14 +344,8 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
-        if (secretsManagerPlan == null)
-        {
-            throw new NotFoundException("Invalid Secrets Manager plan.");
-        }
-
-        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, secretsManagerPlan);
-        await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization);
+        await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
     }
 
     [HttpPost("{id}/seat")]

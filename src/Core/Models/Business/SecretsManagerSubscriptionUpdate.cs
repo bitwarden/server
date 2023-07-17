@@ -1,8 +1,11 @@
-﻿namespace Bit.Core.Models.Business;
+﻿using Bit.Core.Entities;
+using Bit.Core.Exceptions;
+
+namespace Bit.Core.Models.Business;
 
 public class SecretsManagerSubscriptionUpdate
 {
-    public Guid OrganizationId { get; set; }
+    public Organization Organization { get; set; }
 
     /// <summary>
     /// The seats to be added or removed from the organization
@@ -53,4 +56,39 @@ public class SecretsManagerSubscriptionUpdate
     public bool SmServiceAccountsChanged => SmServiceAccountsAdjustment != 0;
     public bool MaxAutoscaleSmSeatsChanged { get; set; }
     public bool MaxAutoscaleSmServiceAccountsChanged { get; set; }
+
+    public SecretsManagerSubscriptionUpdate(
+        Organization organization,
+        int seatAdjustment, int? maxAutoscaleSeats,
+        int serviceAccountAdjustment, int? maxAutoscaleServiceAccounts)
+    {
+        if (organization == null)
+        {
+            throw new NotFoundException("Organization is not found.");
+        }
+
+        var secretsManagerPlan = Utilities.StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (secretsManagerPlan == null)
+        {
+            throw new NotFoundException("Invalid Secrets Manager plan.");
+        }
+
+        var newTotalSeats = organization.SmSeats.GetValueOrDefault() + seatAdjustment;
+        var newTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + serviceAccountAdjustment;
+
+        Organization = organization;
+
+        SmSeats = newTotalSeats;
+        SmSeatsAdjustment = seatAdjustment;
+        SmSeatsExcludingBase = newTotalSeats - secretsManagerPlan.BaseSeats;
+        MaxAutoscaleSmSeats = maxAutoscaleSeats;
+
+        SmServiceAccounts = newTotalServiceAccounts;
+        SmServiceAccountsAdjustment = serviceAccountAdjustment;
+        SmServiceAccountsExcludingBase = newTotalServiceAccounts - secretsManagerPlan.BaseServiceAccount.GetValueOrDefault();
+        MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
+
+        MaxAutoscaleSmSeatsChanged = maxAutoscaleSeats != organization.MaxAutoscaleSmSeats;
+        MaxAutoscaleSmServiceAccountsChanged = maxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts;
+    }
 }
