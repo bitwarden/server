@@ -9,9 +9,9 @@ namespace Bit.Icons.Models;
 
 public class IconLink
 {
-    private static readonly HashSet<string> _iconRels = new() { "icon", "apple-touch-icon", "shortcut icon" };
-    private static readonly HashSet<string> _blocklistedRels = new() { "preload", "image_src", "preconnect", "canonical", "alternate", "stylesheet" };
-    private static readonly HashSet<string> _iconExtensions = new() { ".ico", ".png", ".jpg", ".jpeg" };
+    private static readonly HashSet<string> _iconRels = new(StringComparer.InvariantCultureIgnoreCase) { "icon", "apple-touch-icon", "shortcut icon" };
+    private static readonly HashSet<string> _blocklistedRels = new(StringComparer.InvariantCultureIgnoreCase) { "preload", "image_src", "preconnect", "canonical", "alternate", "stylesheet" };
+    private static readonly HashSet<string> _iconExtensions = new(StringComparer.InvariantCultureIgnoreCase) { ".ico", ".png", ".jpg", ".jpeg" };
     private const string _pngMediaType = "image/png";
     private static readonly byte[] _pngHeader = new byte[] { 137, 80, 78, 71 };
     private static readonly byte[] _webpHeader = Encoding.UTF8.GetBytes("RIFF");
@@ -23,7 +23,7 @@ public class IconLink
     private const string _jpegMediaType = "image/jpeg";
     private static readonly byte[] _jpegHeader = new byte[] { 255, 216, 255 };
 
-    private static readonly HashSet<string> _allowedMediaTypes = new()
+    private static readonly HashSet<string> _allowedMediaTypes = new(StringComparer.InvariantCultureIgnoreCase)
     {
         _pngMediaType,
         _icoMediaType,
@@ -99,16 +99,16 @@ public class IconLink
             return false;
         }
 
-        if (Rel != null && _iconRels.Contains(Rel.Value, StringComparer.InvariantCultureIgnoreCase))
+        if (Rel != null && _iconRels.Contains(Rel.Value))
         {
             _validated = true;
         }
-        if (Rel == null || !_blocklistedRels.Contains(Rel.Value, StringComparer.InvariantCultureIgnoreCase))
+        if (Rel == null || !_blocklistedRels.Contains(Rel.Value))
         {
             try
             {
                 var extension = Path.GetExtension(Href.Value);
-                if (_iconExtensions.Contains(extension, StringComparer.InvariantCultureIgnoreCase))
+                if (_iconExtensions.Contains(extension))
                 {
                     _validated = true;
                 }
