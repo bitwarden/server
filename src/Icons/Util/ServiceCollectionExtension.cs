@@ -32,8 +32,7 @@ public static class ServiceCollectionExtension
 
     public static void AddHtmlParsing(this IServiceCollection services)
     {
-        services.AddSingleton<HtmlParser>();
-        services.AddSingleton<IHtmlParser>(s => s.GetRequiredService<HtmlParser>());
+        services.AddSingleton<IHtmlParser, HtmlParser>();
     }
 
     public static void AddServices(this IServiceCollection services)
