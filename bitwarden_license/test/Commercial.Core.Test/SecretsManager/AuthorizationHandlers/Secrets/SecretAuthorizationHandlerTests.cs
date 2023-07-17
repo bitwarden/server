@@ -436,7 +436,7 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]
     [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]
     [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
-    public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
+    public async Task CanDeleteSecret_AccessCheck(PermissionType permissionType, bool read, bool write,
         bool expected,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
         ClaimsPrincipal claimsPrincipal,

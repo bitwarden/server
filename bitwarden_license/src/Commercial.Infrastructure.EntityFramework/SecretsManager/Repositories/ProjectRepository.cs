@@ -60,16 +60,23 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        using var scope = ServiceScopeFactory.CreateScope();
+        var utcNow = DateTime.UtcNow;
+        var dbContext = GetDatabaseContext(scope);
+        var projects = dbContext.Project
+            .Where(c => ids.Contains(c.Id))
+            .Include(p => p.Secrets);
+        await projects.ForEachAsync(project =>
         {
-            var dbContext = GetDatabaseContext(scope);
-            var projects = dbContext.Project.Where(c => ids.Contains(c.Id));
-            await projects.ForEachAsync(project =>
+            foreach (var projectSecret in project.Secrets)
             {
-                dbContext.Remove(project);
-            });
-            await dbContext.SaveChangesAsync();
-        }
+                projectSecret.RevisionDate = utcNow;
+            }
+
+            dbContext.Remove(project);
+        });
+
+        await dbContext.SaveChangesAsync();
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids)

@@ -14,7 +14,7 @@ public class DeviceResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(device));
         }
 
-        Id = device.Id.ToString();
+        Id = device.Id;
         Name = device.Name;
         Type = device.Type;
         Identifier = device.Identifier;
@@ -24,7 +24,7 @@ public class DeviceResponseModel : ResponseModel
         EncryptedPrivateKey = device.EncryptedPrivateKey;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
     public DeviceType Type { get; set; }
     public string Identifier { get; set; }
