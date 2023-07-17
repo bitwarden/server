@@ -307,20 +307,25 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             {
                 throw new BadRequestException(
                     $"Your organization currently has {occupiedSmSeats} Secrets Manager seats filled. " +
-                    $"Your new plan only has ({newPlanSmSeats}) seats. Remove some users.");
+                    $"Your new plan only has {newPlanSmSeats} seats. Remove some users or increase your subscription.");
             }
         }
 
-        if (!organization.SmServiceAccounts.HasValue ||
-            organization.SmServiceAccounts.Value > newSecretsManagerPlan.MaxServiceAccounts)
+        var additionalServiceAccounts = newSecretsManagerPlan.HasAdditionalServiceAccountOption
+            ? upgrade.AdditionalServiceAccounts
+            : 0;
+        var newPlanServiceAccounts = newSecretsManagerPlan.BaseServiceAccount + additionalServiceAccounts;
+
+        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newPlanServiceAccounts)
         {
             var currentServiceAccounts =
                 await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
-            if (currentServiceAccounts > newSecretsManagerPlan.MaxServiceAccounts)
+            if (currentServiceAccounts > newPlanServiceAccounts)
             {
                 throw new BadRequestException(
                     $"Your organization currently has {currentServiceAccounts} service accounts. " +
-                    $"Your new plan only allows {newSecretsManagerPlan.MaxServiceAccounts} service accounts. Remove some service accounts.");
+                    $"Your new plan only allows {newSecretsManagerPlan.MaxServiceAccounts} service accounts. " +
+                    "Remove some service accounts or increase your subscription.");
             }
         }
     }
