@@ -606,6 +606,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<int?>("Seats")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("SecretsManagerBeta")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("SelfHost")
                         .HasColumnType("INTEGER");
 
