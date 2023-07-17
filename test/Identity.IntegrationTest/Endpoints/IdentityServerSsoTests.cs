@@ -183,7 +183,8 @@ public class IdentityServerSsoTests
         //   "Object": "userDecryptionOptions"
         //   "HasMasterPassword": true,
         //   "TrustedDeviceOption": {
-        //     "HasAdminApproval": true
+        //     "HasAdminApproval": true,
+        //     "HasManageResetPasswordPermission": false
         //   }
         // }
 
@@ -238,19 +239,33 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
-        //     "HasLoginApprovingDevice": false
+        //     "HasLoginApprovingDevice": false,
+        //     "HasManageResetPasswordPermission": false
         //   }
         // }
 
         var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.False);
 
         // This asserts that device keys are not coming back in the response because this should be a new device.
         // if we ever add new properties that come back from here it is fine to change the expected number of properties
         // but it should still be asserted in some way that keys are not amongst them.
         Assert.Collection(trustedDeviceOption.EnumerateObject(),
-            p => { Assert.Equal("HasAdminApproval", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); },
-            p => { Assert.Equal("HasLoginApprovingDevice", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); });
+            p =>
+            {
+                Assert.Equal("HasAdminApproval", p.Name); 
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            },
+            p =>
+            {
+                Assert.Equal("HasLoginApprovingDevice", p.Name); 
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            },
+            p=>{
+                Assert.Equal("HasManageResetPasswordPermission", p.Name); 
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            });
     }
 
     /// <summary>
@@ -312,7 +327,8 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
-        //     "HasLoginApprovingDevice": true
+        //     "HasLoginApprovingDevice": true,
+        //     "HasManageResetPasswordPermission": false
         //   }
         // }
 
@@ -322,8 +338,20 @@ public class IdentityServerSsoTests
         // if we ever add new properties that come back from here it is fine to change the expected number of properties
         // but it should still be asserted in some way that keys are not amongst them.
         Assert.Collection(trustedDeviceOption.EnumerateObject(),
-            p => { Assert.Equal("HasAdminApproval", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); },
-            p => { Assert.Equal("HasLoginApprovingDevice", p.Name); Assert.Equal(JsonValueKind.True, p.Value.ValueKind); });
+            p =>
+            {
+                Assert.Equal("HasAdminApproval", p.Name); 
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            },
+            p =>
+            {
+                Assert.Equal("HasLoginApprovingDevice", p.Name); 
+                Assert.Equal(JsonValueKind.True, p.Value.ValueKind);
+            },
+            p=>{
+                Assert.Equal("HasManageResetPasswordPermission", p.Name); 
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            });
     }
 
     /// <summary>
@@ -394,6 +422,7 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
+        //     "HasManageResetPasswordPermission": false,
         //     "EncryptedPrivateKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
         //     "EncryptedUserKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA=="
         //   }
@@ -401,6 +430,7 @@ public class IdentityServerSsoTests
 
         var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.False);
 
         var actualPrivateKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedPrivateKey", JsonValueKind.String).GetString();
         Assert.Equal(expectedPrivateKey, actualPrivateKey);
