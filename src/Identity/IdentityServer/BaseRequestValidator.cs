@@ -623,7 +623,7 @@ public abstract class BaseRequestValidator<T> where T : class
             var hasLoginApprovingDevice = allDevices
                 .Where(d => d.Identifier != device.Identifier && LoginApprovingDeviceTypes.Types.Contains(d.Type))
                 .Any();
-            
+
             // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
             // TDE requires single org so grab first id. 
             var orgId = CurrentContext.Organizations.First().Id;

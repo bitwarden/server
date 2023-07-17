@@ -255,16 +255,17 @@ public class IdentityServerSsoTests
         Assert.Collection(trustedDeviceOption.EnumerateObject(),
             p =>
             {
-                Assert.Equal("HasAdminApproval", p.Name); 
+                Assert.Equal("HasAdminApproval", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
             },
             p =>
             {
-                Assert.Equal("HasLoginApprovingDevice", p.Name); 
+                Assert.Equal("HasLoginApprovingDevice", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
             },
-            p=>{
-                Assert.Equal("HasManageResetPasswordPermission", p.Name); 
+            p =>
+            {
+                Assert.Equal("HasManageResetPasswordPermission", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
             });
     }
@@ -341,16 +342,17 @@ public class IdentityServerSsoTests
         Assert.Collection(trustedDeviceOption.EnumerateObject(),
             p =>
             {
-                Assert.Equal("HasAdminApproval", p.Name); 
+                Assert.Equal("HasAdminApproval", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
             },
             p =>
             {
-                Assert.Equal("HasLoginApprovingDevice", p.Name); 
+                Assert.Equal("HasLoginApprovingDevice", p.Name);
                 Assert.Equal(JsonValueKind.True, p.Value.ValueKind);
             },
-            p=>{
-                Assert.Equal("HasManageResetPasswordPermission", p.Name); 
+            p =>
+            {
+                Assert.Equal("HasManageResetPasswordPermission", p.Name);
                 Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
             });
     }
@@ -448,10 +450,10 @@ public class IdentityServerSsoTests
     {
         // Arrange
         var challenge = new string('c', 50);
-        
+
         // create user permissions with the ManageResetPassword permission
         var permissionsWithManageResetPassword = new Permissions() { ManageResetPassword = true };
-        
+
         var factory = await CreateFactoryAsync(new SsoConfigurationData
         {
             MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
@@ -483,14 +485,14 @@ public class IdentityServerSsoTests
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
 
         var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
-       
+
         var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.True);
 
     }
-    
-    
+
+
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryption_FlagTurnedOff_DoesNotReturnOption()
     {
@@ -601,8 +603,8 @@ public class IdentityServerSsoTests
     }
 
     private static async Task<IdentityApplicationFactory> CreateFactoryAsync(
-        SsoConfigurationData ssoConfigurationData, 
-        string challenge, 
+        SsoConfigurationData ssoConfigurationData,
+        string challenge,
         bool trustedDeviceEnabled = true,
         Permissions? permissions = null
         )
@@ -654,7 +656,7 @@ public class IdentityServerSsoTests
 
         var orgUserPermissions =
             (permissions == null) ? null : JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase);
-        
+
         var organizationUser = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             UserId = user.Id,
