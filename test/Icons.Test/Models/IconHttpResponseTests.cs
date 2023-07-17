@@ -20,7 +20,7 @@ public class IconHttpResponseTests
         _mockedUriService = Substitute.For<IUriService>();
         _mockedUriService.TryGetUri(Arg.Any<Uri>(), out Arg.Any<IconUri>()).Returns(x =>
         {
-            x[1] = new IconUri(new Uri("https://test.local"), IPAddress.Parse("3.0.0.0"));
+            x[1] = new IconUri(new Uri("https://icon.test"), IPAddress.Parse("192.0.2.1"));
             return true;
         });
     }
@@ -39,7 +39,7 @@ public class IconHttpResponseTests
         var response = GetHttpResponseMessage(htmlBuilder.ToString());
         var sut = CurriedIconHttpResponse()(response);
 
-        var result = await sut.RetrieveIconsAsync(new Uri("https://test.local"), "test.local", _parser);
+        var result = await sut.RetrieveIconsAsync(new Uri("https://icon.test"), "icon.test", _parser);
 
         Assert.Empty(result);
     }
@@ -57,14 +57,14 @@ public class IconHttpResponseTests
         var response = GetHttpResponseMessage(htmlBuilder.ToString());
         var sut = CurriedIconHttpResponse()(response);
 
-        var result = await sut.RetrieveIconsAsync(new Uri("https://test.local"), "test.local", _parser);
+        var result = await sut.RetrieveIconsAsync(new Uri("https://icon.test"), "icon.test", _parser);
 
         Assert.Equal(10, result.Count());
     }
 
     private static string UsableLinkNode()
     {
-        return "<link rel=\"icon\" href=\"https://test.local/favicon.ico\" />";
+        return "<link rel=\"icon\" href=\"https://icon.test/favicon.ico\" />";
     }
 
     private static string UnusableLinkNode()
@@ -77,7 +77,7 @@ public class IconHttpResponseTests
     {
         return new HttpResponseMessage(HttpStatusCode.OK)
         {
-            RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://test.local"),
+            RequestMessage = new HttpRequestMessage(HttpMethod.Get, "https://icon.test"),
             Content = new StringContent(content)
         };
     }

@@ -11,7 +11,7 @@ namespace Bit.Icons.Test.Models;
 public class IconLinkTests
 {
     private readonly IElement _element;
-    private readonly Uri _uri = new("https://test.local");
+    private readonly Uri _uri = new("https://icon.test");
     private readonly ILogger<IIconFetchingService> _logger = Substitute.For<ILogger<IIconFetchingService>>();
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IUriService _uriService;
@@ -24,7 +24,7 @@ public class IconLinkTests
         _uriService = Substitute.For<IUriService>();
         _uriService.TryGetUri(Arg.Any<Uri>(), out Arg.Any<IconUri>()).Returns(x =>
         {
-            x[1] = new IconUri(new Uri("https://test.local"), IPAddress.Parse("3.0.0.0"));
+            x[1] = new IconUri(new Uri("https://icon.test"), IPAddress.Parse("192.0.2.1"));
             return true;
         });
     }
