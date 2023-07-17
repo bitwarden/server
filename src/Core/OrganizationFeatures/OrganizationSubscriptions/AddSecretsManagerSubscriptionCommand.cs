@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -32,22 +33,36 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         ValidateOrganization(organization);
 
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-
-        ValidateSecretsManagerPlan(plan, organization, additionalSeats, additionalServiceAccounts);
+        var signup = SetOrganizationUpgrade(organization, additionalSeats, additionalServiceAccounts);
+        _organizationService.ValidateSecretsManagerPlan(plan, signup);
 
         if (plan.Type != PlanType.Free)
         {
             await _paymentService.AddSecretsManagerToSubscription(organization, plan, additionalSeats, additionalServiceAccounts);
         }
 
-        organization.SmSeats = additionalSeats;
-        organization.SmServiceAccounts = additionalServiceAccounts;
+        organization.SmSeats = plan.BaseSeats + additionalSeats;
+        organization.SmServiceAccounts = plan.BaseServiceAccount + additionalServiceAccounts;
         organization.UseSecretsManager = true;
-        var returnValue = await SignUpAsync(organization);
+
+        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
         // TODO: call ReferenceEventService - see AC-1481
 
-        return returnValue;
+        return organization;
+    }
+
+    private static OrganizationUpgrade SetOrganizationUpgrade(Organization organization, int additionalSeats,
+        int additionalServiceAccounts)
+    {
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = additionalSeats,
+            AdditionalServiceAccounts = additionalServiceAccounts,
+            AdditionalSeats = organization.Seats.GetValueOrDefault()
+        };
+        return signup;
     }
 
     private static void ValidateOrganization(Organization organization)
@@ -65,90 +80,6 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
             throw new BadRequestException("No subscription found.");
-        }
-    }
-
-    private void ValidateSecretsManagerPlan(Plan plan, Organization signup, int additionalSeats, int additionalServiceAccounts)
-    {
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException($"Invalid Secrets Manager plan selected.");
-        }
-
-        if (plan.Disabled)
-        {
-            throw new BadRequestException($"Secrets Manager Plan is disabled.");
-        }
-
-        if (plan.BaseSeats + additionalSeats <= 0)
-        {
-            throw new BadRequestException($"You do not have any Secrets Manager seats!");
-        }
-
-        if (additionalSeats < 0)
-        {
-            throw new BadRequestException($"You can't subtract Secrets Manager seats!");
-        }
-
-        if (!plan.HasAdditionalServiceAccountOption && additionalServiceAccounts > 0)
-        {
-            throw new BadRequestException("Plan does not allow additional Service Accounts.");
-        }
-
-        if (additionalSeats > signup.Seats)
-        {
-            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
-        }
-
-        if (additionalServiceAccounts < 0)
-        {
-            throw new BadRequestException("You can't subtract Service Accounts!");
-        }
-
-        switch (plan.HasAdditionalSeatsOption)
-        {
-            case false when additionalSeats > 0:
-                throw new BadRequestException("Plan does not allow additional users.");
-            case true when plan.MaxAdditionalSeats.HasValue &&
-                           additionalSeats > plan.MaxAdditionalSeats.Value:
-                throw new BadRequestException($"Selected plan allows a maximum of " +
-                                              $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
-        }
-    }
-
-    private async Task<Organization> SignUpAsync(Organization organization)
-    {
-        try
-        {
-            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-
-            var ownerUsers =
-                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
-                    OrganizationUserType.Owner);
-
-            if (ownerUsers.Any())
-            {
-                foreach (var onwerUser in ownerUsers)
-                {
-                    onwerUser.AccessSecretsManager = true;
-                }
-
-                await _organizationUserRepository.ReplaceManyAsync(ownerUsers);
-            }
-
-            return organization;
-        }
-        catch
-        {
-            if (organization.Id != default)
-            {
-                organization.SmSeats = 0;
-                organization.SmServiceAccounts = 0;
-                organization.UseSecretsManager = false;
-                await _organizationService.ReplaceAndUpdateCacheAsync(organization);
-            }
-
-            throw;
         }
     }
 }
