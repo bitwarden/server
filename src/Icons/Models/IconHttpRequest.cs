@@ -10,7 +10,7 @@ public class IconHttpRequest
 {
     private const int _maxRedirects = 2;
 
-    private readonly HttpStatusCode[] _redirectStatusCodes = new HttpStatusCode[] { HttpStatusCode.Redirect, HttpStatusCode.MovedPermanently, HttpStatusCode.RedirectKeepVerb, HttpStatusCode.SeeOther };
+    private static readonly HttpStatusCode[] _redirectStatusCodes = new HttpStatusCode[] { HttpStatusCode.Redirect, HttpStatusCode.MovedPermanently, HttpStatusCode.RedirectKeepVerb, HttpStatusCode.SeeOther };
 
     private readonly ILogger<IIconFetchingService> _logger;
     private readonly HttpClient _httpClient;
