@@ -10,26 +10,26 @@ public class SecretWithProjectsListResponseModel : ResponseModel
 
     public SecretWithProjectsListResponseModel(IEnumerable<SecretPermissionDetails> secrets) : base(_objectName)
     {
-        Secrets = secrets.Select(s => new InnerSecret(s));
-        Projects = secrets.SelectMany(s => s.Secret.Projects).DistinctBy(p => p.Id).Select(p => new InnerProject(p));
+        Secrets = secrets.Select(s => new SecretsWithProjectsInnerSecret(s));
+        Projects = secrets.SelectMany(s => s.Secret.Projects).DistinctBy(p => p.Id).Select(p => new SecretWithProjectsInnerProject(p));
     }
 
     public SecretWithProjectsListResponseModel() : base(_objectName)
     {
     }
 
-    public IEnumerable<InnerSecret> Secrets { get; set; }
-    public IEnumerable<InnerProject> Projects { get; set; }
+    public IEnumerable<SecretsWithProjectsInnerSecret> Secrets { get; set; }
+    public IEnumerable<SecretWithProjectsInnerProject> Projects { get; set; }
 
-    public class InnerProject
+    public class SecretWithProjectsInnerProject
     {
-        public InnerProject(Project project)
+        public SecretWithProjectsInnerProject(Project project)
         {
             Id = project.Id;
             Name = project.Name;
         }
 
-        public InnerProject()
+        public SecretWithProjectsInnerProject()
         {
         }
 
@@ -37,27 +37,27 @@ public class SecretWithProjectsListResponseModel : ResponseModel
         public string Name { get; set; }
     }
 
-    public class InnerSecret
+    public class SecretsWithProjectsInnerSecret
     {
-        public InnerSecret(SecretPermissionDetails secret)
+        public SecretsWithProjectsInnerSecret(SecretPermissionDetails secret)
         {
-            Id = secret.Secret.Id.ToString();
-            OrganizationId = secret.Secret.OrganizationId.ToString();
+            Id = secret.Secret.Id;
+            OrganizationId = secret.Secret.OrganizationId;
             Key = secret.Secret.Key;
             CreationDate = secret.Secret.CreationDate;
             RevisionDate = secret.Secret.RevisionDate;
-            Projects = secret.Secret.Projects?.Select(p => new InnerProject(p));
+            Projects = secret.Secret.Projects?.Select(p => new SecretWithProjectsInnerProject(p));
             Read = secret.Read;
             Write = secret.Write;
         }
 
-        public InnerSecret()
+        public SecretsWithProjectsInnerSecret()
         {
         }
 
-        public string Id { get; set; }
+        public Guid Id { get; set; }
 
-        public string OrganizationId { get; set; }
+        public Guid OrganizationId { get; set; }
 
         public string Key { get; set; }
 
@@ -65,7 +65,7 @@ public class SecretWithProjectsListResponseModel : ResponseModel
 
         public DateTime RevisionDate { get; set; }
 
-        public IEnumerable<InnerProject> Projects { get; set; }
+        public IEnumerable<SecretWithProjectsInnerProject> Projects { get; set; }
         public bool Read { get; set; }
         public bool Write { get; set; }
     }
