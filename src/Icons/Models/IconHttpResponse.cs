@@ -1,13 +1,12 @@
 ﻿#nullable enable
 
-using System.Collections;
 using System.Net;
 using AngleSharp.Html.Parser;
 using Bit.Icons.Services;
 
 namespace Bit.Icons.Models;
 
-public class IconHttpResponse : IEnumerable<Icon>, IDisposable
+public class IconHttpResponse : IDisposable
 {
     private const int _maxIconLinksProcessed = 200;
     private const int _maxRetrievedIcons = 10;
@@ -16,21 +15,11 @@ public class IconHttpResponse : IEnumerable<Icon>, IDisposable
     private readonly ILogger<IIconFetchingService> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IUriService _uriService;
-    private readonly List<Icon> _icons = new();
 
     public HttpStatusCode StatusCode => _response.StatusCode;
     public bool IsSuccessStatusCode => _response.IsSuccessStatusCode;
     public string? ContentType => _response.Content.Headers.ContentType?.MediaType;
     public HttpContent Content => _response.Content;
-    public Icon this[int i]
-    {
-        get
-        {
-            return _icons[i];
-        }
-    }
-    public IEnumerator<Icon> GetEnumerator() => ((IEnumerable<Icon>)_icons).GetEnumerator();
-    IEnumerator IEnumerable.GetEnumerator() => ((IEnumerable)_icons).GetEnumerator();
 
     public IconHttpResponse(HttpResponseMessage response, ILogger<IIconFetchingService> logger, IHttpClientFactory httpClientFactory, IUriService uriService)
     {
