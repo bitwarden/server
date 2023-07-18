@@ -2,7 +2,7 @@
 
 namespace Bit.Api.Models.Request.Organizations;
 
-public class SecretsManagerSubscriptionAddRequestModel
+public class SecretsManagerSubscribeRequestModel
 {
     [Required]
     [Range(1, int.MaxValue)]

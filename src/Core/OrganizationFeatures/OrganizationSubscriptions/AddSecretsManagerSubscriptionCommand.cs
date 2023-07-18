@@ -13,18 +13,12 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscriptionCommand
 {
     private readonly IPaymentService _paymentService;
-    private readonly IOrganizationRepository _organizationRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
     public AddSecretsManagerSubscriptionCommand(
         IPaymentService paymentService,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService)
     {
         _paymentService = paymentService;
-        _organizationRepository = organizationRepository;
-        _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
     }
     public async Task<Organization> SignUpAsync(Organization organization, int additionalSeats,
@@ -32,7 +26,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
     {
         ValidateOrganization(organization);
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
+        var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
         var signup = SetOrganizationUpgrade(organization, additionalSeats, additionalServiceAccounts);
         _organizationService.ValidateSecretsManagerPlan(plan, signup);
 
@@ -42,7 +36,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         }
 
         organization.SmSeats = plan.BaseSeats + additionalSeats;
-        organization.SmServiceAccounts = plan.BaseServiceAccount + additionalServiceAccounts;
+        organization.SmServiceAccounts = plan.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts;
         organization.UseSecretsManager = true;
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);

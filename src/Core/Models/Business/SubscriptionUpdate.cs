@@ -262,13 +262,13 @@ public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
 
 }
 
-public class SubscriptionUpdateForSecretsManager : SubscriptionUpdate
+public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
 {
     private readonly StaticStore.Plan _plan;
     private readonly long? _additionalSeats;
     private readonly long? _additionalServiceAccounts;
     protected override List<string> PlanIds => new() { _plan.StripeSeatPlanId, _plan.StripeServiceAccountPlanId };
-    public SubscriptionUpdateForSecretsManager(StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
+    public SecretsManagerSubscribeUpdate(StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
     {
         _plan = plan;
         _additionalSeats = additionalSeats;
@@ -279,7 +279,7 @@ public class SubscriptionUpdateForSecretsManager : SubscriptionUpdate
     {
         var updatedItems = new List<SubscriptionItemOptions>();
 
-        RetrieveExistingSubsctiptionItems(subscription, updatedItems);
+        RetrieveExistingSubscriptionItems(subscription, updatedItems);
         RemovePreviousSecretsManagerItems(updatedItems);
 
         return updatedItems;
@@ -289,7 +289,7 @@ public class SubscriptionUpdateForSecretsManager : SubscriptionUpdate
     {
         var updatedItems = new List<SubscriptionItemOptions>();
 
-        RetrieveExistingSubsctiptionItems(subscription, updatedItems);
+        RetrieveExistingSubscriptionItems(subscription, updatedItems);
         AddNewSecretsManagerItems(updatedItems);
 
         return updatedItems;
@@ -327,7 +327,7 @@ public class SubscriptionUpdateForSecretsManager : SubscriptionUpdate
         });
     }
 
-    private static void RetrieveExistingSubsctiptionItems(Subscription subscription, List<SubscriptionItemOptions> updatedItems)
+    private void RetrieveExistingSubscriptionItems(Subscription subscription, List<SubscriptionItemOptions> updatedItems)
     {
         foreach (var item in subscription.Items.Data)
         {

@@ -38,5 +38,5 @@ public interface IPaymentService
     Task UpdateTaxRateAsync(TaxRate taxRate);
     Task ArchiveTaxRateAsync(TaxRate taxRate);
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
-        int additionalServiceAccount = 0, DateTime? prorationDate = null);
+        int additionalServiceAccount, DateTime? prorationDate = null);
 }

@@ -359,7 +359,7 @@ public class OrganizationsController : Controller
 
     [HttpPost("{id}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<OrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscriptionAddRequestModel model)
+    public async Task<OrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
