@@ -307,23 +307,25 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             {
                 throw new BadRequestException(
                     $"Your organization currently has {occupiedSmSeats} Secrets Manager seats filled. " +
-                    $"Your new plan only has ({newPlanSmSeats}) seats. Remove some users.");
+                    $"Your new plan only has {newPlanSmSeats} seats. Remove some users or increase your subscription.");
             }
         }
 
-        if (newSecretsManagerPlan.BaseServiceAccount != null)
+        var additionalServiceAccounts = newSecretsManagerPlan.HasAdditionalServiceAccountOption
+            ? upgrade.AdditionalServiceAccounts
+            : 0;
+        var newPlanServiceAccounts = newSecretsManagerPlan.BaseServiceAccount + additionalServiceAccounts;
+
+        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newPlanServiceAccounts)
         {
-            if (!organization.SmServiceAccounts.HasValue ||
-                organization.SmServiceAccounts.Value > newSecretsManagerPlan.MaxServiceAccounts)
+            var currentServiceAccounts =
+                await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+            if (currentServiceAccounts > newPlanServiceAccounts)
             {
-                var currentServiceAccounts =
-                    await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
-                if (currentServiceAccounts > newSecretsManagerPlan.MaxServiceAccounts)
-                {
-                    throw new BadRequestException(
-                        $"Your organization currently has {currentServiceAccounts} service account seats filled. " +
-                        $"Your new plan only has ({newSecretsManagerPlan.MaxServiceAccounts}) service accounts. Remove some service accounts.");
-                }
+                throw new BadRequestException(
+                    $"Your organization currently has {currentServiceAccounts} service accounts. " +
+                    $"Your new plan only allows {newSecretsManagerPlan.MaxServiceAccounts} service accounts. " +
+                    "Remove some service accounts or increase your subscription.");
             }
         }
     }
