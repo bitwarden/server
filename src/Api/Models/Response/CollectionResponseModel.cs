@@ -14,14 +14,14 @@ public class CollectionResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(collection));
         }
 
-        Id = collection.Id.ToString();
-        OrganizationId = collection.OrganizationId.ToString();
+        Id = collection.Id;
+        OrganizationId = collection.OrganizationId;
         Name = collection.Name;
         ExternalId = collection.ExternalId;
     }
 
-    public string Id { get; set; }
-    public string OrganizationId { get; set; }
+    public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public string Name { get; set; }
     public string ExternalId { get; set; }
 }
