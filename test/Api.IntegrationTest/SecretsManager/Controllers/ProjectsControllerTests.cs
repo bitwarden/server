@@ -144,7 +144,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
 
-        var createdProject = await _projectRepository.GetByIdAsync(new Guid(result.Id));
+        var createdProject = await _projectRepository.GetByIdAsync(result.Id);
         Assert.NotNull(result);
         Assert.Equal(request.Name, createdProject.Name);
         AssertHelper.AssertRecent(createdProject.RevisionDate);
@@ -205,7 +205,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         AssertHelper.AssertRecent(result.RevisionDate);
         Assert.NotEqual(initialProject.RevisionDate, result.RevisionDate);
 
-        var updatedProject = await _projectRepository.GetByIdAsync(new Guid(result.Id));
+        var updatedProject = await _projectRepository.GetByIdAsync(result.Id);
         Assert.NotNull(result);
         Assert.Equal(request.Name, updatedProject.Name);
         AssertHelper.AssertRecent(updatedProject.RevisionDate);
