@@ -9,6 +9,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -183,7 +184,8 @@ public class IdentityServerSsoTests
         //   "Object": "userDecryptionOptions"
         //   "HasMasterPassword": true,
         //   "TrustedDeviceOption": {
-        //     "HasAdminApproval": true
+        //     "HasAdminApproval": true,
+        //     "HasManageResetPasswordPermission": false
         //   }
         // }
 
@@ -238,19 +240,34 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
-        //     "HasLoginApprovingDevice": false
+        //     "HasLoginApprovingDevice": false,
+        //     "HasManageResetPasswordPermission": false
         //   }
         // }
 
         var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.False);
 
         // This asserts that device keys are not coming back in the response because this should be a new device.
         // if we ever add new properties that come back from here it is fine to change the expected number of properties
         // but it should still be asserted in some way that keys are not amongst them.
         Assert.Collection(trustedDeviceOption.EnumerateObject(),
-            p => { Assert.Equal("HasAdminApproval", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); },
-            p => { Assert.Equal("HasLoginApprovingDevice", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); });
+            p =>
+            {
+                Assert.Equal("HasAdminApproval", p.Name);
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            },
+            p =>
+            {
+                Assert.Equal("HasLoginApprovingDevice", p.Name);
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            },
+            p =>
+            {
+                Assert.Equal("HasManageResetPasswordPermission", p.Name);
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            });
     }
 
     /// <summary>
@@ -258,7 +275,7 @@ public class IdentityServerSsoTests
     /// with the user decryption options.
     /// </summary>
     [Fact]
-    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasLoggingApprovingDevice_ReturnsTrue()
+    public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasLoginApprovingDevice_ReturnsTrue()
     {
         // Arrange
         var challenge = new string('c', 50);
@@ -312,7 +329,8 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
-        //     "HasLoginApprovingDevice": true
+        //     "HasLoginApprovingDevice": true,
+        //     "HasManageResetPasswordPermission": false
         //   }
         // }
 
@@ -322,8 +340,21 @@ public class IdentityServerSsoTests
         // if we ever add new properties that come back from here it is fine to change the expected number of properties
         // but it should still be asserted in some way that keys are not amongst them.
         Assert.Collection(trustedDeviceOption.EnumerateObject(),
-            p => { Assert.Equal("HasAdminApproval", p.Name); Assert.Equal(JsonValueKind.False, p.Value.ValueKind); },
-            p => { Assert.Equal("HasLoginApprovingDevice", p.Name); Assert.Equal(JsonValueKind.True, p.Value.ValueKind); });
+            p =>
+            {
+                Assert.Equal("HasAdminApproval", p.Name);
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            },
+            p =>
+            {
+                Assert.Equal("HasLoginApprovingDevice", p.Name);
+                Assert.Equal(JsonValueKind.True, p.Value.ValueKind);
+            },
+            p =>
+            {
+                Assert.Equal("HasManageResetPasswordPermission", p.Name);
+                Assert.Equal(JsonValueKind.False, p.Value.ValueKind);
+            });
     }
 
     /// <summary>
@@ -394,6 +425,7 @@ public class IdentityServerSsoTests
         //   "HasMasterPassword": false,
         //   "TrustedDeviceOption": {
         //     "HasAdminApproval": true,
+        //     "HasManageResetPasswordPermission": false,
         //     "EncryptedPrivateKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA==",
         //     "EncryptedUserKey": "2.QmFzZTY0UGFydA==|QmFzZTY0UGFydA==|QmFzZTY0UGFydA=="
         //   }
@@ -401,12 +433,65 @@ public class IdentityServerSsoTests
 
         var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
         AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.False);
 
         var actualPrivateKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedPrivateKey", JsonValueKind.String).GetString();
         Assert.Equal(expectedPrivateKey, actualPrivateKey);
         var actualUserKey = AssertHelper.AssertJsonProperty(trustedDeviceOption, "EncryptedUserKey", JsonValueKind.String).GetString();
         Assert.Equal(expectedUserKey, actualUserKey);
     }
+
+    /// <summary>
+    /// Story: When a user with TDE and the manage reset password permission signs in with SSO, we should return
+    ///  TrustedDeviceEncryption.HasManageResetPasswordPermission as true
+    /// </summary>
+    [Fact]
+    public async Task SsoLogin_TrustedDeviceEncryption_UserHasManageResetPasswordPermission_ReturnsTrue()
+    {
+        // Arrange
+        var challenge = new string('c', 50);
+
+        // create user permissions with the ManageResetPassword permission
+        var permissionsWithManageResetPassword = new Permissions() { ManageResetPassword = true };
+
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+        }, challenge, permissions: permissionsWithManageResetPassword);
+
+        // Act
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "10" },
+            { "deviceIdentifier", "test_id" },
+            { "deviceName", "firefox" },
+            { "twoFactorToken", "TEST"},
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }));
+
+        // Assert
+        // If the organization has selected TrustedDeviceEncryption but the user still has their master password
+        // they can decrypt with either option
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = responseBody.RootElement;
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
+
+        var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
+
+        var trustedDeviceOption = AssertHelper.AssertJsonProperty(userDecryptionOptions, "TrustedDeviceOption", JsonValueKind.Object);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasAdminApproval", JsonValueKind.False);
+        AssertHelper.AssertJsonProperty(trustedDeviceOption, "HasManageResetPasswordPermission", JsonValueKind.True);
+
+    }
+
 
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryption_FlagTurnedOff_DoesNotReturnOption()
@@ -517,7 +602,12 @@ public class IdentityServerSsoTests
         Assert.Equal("https://key_connector.com", keyConnectorUrl);
     }
 
-    private static async Task<IdentityApplicationFactory> CreateFactoryAsync(SsoConfigurationData ssoConfigurationData, string challenge, bool trustedDeviceEnabled = true)
+    private static async Task<IdentityApplicationFactory> CreateFactoryAsync(
+        SsoConfigurationData ssoConfigurationData,
+        string challenge,
+        bool trustedDeviceEnabled = true,
+        Permissions? permissions = null
+        )
     {
         var factory = new IdentityApplicationFactory();
 
@@ -563,12 +653,17 @@ public class IdentityServerSsoTests
         });
 
         var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
+
+        var orgUserPermissions =
+            (permissions == null) ? null : JsonSerializer.Serialize(permissions, JsonHelpers.CamelCase);
+
         var organizationUser = await organizationUserRepository.CreateAsync(new OrganizationUser
         {
             UserId = user.Id,
             OrganizationId = organization.Id,
             Status = OrganizationUserStatusType.Confirmed,
             Type = OrganizationUserType.User,
+            Permissions = orgUserPermissions
         });
 
         var ssoConfigRepository = factory.Services.GetRequiredService<ISsoConfigRepository>();
