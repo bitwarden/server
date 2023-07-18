@@ -4,7 +4,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -48,11 +47,6 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
 
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
-            .Returns(organization);
-
-        sutProvider.GetDependency<IOrganizationService>().ValidateSecretsManagerPlan(plan, signup);
-
         var result = await sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts);
 
         await sutProvider.GetDependency<IPaymentService>().Received()
@@ -61,7 +55,12 @@ public class AddSecretsManagerSubscriptionCommandTests
         // TODO: call ReferenceEventService - see AC-1481
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
-        sutProvider.GetDependency<IOrganizationService>().Received(1).ValidateSecretsManagerPlan(plan, signup);
+        sutProvider.GetDependency<IOrganizationService>().Received(1)
+            .ValidateSecretsManagerPlan(plan, Arg.Is<OrganizationUpgrade>(c=>
+                c.UseSecretsManager == signup.UseSecretsManager &&
+                c.AdditionalSmSeats == signup.AdditionalSmSeats &&
+                c.AdditionalServiceAccounts == signup.AdditionalServiceAccounts &&
+                c.AdditionalSeats == organization.Seats.GetValueOrDefault()));
 
         Assert.NotNull(result);
         Assert.IsType<Organization>(result);
@@ -72,13 +71,8 @@ public class AddSecretsManagerSubscriptionCommandTests
     [BitAutoData]
     public async Task SignUpAsync_ThrowsNotFoundException_WhenOrganizationIsNull(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
     {
-        var organizationId = Guid.NewGuid();
         var additionalSeats = 10;
         var additionalServiceAccounts = 5;
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
-            .Returns((Organization)null);
-
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.SignUpAsync(null, additionalSeats, additionalServiceAccounts));
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
@@ -91,9 +85,6 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = 10;
         var additionalServiceAccounts = 5;
         var organization = new Organization { Id = organizationId };
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
-            .Returns(organization);
 
         var exception = await Assert.ThrowsAsync<GatewayException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("Not a gateway customer.", exception.Message);
@@ -108,10 +99,6 @@ public class AddSecretsManagerSubscriptionCommandTests
         var additionalSeats = 10;
         var additionalServiceAccounts = 5;
         var organization = new Organization { Id = organizationId, GatewayCustomerId = "1" };
-
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId)
-            .Returns(organization);
-
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
         Assert.Contains("No subscription found.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
@@ -126,7 +113,5 @@ public class AddSecretsManagerSubscriptionCommandTests
         // TODO: call ReferenceEventService - see AC-1481
 
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive().ReplaceManyAsync(Arg.Any<ICollection<OrganizationUser>>());
     }
 }
