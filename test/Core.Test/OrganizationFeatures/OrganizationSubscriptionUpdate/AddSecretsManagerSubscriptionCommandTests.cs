@@ -21,89 +21,82 @@ public class AddSecretsManagerSubscriptionCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public async Task SignUpAsync_ReturnsSuccessAndClientSecret_WhenOrganizationAndPlanExist(PlanType planType,
-        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
+        int additionalServiceAccounts,
+        int additionalSmSeats,
+        Organization organization)
     {
-        var organizationId = Guid.NewGuid();
-        var additionalSeats = 10;
-        var additionalServiceAccounts = 5;
-
-        var organization = new Organization
-        {
-            Id = organizationId,
-            GatewayCustomerId = "123",
-            PlanType = planType,
-            SmSeats = 0,
-            SmServiceAccounts = 0,
-            UseSecretsManager = false,
-            GatewaySubscriptionId = "1"
-        };
+        organization.PlanType = planType;
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
-            AdditionalSmSeats = additionalSeats,
+            AdditionalSmSeats = additionalSmSeats,
             AdditionalServiceAccounts = additionalServiceAccounts,
             AdditionalSeats = organization.Seats.GetValueOrDefault(),
         };
 
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
 
-        var result = await sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts);
+        var result = await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
 
-        await sutProvider.GetDependency<IPaymentService>().Received()
-            .AddSecretsManagerToSubscription(organization, plan, additionalSeats, additionalServiceAccounts);
-
-        // TODO: call ReferenceEventService - see AC-1481
-
-        await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
         sutProvider.GetDependency<IOrganizationService>().Received(1)
-            .ValidateSecretsManagerPlan(plan, Arg.Is<OrganizationUpgrade>(c=>
+            .ValidateSecretsManagerPlan(plan, Arg.Is<OrganizationUpgrade>(c =>
                 c.UseSecretsManager == signup.UseSecretsManager &&
                 c.AdditionalSmSeats == signup.AdditionalSmSeats &&
                 c.AdditionalServiceAccounts == signup.AdditionalServiceAccounts &&
                 c.AdditionalSeats == organization.Seats.GetValueOrDefault()));
 
-        Assert.NotNull(result);
-        Assert.IsType<Organization>(result);
-        Assert.True(organization.UseSecretsManager);
+        await sutProvider.GetDependency<IPaymentService>().Received()
+            .AddSecretsManagerToSubscription(organization, plan, additionalSmSeats, additionalServiceAccounts);
+
+        // TODO: call ReferenceEventService - see AC-1481
+
+        sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(c =>
+            c.SmSeats == plan.BaseSeats + additionalSmSeats &&
+            c.SmServiceAccounts == plan.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts &&
+            c.UseSecretsManager == true));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_ThrowsNotFoundException_WhenOrganizationIsNull(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
+    public async Task SignUpAsync_ThrowsNotFoundException_WhenOrganizationIsNull(
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
+        int additionalServiceAccounts,
+        int additionalSmSeats)
     {
-        var additionalSeats = 10;
-        var additionalServiceAccounts = 5;
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.SignUpAsync(null, additionalSeats, additionalServiceAccounts));
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.SignUpAsync(null, additionalSmSeats, additionalServiceAccounts));
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_ThrowsGatewayException_WhenGatewayCustomerIdIsNullOrWhitespace(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
+    public async Task SignUpAsync_ThrowsGatewayException_WhenGatewayCustomerIdIsNullOrWhitespace(
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization,
+        int additionalServiceAccounts,
+        int additionalSmSeats)
     {
-        var organizationId = Guid.NewGuid();
-        var additionalSeats = 10;
-        var additionalServiceAccounts = 5;
-        var organization = new Organization { Id = organizationId };
-
-        var exception = await Assert.ThrowsAsync<GatewayException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
-        Assert.Contains("Not a gateway customer.", exception.Message);
+        organization.GatewayCustomerId = null;
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
+        Assert.Contains("No payment method found.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task SignUpAsync_ThrowsGatewayException_WhenGatewaySubscriptionIdIsNullOrWhitespace(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
+    public async Task SignUpAsync_ThrowsGatewayException_WhenGatewaySubscriptionIdIsNullOrWhitespace(
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization,
+        int additionalServiceAccounts,
+        int additionalSmSeats)
     {
-        var organizationId = Guid.NewGuid();
-        var additionalSeats = 10;
-        var additionalServiceAccounts = 5;
-        var organization = new Organization { Id = organizationId, GatewayCustomerId = "1" };
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSeats, additionalServiceAccounts));
+        organization.GatewaySubscriptionId = null;
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
         Assert.Contains("No subscription found.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
-
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
     {

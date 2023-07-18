@@ -1664,4 +1664,25 @@ public class OrganizationServiceTests
         var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
         Assert.Contains("Plan does not allow additional users.", exception.Message);
     }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ValidPlan_NoExceptionThrown(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 2,
+            AdditionalServiceAccounts = 0,
+            AdditionalSeats = 4
+        };
+
+        sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup);
+    }
 }

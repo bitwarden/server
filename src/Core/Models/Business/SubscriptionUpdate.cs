@@ -267,19 +267,22 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     private readonly StaticStore.Plan _plan;
     private readonly long? _additionalSeats;
     private readonly long? _additionalServiceAccounts;
+    private readonly int _previousSeats;
+    private readonly int _previousServiceAccounts;
     protected override List<string> PlanIds => new() { _plan.StripeSeatPlanId, _plan.StripeServiceAccountPlanId };
-    public SecretsManagerSubscribeUpdate(StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
+    public SecretsManagerSubscribeUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
     {
         _plan = plan;
         _additionalSeats = additionalSeats;
         _additionalServiceAccounts = additionalServiceAccounts;
+        _previousSeats = organization.SmSeats.GetValueOrDefault();
+        _previousServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault();
     }
 
     public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
     {
         var updatedItems = new List<SubscriptionItemOptions>();
 
-        RetrieveExistingSubscriptionItems(subscription, updatedItems);
         RemovePreviousSecretsManagerItems(updatedItems);
 
         return updatedItems;
@@ -289,7 +292,6 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     {
         var updatedItems = new List<SubscriptionItemOptions>();
 
-        RetrieveExistingSubscriptionItems(subscription, updatedItems);
         AddNewSecretsManagerItems(updatedItems);
 
         return updatedItems;
@@ -300,13 +302,15 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         updatedItems.Add(new SubscriptionItemOptions
         {
             Price = _plan.StripeSeatPlanId,
-            Quantity = _additionalSeats
+            Quantity = _additionalSeats,
+            Deleted = _additionalSeats == 0 ? true : null,
         });
 
         updatedItems.Add(new SubscriptionItemOptions
         {
             Price = _plan.StripeServiceAccountPlanId,
-            Quantity = _additionalServiceAccounts
+            Quantity = _additionalServiceAccounts,
+            Deleted = _additionalServiceAccounts == 0 ? true : null
         });
     }
 
@@ -315,27 +319,15 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         updatedItems.Add(new SubscriptionItemOptions
         {
             Price = _plan.StripeSeatPlanId,
-            Quantity = 0,
-            Deleted = true,
+            Quantity = _previousSeats,
+            Deleted = _previousSeats == 0 ? true : (bool?)null,
         });
 
         updatedItems.Add(new SubscriptionItemOptions
         {
             Price = _plan.StripeServiceAccountPlanId,
-            Quantity = 0,
-            Deleted = true,
+            Quantity = _previousServiceAccounts,
+            Deleted = _previousServiceAccounts == 0 ? true : (bool?)null,
         });
-    }
-
-    private void RetrieveExistingSubscriptionItems(Subscription subscription, List<SubscriptionItemOptions> updatedItems)
-    {
-        foreach (var item in subscription.Items.Data)
-        {
-            updatedItems.Add(new SubscriptionItemOptions
-            {
-                Id = item.Id,
-                Quantity = item.Quantity
-            });
-        }
     }
 }

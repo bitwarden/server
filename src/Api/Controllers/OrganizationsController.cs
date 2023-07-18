@@ -371,7 +371,7 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-        var result = await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSeats,
+        var result = await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
             model.AdditionalServiceAccounts);
 
         return new OrganizationResponseModel(result);

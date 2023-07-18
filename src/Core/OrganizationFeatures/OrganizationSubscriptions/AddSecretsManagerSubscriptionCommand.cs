@@ -19,21 +19,21 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         _paymentService = paymentService;
         _organizationService = organizationService;
     }
-    public async Task<Organization> SignUpAsync(Organization organization, int additionalSeats,
+    public async Task<Organization> SignUpAsync(Organization organization, int additionalSmSeats,
         int additionalServiceAccounts)
     {
         ValidateOrganization(organization);
 
         var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
-        var signup = SetOrganizationUpgrade(organization, additionalSeats, additionalServiceAccounts);
+        var signup = SetOrganizationUpgrade(organization, additionalSmSeats, additionalServiceAccounts);
         _organizationService.ValidateSecretsManagerPlan(plan, signup);
 
         if (plan.Type != PlanType.Free)
         {
-            await _paymentService.AddSecretsManagerToSubscription(organization, plan, additionalSeats, additionalServiceAccounts);
+            await _paymentService.AddSecretsManagerToSubscription(organization, plan, additionalSmSeats, additionalServiceAccounts);
         }
 
-        organization.SmSeats = plan.BaseSeats + additionalSeats;
+        organization.SmSeats = plan.BaseSeats + additionalSmSeats;
         organization.SmServiceAccounts = plan.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts;
         organization.UseSecretsManager = true;
 
@@ -64,12 +64,12 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
             throw new NotFoundException();
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
+        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && organization.PlanType != PlanType.Free)
         {
-            throw new GatewayException("Not a gateway customer.");
+            throw new BadRequestException("No payment method found.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
+        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId) && organization.PlanType != PlanType.Free)
         {
             throw new BadRequestException("No subscription found.");
         }

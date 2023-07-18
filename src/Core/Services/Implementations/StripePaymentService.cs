@@ -1698,7 +1698,7 @@ public class StripePaymentService : IPaymentService
     public async Task<string> AddSecretsManagerToSubscription(Organization org, StaticStore.Plan plan, int additionalSmSeats,
         int additionalServiceAccount = 0, DateTime? prorationDate = null)
     {
-        return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerSubscribeUpdate(plan, additionalSmSeats, additionalServiceAccount), prorationDate);
+        return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount), prorationDate);
     }
 
     private Stripe.PaymentMethod GetLatestCardPaymentMethod(string customerId)
