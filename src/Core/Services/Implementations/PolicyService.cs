@@ -20,6 +20,8 @@ public class PolicyService : IPolicyService
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
 
+    private IEnumerable<OrganizationUserPolicyDetails> _cachedOrganizationUserPolicyDetails;
+
     public PolicyService(
         IEventService eventService,
         IOrganizationRepository organizationRepository,
@@ -188,18 +190,25 @@ public class PolicyService : IPolicyService
         return result.Any();
     }
 
-    private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType? policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
-        var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
+        // Check if the cached policies are available
+        if (_cachedOrganizationUserPolicyDetails == null)
+        {
+            // Cached policies not available, retrieve from the repository
+            _cachedOrganizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId);
+        }
+
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
-        return organizationUserPolicyDetails.Where(o =>
+        return _cachedOrganizationUserPolicyDetails.Where(o =>
+            (policyType == null || o.PolicyType == policyType) &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
             o.OrganizationUserStatus >= minStatus &&
             !o.IsProvider);
     }
 
-    private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)
+    private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType? policyType)
     {
         switch (policyType)
         {

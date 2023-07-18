@@ -556,18 +556,12 @@ public class PolicyServiceTests
     private static void SetupUserPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.RequireSso)
+            .GetByUserIdWithPolicyDetailsAsync(userId)
             .Returns(new List<OrganizationUserPolicyDetails>
             {
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = false, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false},
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
-                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = true }
-            });
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.DisableSend)
-            .Returns(new List<OrganizationUserPolicyDetails>
-            {
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = true },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
             });

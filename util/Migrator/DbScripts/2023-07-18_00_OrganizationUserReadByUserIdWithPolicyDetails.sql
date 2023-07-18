@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -28,3 +28,4 @@ WHERE
         WHERE U.[Id] = @UserId AND OU.[Email] = U.[Email] AND OU.[Status] = 0 -- 'Invited' OrgUsers are not linked to a UserId yet, so we have to look up their email
     )
 END
+GO
