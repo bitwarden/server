@@ -54,7 +54,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
     public async Task Get_NotFound()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var groupId = Guid.NewGuid().ToString();
+        var groupId = Guid.NewGuid();
         var expectedResponse = new ScimErrorResponseModel
         {
             Status = StatusCodes.Status404NotFound,
@@ -214,7 +214,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             ExternalId = externalId.ToString(),
             Members = new List<ScimGroupRequestModel.GroupMembersModel>
             {
-                new ScimGroupRequestModel.GroupMembersModel { Display = "user1@example.com", Value = ScimApplicationFactory.TestOrganizationUserId1 }
+                new ScimGroupRequestModel.GroupMembersModel { Display = "user1@example.com", Value = ScimApplicationFactory.TestOrganizationUserId1.ToString() }
             },
             Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
         };
@@ -234,14 +234,13 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
 
         var responseModel = JsonSerializer.Deserialize<ScimGroupResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
-        Assert.NotNull(responseModel.Id);
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialGroupCount + 1, databaseContext.Groups.Count());
         Assert.True(databaseContext.Groups.Any(g => g.Name == displayName && g.ExternalId == externalId));
 
         Assert.Equal(_initialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == responseModel.Id && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId1));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == responseModel.Id && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1));
     }
 
     [Theory]
@@ -297,8 +296,8 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
             ExternalId = "A",
             Members = new List<ScimGroupRequestModel.GroupMembersModel>
             {
-                new ScimGroupRequestModel.GroupMembersModel { Display = "user2@example.com", Value = ScimApplicationFactory.TestOrganizationUserId2 },
-                new ScimGroupRequestModel.GroupMembersModel { Display = "user3@example.com", Value = ScimApplicationFactory.TestOrganizationUserId3 }
+                new ScimGroupRequestModel.GroupMembersModel { Display = "user2@example.com", Value = ScimApplicationFactory.TestOrganizationUserId2.ToString() },
+                new ScimGroupRequestModel.GroupMembersModel { Display = "user3@example.com", Value = ScimApplicationFactory.TestOrganizationUserId3.ToString() }
             },
             Schemas = new List<string>() { ScimConstants.Scim2SchemaGroup }
         };
@@ -318,12 +317,12 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
-        var firstGroup = databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == groupId);
+        var firstGroup = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
         Assert.Equal(newGroupName, firstGroup.Name);
 
-        Assert.Equal(2, databaseContext.GroupUsers.Count(gu => gu.GroupId.ToString() == groupId));
-        Assert.NotNull(databaseContext.GroupUsers.FirstOrDefault(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId2));
-        Assert.NotNull(databaseContext.GroupUsers.FirstOrDefault(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId3));
+        Assert.Equal(2, databaseContext.GroupUsers.Count(gu => gu.GroupId == groupId));
+        Assert.NotNull(databaseContext.GroupUsers.FirstOrDefault(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2));
+        Assert.NotNull(databaseContext.GroupUsers.FirstOrDefault(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId3));
     }
 
     [Fact]
@@ -331,7 +330,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
     {
         var newGroupName = "Test Group 1 New Name";
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var groupId = Guid.NewGuid().ToString();
+        var groupId = Guid.NewGuid();
         var inputModel = new ScimGroupRequestModel
         {
             DisplayName = newGroupName,
@@ -378,12 +377,12 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        var group = databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == groupId);
+        var group = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
         Assert.Equal(newDisplayName, group.Name);
 
         Assert.Equal(_initialGroupUsersCount, databaseContext.GroupUsers.Count());
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId1));
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId4));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId4));
     }
 
     [Fact]
@@ -414,7 +413,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
 
         Assert.Equal(_initialGroupUsersCount - 1, databaseContext.GroupUsers.Count());
         var groupUser = databaseContext.GroupUsers.FirstOrDefault();
-        Assert.Equal(ScimApplicationFactory.TestOrganizationUserId2, groupUser.OrganizationUserId.ToString());
+        Assert.Equal(ScimApplicationFactory.TestOrganizationUserId2, groupUser.OrganizationUserId);
     }
 
     [Fact]
@@ -442,9 +441,9 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialGroupUsersCount + 1, databaseContext.GroupUsers.Count());
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId1));
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId2));
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId4));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId1));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId4));
     }
 
     [Fact]
@@ -471,8 +470,8 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(StatusCodes.Status204NoContent, context.Response.StatusCode);
 
         var databaseContext = _factory.GetDatabaseContext();
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId2));
-        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId.ToString() == groupId && gu.OrganizationUserId.ToString() == ScimApplicationFactory.TestOrganizationUserId3));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId2));
+        Assert.True(databaseContext.GroupUsers.Any(gu => gu.GroupId == groupId && gu.OrganizationUserId == ScimApplicationFactory.TestOrganizationUserId3));
     }
 
     [Fact]
@@ -508,7 +507,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
         Assert.Equal(_initialGroupUsersCount - 1, databaseContext.GroupUsers.Count());
         Assert.Equal(_initialGroupCount, databaseContext.Groups.Count());
 
-        var group = databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == groupId);
+        var group = databaseContext.Groups.FirstOrDefault(g => g.Id == groupId);
         Assert.Equal(newDisplayName, group.Name);
     }
 
@@ -543,7 +542,7 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
     public async Task Patch_NotFound()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var groupId = Guid.NewGuid().ToString();
+        var groupId = Guid.NewGuid();
         var inputModel = new Models.ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
@@ -576,14 +575,14 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialGroupCount - 1, databaseContext.Groups.Count());
-        Assert.True(databaseContext.Groups.FirstOrDefault(g => g.Id.ToString() == groupId) == null);
+        Assert.True(databaseContext.Groups.FirstOrDefault(g => g.Id == groupId) == null);
     }
 
     [Fact]
     public async Task Delete_NotFound()
     {
         var organizationId = ScimApplicationFactory.TestOrganizationId1;
-        var groupId = Guid.NewGuid().ToString();
+        var groupId = Guid.NewGuid();
         var expectedResponse = new ScimErrorResponseModel
         {
             Status = StatusCodes.Status404NotFound,

@@ -16,8 +16,8 @@ public class ProjectResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(project));
         }
 
-        Id = project.Id.ToString();
-        OrganizationId = project.OrganizationId.ToString();
+        Id = project.Id;
+        OrganizationId = project.OrganizationId;
         Name = project.Name;
         CreationDate = project.CreationDate;
         RevisionDate = project.RevisionDate;
@@ -33,8 +33,8 @@ public class ProjectResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(projectDetails));
         }
 
-        Id = projectDetails.Project.Id.ToString();
-        OrganizationId = projectDetails.Project.OrganizationId.ToString();
+        Id = projectDetails.Project.Id;
+        OrganizationId = projectDetails.Project.OrganizationId;
         Name = projectDetails.Project.Name;
         CreationDate = projectDetails.Project.CreationDate;
         RevisionDate = projectDetails.Project.RevisionDate;
@@ -46,9 +46,9 @@ public class ProjectResponseModel : ResponseModel
     {
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
 
-    public string OrganizationId { get; set; }
+    public Guid OrganizationId { get; set; }
 
     public string Name { get; set; }
 

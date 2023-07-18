@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <!--2022.6.2-->
     <Version>2023.7.0</Version>
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
