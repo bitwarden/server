@@ -7,6 +7,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
@@ -20,6 +21,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IMailService _mailService;
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IGlobalSettings _globalSettings;
 
     public UpdateSecretsManagerSubscriptionCommand(
         IOrganizationService organizationService,
@@ -27,7 +29,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         IPaymentService paymentService,
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository,
+        IGlobalSettings globalSettings)
     {
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
@@ -35,6 +38,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _mailService = mailService;
         _logger = logger;
         _serviceAccountRepository = serviceAccountRepository;
+        _globalSettings = globalSettings;
     }
 
     public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
@@ -77,6 +81,25 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts);
 
         await UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate);
+    }
+
+    public async Task AutoAddSmSeatsAsync(Organization organization, int smSeatAdjustment)
+    {
+        if (_globalSettings.SelfHosted)
+        {
+            throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
+        }
+
+        var update = new SecretsManagerSubscriptionUpdate(
+            organization, seatAdjustment: smSeatAdjustment, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
+            serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts);
+
+        if (organization.MaxAutoscaleSmSeats.HasValue && update.SmSeats > organization.MaxAutoscaleSmSeats.Value)
+        {
+            throw new BadRequestException("Secrets Manager seat limit has been reached.");
+        }
+
+        await UpdateSubscriptionAsync(update);
     }
 
     private Plan GetPlanForOrganization(Organization organization)

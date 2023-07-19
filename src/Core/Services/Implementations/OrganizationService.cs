@@ -11,6 +11,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
@@ -50,6 +52,8 @@ public class OrganizationService : IOrganizationService
     private readonly ILogger<OrganizationService> _logger;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
+    private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -76,7 +80,9 @@ public class OrganizationService : IOrganizationService
         ICurrentContext currentContext,
         ILogger<OrganizationService> logger,
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
+        IProviderUserRepository providerUserRepository,
+        ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -103,6 +109,8 @@ public class OrganizationService : IOrganizationService
         _logger = logger;
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
+        _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1341,6 +1349,16 @@ public class OrganizationService : IOrganizationService
             !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
+        }
+
+        if (!originalUser.AccessSecretsManager && user.AccessSecretsManager)
+        {
+            var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
+            if (additionalSmSeatsRequired > 0)
+            {
+                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
+                await _updateSecretsManagerSubscriptionCommand.AutoAddSmSeatsAsync(organization, additionalSmSeatsRequired);
+            }
         }
 
         if (user.AccessAll)

@@ -7,4 +7,5 @@ public interface IUpdateSecretsManagerSubscriptionCommand
 {
     Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update);
     Task AdjustServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment);
+    Task AutoAddSmSeatsAsync(Organization organization, int smSeatAdjustment);
 }
