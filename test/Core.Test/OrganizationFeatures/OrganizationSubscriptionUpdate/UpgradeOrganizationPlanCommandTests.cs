@@ -3,6 +3,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Utilities;
@@ -128,4 +129,57 @@ public class UpgradeOrganizationPlanCommandTests
         Assert.NotNull(result.Item2);
     }
 
+
+    [Theory, FreeOrganizationUpgradeCustomize]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    public async Task UpgradePlan_SM_NotEnoughSmSeats_Throws(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
+        SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        upgrade.Plan = planType;
+        upgrade.AdditionalSeats = 15;
+        upgrade.AdditionalSmSeats = 1;
+        upgrade.AdditionalServiceAccounts = 0;
+
+        organization.SmSeats = 2;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(2);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+        Assert.Contains("Your organization currently has 2 Secrets Manager seats filled. Your new plan only has", exception.Message);
+
+        sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+    }
+
+    [Theory, FreeOrganizationUpgradeCustomize]
+    [BitAutoData(PlanType.EnterpriseMonthly, 201)]
+    [BitAutoData(PlanType.EnterpriseAnnually, 201)]
+    [BitAutoData(PlanType.TeamsMonthly, 51)]
+    [BitAutoData(PlanType.TeamsAnnually, 51)]
+    public async Task UpgradePlan_SM_NotEnoughServiceAccounts_Throws(PlanType planType, int currentServiceAccounts,
+     Organization organization, OrganizationUpgrade upgrade, SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
+    {
+        upgrade.Plan = planType;
+        upgrade.AdditionalSeats = 15;
+        upgrade.AdditionalSmSeats = 1;
+        upgrade.AdditionalServiceAccounts = 0;
+
+        organization.SmSeats = 1;
+        organization.SmServiceAccounts = currentServiceAccounts;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(1);
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .GetServiceAccountCountByOrganizationIdAsync(organization.Id).Returns(currentServiceAccounts);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
+        Assert.Contains($"Your organization currently has {currentServiceAccounts} service accounts. Your new plan only allows", exception.Message);
+
+        sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+    }
 }

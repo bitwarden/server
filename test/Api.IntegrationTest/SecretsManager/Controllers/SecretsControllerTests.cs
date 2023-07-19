@@ -166,7 +166,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
 
-        var createdSecret = await _secretRepository.GetByIdAsync(new Guid(result.Id));
+        var createdSecret = await _secretRepository.GetByIdAsync(result.Id);
         Assert.NotNull(result);
         Assert.Equal(request.Key, createdSecret.Key);
         Assert.Equal(request.Value, createdSecret.Value);
@@ -286,8 +286,8 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var secret = result.Secret;
 
         Assert.NotNull(secretResult);
-        Assert.Equal(secret.Id.ToString(), secretResult!.Id);
-        Assert.Equal(secret.OrganizationId.ToString(), secretResult.OrganizationId);
+        Assert.Equal(secret.Id, secretResult!.Id);
+        Assert.Equal(secret.OrganizationId, secretResult.OrganizationId);
         Assert.Equal(secret.Key, secretResult.Key);
         Assert.Equal(secret.Value, secretResult.Value);
         Assert.Equal(secret.Note, secretResult.Note);
@@ -463,8 +463,8 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         response.EnsureSuccessStatusCode();
         var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
         Assert.NotEmpty(result!.Secrets);
-        Assert.Equal(secret.Id.ToString(), result.Secrets.First().Id);
-        Assert.Equal(secret.OrganizationId.ToString(), result.Secrets.First().OrganizationId);
+        Assert.Equal(secret.Id, result.Secrets.First().Id);
+        Assert.Equal(secret.OrganizationId, result.Secrets.First().OrganizationId);
         Assert.Equal(secret.Key, result.Secrets.First().Key);
         Assert.Equal(secret.CreationDate, result.Secrets.First().CreationDate);
         Assert.Equal(secret.RevisionDate, result.Secrets.First().RevisionDate);
@@ -557,7 +557,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         AssertHelper.AssertRecent(result.RevisionDate);
         Assert.NotEqual(secret.RevisionDate, result.RevisionDate);
 
-        var updatedSecret = await _secretRepository.GetByIdAsync(new Guid(result.Id));
+        var updatedSecret = await _secretRepository.GetByIdAsync(result.Id);
         Assert.NotNull(result);
         Assert.Equal(request.Key, updatedSecret.Key);
         Assert.Equal(request.Value, updatedSecret.Value);

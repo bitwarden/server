@@ -60,7 +60,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     [Fact]
     public async Task Get_NotFound()
     {
-        var organizationUserId = Guid.NewGuid().ToString();
+        var organizationUserId = Guid.NewGuid();
         var expectedResponse = new ScimErrorResponseModel
         {
             Status = StatusCodes.Status404NotFound,
@@ -274,7 +274,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel, "Id");
-        Assert.NotNull(responseModel.Id);
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialUserCount + 1, databaseContext.OrganizationUsers.Count());
@@ -373,7 +372,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
-        var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == organizationUserId);
+        var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
         Assert.Equal(OrganizationUserStatusType.Revoked, revokedUser.Status);
     }
 
@@ -408,7 +407,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
 
         var databaseContext = _factory.GetDatabaseContext();
-        var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == organizationUserId);
+        var revokedUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
         Assert.NotEqual(OrganizationUserStatusType.Revoked, revokedUser.Status);
     }
 
@@ -429,7 +428,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
             Schemas = new List<string> { ScimConstants.Scim2SchemaError }
         };
 
-        var context = await _factory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId.ToString(), inputModel);
+        var context = await _factory.UsersPutAsync(ScimApplicationFactory.TestOrganizationId1, organizationUserId, inputModel);
 
         Assert.Equal(StatusCodes.Status404NotFound, context.Response.StatusCode);
 
@@ -456,7 +455,7 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var databaseContext = _factory.GetDatabaseContext();
 
-        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == organizationUserId);
+        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
         Assert.Equal(OrganizationUserStatusType.Revoked, organizationUser.Status);
     }
 
@@ -479,14 +478,14 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var databaseContext = _factory.GetDatabaseContext();
 
-        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id.ToString() == organizationUserId);
+        var organizationUser = databaseContext.OrganizationUsers.FirstOrDefault(g => g.Id == organizationUserId);
         Assert.NotEqual(OrganizationUserStatusType.Revoked, organizationUser.Status);
     }
 
     [Fact]
     public async Task Patch_NotFound()
     {
-        var organizationUserId = Guid.NewGuid().ToString();
+        var organizationUserId = Guid.NewGuid();
         var inputModel = new Models.ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
@@ -519,13 +518,13 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var databaseContext = _factory.GetDatabaseContext();
         Assert.Equal(_initialUserCount - 1, databaseContext.OrganizationUsers.Count());
-        Assert.False(databaseContext.OrganizationUsers.Any(g => g.Id.ToString() == organizationUserId));
+        Assert.False(databaseContext.OrganizationUsers.Any(g => g.Id == organizationUserId));
     }
 
     [Fact]
     public async Task Delete_NotFound()
     {
-        var organizationUserId = Guid.NewGuid().ToString();
+        var organizationUserId = Guid.NewGuid();
         var inputModel = new ScimUserRequestModel();
         var expectedResponse = new ScimErrorResponseModel
         {

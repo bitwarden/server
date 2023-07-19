@@ -14,7 +14,7 @@ public class ScimUserResponseModel : BaseScimUserModel
     public ScimUserResponseModel(OrganizationUserUserDetails orgUser)
         : this()
     {
-        Id = orgUser.Id.ToString();
+        Id = orgUser.Id;
         ExternalId = orgUser.ExternalId;
         UserName = orgUser.Email;
         DisplayName = orgUser.Name;
@@ -23,6 +23,6 @@ public class ScimUserResponseModel : BaseScimUserModel
         Active = orgUser.Status != Core.Enums.OrganizationUserStatusType.Revoked;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public ScimMetaModel Meta { get; private set; }
 }
