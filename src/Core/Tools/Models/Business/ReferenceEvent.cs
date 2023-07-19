@@ -52,7 +52,6 @@ public class ReferenceEvent
 
     public int? Seats { get; set; }
     public int? PreviousSeats { get; set; }
-    public int? PreviousServiceAccounts { get; set; }
 
     public short? Storage { get; set; }
 
@@ -71,7 +70,4 @@ public class ReferenceEvent
 
     public string ClientId { get; set; }
     public Version ClientVersion { get; set; }
-    public int? SmSeats { get; set; }
-    public int? ServiceAccounts { get; set; }
-    public bool UseSecretsManager { get; set; }
 }

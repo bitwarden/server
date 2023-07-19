@@ -149,6 +149,7 @@ public class Startup
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
         services.AddSecretsManagerEfRepositories();
+        Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
         // MVC
