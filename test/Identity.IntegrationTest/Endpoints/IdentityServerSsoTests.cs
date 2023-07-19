@@ -441,6 +441,9 @@ public class IdentityServerSsoTests
         Assert.Equal(expectedUserKey, actualUserKey);
     }
 
+    // we should add a test case for JIT provisioned users. They don't have any orgs which caused
+    // an error in the UserHasManageResetPasswordPermission set logic.
+
     /// <summary>
     /// Story: When a user with TDE and the manage reset password permission signs in with SSO, we should return
     ///  TrustedDeviceEncryption.HasManageResetPasswordPermission as true
@@ -620,7 +623,7 @@ public class IdentityServerSsoTests
             RedirectUri = "https://localhost:8080/sso-connector.html",
             RequestedScopes = new[] { "api", "offline_access" },
             CodeChallenge = challenge.Sha256(),
-            CodeChallengeMethod = "plain", // 
+            CodeChallengeMethod = "plain", //
             Subject = null, // Temporarily set it to null
         };
 
