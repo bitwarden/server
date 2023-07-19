@@ -352,7 +352,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return true;
         }
 
-        // Check if user belongs to any organization with an active SSO policy 
+        // Check if user belongs to any organization with an active SSO policy
         var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
         {
@@ -625,9 +625,16 @@ public abstract class BaseRequestValidator<T> where T : class
                 .Any();
 
             // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
-            // TDE requires single org so grab first id. 
-            var orgId = CurrentContext.Organizations.First().Id;
-            var hasManageResetPasswordPermission = await CurrentContext.ManageResetPassword(orgId);
+            var hasManageResetPasswordPermission = false;
+
+            // when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
+            var org = CurrentContext.Organizations.FirstOrDefault();
+
+            if (org != null)
+            {
+                // TDE requires single org so grabbing first org & id is fine.
+                hasManageResetPasswordPermission = await CurrentContext.ManageResetPassword(org.Id);
+            }
 
             var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
