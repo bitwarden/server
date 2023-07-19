@@ -11,12 +11,12 @@ public class SelectionReadOnlyResponseModel
             throw new ArgumentNullException(nameof(selection));
         }
 
-        Id = selection.Id.ToString();
+        Id = selection.Id;
         ReadOnly = selection.ReadOnly;
         HidePasswords = selection.HidePasswords;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
 }
