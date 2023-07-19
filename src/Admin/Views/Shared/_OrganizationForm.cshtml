@@ -99,34 +99,6 @@
                 </div>
             </div>
         </div>
-        <div class="row">
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="Seats"></label>
-                    <input type="number" class="form-control" asp-for="Seats" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxCollections"></label>
-                    <input type="number" class="form-control" asp-for="MaxCollections" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-            <div class="col-sm">
-                <div class="form-group">
-                    <label asp-for="MaxStorageGb"></label>
-                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-4">
-                <div class="form-group">
-                    <label asp-for="MaxAutoscaleSeats"></label>
-                    <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1" readonly='@(!canEditPlan)'>
-                </div>
-            </div>
-        </div>
         <h2>Features</h2>
         <div class="row mb-3">
             <div class="col-4">
@@ -200,6 +172,75 @@
             </div>
         </div>
     }
+    
+    @if (canViewPlan)
+    {
+        <h2>Password Manager Configuration</h2>
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="Seats"></label>
+                    <input type="number" class="form-control" asp-for="Seats" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="MaxCollections"></label>
+                    <input type="number" class="form-control" asp-for="MaxCollections" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label asp-for="MaxStorageGb"></label>
+                    <input type="number" class="form-control" asp-for="MaxStorageGb" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-4">
+                <div class="form-group">
+                    <label asp-for="MaxAutoscaleSeats"></label>
+                    <input type="number" class="form-control" asp-for="MaxAutoscaleSeats" min="1" readonly='@(!canEditPlan)'>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (canViewPlan)
+    {
+        <div id="organization-secrets-configuration" hidden="@(!Model.UseSecretsManager)">
+            <h2>Secrets Manager Configuration</h2>
+            <div class="row">
+                <div class="col-sm">
+                    <div class="form-group">
+                        <label asp-for="SmSeats"></label>
+                        <input type="number" class="form-control" asp-for="SmSeats" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <div class="form-group">
+                        <label asp-for="MaxAutoscaleSmSeats"></label>
+                        <input type="number" class="form-control" asp-for="MaxAutoscaleSmSeats" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+                <div class="col-sm">
+                    <div class="form-group">
+                        <label asp-for="SmServiceAccounts"></label>
+                        <input type="number" class="form-control" asp-for="SmServiceAccounts" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-4">
+                    <div class="form-group">
+                        <label asp-for="MaxAutoscaleSmServiceAccounts"></label>
+                        <input type="number" class="form-control" asp-for="MaxAutoscaleSmServiceAccounts" min="1" readonly='@(!canEditPlan)'>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     @if(canViewLicensing)
     {
         <h2>Licensing</h2>

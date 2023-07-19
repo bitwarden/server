@@ -1,6 +1,9 @@
-﻿using Bit.Core.Exceptions;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Utilities;
 
@@ -16,14 +19,24 @@ public class CreateAccessTokenCommand : ICreateAccessTokenCommand
         _apiKeyRepository = apiKeyRepository;
     }
 
-    public async Task<ApiKey> CreateAsync(ApiKey apiKey)
+    public async Task<ApiKeyClientSecretDetails> CreateAsync(ApiKey apiKey)
     {
         if (apiKey.ServiceAccountId == null)
         {
             throw new BadRequestException();
         }
 
-        apiKey.ClientSecret = CoreHelpers.SecureRandomString(_clientSecretMaxLength);
-        return await _apiKeyRepository.CreateAsync(apiKey);
+        var clientSecret = CoreHelpers.SecureRandomString(_clientSecretMaxLength);
+        apiKey.ClientSecretHash = GetHash(clientSecret);
+        var result = await _apiKeyRepository.CreateAsync(apiKey);
+        return new ApiKeyClientSecretDetails { ApiKey = result, ClientSecret = clientSecret };
+    }
+
+    private static string GetHash(string input)
+    {
+        using var sha = SHA256.Create();
+        var bytes = Encoding.UTF8.GetBytes(input);
+        var hash = sha.ComputeHash(bytes);
+        return Convert.ToBase64String(hash);
     }
 }
