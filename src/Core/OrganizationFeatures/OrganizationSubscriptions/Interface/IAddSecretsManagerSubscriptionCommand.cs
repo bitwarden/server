@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 
@@ -7,5 +8,5 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 /// </summary>
 public interface IAddSecretsManagerSubscriptionCommand
 {
-    Task<Organization> SignUpAsync(Organization organization, int additionalSmSeats, int additionalServiceAccounts);
+    Task<OrganizationUserOrganizationDetails> SignUpAsync(Organization organization, int additionalSmSeats, int additionalServiceAccounts, Guid userId);
 }

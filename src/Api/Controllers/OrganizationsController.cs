@@ -359,7 +359,7 @@ public class OrganizationsController : Controller
 
     [HttpPost("{id}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<OrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
+    public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
@@ -371,10 +371,13 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-        var result = await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
-            model.AdditionalServiceAccounts);
 
-        return new OrganizationResponseModel(result);
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var organizationDetails = await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
+            model.AdditionalServiceAccounts, userId);
+
+        return new ProfileOrganizationResponseModel(organizationDetails);
     }
 
     [HttpPost("{id}/seat")]
