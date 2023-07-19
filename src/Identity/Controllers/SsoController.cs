@@ -14,8 +14,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
 
-// TODO: 2022-01-12, Remove account alias
-[Route("account/[action]")]
 [Route("sso/[action]")]
 public class SsoController : Controller
 {
