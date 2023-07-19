@@ -633,8 +633,7 @@ public abstract class BaseRequestValidator<T> where T : class
             if (org != null)
             {
                 // TDE requires single org so grabbing first org & id is fine.
-                var orgId = org.Id;
-                hasManageResetPasswordPermission = await CurrentContext.ManageResetPassword(orgId);
+                hasManageResetPasswordPermission = await CurrentContext.ManageResetPassword(org.Id);
             }
 
             var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
