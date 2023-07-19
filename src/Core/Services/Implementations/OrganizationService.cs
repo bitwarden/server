@@ -1351,6 +1351,8 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
+        // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
+        // updating Stripe
         if (!originalUser.AccessSecretsManager && user.AccessSecretsManager)
         {
             var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
