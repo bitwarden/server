@@ -630,7 +630,7 @@ public abstract class BaseRequestValidator<T> where T : class
             // when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
             var org = CurrentContext.Organizations.FirstOrDefault();
 
-            if(org != null)
+            if (org != null)
             {
                 // TDE requires single org so grabbing first org & id is fine.
                 var orgId = org.Id;
