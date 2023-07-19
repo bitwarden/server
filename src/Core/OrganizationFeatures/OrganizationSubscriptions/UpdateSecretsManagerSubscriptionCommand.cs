@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -15,7 +14,6 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubscriptionCommand
 {
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationService _organizationService;
@@ -24,7 +22,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public UpdateSecretsManagerSubscriptionCommand(
-        IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IPaymentService paymentService,
@@ -32,7 +29,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository)
     {
-        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
         _organizationService = organizationService;
@@ -41,9 +37,9 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         _serviceAccountRepository = serviceAccountRepository;
     }
 
-    public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
+    public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
     {
-        var organization = await _organizationRepository.GetByIdAsync(update.OrganizationId);
+        var organization = update.Organization;
 
         ValidateOrganization(organization);
 
@@ -74,6 +70,15 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await SendEmailIfAutoscaleLimitReached(organization);
     }
 
+    public async Task AdjustServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
+    {
+        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
+            organization, seatAdjustment: 0, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
+            serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts);
+
+        await UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate);
+    }
+
     private Plan GetPlanForOrganization(Organization organization)
     {
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
@@ -88,7 +93,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (organization == null)
         {
-            throw new NotFoundException("Organization is not found");
+            throw new NotFoundException("Organization is not found.");
         }
 
         if (!organization.UseSecretsManager)
