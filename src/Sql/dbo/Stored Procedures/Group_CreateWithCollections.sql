@@ -26,13 +26,15 @@ BEGIN
         [CollectionId],
         [GroupId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         [Id],
         @Id,
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     FROM
         @Collections
     WHERE
