@@ -14,8 +14,8 @@ public class ServiceAccountResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(serviceAccount));
         }
 
-        Id = serviceAccount.Id.ToString();
-        OrganizationId = serviceAccount.OrganizationId.ToString();
+        Id = serviceAccount.Id;
+        OrganizationId = serviceAccount.OrganizationId;
         Name = serviceAccount.Name;
         CreationDate = serviceAccount.CreationDate;
         RevisionDate = serviceAccount.RevisionDate;
@@ -25,9 +25,9 @@ public class ServiceAccountResponseModel : ResponseModel
     {
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
 
-    public string OrganizationId { get; set; }
+    public Guid OrganizationId { get; set; }
 
     public string Name { get; set; }
 

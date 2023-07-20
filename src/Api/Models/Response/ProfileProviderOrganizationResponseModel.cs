@@ -9,7 +9,7 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
     public ProfileProviderOrganizationResponseModel(ProviderUserOrganizationDetails organization)
         : base("profileProviderOrganization")
     {
-        Id = organization.OrganizationId.ToString();
+        Id = organization.OrganizationId;
         Name = organization.Name;
         UsePolicies = organization.UsePolicies;
         UseSso = organization.UseSso;
@@ -39,8 +39,8 @@ public class ProfileProviderOrganizationResponseModel : ProfileOrganizationRespo
         Identifier = organization.Identifier;
         Permissions = new Permissions();
         ResetPasswordEnrolled = false;
-        UserId = organization.UserId?.ToString();
-        ProviderId = organization.ProviderId?.ToString();
+        UserId = organization.UserId;
+        ProviderId = organization.ProviderId;
         ProviderName = organization.ProviderName;
         PlanProductType = StaticStore.GetPasswordManagerPlan(organization.PlanType).Product;
     }
