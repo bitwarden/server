@@ -16,7 +16,7 @@ namespace Bit.MySqlMigrations.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.12")
+                .HasAnnotation("ProductVersion", "7.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
@@ -284,6 +284,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("HidePasswords")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("Manage")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("ReadOnly")
                         .HasColumnType("tinyint(1)");
 
@@ -303,6 +306,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<bool>("HidePasswords")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("Manage")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("ReadOnly")
@@ -1328,6 +1334,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>
