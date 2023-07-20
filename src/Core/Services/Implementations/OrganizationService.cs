@@ -824,9 +824,12 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        var newSeatsRequired = 0;
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
+
+        // Seat autoscaling
+        var initialSmSeatCount = organization.SmSeats;
+        var newSeatsRequired = 0;
         if (organization.Seats.HasValue)
         {
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
@@ -841,6 +844,18 @@ public class OrganizationService : IOrganizationService
             {
                 throw new BadRequestException(failureReason);
             }
+        }
+
+        // Secrets Manager seat autoscaling
+        var inviteWithSmAccessCount = invites
+            .Where(i => i.invite.AccessSecretsManager)
+            .SelectMany(i => i.invite.Emails)
+            .Count(email => !existingEmails.Contains(email));
+
+        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
+        if (additionalSmSeatsRequired > 0)
+        {
+            // TODO: Pre-validation?
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
@@ -936,6 +951,10 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
 
+            if (additionalSmSeatsRequired > 0)
+            {
+                await _updateSecretsManagerSubscriptionCommand.AutoAddSmSeatsAsync(organization, additionalSmSeatsRequired, prorationDate);
+            }
             await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
@@ -950,11 +969,20 @@ public class OrganizationService : IOrganizationService
             // Revert any added users.
             var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
-            var currentSeatCount = (await _organizationRepository.GetByIdAsync(organization.Id)).Seats;
+            var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
-            if (initialSeatCount.HasValue && currentSeatCount.HasValue && currentSeatCount.Value != initialSeatCount.Value)
+            // Revert autoscaling
+            if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
             {
-                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentSeatCount.Value, prorationDate);
+                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value, prorationDate);
+            }
+
+            // Revert SmSeat autoscaling
+            if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
+                currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
+            {
+                await _updateSecretsManagerSubscriptionCommand.RevertAutoAddSmSeatsAsync(organization,
+                    initialSmSeatCount.Value - currentOrganization.SmSeats.Value, prorationDate);
             }
 
             exceptions.Add(e);

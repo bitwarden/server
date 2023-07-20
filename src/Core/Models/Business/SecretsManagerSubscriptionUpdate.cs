@@ -56,11 +56,13 @@ public class SecretsManagerSubscriptionUpdate
     public bool SmServiceAccountsChanged => SmServiceAccountsAdjustment != 0;
     public bool MaxAutoscaleSmSeatsChanged { get; set; }
     public bool MaxAutoscaleSmServiceAccountsChanged { get; set; }
+    public DateTime? ProrationDate { get; init; }
 
     public SecretsManagerSubscriptionUpdate(
         Organization organization,
         int seatAdjustment, int? maxAutoscaleSeats,
-        int serviceAccountAdjustment, int? maxAutoscaleServiceAccounts)
+        int serviceAccountAdjustment, int? maxAutoscaleServiceAccounts,
+        DateTime? prorationDate = null)
     {
         if (organization == null)
         {
@@ -90,5 +92,7 @@ public class SecretsManagerSubscriptionUpdate
 
         MaxAutoscaleSmSeatsChanged = maxAutoscaleSeats != organization.MaxAutoscaleSmSeats;
         MaxAutoscaleSmServiceAccountsChanged = maxAutoscaleServiceAccounts != organization.MaxAutoscaleSmServiceAccounts;
+
+        ProrationDate = prorationDate;
     }
 }

@@ -99,7 +99,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await UpdateSubscriptionAsync(update);
     }
 
-    public async Task AutoAddSmSeatsAsync(Organization organization, int smSeatAdjustment)
+    public async Task AutoAddSmSeatsAsync(Organization organization, int smSeatAdjustment, DateTime? prorationDate = null)
     {
         if (smSeatAdjustment < 1)
         {
@@ -113,12 +113,28 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         var update = new SecretsManagerSubscriptionUpdate(
             organization, seatAdjustment: smSeatAdjustment, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
-            serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts);
+            serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts,
+            prorationDate: prorationDate);
 
         if (organization.MaxAutoscaleSmSeats.HasValue && update.SmSeats > organization.MaxAutoscaleSmSeats.Value)
         {
             throw new BadRequestException("Secrets Manager seat limit has been reached.");
         }
+
+        await UpdateSubscriptionAsync(update);
+    }
+
+    public async Task RevertAutoAddSmSeatsAsync(Organization organization, int smSeatAdjustment, DateTime? proratinDate = null)
+    {
+        if (smSeatAdjustment > -1)
+        {
+            throw new BadRequestException("Cannot revert a positive number of Secrets Manager seats");
+        }
+
+        var update = new SecretsManagerSubscriptionUpdate(
+            organization, seatAdjustment: smSeatAdjustment, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
+            serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts,
+            prorationDate: proratinDate);
 
         await UpdateSubscriptionAsync(update);
     }
@@ -177,7 +193,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
         SecretsManagerSubscriptionUpdate update)
     {
-        await _paymentService.AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
+        await _paymentService.AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase, update.ProrationDate);
 
         // TODO: call ReferenceEventService - see AC-1481
     }
@@ -186,7 +202,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         SecretsManagerSubscriptionUpdate update)
     {
         await _paymentService.AdjustServiceAccountsAsync(organization, plan,
-            update.SmServiceAccountsExcludingBase);
+            update.SmServiceAccountsExcludingBase, update.ProrationDate);
 
         // TODO: call ReferenceEventService - see AC-1481
     }
