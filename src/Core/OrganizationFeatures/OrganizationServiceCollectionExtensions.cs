@@ -17,6 +17,8 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
+using Bit.Core.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -41,6 +43,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationAuthCommands();
+        services.AddOrganizationUserCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -113,6 +116,11 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationAuthCommands(this IServiceCollection services)
     {
         services.AddScoped<IUpdateOrganizationAuthRequestCommand, UpdateOrganizationAuthRequestCommand>();
+    }
+
+    private static void AddOrganizationUserCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)
