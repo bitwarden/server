@@ -4,6 +4,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -51,6 +52,9 @@ public class StripePaymentServiceTests
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
         });
+        sutProvider.GetDependency<IGlobalSettings>()
+            .BaseServiceUri.CloudRegion
+            .Returns("US");
 
         var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo, provider);
 
@@ -67,7 +71,8 @@ public class StripePaymentServiceTests
             c.Source == paymentToken &&
             c.PaymentMethod == null &&
             c.Coupon == "msp-discount-35" &&
-            !c.Metadata.Any() &&
+            c.Metadata.Count == 1 &&
+            c.Metadata["region"] == "US" &&
             c.InvoiceSettings.DefaultPaymentMethod == null &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
             c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
@@ -101,6 +106,9 @@ public class StripePaymentServiceTests
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
         });
+        sutProvider.GetDependency<IGlobalSettings>()
+            .BaseServiceUri.CloudRegion
+            .Returns("US");
 
         var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
 
@@ -116,7 +124,8 @@ public class StripePaymentServiceTests
             c.Email == organization.BillingEmail &&
             c.Source == paymentToken &&
             c.PaymentMethod == null &&
-            !c.Metadata.Any() &&
+            c.Metadata.Count == 1 &&
+            c.Metadata["region"] == "US" &&
             c.InvoiceSettings.DefaultPaymentMethod == null &&
             c.InvoiceSettings.CustomFields != null &&
             c.InvoiceSettings.CustomFields[0].Name == "Organization" &&
@@ -154,6 +163,9 @@ public class StripePaymentServiceTests
             Id = "S-1",
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
         });
+        sutProvider.GetDependency<IGlobalSettings>()
+            .BaseServiceUri.CloudRegion
+            .Returns("US");
 
         var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
 
@@ -169,7 +181,8 @@ public class StripePaymentServiceTests
             c.Email == organization.BillingEmail &&
             c.Source == null &&
             c.PaymentMethod == paymentToken &&
-            !c.Metadata.Any() &&
+            c.Metadata.Count == 1 &&
+            c.Metadata["region"] == "US" &&
             c.InvoiceSettings.DefaultPaymentMethod == paymentToken &&
             c.InvoiceSettings.CustomFields != null &&
             c.InvoiceSettings.CustomFields[0].Name == "Organization" &&
@@ -300,6 +313,10 @@ public class StripePaymentServiceTests
             CurrentPeriodEnd = DateTime.Today.AddDays(10),
         });
 
+        sutProvider.GetDependency<IGlobalSettings>()
+            .BaseServiceUri.CloudRegion
+            .Returns("US");
+
         var customer = Substitute.For<Customer>();
         customer.Id.ReturnsForAnyArgs("Braintree-Id");
         customer.PaymentMethods.ReturnsForAnyArgs(new[] { Substitute.For<PaymentMethod>() });
@@ -323,8 +340,9 @@ public class StripePaymentServiceTests
             c.Description == organization.BusinessName &&
             c.Email == organization.BillingEmail &&
             c.PaymentMethod == null &&
-            c.Metadata.Count == 1 &&
+            c.Metadata.Count == 2 &&
             c.Metadata["btCustomerId"] == "Braintree-Id" &&
+            c.Metadata["region"] == "US" &&
             c.InvoiceSettings.DefaultPaymentMethod == null &&
             c.Address.Country == taxInfo.BillingAddressCountry &&
             c.Address.PostalCode == taxInfo.BillingAddressPostalCode &&
