@@ -15,4 +15,9 @@ public abstract class AssociationWithPermissionsBaseModel
     /// </summary>
     [Required]
     public bool? ReadOnly { get; set; }
+    /// <summary>
+    /// When true, the hide passwords permission will not allow the user or group to view passwords.
+    /// </summary>
+    [Required]
+    public bool? HidePasswords { get; set; }
 }

@@ -9,7 +9,8 @@ public class AssociationWithPermissionsRequestModel : AssociationWithPermissions
         return new CollectionAccessSelection
         {
             Id = Id.Value,
-            ReadOnly = ReadOnly.Value
+            ReadOnly = ReadOnly.Value,
+            HidePasswords = HidePasswords.Value
         };
     }
 }
