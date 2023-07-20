@@ -74,17 +74,38 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await SendEmailIfAutoscaleLimitReached(organization);
     }
 
-    public async Task AdjustServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
+    public async Task AutoAddServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
     {
-        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(
+        if (smServiceAccountsAdjustment < 0)
+        {
+            throw new BadRequestException("Cannot use autoscale to subtract service accounts.");
+        }
+
+        if (_globalSettings.SelfHosted)
+        {
+            throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
+        }
+
+        var update = new SecretsManagerSubscriptionUpdate(
             organization, seatAdjustment: 0, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
             serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts);
 
-        await UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate);
+        if (organization.MaxAutoscaleSmServiceAccounts.HasValue &&
+            update.SmServiceAccounts > organization.MaxAutoscaleSmServiceAccounts.Value)
+        {
+            throw new BadRequestException("Secrets Manager service account limit has been reached.");
+        }
+
+        await UpdateSubscriptionAsync(update);
     }
 
     public async Task AutoAddSmSeatsAsync(Organization organization, int smSeatAdjustment)
     {
+        if (smSeatAdjustment < 1)
+        {
+            throw new BadRequestException("Cannot use autoscale to subtract Secrets Manager seats.");
+        }
+
         if (_globalSettings.SelfHosted)
         {
             throw new BadRequestException("Cannot autoscale on a self-hosted instance.");

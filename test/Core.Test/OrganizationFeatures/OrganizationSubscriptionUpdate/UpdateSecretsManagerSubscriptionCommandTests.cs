@@ -610,7 +610,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var expectedSmServiceAccounts = organizationServiceAccounts + smServiceAccountsAdjustment;
         var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault();
 
-        await sutProvider.Sut.AdjustServiceAccountsAsync(organization, smServiceAccountsAdjustment);
+        await sutProvider.Sut.AutoAddServiceAccountsAsync(organization, smServiceAccountsAdjustment);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustServiceAccountsAsync(
             Arg.Is<Organization>(o => o.Id == organizationId),
@@ -634,9 +634,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     public async Task AutoAddSmSeats_Succeeds(PlanType planType, Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        var originalMaxAutoscaleSmSeats = 20;
+        var originalSmServiceAccounts = organization.SmServiceAccounts;
+        var originalMaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
+
         organization.UseSecretsManager = true;
         organization.SmSeats = 10;
-        organization.MaxAutoscaleSmSeats = 20;
+        organization.MaxAutoscaleSmSeats = originalMaxAutoscaleSmSeats;
         organization.PlanType = planType;
 
         var plan = StaticStore.GetSecretsManagerPlan(planType);
@@ -646,10 +650,25 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
 
+        // TODO: call ReferenceEventService - see AC-1481
         sutProvider.Sut.AutoAddSmSeatsAsync(organization, smSeatsToAdd);
         sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
-            Arg.Is<Organization>(o => o.SmSeats == newSmSeats));
+            Arg.Is<Organization>(o => o.SmSeats == newSmSeats &&
+                                      o.MaxAutoscaleSmSeats == originalMaxAutoscaleSmSeats &&
+                                      o.SmServiceAccounts == originalSmServiceAccounts &&
+                                      o.MaxAutoscaleSmServiceAccounts == originalMaxAutoscaleSmServiceAccounts));
         sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSeatsAsync(organization, plan, paidSmSeats);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AutoAddSmSeats_NegativeAdjustmentAmount_Throws(Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AutoAddSmSeatsAsync(organization, -1));
+        Assert.Contains("Cannot use autoscale to subtract", exception.Message);
+        VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
