@@ -123,8 +123,6 @@ public class ServiceAccountsController : Controller
             throw new NotFoundException();
         }
 
-        // FIXME put the slot check/adjustment in an IF block based on the organization's SM beta flag
-
         var newServiceAccountSlotsRequired = await _countNewServiceAccountSlotsRequiredQuery
             .CountNewServiceAccountSlotsRequiredAsync(organizationId, 1);
         if (newServiceAccountSlotsRequired > 0)
