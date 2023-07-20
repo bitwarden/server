@@ -40,6 +40,8 @@ public static class DapperHelpers
         table.Columns.Add(readOnlyColumn);
         var hidePasswordsColumn = new DataColumn("HidePasswords", typeof(bool));
         table.Columns.Add(hidePasswordsColumn);
+        var manageColumn = new DataColumn("Manage", typeof(bool));
+        table.Columns.Add(manageColumn);
 
         if (values != null)
         {
@@ -49,6 +51,7 @@ public static class DapperHelpers
                 row[idColumn] = value.Id;
                 row[readOnlyColumn] = value.ReadOnly;
                 row[hidePasswordsColumn] = value.HidePasswords;
+                row[manageColumn] = value.Manage;
                 table.Rows.Add(row);
             }
         }

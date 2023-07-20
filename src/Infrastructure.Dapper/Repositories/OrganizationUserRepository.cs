@@ -253,7 +253,8 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                         {
                             Id = uc.CollectionId,
                             ReadOnly = uc.ReadOnly,
-                            HidePasswords = uc.HidePasswords
+                            HidePasswords = uc.HidePasswords,
+                            Manage = uc.Manage
                         }).ToList() ?? new List<CollectionAccessSelection>();
                 }
             }
