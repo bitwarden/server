@@ -33,7 +33,7 @@ public class CipherAttachment
         public string AttachmentId { get; set; }
 
         /// <summary>
-        /// Temporary metadata used to store original metadata on migrations
+        /// Temporary metadata used to store original metadata on migrations from a user-owned attachment to an organization-owned one
         /// </summary>
         public MetaData TempMetadata { get; set; }
     }
