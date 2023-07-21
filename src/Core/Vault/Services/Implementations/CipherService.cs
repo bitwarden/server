@@ -851,6 +851,11 @@ public class CipherService : ICipherService
 
     public async Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false)
     {
+        if (cipherIds == null || !cipherIds.Any())
+        {
+            return new List<CipherOrganizationDetails>();
+        }
+
         var cipherIdsSet = new HashSet<Guid>(cipherIds);
         var restoringCiphers = new List<CipherOrganizationDetails>();
         DateTime? revisionDate;
