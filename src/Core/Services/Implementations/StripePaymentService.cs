@@ -49,8 +49,9 @@ public class StripePaymentService : IPaymentService
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-        string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false)
+        string paymentToken, List<StaticStore.Plan> plans, short additionalStorageGb,
+        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
+        int additionalSmSeats = 0, int additionalServiceAccount = 0)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -118,7 +119,8 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
+        , additionalSmSeats, additionalServiceAccount);
 
         Stripe.Customer customer = null;
         Stripe.Subscription subscription;
@@ -229,8 +231,8 @@ public class StripePaymentService : IPaymentService
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
-    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
-        short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
+    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, List<StaticStore.Plan> plans,
+        OrganizationUpgrade upgrade)
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
         {
@@ -246,6 +248,7 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Could not find customer payment profile.");
         }
 
+        var taxInfo = upgrade.TaxInfo;
         if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
         {
             var taxRateSearch = new TaxRate
@@ -263,7 +266,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plans, upgrade);
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
         var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
@@ -858,6 +861,11 @@ public class StripePaymentService : IPaymentService
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
     {
         return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
+    }
+
+    public Task<string> AdjustServiceAccountsAsync(Organization organization, StaticStore.Plan plan, int additionalServiceAccounts, DateTime? prorationDate = null)
+    {
+        return FinalizeSubscriptionChangeAsync(organization, new ServiceAccountSubscriptionUpdate(organization, plan, additionalServiceAccounts), prorationDate);
     }
 
     public Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
