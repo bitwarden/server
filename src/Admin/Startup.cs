@@ -9,11 +9,10 @@ using Stripe;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Admin.Services;
-using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
-using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager.Repositories;
+using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 #endif
 
 namespace Bit.Admin;
