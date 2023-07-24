@@ -73,14 +73,14 @@ GO
 --Add Manage Column
 IF COL_LENGTH('[dbo].[CollectionUser]', 'Manage') IS NULL
     BEGIN
-        ALTER TABLE [dbo].[CollectionUser] ADD [Manage] BIT NOT NULL DEFAULT(0);
+        ALTER TABLE [dbo].[CollectionUser] ADD [Manage] BIT NOT NULL CONSTRAINT D_CollectionUser_Manage DEFAULT (0);
     END
 GO
 
 --Add Manage Column
 IF COL_LENGTH('[dbo].[CollectionGroup]', 'Manage') IS NULL
     BEGIN
-        ALTER TABLE [dbo].[CollectionGroup] ADD [Manage] BIT NOT NULL DEFAULT(0);
+        ALTER TABLE [dbo].[CollectionGroup] ADD [Manage] BIT NOT NULL CONSTRAINT D_CollectionGroup_Manage DEFAULT (0);
     END
 GO
 
