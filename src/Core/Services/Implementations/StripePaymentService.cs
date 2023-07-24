@@ -83,7 +83,8 @@ public class StripePaymentService : IPaymentService
                 Id = org.BraintreeCustomerIdPrefix() + org.Id.ToString("N").ToLower() + randomSuffix,
                 CustomFields = new Dictionary<string, string>
                 {
-                    [org.BraintreeIdField()] = org.Id.ToString()
+                    [org.BraintreeIdField()] = org.Id.ToString(),
+                    [org.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                 }
             });
 
@@ -406,7 +407,8 @@ public class StripePaymentService : IPaymentService
                     Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix,
                     CustomFields = new Dictionary<string, string>
                     {
-                        [user.BraintreeIdField()] = user.Id.ToString()
+                        [user.BraintreeIdField()] = user.Id.ToString(),
+                        [user.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                     }
                 });
 
@@ -602,12 +604,13 @@ public class StripePaymentService : IPaymentService
                                     SubmitForSettlement = true,
                                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                                     {
-                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
+                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id},{subscriber.BraintreeCloudRegionField()}:{_globalSettings.BaseServiceUri.CloudRegion}"
                                     }
                                 },
                                 CustomFields = new Dictionary<string, string>
                                 {
-                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
+                                    [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                                 }
                             });
 
@@ -991,12 +994,13 @@ public class StripePaymentService : IPaymentService
                             SubmitForSettlement = true,
                             PayPal = new Braintree.TransactionOptionsPayPalRequest
                             {
-                                CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
+                                CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id},{subscriber.BraintreeCloudRegionField()}:{_globalSettings.BaseServiceUri.CloudRegion}"
                             }
                         },
                         CustomFields = new Dictionary<string, string>
                         {
-                            [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                            [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
+                            [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                         }
                     });
 
@@ -1290,7 +1294,8 @@ public class StripePaymentService : IPaymentService
                         Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false),
                     CustomFields = new Dictionary<string, string>
                     {
-                        [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                        [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
+                        [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                     }
                 });
 
