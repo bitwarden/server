@@ -17,28 +17,34 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
-    private readonly IOrganizationService _organizationService;
     private readonly IMailService _mailService;
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IGlobalSettings _globalSettings;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IEventService _eventService;
 
     public UpdateSecretsManagerSubscriptionCommand(
-        IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IPaymentService paymentService,
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
         IServiceAccountRepository serviceAccountRepository,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        IOrganizationRepository organizationRepository,
+        IApplicationCacheService applicationCacheService,
+        IEventService eventService)
     {
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
-        _organizationService = organizationService;
         _mailService = mailService;
         _logger = logger;
         _serviceAccountRepository = serviceAccountRepository;
         _globalSettings = globalSettings;
+        _organizationRepository = organizationRepository;
+        _applicationCacheService = applicationCacheService;
+        _eventService = eventService;
     }
 
     public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
@@ -187,7 +193,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             organization.MaxAutoscaleSmServiceAccounts = update.MaxAutoscaleSmServiceAccounts;
         }
 
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await ReplaceAndUpdateCacheAsync(organization);
     }
 
     private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
@@ -416,6 +422,19 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 $"Your plan has a Service Accounts limit of {plan.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {maxAutoscaleServiceAccounts}.",
                 "Reduce your max autoscale count."));
+        }
+    }
+
+    // TODO: This is a temporary duplication of OrganizationService.ReplaceAndUpdateCache to avoid a circular dependency.
+    // TODO: This should no longer be necessary when user-related methods are extracted from OrganizationService: see PM-1880
+    private async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
+    {
+        await _organizationRepository.ReplaceAsync(org);
+        await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+
+        if (orgEvent.HasValue)
+        {
+            await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
         }
     }
 }
