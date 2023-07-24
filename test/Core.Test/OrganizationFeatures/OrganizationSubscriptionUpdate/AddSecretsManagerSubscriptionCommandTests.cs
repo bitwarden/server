@@ -26,8 +26,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         int additionalServiceAccounts,
         int additionalSmSeats,
-        Organization organization,
-        Guid userId)
+        Organization organization)
     {
         organization.PlanType = planType;
         var signup = new OrganizationUpgrade
@@ -40,7 +39,7 @@ public class AddSecretsManagerSubscriptionCommandTests
 
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
 
-        var result = await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts, userId);
+        var result = await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
 
         sutProvider.GetDependency<IOrganizationService>().Received(1)
             .ValidateSecretsManagerPlan(plan, Arg.Is<OrganizationUpgrade>(c =>
@@ -58,9 +57,6 @@ public class AddSecretsManagerSubscriptionCommandTests
             c.SmSeats == plan.BaseSeats + additionalSmSeats &&
             c.SmServiceAccounts == plan.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts &&
             c.UseSecretsManager == true));
-
-        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed);
     }
 
     [Theory]
@@ -68,11 +64,10 @@ public class AddSecretsManagerSubscriptionCommandTests
     public async Task SignUpAsync_ThrowsNotFoundException_WhenOrganizationIsNull(
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         int additionalServiceAccounts,
-        int additionalSmSeats,
-        Guid userId)
+        int additionalSmSeats)
     {
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.SignUpAsync(null, additionalSmSeats, additionalServiceAccounts, userId));
+            sutProvider.Sut.SignUpAsync(null, additionalSmSeats, additionalServiceAccounts));
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -82,13 +77,12 @@ public class AddSecretsManagerSubscriptionCommandTests
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         Organization organization,
         int additionalServiceAccounts,
-        int additionalSmSeats,
-        Guid userId)
+        int additionalSmSeats)
     {
         organization.GatewayCustomerId = null;
         organization.PlanType = PlanType.EnterpriseAnnually;
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts, userId));
+            sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
         Assert.Contains("No payment method found.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
@@ -99,13 +93,12 @@ public class AddSecretsManagerSubscriptionCommandTests
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         Organization organization,
         int additionalServiceAccounts,
-        int additionalSmSeats,
-        Guid userId)
+        int additionalSmSeats)
     {
         organization.GatewaySubscriptionId = null;
         organization.PlanType = PlanType.EnterpriseAnnually;
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts, userId));
+            sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts));
         Assert.Contains("No subscription found.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }

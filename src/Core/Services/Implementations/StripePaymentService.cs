@@ -1696,7 +1696,7 @@ public class StripePaymentService : IPaymentService
     }
 
     public async Task<string> AddSecretsManagerToSubscription(Organization org, StaticStore.Plan plan, int additionalSmSeats,
-        int additionalServiceAccount = 0, DateTime? prorationDate = null)
+        int additionalServiceAccount, DateTime? prorationDate = null)
     {
         return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount), prorationDate);
     }

@@ -366,10 +366,12 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
+        var updateOrganization = await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
+            model.AdditionalServiceAccounts);
 
-        var organizationDetails = await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
-            model.AdditionalServiceAccounts, userId);
+        var userId = _userService.GetProperUserId(User).Value;
+        var organizationDetails = await _organizationUserRepository.GetDetailsByUserAsync(userId, updateOrganization.Id,
+            OrganizationUserStatusType.Confirmed);
 
         return new ProfileOrganizationResponseModel(organizationDetails);
     }

@@ -299,19 +299,23 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
 
     private void AddNewSecretsManagerItems(List<SubscriptionItemOptions> updatedItems)
     {
-        updatedItems.Add(new SubscriptionItemOptions
+        if (_additionalSeats > 0)
         {
-            Price = _plan.StripeSeatPlanId,
-            Quantity = _additionalSeats,
-            Deleted = _additionalSeats == 0 ? true : null,
-        });
+            updatedItems.Add(new SubscriptionItemOptions
+            {
+                Price = _plan.StripeSeatPlanId,
+                Quantity = _additionalSeats
+            });
+        }
 
-        updatedItems.Add(new SubscriptionItemOptions
+        if (_additionalServiceAccounts > 0)
         {
-            Price = _plan.StripeServiceAccountPlanId,
-            Quantity = _additionalServiceAccounts,
-            Deleted = _additionalServiceAccounts == 0 ? true : null
-        });
+            updatedItems.Add(new SubscriptionItemOptions
+            {
+                Price = _plan.StripeServiceAccountPlanId,
+                Quantity = _additionalServiceAccounts
+            });
+        }
     }
 
     private void RemovePreviousSecretsManagerItems(List<SubscriptionItemOptions> updatedItems)

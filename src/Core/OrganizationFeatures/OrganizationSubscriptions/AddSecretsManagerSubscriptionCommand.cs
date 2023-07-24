@@ -2,7 +2,6 @@
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -24,8 +23,8 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         _organizationService = organizationService;
         _organizationUserRepository = organizationUserRepository;
     }
-    public async Task<OrganizationUserOrganizationDetails> SignUpAsync(Organization organization, int additionalSmSeats,
-        int additionalServiceAccounts, Guid userId)
+    public async Task<Organization> SignUpAsync(Organization organization, int additionalSmSeats,
+        int additionalServiceAccounts)
     {
         ValidateOrganization(organization);
 
@@ -46,10 +45,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
 
         // TODO: call ReferenceEventService - see AC-1481
 
-        var organizationDetails = await _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
-            OrganizationUserStatusType.Confirmed);
-
-        return organizationDetails;
+        return organization;
     }
 
     private static OrganizationUpgrade SetOrganizationUpgrade(Organization organization, int additionalSeats,
