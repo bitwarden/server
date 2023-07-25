@@ -19,7 +19,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 public class UpdateOrganizationUserCommandTests
 {
     [Theory, BitAutoData]
-    public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
+    public async Task UpdateUserAsync_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
         IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         user.Id = default(Guid);
@@ -29,7 +29,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
+    public async Task UpdateUserAsync_NoChangeToData_Throws(OrganizationUser user, Guid? savingUserId,
         IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
@@ -40,7 +40,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_Passes(
+    public async Task UpdateUserAsync_Passes(
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
@@ -82,7 +82,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_WithCustomType_WhenUseCustomPermissionsIsFalse_Throws(
+    public async Task UpdateUserAsync_WithCustomType_WhenUseCustomPermissionsIsFalse_Throws(
         Organization organization,
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
@@ -118,7 +118,7 @@ public class UpdateOrganizationUserCommandTests
     [BitAutoData(OrganizationUserType.Manager)]
     [BitAutoData(OrganizationUserType.Owner)]
     [BitAutoData(OrganizationUserType.User)]
-    public async Task SaveUser_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(
+    public async Task UpdateUserAsync_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(
         OrganizationUserType newUserType,
         Organization organization,
         OrganizationUser oldUserData,
@@ -156,7 +156,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(
+    public async Task UpdateUserAsync_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(
         Organization organization,
         OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
@@ -192,7 +192,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_WithCustomPermission_WhenSavingUserHasCustomPermission_Passes(
+    public async Task UpdateUserAsync_WithCustomPermission_WhenSavingUserHasCustomPermission_Passes(
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
@@ -228,7 +228,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_WithCustomPermission_WhenSavingUserDoesNotHaveCustomPermission_Throws(
+    public async Task UpdateUserAsync_WithCustomPermission_WhenSavingUserDoesNotHaveCustomPermission_Throws(
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
@@ -263,7 +263,7 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveUser_WithCustomPermission_WhenUpgradingToAdmin_Throws(
+    public async Task UpdateUserAsync_WithCustomPermission_WhenUpgradingToAdmin_Throws(
         Organization organization,
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser oldUserData,
         [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser newUserData,
