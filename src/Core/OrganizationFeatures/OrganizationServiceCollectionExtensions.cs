@@ -86,6 +86,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IDeleteOrganizationUserCommand, DeleteOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserCommand, UpdateOrganizationUserCommand>();
         services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
+        services.AddScoped<IInviteOrganizationUserCommand, InviteOrganizationUserCommand>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)

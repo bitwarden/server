@@ -8,8 +8,8 @@ namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
 public abstract class OrganizationUserCommand
 {
-    private readonly ICurrentContext _currentContext;
-    private readonly IOrganizationRepository _organizationRepository;
+    protected readonly ICurrentContext _currentContext;
+    protected readonly IOrganizationRepository _organizationRepository;
 
     protected OrganizationUserCommand(ICurrentContext currentContext, IOrganizationRepository organizationRepository)
     {
