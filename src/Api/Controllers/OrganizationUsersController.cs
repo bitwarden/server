@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 using Bit.Core.Services;
@@ -29,6 +30,7 @@ public class OrganizationUsersController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
 
     public OrganizationUsersController(
         IEnableAccessSecretsManagerCommand enableAccessSecretsManagerCommand,
@@ -39,7 +41,8 @@ public class OrganizationUsersController : Controller
         IGroupRepository groupRepository,
         IUserService userService,
         IPolicyRepository policyRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
     {
         _enableAccessSecretsManagerCommand = enableAccessSecretsManagerCommand;
         _organizationRepository = organizationRepository;
@@ -50,6 +53,7 @@ public class OrganizationUsersController : Controller
         _userService = userService;
         _policyRepository = policyRepository;
         _currentContext = currentContext;
+        _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
     }
 
     [HttpGet("{id}")]
@@ -305,7 +309,7 @@ public class OrganizationUsersController : Controller
         }
 
         var loggedInUserId = _userService.GetProperUserId(User);
-        await _organizationService.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
+        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
