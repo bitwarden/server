@@ -512,6 +512,10 @@ public class StripeController : Controller
                     break;
                 }
             case HandledStripeWebhook.UpcomingInvoice:
+                var eventInvoice = await GetInvoiceAsync(parsedEvent);
+                var customer = await GetCustomerAsync(eventInvoice.CustomerId);
+                customerRegion = GetCustomerRegionFromMetadata(customer.Metadata);
+                break;
             case HandledStripeWebhook.PaymentSucceeded:
             case HandledStripeWebhook.PaymentFailed:
             case HandledStripeWebhook.InvoiceCreated:
@@ -746,12 +750,13 @@ public class StripeController : Controller
                     SubmitForSettlement = true,
                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                     {
-                        CustomField = $"{btObjIdField}:{btObjId}"
+                        CustomField = $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
                     }
                 },
                 CustomFields = new Dictionary<string, string>
                 {
-                    [btObjIdField] = btObjId.ToString()
+                    [btObjIdField] = btObjId.ToString(),
+                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion
                 }
             });
 
@@ -862,6 +867,23 @@ public class StripeController : Controller
             throw new Exception("Subscription is null. " + eventSubscription.Id);
         }
         return subscription;
+    }
+
+    private async Task<Customer> GetCustomerAsync(string customerId)
+    {
+        if (string.IsNullOrWhiteSpace(customerId))
+        {
+            throw new Exception("Customer ID cannot be empty when attempting to get a customer from Stripe");
+        }
+
+        var customerService = new CustomerService();
+        var customer = await customerService.GetAsync(customerId);
+        if (customer == null)
+        {
+            throw new Exception($"Customer is null. {customerId}");
+        }
+
+        return customer;
     }
 
     private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
