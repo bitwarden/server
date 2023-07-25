@@ -62,12 +62,13 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
             throw new NotFoundException();
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && organization.PlanType != PlanType.Free)
+        var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && plan.Product != ProductType.Free)
         {
             throw new BadRequestException("No payment method found.");
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId) && organization.PlanType != PlanType.Free)
+        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId) && plan.Product != ProductType.Free)
         {
             throw new BadRequestException("No subscription found.");
         }
