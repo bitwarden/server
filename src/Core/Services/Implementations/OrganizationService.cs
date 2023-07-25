@@ -1,6 +1,5 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
-using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Repositories;
@@ -38,7 +37,6 @@ public class OrganizationService : IOrganizationService
     private readonly IDeviceRepository _deviceRepository;
     private readonly ILicensingService _licensingService;
     private readonly IEventService _eventService;
-    private readonly IInstallationRepository _installationRepository;
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
@@ -48,7 +46,6 @@ public class OrganizationService : IOrganizationService
     private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
     private readonly IOrganizationApiKeyRepository _organizationApiKeyRepository;
-    private readonly IOrganizationConnectionRepository _organizationConnectionRepository;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<OrganizationService> _logger;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
@@ -67,7 +64,6 @@ public class OrganizationService : IOrganizationService
         IDeviceRepository deviceRepository,
         ILicensingService licensingService,
         IEventService eventService,
-        IInstallationRepository installationRepository,
         IApplicationCacheService applicationCacheService,
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
@@ -77,7 +73,6 @@ public class OrganizationService : IOrganizationService
         IReferenceEventService referenceEventService,
         IGlobalSettings globalSettings,
         IOrganizationApiKeyRepository organizationApiKeyRepository,
-        IOrganizationConnectionRepository organizationConnectionRepository,
         ICurrentContext currentContext,
         ILogger<OrganizationService> logger,
         IProviderOrganizationRepository providerOrganizationRepository,
@@ -95,7 +90,6 @@ public class OrganizationService : IOrganizationService
         _deviceRepository = deviceRepository;
         _licensingService = licensingService;
         _eventService = eventService;
-        _installationRepository = installationRepository;
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyRepository = policyRepository;
@@ -105,7 +99,6 @@ public class OrganizationService : IOrganizationService
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
         _organizationApiKeyRepository = organizationApiKeyRepository;
-        _organizationConnectionRepository = organizationConnectionRepository;
         _currentContext = currentContext;
         _logger = logger;
         _providerOrganizationRepository = providerOrganizationRepository;
@@ -164,211 +157,6 @@ public class OrganizationService : IOrganizationService
         await _paymentService.ReinstateSubscriptionAsync(organization);
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.ReinstateSubscription, organization, _currentContext));
-    }
-
-    public async Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade)
-    {
-        var organization = await GetOrgById(organizationId);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
-        {
-            throw new BadRequestException("Your account has no payment method available.");
-        }
-
-        var existingPlan = StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (existingPlan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
-
-        var newPlan = StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
-        if (newPlan == null)
-        {
-            throw new BadRequestException("Plan not found.");
-        }
-
-        if (existingPlan.Type == newPlan.Type)
-        {
-            throw new BadRequestException("Organization is already on this plan.");
-        }
-
-        if (existingPlan.UpgradeSortOrder >= newPlan.UpgradeSortOrder)
-        {
-            throw new BadRequestException("You cannot upgrade to this plan.");
-        }
-
-        if (existingPlan.Type != PlanType.Free)
-        {
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
-        }
-
-        ValidateOrganizationUpgradeParameters(newPlan, upgrade);
-
-        var newPlanSeats = (short)(newPlan.BaseSeats +
-            (newPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
-        if (!organization.Seats.HasValue || organization.Seats.Value > newPlanSeats)
-        {
-            var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > newPlanSeats)
-            {
-                throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                    $"Your new plan only has ({newPlanSeats}) seats. Remove some users.");
-            }
-        }
-
-        if (newPlan.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
-            organization.MaxCollections.Value > newPlan.MaxCollections.Value))
-        {
-            var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
-            if (collectionCount > newPlan.MaxCollections.Value)
-            {
-                throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
-                    $"Your new plan allows for a maximum of ({newPlan.MaxCollections.Value}) collections. " +
-                    "Remove some collections.");
-            }
-        }
-
-        if (!newPlan.HasGroups && organization.UseGroups)
-        {
-            var groups = await _groupRepository.GetManyByOrganizationIdAsync(organization.Id);
-            if (groups.Any())
-            {
-                throw new BadRequestException($"Your new plan does not allow the groups feature. " +
-                    $"Remove your groups.");
-            }
-        }
-
-        if (!newPlan.HasPolicies && organization.UsePolicies)
-        {
-            var policies = await _policyRepository.GetManyByOrganizationIdAsync(organization.Id);
-            if (policies.Any(p => p.Enabled))
-            {
-                throw new BadRequestException($"Your new plan does not allow the policies feature. " +
-                    $"Disable your policies.");
-            }
-        }
-
-        if (!newPlan.HasSso && organization.UseSso)
-        {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig != null && ssoConfig.Enabled)
-            {
-                throw new BadRequestException($"Your new plan does not allow the SSO feature. " +
-                    $"Disable your SSO configuration.");
-            }
-        }
-
-        if (!newPlan.HasKeyConnector && organization.UseKeyConnector)
-        {
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id);
-            if (ssoConfig != null && ssoConfig.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector)
-            {
-                throw new BadRequestException("Your new plan does not allow the Key Connector feature. " +
-                                              "Disable your Key Connector.");
-            }
-        }
-
-        if (!newPlan.HasResetPassword && organization.UseResetPassword)
-        {
-            var resetPasswordPolicy =
-                await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.ResetPassword);
-            if (resetPasswordPolicy != null && resetPasswordPolicy.Enabled)
-            {
-                throw new BadRequestException("Your new plan does not allow the Password Reset feature. " +
-                    "Disable your Password Reset policy.");
-            }
-        }
-
-        if (!newPlan.HasScim && organization.UseScim)
-        {
-            var scimConnections = await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(organization.Id,
-                OrganizationConnectionType.Scim);
-            if (scimConnections != null && scimConnections.Any(c => c.GetConfig<ScimConfig>()?.Enabled == true))
-            {
-                throw new BadRequestException("Your new plan does not allow the SCIM feature. " +
-                    "Disable your SCIM configuration.");
-            }
-        }
-
-        if (!newPlan.HasCustomPermissions && organization.UseCustomPermissions)
-        {
-            var organizationCustomUsers =
-                await _organizationUserRepository.GetManyByOrganizationAsync(organization.Id,
-                    OrganizationUserType.Custom);
-            if (organizationCustomUsers.Any())
-            {
-                throw new BadRequestException("Your new plan does not allow the Custom Permissions feature. " +
-                                              "Disable your Custom Permissions configuration.");
-            }
-        }
-
-        // TODO: Check storage?
-
-        string paymentIntentClientSecret = null;
-        var success = true;
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization, newPlan,
-                upgrade.AdditionalStorageGb, upgrade.AdditionalSeats, upgrade.PremiumAccessAddon, upgrade.TaxInfo);
-            success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
-        }
-        else
-        {
-            // TODO: Update existing sub
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
-        }
-
-        organization.BusinessName = upgrade.BusinessName;
-        organization.PlanType = newPlan.Type;
-        organization.Seats = (short)(newPlan.BaseSeats + upgrade.AdditionalSeats);
-        organization.MaxCollections = newPlan.MaxCollections;
-        organization.UseGroups = newPlan.HasGroups;
-        organization.UseDirectory = newPlan.HasDirectory;
-        organization.UseEvents = newPlan.HasEvents;
-        organization.UseTotp = newPlan.HasTotp;
-        organization.Use2fa = newPlan.Has2fa;
-        organization.UseApi = newPlan.HasApi;
-        organization.SelfHost = newPlan.HasSelfHost;
-        organization.UsePolicies = newPlan.HasPolicies;
-        organization.MaxStorageGb = !newPlan.BaseStorageGb.HasValue ?
-            (short?)null : (short)(newPlan.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
-        organization.UseGroups = newPlan.HasGroups;
-        organization.UseDirectory = newPlan.HasDirectory;
-        organization.UseEvents = newPlan.HasEvents;
-        organization.UseTotp = newPlan.HasTotp;
-        organization.Use2fa = newPlan.Has2fa;
-        organization.UseApi = newPlan.HasApi;
-        organization.UseSso = newPlan.HasSso;
-        organization.UseKeyConnector = newPlan.HasKeyConnector;
-        organization.UseScim = newPlan.HasScim;
-        organization.UseResetPassword = newPlan.HasResetPassword;
-        organization.SelfHost = newPlan.HasSelfHost;
-        organization.UsersGetPremium = newPlan.UsersGetPremium || upgrade.PremiumAccessAddon;
-        organization.UseCustomPermissions = newPlan.HasCustomPermissions;
-        organization.Plan = newPlan.Name;
-        organization.Enabled = success;
-        organization.PublicKey = upgrade.PublicKey;
-        organization.PrivateKey = upgrade.PrivateKey;
-        await ReplaceAndUpdateCacheAsync(organization);
-        if (success)
-        {
-            await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, organization, _currentContext)
-                {
-                    PlanName = newPlan.Name,
-                    PlanType = newPlan.Type,
-                    OldPlanName = existingPlan.Name,
-                    OldPlanType = existingPlan.Type,
-                    Seats = organization.Seats,
-                    Storage = organization.MaxStorageGb,
-                });
-        }
-
-        return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 
     public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -607,23 +395,20 @@ public class OrganizationService : IOrganizationService
     public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
         bool provider = false)
     {
-        var plan = StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == signup.Plan);
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException("Invalid plan selected.");
-        }
+        var passwordManagerPlan = StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == signup.Plan);
 
-        if (plan.Disabled)
+        ValidatePasswordManagerPlan(passwordManagerPlan, signup);
+
+        var secretsManagerPlan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == signup.Plan);
+        if (signup.UseSecretsManager)
         {
-            throw new BadRequestException("Plan not found.");
+            ValidateSecretsManagerPlan(secretsManagerPlan, signup);
         }
 
         if (!provider)
         {
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
-
-        ValidateOrganizationUpgradeParameters(plan, signup);
 
         var organization = new Organization
         {
@@ -632,25 +417,25 @@ public class OrganizationService : IOrganizationService
             Name = signup.Name,
             BillingEmail = signup.BillingEmail,
             BusinessName = signup.BusinessName,
-            PlanType = plan.Type,
-            Seats = (short)(plan.BaseSeats + signup.AdditionalSeats),
-            MaxCollections = plan.MaxCollections,
-            MaxStorageGb = !plan.BaseStorageGb.HasValue ?
-                (short?)null : (short)(plan.BaseStorageGb.Value + signup.AdditionalStorageGb),
-            UsePolicies = plan.HasPolicies,
-            UseSso = plan.HasSso,
-            UseGroups = plan.HasGroups,
-            UseEvents = plan.HasEvents,
-            UseDirectory = plan.HasDirectory,
-            UseTotp = plan.HasTotp,
-            Use2fa = plan.Has2fa,
-            UseApi = plan.HasApi,
-            UseResetPassword = plan.HasResetPassword,
-            SelfHost = plan.HasSelfHost,
-            UsersGetPremium = plan.UsersGetPremium || signup.PremiumAccessAddon,
-            UseCustomPermissions = plan.HasCustomPermissions,
-            UseScim = plan.HasScim,
-            Plan = plan.Name,
+            PlanType = passwordManagerPlan.Type,
+            Seats = (short)(passwordManagerPlan.BaseSeats + signup.AdditionalSeats),
+            MaxCollections = passwordManagerPlan.MaxCollections,
+            MaxStorageGb = !passwordManagerPlan.BaseStorageGb.HasValue ?
+                (short?)null : (short)(passwordManagerPlan.BaseStorageGb.Value + signup.AdditionalStorageGb),
+            UsePolicies = passwordManagerPlan.HasPolicies,
+            UseSso = passwordManagerPlan.HasSso,
+            UseGroups = passwordManagerPlan.HasGroups,
+            UseEvents = passwordManagerPlan.HasEvents,
+            UseDirectory = passwordManagerPlan.HasDirectory,
+            UseTotp = passwordManagerPlan.HasTotp,
+            Use2fa = passwordManagerPlan.Has2fa,
+            UseApi = passwordManagerPlan.HasApi,
+            UseResetPassword = passwordManagerPlan.HasResetPassword,
+            SelfHost = passwordManagerPlan.HasSelfHost,
+            UsersGetPremium = passwordManagerPlan.UsersGetPremium || signup.PremiumAccessAddon,
+            UseCustomPermissions = passwordManagerPlan.HasCustomPermissions,
+            UseScim = passwordManagerPlan.HasScim,
+            Plan = passwordManagerPlan.Name,
             Gateway = null,
             ReferenceData = signup.Owner.ReferenceData,
             Enabled = true,
@@ -659,10 +444,14 @@ public class OrganizationService : IOrganizationService
             PrivateKey = signup.PrivateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
-            Status = OrganizationStatusType.Created
+            Status = OrganizationStatusType.Created,
+            UsePasswordManager = true,
+            SmSeats = (short)(secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault()),
+            SmServiceAccounts = secretsManagerPlan.BaseServiceAccount + signup.AdditionalServiceAccounts.GetValueOrDefault(),
+            UseSecretsManager = signup.UseSecretsManager
         };
 
-        if (plan.Type == PlanType.Free && !provider)
+        if (passwordManagerPlan.Type == PlanType.Free && !provider)
         {
             var adminCount =
                 await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(signup.Owner.Id);
@@ -671,11 +460,16 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("You can only be an admin of one free organization.");
             }
         }
-        else if (plan.Type != PlanType.Free)
+        else if (passwordManagerPlan.Type != PlanType.Free)
         {
+            var purchaseOrganizationPlan = signup.UseSecretsManager
+                ? StaticStore.Plans.Where(p => p.Type == signup.Plan).ToList()
+                : StaticStore.PasswordManagerPlans.Where(p => p.Type == signup.Plan).Take(1).ToList();
+
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
-                signup.PremiumAccessAddon, signup.TaxInfo, provider);
+                signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                signup.PremiumAccessAddon, signup.TaxInfo, provider, signup.AdditionalSmSeats.GetValueOrDefault(),
+                signup.AdditionalServiceAccounts.GetValueOrDefault());
         }
 
         var ownerId = provider ? default : signup.Owner.Id;
@@ -683,10 +477,11 @@ public class OrganizationService : IOrganizationService
         await _referenceEventService.RaiseEventAsync(
             new ReferenceEvent(ReferenceEventType.Signup, organization, _currentContext)
             {
-                PlanName = plan.Name,
-                PlanType = plan.Type,
+                PlanName = passwordManagerPlan.Name,
+                PlanType = passwordManagerPlan.Type,
                 Seats = returnValue.Item1.Seats,
                 Storage = returnValue.Item1.MaxStorageGb,
+                // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
             });
         return returnValue;
     }
@@ -807,6 +602,7 @@ public class OrganizationService : IOrganizationService
                     OrganizationId = organization.Id,
                     UserId = ownerId,
                     Key = ownerKey,
+                    AccessSecretsManager = organization.UseSecretsManager,
                     Type = OrganizationUserType.Owner,
                     Status = OrganizationUserStatusType.Confirmed,
                     AccessAll = true,
@@ -2060,8 +1856,43 @@ public class OrganizationService : IOrganizationService
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private void ValidateOrganizationUpgradeParameters(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    private static void ValidatePlan(Models.StaticStore.Plan plan, int additionalSeats, string productType)
     {
+        if (plan is not { LegacyYear: null })
+        {
+            throw new BadRequestException($"Invalid {productType} plan selected.");
+        }
+
+        if (plan.Disabled)
+        {
+            throw new BadRequestException($"{productType} Plan not found.");
+        }
+
+        if (plan.BaseSeats + additionalSeats <= 0)
+        {
+            throw new BadRequestException($"You do not have any {productType} seats!");
+        }
+
+        if (additionalSeats < 0)
+        {
+            throw new BadRequestException($"You can't subtract {productType} seats!");
+        }
+    }
+
+    public void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    {
+        ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
+
+        if (plan.BaseSeats + upgrade.AdditionalSeats <= 0)
+        {
+            throw new BadRequestException($"You do not have any Password Manager seats!");
+        }
+
+        if (upgrade.AdditionalSeats < 0)
+        {
+            throw new BadRequestException($"You can't subtract Password Manager seats!");
+        }
+
         if (!plan.HasAdditionalStorageOption && upgrade.AdditionalStorageGb > 0)
         {
             throw new BadRequestException("Plan does not allow additional storage.");
@@ -2077,16 +1908,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("This plan does not allow you to buy the premium access addon.");
         }
 
-        if (plan.BaseSeats + upgrade.AdditionalSeats <= 0)
-        {
-            throw new BadRequestException("You do not have any seats!");
-        }
-
-        if (upgrade.AdditionalSeats < 0)
-        {
-            throw new BadRequestException("You can't subtract seats!");
-        }
-
         if (!plan.HasAdditionalSeatsOption && upgrade.AdditionalSeats > 0)
         {
             throw new BadRequestException("Plan does not allow additional users.");
@@ -2096,7 +1917,37 @@ public class OrganizationService : IOrganizationService
             upgrade.AdditionalSeats > plan.MaxAdditionalSeats.Value)
         {
             throw new BadRequestException($"Selected plan allows a maximum of " +
-                $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+                                          $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
+        }
+    }
+
+    public void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    {
+        ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");
+
+        if (!plan.HasAdditionalServiceAccountOption && upgrade.AdditionalServiceAccounts > 0)
+        {
+            throw new BadRequestException("Plan does not allow additional Service Accounts.");
+        }
+
+        if (upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats)
+        {
+            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+        }
+
+        if (upgrade.AdditionalServiceAccounts.GetValueOrDefault() < 0)
+        {
+            throw new BadRequestException("You can't subtract Service Accounts!");
+        }
+
+        switch (plan.HasAdditionalSeatsOption)
+        {
+            case false when upgrade.AdditionalSmSeats > 0:
+                throw new BadRequestException("Plan does not allow additional users.");
+            case true when plan.MaxAdditionalSeats.HasValue &&
+                           upgrade.AdditionalSmSeats > plan.MaxAdditionalSeats.Value:
+                throw new BadRequestException($"Selected plan allows a maximum of " +
+                                              $"{plan.MaxAdditionalSeats.GetValueOrDefault(0)} additional users.");
         }
     }
 
