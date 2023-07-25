@@ -450,7 +450,9 @@ public class OrganizationUsersController : Controller
         if (additionalSmSeatsRequired > 0)
         {
             var organization = await _organizationRepository.GetByIdAsync(orgId);
-            await _updateSecretsManagerSubscriptionCommand.AutoAddSmSeatsAsync(organization, additionalSmSeatsRequired);
+            var update = new SecretsManagerSubscriptionUpdate(organization);
+            update.AdjustSeats(additionalSmSeatsRequired);
+            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }
 
         foreach (var orgUser in orgUsers)

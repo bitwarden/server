@@ -49,35 +49,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
     {
-        var organization = update.Organization;
+        await ValidateUpdate(update);
 
-        ValidateOrganization(organization);
+        await FinalizeSubscriptionAdjustmentAsync(update.Organization, update.Plan, update);
 
-        var plan = GetPlanForOrganization(organization);
-
-        if (update.SmSeatsChanged)
-        {
-            await ValidateSmSeatsUpdateAsync(organization, update, plan);
-        }
-
-        if (update.SmServiceAccountsChanged)
-        {
-            await ValidateSmServiceAccountsUpdateAsync(organization, update, plan);
-        }
-
-        if (update.MaxAutoscaleSmSeatsChanged)
-        {
-            ValidateMaxAutoscaleSmSeatsUpdateAsync(organization, update.MaxAutoscaleSmSeats, plan);
-        }
-
-        if (update.MaxAutoscaleSmServiceAccountsChanged)
-        {
-            ValidateMaxAutoscaleSmServiceAccountUpdate(organization, update.MaxAutoscaleSmServiceAccounts, plan);
-        }
-
-        await FinalizeSubscriptionAdjustmentAsync(organization, plan, update);
-
-        await SendEmailIfAutoscaleLimitReached(organization);
+        await SendEmailIfAutoscaleLimitReached(update.Organization);
     }
 
     public async Task AutoAddServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
@@ -101,46 +77,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             throw new BadRequestException("Secrets Manager service account limit has been reached.");
         }
-
-        await UpdateSubscriptionAsync(update);
-    }
-
-    public async Task AutoAddSmSeatsAsync(Organization organization, int smSeatAdjustment, DateTime? prorationDate = null)
-    {
-        if (smSeatAdjustment < 1)
-        {
-            throw new BadRequestException("Cannot use autoscale to subtract Secrets Manager seats.");
-        }
-
-        if (_globalSettings.SelfHosted)
-        {
-            throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
-        }
-
-        var update = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: smSeatAdjustment, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
-            serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts,
-            prorationDate: prorationDate);
-
-        if (organization.MaxAutoscaleSmSeats.HasValue && update.SmSeats > organization.MaxAutoscaleSmSeats.Value)
-        {
-            throw new BadRequestException("Secrets Manager seat limit has been reached.");
-        }
-
-        await UpdateSubscriptionAsync(update);
-    }
-
-    public async Task RevertAutoAddSmSeatsAsync(Organization organization, int smSeatAdjustment, DateTime? proratinDate = null)
-    {
-        if (smSeatAdjustment > -1)
-        {
-            throw new BadRequestException("Cannot revert a positive number of Secrets Manager seats");
-        }
-
-        var update = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: smSeatAdjustment, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
-            serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts,
-            prorationDate: proratinDate);
 
         await UpdateSubscriptionAsync(update);
     }
@@ -241,7 +177,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             _logger.LogError(e, $"Error encountered notifying organization owners of Seats limit reached.");
         }
-
     }
 
     private async Task SendServiceAccountLimitEmailAsync(Organization organization, int MaxAutoscaleValue)
@@ -262,9 +197,37 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     }
 
+    public async Task ValidateUpdate(SecretsManagerSubscriptionUpdate update)
+    {
+        var organization = update.Organization;
+        ValidateOrganization(organization);
+
+        var plan = GetPlanForOrganization(organization);
+
+        if (update.SmSeatsChanged)
+        {
+            await ValidateSmSeatsUpdateAsync(organization, update, plan);
+        }
+
+        if (update.SmServiceAccountsChanged)
+        {
+            await ValidateSmServiceAccountsUpdateAsync(organization, update, plan);
+        }
+
+        if (update.MaxAutoscaleSmSeatsChanged)
+        {
+            ValidateMaxAutoscaleSmSeatsUpdateAsync(organization, update.MaxAutoscaleSmSeats, plan);
+        }
+
+        if (update.MaxAutoscaleSmServiceAccountsChanged)
+        {
+            ValidateMaxAutoscaleSmServiceAccountUpdate(organization, update.MaxAutoscaleSmServiceAccounts, plan);
+        }
+    }
+
     private async Task ValidateSmSeatsUpdateAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
-        if (organization.SmSeats == null)
+        if (!organization.SmSeats.HasValue)
         {
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
         }

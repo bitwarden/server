@@ -847,6 +847,7 @@ public class OrganizationService : IOrganizationService
         }
 
         // Secrets Manager seat autoscaling
+        SecretsManagerSubscriptionUpdate smSubscriptionUpdate = null;
         var inviteWithSmAccessCount = invites
             .Where(i => i.invite.AccessSecretsManager)
             .SelectMany(i => i.invite.Emails)
@@ -855,7 +856,9 @@ public class OrganizationService : IOrganizationService
         var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
         if (additionalSmSeatsRequired > 0)
         {
-            // TODO: Pre-validation?
+            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization);
+            smSubscriptionUpdate.AdjustSeats(additionalSmSeatsRequired);
+            _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
@@ -953,7 +956,8 @@ public class OrganizationService : IOrganizationService
 
             if (additionalSmSeatsRequired > 0)
             {
-                await _updateSecretsManagerSubscriptionCommand.AutoAddSmSeatsAsync(organization, additionalSmSeatsRequired, prorationDate);
+                smSubscriptionUpdate.ProrationDate = prorationDate;
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
             await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
@@ -981,8 +985,12 @@ public class OrganizationService : IOrganizationService
             if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
                 currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
             {
-                await _updateSecretsManagerSubscriptionCommand.RevertAutoAddSmSeatsAsync(organization,
-                    initialSmSeatCount.Value - currentOrganization.SmSeats.Value, prorationDate);
+                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(organization, prorationDate)
+                {
+                    // Use the temp var just in case the organization reference has been updated
+                    SmSeats = initialSmSeatCount.Value
+                };
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
             }
 
             exceptions.Add(e);
@@ -1387,7 +1395,9 @@ public class OrganizationService : IOrganizationService
             if (additionalSmSeatsRequired > 0)
             {
                 var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-                await _updateSecretsManagerSubscriptionCommand.AutoAddSmSeatsAsync(organization, additionalSmSeatsRequired);
+                var update = new SecretsManagerSubscriptionUpdate(organization);
+                update.AdjustSeats(additionalSmSeatsRequired);
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
 

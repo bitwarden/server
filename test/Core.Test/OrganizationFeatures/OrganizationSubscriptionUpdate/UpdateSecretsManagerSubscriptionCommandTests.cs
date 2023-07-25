@@ -7,7 +7,6 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -319,7 +318,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 org.Id == organizationId
                 && org.SmSeats == organizationUpdate.SmSeats
                 && org.MaxAutoscaleSmSeats == organizationUpdate.MaxAutoscaleSmSeats
-                && org.SmServiceAccounts == (organizationServiceAccounts + organizationUpdate.SmServiceAccountsAdjustment)
+                && org.SmServiceAccounts == (organizationServiceAccounts + serviceAccountAdjustment)
                 && org.MaxAutoscaleSmServiceAccounts == organizationUpdate.MaxAutoscaleSmServiceAccounts), sutProvider);
 
         await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, Arg.Any<IEnumerable<string>>());
@@ -374,7 +373,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 org.Id == organizationId
                 && org.SmSeats == organizationUpdate.SmSeats
                 && org.MaxAutoscaleSmSeats == organizationUpdate.MaxAutoscaleSmSeats
-                && org.SmServiceAccounts == (organizationServiceAccounts + organizationUpdate.SmServiceAccountsAdjustment)
+                && org.SmServiceAccounts == (organizationServiceAccounts + serviceAccountAdjustment)
                 && org.MaxAutoscaleSmServiceAccounts == organizationUpdate.MaxAutoscaleSmServiceAccounts), sutProvider);
 
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendSecretsManagerMaxSeatLimitReachedEmailAsync(default, default, default);
@@ -621,73 +620,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 && o.MaxAutoscaleSmSeats == organizationMaxAutoscaleSeats
                 && o.SmServiceAccounts == expectedSmServiceAccounts
                 && o.MaxAutoscaleSmServiceAccounts == organizationMaxAutoscaleServiceAccounts), sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
-    [BitAutoData(PlanType.EnterpriseMonthly)]
-    [BitAutoData(PlanType.TeamsMonthly)]
-    [BitAutoData(PlanType.TeamsAnnually)]
-    public async Task AutoAddSmSeats_Succeeds(PlanType planType, Organization organization,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var originalMaxAutoscaleSmSeats = 20;
-        var originalSmServiceAccounts = organization.SmServiceAccounts;
-        var originalMaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
-
-        organization.UseSecretsManager = true;
-        organization.SmSeats = 10;
-        organization.MaxAutoscaleSmSeats = originalMaxAutoscaleSmSeats;
-        organization.PlanType = planType;
-
-        var plan = StaticStore.GetSecretsManagerPlan(planType);
-        var smSeatsToAdd = 5;
-        var newSmSeats = 15;
-        var paidSmSeats = newSmSeats - plan.BaseSeats;
-
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
-
-        // TODO: call ReferenceEventService - see AC-1481
-        sutProvider.Sut.AutoAddSmSeatsAsync(organization, smSeatsToAdd);
-        AssertUpdatedOrganization(() => Arg.Is<Organization>(o => o.SmSeats == newSmSeats &&
-                                      o.MaxAutoscaleSmSeats == originalMaxAutoscaleSmSeats &&
-                                      o.SmServiceAccounts == originalSmServiceAccounts &&
-                                      o.MaxAutoscaleSmServiceAccounts == originalMaxAutoscaleSmServiceAccounts), sutProvider);
-        sutProvider.GetDependency<IPaymentService>().Received(1).AdjustSeatsAsync(organization, plan, paidSmSeats);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutoAddSmSeats_NegativeAdjustmentAmount_Throws(Organization organization,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AutoAddSmSeatsAsync(organization, -1));
-        Assert.Contains("Cannot use autoscale to subtract", exception.Message);
-        VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutoAddSmSeats_WhenSelfHosted_Throws(Organization organization, SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AutoAddSmSeatsAsync(organization, 10));
-        Assert.Contains("Cannot autoscale on a self-hosted instance", exception.Message);
-        VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutoAddSmSeats_WhenAutoscaleMaxReached_Throws(Organization organization, SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        organization.SmSeats = 10;
-        organization.MaxAutoscaleSmSeats = 10;
-
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(false);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AutoAddSmSeatsAsync(organization, 1));
-        Assert.Contains("Secrets Manager seat limit has been reached", exception.Message);
-        VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
