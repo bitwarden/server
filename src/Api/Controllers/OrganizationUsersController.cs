@@ -30,6 +30,7 @@ public class OrganizationUsersController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
 
     public OrganizationUsersController(
@@ -42,6 +43,7 @@ public class OrganizationUsersController : Controller
         IUserService userService,
         IPolicyRepository policyRepository,
         ICurrentContext currentContext,
+        IUpdateOrganizationUserCommand updateOrganizationUserCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
     {
         _enableAccessSecretsManagerCommand = enableAccessSecretsManagerCommand;
@@ -53,6 +55,7 @@ public class OrganizationUsersController : Controller
         _userService = userService;
         _policyRepository = policyRepository;
         _currentContext = currentContext;
+        _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
     }
 
@@ -288,7 +291,7 @@ public class OrganizationUsersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
+        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
             model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
     }
 

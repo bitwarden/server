@@ -45,7 +45,6 @@ public interface IOrganizationService
         Guid confirmingUserId, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
         Guid confirmingUserId, IUserService userService);
-    Task SaveUserAsync(OrganizationUser user, Guid? savingUserId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId);
     [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
