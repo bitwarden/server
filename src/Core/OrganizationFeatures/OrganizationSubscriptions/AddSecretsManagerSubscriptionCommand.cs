@@ -3,7 +3,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 
@@ -13,17 +12,14 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
 {
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationService _organizationService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     public AddSecretsManagerSubscriptionCommand(
         IPaymentService paymentService,
-        IOrganizationService organizationService,
-        IOrganizationUserRepository organizationUserRepository)
+        IOrganizationService organizationService)
     {
         _paymentService = paymentService;
         _organizationService = organizationService;
-        _organizationUserRepository = organizationUserRepository;
     }
-    public async Task<Organization> SignUpAsync(Organization organization, int additionalSmSeats,
+    public async Task SignUpAsync(Organization organization, int additionalSmSeats,
         int additionalServiceAccounts)
     {
         ValidateOrganization(organization);
@@ -32,7 +28,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         var signup = SetOrganizationUpgrade(organization, additionalSmSeats, additionalServiceAccounts);
         _organizationService.ValidateSecretsManagerPlan(plan, signup);
 
-        if (plan.Type != PlanType.Free)
+        if (plan.Product != ProductType.Free)
         {
             await _paymentService.AddSecretsManagerToSubscription(organization, plan, additionalSmSeats, additionalServiceAccounts);
         }
@@ -44,8 +40,6 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 
         // TODO: call ReferenceEventService - see AC-1481
-
-        return organization;
     }
 
     private static OrganizationUpgrade SetOrganizationUpgrade(Organization organization, int additionalSeats,

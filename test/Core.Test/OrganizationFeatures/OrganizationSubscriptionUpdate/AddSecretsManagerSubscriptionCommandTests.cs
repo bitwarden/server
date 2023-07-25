@@ -26,26 +26,20 @@ public class AddSecretsManagerSubscriptionCommandTests
         SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
         int additionalServiceAccounts,
         int additionalSmSeats,
-        Organization organization)
+        Organization organization,
+        bool useSecretsManager)
     {
         organization.PlanType = planType;
-        var signup = new OrganizationUpgrade
-        {
-            UseSecretsManager = true,
-            AdditionalSmSeats = additionalSmSeats,
-            AdditionalServiceAccounts = additionalServiceAccounts,
-            AdditionalSeats = organization.Seats.GetValueOrDefault(),
-        };
 
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
 
-        var result = await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
+        await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
 
         sutProvider.GetDependency<IOrganizationService>().Received(1)
             .ValidateSecretsManagerPlan(plan, Arg.Is<OrganizationUpgrade>(c =>
-                c.UseSecretsManager == signup.UseSecretsManager &&
-                c.AdditionalSmSeats == signup.AdditionalSmSeats &&
-                c.AdditionalServiceAccounts == signup.AdditionalServiceAccounts &&
+                c.UseSecretsManager == useSecretsManager &&
+                c.AdditionalSmSeats == additionalSmSeats &&
+                c.AdditionalServiceAccounts == additionalServiceAccounts &&
                 c.AdditionalSeats == organization.Seats.GetValueOrDefault()));
 
         await sutProvider.GetDependency<IPaymentService>().Received()
@@ -111,6 +105,5 @@ public class AddSecretsManagerSubscriptionCommandTests
         // TODO: call ReferenceEventService - see AC-1481
 
         await sutProvider.GetDependency<IOrganizationService>().DidNotReceive().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceive().GetDetailsByUserAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), OrganizationUserStatusType.Confirmed);
     }
 }

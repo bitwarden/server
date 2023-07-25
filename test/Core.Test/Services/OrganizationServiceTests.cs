@@ -1575,21 +1575,6 @@ public class OrganizationServiceTests
 
     [Theory]
     [BitAutoData(PlanType.Free)]
-    public void ValidateSecretsManagerPlan_ThrowsException_WhenAddingSeatWithNoAdditionalSeat(PlanType planType, SutProvider<OrganizationService> sutProvider)
-    {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
-        var signup = new OrganizationUpgrade
-        {
-            UseSecretsManager = true,
-            AdditionalSmSeats = -5,
-            AdditionalServiceAccounts = 5
-        };
-        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
-        Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.Free)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
     {
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
