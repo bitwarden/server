@@ -49,7 +49,8 @@
     @SmSeats INT = null,
     @SmServiceAccounts INT = null,
     @MaxAutoscaleSmSeats INT= null,
-    @MaxAutoscaleSmServiceAccounts INT = null
+    @MaxAutoscaleSmServiceAccounts INT = null,
+    @SecretsManagerBeta BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -106,7 +107,8 @@ BEGIN
         [SmSeats],
         [SmServiceAccounts],
         [MaxAutoscaleSmSeats],
-        [MaxAutoscaleSmServiceAccounts]
+        [MaxAutoscaleSmServiceAccounts],
+        [SecretsManagerBeta]
     )
     VALUES
     (
@@ -160,6 +162,7 @@ BEGIN
         @SmSeats,
         @SmServiceAccounts,
         @MaxAutoscaleSmSeats,
-        @MaxAutoscaleSmServiceAccounts
+        @MaxAutoscaleSmServiceAccounts,
+        @SecretsManagerBeta
     )
 END
