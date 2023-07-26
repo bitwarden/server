@@ -121,7 +121,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                             {
                                 Id = g.GroupId,
                                 HidePasswords = g.HidePasswords,
-                                ReadOnly = g.ReadOnly
+                                ReadOnly = g.ReadOnly,
+                                Manage = g.Manage
                             }).ToList() ?? new List<CollectionAccessSelection>(),
                         Users = users
                             .FirstOrDefault(u => u.Key == collection.Id)?
@@ -129,7 +130,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                             {
                                 Id = c.OrganizationUserId,
                                 HidePasswords = c.HidePasswords,
-                                ReadOnly = c.ReadOnly
+                                ReadOnly = c.ReadOnly,
+                                Manage = c.Manage
                             }).ToList() ?? new List<CollectionAccessSelection>()
                     }
                 )
@@ -163,7 +165,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                             {
                                 Id = g.GroupId,
                                 HidePasswords = g.HidePasswords,
-                                ReadOnly = g.ReadOnly
+                                ReadOnly = g.ReadOnly,
+                                Manage = g.Manage
                             }).ToList() ?? new List<CollectionAccessSelection>(),
                         Users = users
                             .FirstOrDefault(u => u.Key == collection.Id)?
@@ -171,7 +174,8 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
                             {
                                 Id = c.OrganizationUserId,
                                 HidePasswords = c.HidePasswords,
-                                ReadOnly = c.ReadOnly
+                                ReadOnly = c.ReadOnly,
+                                Manage = c.Manage
                             }).ToList() ?? new List<CollectionAccessSelection>()
                     }
                 )
