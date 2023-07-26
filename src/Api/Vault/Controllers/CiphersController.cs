@@ -125,7 +125,6 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = model.ToCipherDetails(userId);
-
         if (cipher.OrganizationId.HasValue && !await _currentContext.OrganizationUser(cipher.OrganizationId.Value))
         {
             throw new NotFoundException();
@@ -178,10 +177,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        if (cipher.Key != null && _currentContext.ClientVersion < new Version(Constants.CipherKeyEncryptionMinimumVersion))
-        {
-            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
-        }
+        ValidateItemLevelEncryptionIsAvailable(cipher);
 
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
@@ -205,10 +201,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
 
-        if (cipher.Key != null && _currentContext.ClientVersion < new Version(Constants.CipherKeyEncryptionMinimumVersion))
-        {
-            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
-        }
+        ValidateItemLevelEncryptionIsAvailable(cipher);
 
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
@@ -254,10 +247,7 @@ public class CiphersController : Controller
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         var cipherId = new Guid(id);
 
-        if (_currentContext.ClientVersion < new Version(Constants.CipherKeyEncryptionMinimumVersion) && (await _cipherRepository.GetByIdAsync(cipherId, userId)).Key != null)
-        {
-            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
-        }
+        ValidateItemLevelEncryptionIsAvailable(await _cipherRepository.GetByIdAsync(cipherId, userId));
 
         await _cipherRepository.UpdatePartialAsync(cipherId, userId, folderId, model.Favorite);
 
@@ -576,10 +566,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        if (cipher.Key != null && _currentContext.ClientVersion < new Version(Constants.CipherKeyEncryptionMinimumVersion))
-        {
-            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
-        }
+        ValidateItemLevelEncryptionIsAvailable(cipher);
 
         if (request.FileSize > CipherService.MAX_FILE_SIZE)
         {
@@ -798,6 +785,14 @@ public class CiphersController : Controller
         if (!Request?.ContentType.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
+        }
+    }
+
+    private void ValidateItemLevelEncryptionIsAvailable(Cipher cipher)
+    {
+        if (cipher.Key != null && _currentContext.ClientVersion < new Version(Constants.CipherKeyEncryptionMinimumVersion))
+        {
+            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
         }
     }
 }
