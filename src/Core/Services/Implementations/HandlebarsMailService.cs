@@ -897,6 +897,36 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
+    public async Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
+        IEnumerable<string> ownerEmails)
+    {
+        var message = CreateDefaultMessage($"{organization.Name} Secrets Manager Seat Limit Reached", ownerEmails);
+        var model = new OrganizationSeatsMaxReachedViewModel
+        {
+            OrganizationId = organization.Id,
+            MaxSeatCount = maxSeatCount,
+        };
+
+        await AddMessageContentAsync(message, "OrganizationSmSeatsMaxReached", model);
+        message.Category = "OrganizationSmSeatsMaxReached";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
+    public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
+        IEnumerable<string> ownerEmails)
+    {
+        var message = CreateDefaultMessage($"{organization.Name} Secrets Manager Service Accounts Limit Reached", ownerEmails);
+        var model = new OrganizationServiceAccountsMaxReachedViewModel
+        {
+            OrganizationId = organization.Id,
+            MaxServiceAccountsCount = maxSeatCount,
+        };
+
+        await AddMessageContentAsync(message, "OrganizationSmServiceAccountsMaxReached", model);
+        message.Category = "OrganizationSmServiceAccountsMaxReached";
+        await _mailDeliveryService.SendEmailAsync(message);
+    }
+
     public async Task SendTrustedDeviceAdminApprovalEmailAsync(string email, DateTime utcNow, string ip,
         string deviceTypeAndIdentifier)
     {
