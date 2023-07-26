@@ -37,7 +37,7 @@ public class SecretsManagerSubscriptionUpdate
     public DateTime? ProrationDate { get; set; }
 
     /// <summary>
-    /// Whether the subscription update is a result of autoscaling. Defaults to true
+    /// Whether the subscription update is a result of autoscaling
     /// </summary>
     public bool Autoscaling { get; init; }
 
