@@ -86,4 +86,25 @@ public class CountNewSmSeatsRequiredQueryTests
             await sutProvider.Sut.CountNewSmSeatsRequiredAsync(organization.Id, usersToAdd));
         Assert.Contains("Organization does not use Secrets Manager", exception.Message);
     }
+
+    [Theory, BitAutoData]
+    public async Task CountNewSmSeatsRequiredAsync_WithSecretsManagerBeta_ReturnsZero(
+        int usersToAdd,
+        Organization organization,
+        SutProvider<CountNewSmSeatsRequiredQuery> sutProvider)
+    {
+        organization.UseSecretsManager = true;
+        organization.SecretsManagerBeta = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        var result = await sutProvider.Sut.CountNewSmSeatsRequiredAsync(organization.Id, usersToAdd);
+
+        Assert.Equal(0, result);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetOccupiedSmSeatCountByOrganizationIdAsync(default);
+    }
 }
