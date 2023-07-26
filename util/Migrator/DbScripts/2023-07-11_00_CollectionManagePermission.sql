@@ -56,6 +56,12 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]
+END
+GO
+
 IF TYPE_ID('[dbo].[SelectionReadOnlyArray]') IS NOT NULL
 BEGIN
     DROP TYPE [dbo].[SelectionReadOnlyArray]
@@ -604,5 +610,27 @@ BEGIN
         [Id] IN (SELECT [Id] FROM [AvailableUsersCTE])
 
     EXEC [dbo].[User_BumpAccountRevisionDateByOrganizationId] @OrganizationId
+END
+GO
+
+CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [OrganizationUserUserDetails_ReadById] @Id
+
+    SELECT
+        CU.[CollectionId] Id,
+        CU.[ReadOnly],
+        CU.[HidePasswords],
+        CU.[Manage]
+    FROM
+        [dbo].[OrganizationUser] OU
+    INNER JOIN
+        [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = [OU].[Id]
+    WHERE
+        [OrganizationUserId] = @Id
 END
 GO
