@@ -856,7 +856,7 @@ public class OrganizationService : IOrganizationService
         var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
         if (additionalSmSeatsRequired > 0)
         {
-            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization);
+            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true);
             smSubscriptionUpdate.AdjustSeats(additionalSmSeatsRequired);
             _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
         }
@@ -985,10 +985,11 @@ public class OrganizationService : IOrganizationService
             if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
                 currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
             {
-                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(organization, prorationDate)
+                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(organization, false)
                 {
                     // Use the temp var just in case the organization reference has been updated
-                    SmSeats = initialSmSeatCount.Value
+                    SmSeats = initialSmSeatCount.Value,
+                    ProrationDate = prorationDate
                 };
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
             }
@@ -1395,7 +1396,7 @@ public class OrganizationService : IOrganizationService
             if (additionalSmSeatsRequired > 0)
             {
                 var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-                var update = new SecretsManagerSubscriptionUpdate(organization);
+                var update = new SecretsManagerSubscriptionUpdate(organization, true);
                 update.AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }

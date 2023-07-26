@@ -7,6 +7,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -102,7 +103,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             organization, seatAdjustment: 1, maxAutoscaleSeats: 15, serviceAccountAdjustment: 11, maxAutoscaleServiceAccounts: 10);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("Cannot set max Service Accounts autoscaling below Service Accounts count", exception.Message);
+        Assert.Contains("Cannot set max service accounts autoscaling below service account amount", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -620,6 +621,104 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 && o.MaxAutoscaleSmSeats == organizationMaxAutoscaleSeats
                 && o.SmServiceAccounts == expectedSmServiceAccounts
                 && o.MaxAutoscaleSmServiceAccounts == organizationMaxAutoscaleServiceAccounts), sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task ServiceAccountAutoscaling_MaxLimitReached_ThrowsBadRequestException(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        organization.UseSecretsManager = true;
+        organization.SmServiceAccounts = 9;
+        organization.MaxAutoscaleSmServiceAccounts = 10;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, true);
+        update.AdjustServiceAccounts(2);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Secrets Manager service account limit has been reached.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task ServiceAccountAutoscaling_Subtracting_ThrowsBadRequestException(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        organization.UseSecretsManager = true;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, true);
+        update.AdjustServiceAccounts(-2);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Cannot use autoscaling to subtract service accounts.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task SmSeatAutoscaling_MaxLimitReached_ThrowsBadRequestException(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        organization.UseSecretsManager = true;
+        organization.SmSeats = 9;
+        organization.MaxAutoscaleSmSeats = 10;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, true);
+        update.AdjustSeats(2);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Secrets Manager seat limit has been reached.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task SmSeatAutoscaling_Subtracting_ThrowsBadRequestException(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        organization.UseSecretsManager = true;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, true);
+        update.AdjustSeats(-2);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Cannot use autoscaling to subtract service accounts.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(false, "Cannot update subscription on a self-hosted instance.")]
+    [BitAutoData(true, "Cannot autoscale on a self-hosted instance;")]
+    public async Task UpdatingSubscription_WhenSelfHosted_ThrowsBadRequestException(
+        bool autoscaling,
+        string expectedError,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.UseSecretsManager = true;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, autoscaling);
+        update.AdjustSeats(2);
+
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains(expectedError, exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)

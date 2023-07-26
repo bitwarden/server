@@ -37,6 +37,11 @@ public class SecretsManagerSubscriptionUpdate
     public DateTime? ProrationDate { get; set; }
 
     /// <summary>
+    /// Whether the subscription update is a result of autoscaling. Defaults to true
+    /// </summary>
+    public bool Autoscaling { get; init; }
+
+    /// <summary>
     /// The seats the organization will have after the update, excluding the base seats included in the plan
     /// Usually this is what the organization is billed for
     /// </summary>
@@ -56,7 +61,7 @@ public class SecretsManagerSubscriptionUpdate
     public SecretsManagerSubscriptionUpdate(
         Organization organization,
         int seatAdjustment, int? maxAutoscaleSeats,
-        int serviceAccountAdjustment, int? maxAutoscaleServiceAccounts) : this(organization)
+        int serviceAccountAdjustment, int? maxAutoscaleServiceAccounts) : this(organization, false)
     {
         AdjustSeats(seatAdjustment);
         AdjustServiceAccounts(serviceAccountAdjustment);
@@ -65,7 +70,7 @@ public class SecretsManagerSubscriptionUpdate
         MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
     }
 
-    public SecretsManagerSubscriptionUpdate(Organization organization, DateTime? prorationDate = null)
+    public SecretsManagerSubscriptionUpdate(Organization organization, bool autoscaling)
     {
         if (organization == null)
         {
@@ -83,7 +88,7 @@ public class SecretsManagerSubscriptionUpdate
         MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
         SmServiceAccounts = organization.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
-        ProrationDate = prorationDate;
+        Autoscaling = autoscaling;
     }
 
     public void AdjustSeats(int adjustment)

@@ -58,25 +58,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     public async Task AutoAddServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
     {
-        if (smServiceAccountsAdjustment < 0)
-        {
-            throw new BadRequestException("Cannot use autoscale to subtract service accounts.");
-        }
-
-        if (_globalSettings.SelfHosted)
-        {
-            throw new BadRequestException("Cannot autoscale on a self-hosted instance.");
-        }
-
         var update = new SecretsManagerSubscriptionUpdate(
             organization, seatAdjustment: 0, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
-            serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts);
-
-        if (organization.MaxAutoscaleSmServiceAccounts.HasValue &&
-            update.SmServiceAccounts > organization.MaxAutoscaleSmServiceAccounts.Value)
+            serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts)
         {
-            throw new BadRequestException("Secrets Manager service account limit has been reached.");
-        }
+            Autoscaling = true
+        };
 
         await UpdateSubscriptionAsync(update);
     }
@@ -199,6 +186,14 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     public async Task ValidateUpdate(SecretsManagerSubscriptionUpdate update)
     {
+        if (_globalSettings.SelfHosted)
+        {
+            var message = update.Autoscaling
+                ? "Cannot autoscale on a self-hosted instance;"
+                : "Cannot update subscription on a self-hosted instance.";
+            throw new BadRequestException(message);
+        }
+
         var organization = update.Organization;
         ValidateOrganization(organization);
 
@@ -232,9 +227,17 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
         }
 
+        if (update.Autoscaling && update.SmSeats.Value < organization.SmSeats.Value)
+        {
+            throw new BadRequestException("Cannot use autoscaling to subtract seats.");
+        }
+
         if (update.MaxAutoscaleSmSeats.HasValue && update.SmSeats > update.MaxAutoscaleSmSeats.Value)
         {
-            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+            var message = update.Autoscaling
+                ? "Secrets Manager seat limit has been reached."
+                : "Cannot set max seat autoscaling below seat count.";
+            throw new BadRequestException(message);
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -286,9 +289,18 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no Service Accounts limit, no need to adjust Service Accounts");
         }
 
-        if (update.MaxAutoscaleSmServiceAccounts.HasValue && update.SmServiceAccounts > update.MaxAutoscaleSmServiceAccounts.Value)
+        if (update.Autoscaling && update.SmServiceAccounts.Value < organization.SmServiceAccounts.Value)
         {
-            throw new BadRequestException("Cannot set max Service Accounts autoscaling below Service Accounts count.");
+            throw new BadRequestException("Cannot use autoscaling to subtract service accounts.");
+        }
+
+        if (update.MaxAutoscaleSmServiceAccounts.HasValue &&
+            update.SmServiceAccounts > update.MaxAutoscaleSmServiceAccounts.Value)
+        {
+            var message = update.Autoscaling
+                ? "Secrets Manager service account limit has been reached."
+                : "Cannot set max service accounts autoscaling below service account amount.";
+            throw new BadRequestException(message);
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
