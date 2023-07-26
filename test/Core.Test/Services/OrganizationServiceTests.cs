@@ -1534,4 +1534,154 @@ public class OrganizationServiceTests
         Assert.Equal(includeProvider, result);
     }
 
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenInvalidPlanSelected(
+        PlanType planType, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
+
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 1,
+            AdditionalServiceAccounts = 10,
+            AdditionalSeats = 1
+        };
+
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("Invalid Secrets Manager plan selected.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenNoSecretsManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 0,
+            AdditionalServiceAccounts = 5,
+            AdditionalSeats = 2
+        };
+
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = -1,
+            AdditionalServiceAccounts = 5
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("You can't subtract Secrets Manager seats!", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenPlanDoesNotAllowAdditionalServiceAccounts(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 2,
+            AdditionalServiceAccounts = 5,
+            AdditionalSeats = 3
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenMoreSeatsThanPasswordManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 4,
+            AdditionalServiceAccounts = 5,
+            AdditionalSeats = 3
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingServiceAccounts(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 4,
+            AdditionalServiceAccounts = -5,
+            AdditionalSeats = 5
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenPlanDoesNotAllowAdditionalUsers(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 2,
+            AdditionalServiceAccounts = 0,
+            AdditionalSeats = 5
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("Plan does not allow additional users.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ValidPlan_NoExceptionThrown(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 2,
+            AdditionalServiceAccounts = 0,
+            AdditionalSeats = 4
+        };
+
+        sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup);
+    }
 }

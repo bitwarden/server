@@ -53,6 +53,7 @@ public class OrganizationsController : Controller
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
+    private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -75,7 +76,8 @@ public class OrganizationsController : Controller
         GlobalSettings globalSettings,
         ILicensingService licensingService,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand)
+        IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
+        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -98,6 +100,7 @@ public class OrganizationsController : Controller
         _licensingService = licensingService;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
+        _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
     }
 
     [HttpGet("{id}")]
@@ -346,6 +349,31 @@ public class OrganizationsController : Controller
 
         var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization);
         await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
+    }
+
+    [HttpPost("{id}/subscribe-secrets-manager")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!await _currentContext.EditSubscription(id))
+        {
+            throw new NotFoundException();
+        }
+
+        await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
+            model.AdditionalServiceAccounts);
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var organizationDetails = await _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
+            OrganizationUserStatusType.Confirmed);
+
+        return new ProfileOrganizationResponseModel(organizationDetails);
     }
 
     [HttpPost("{id}/seat")]
