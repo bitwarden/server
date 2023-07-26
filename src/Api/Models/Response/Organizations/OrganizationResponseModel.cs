@@ -104,6 +104,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
@@ -119,6 +120,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             Subscription.Items = null;
             UpcomingInvoice.Amount = null;
         }
+
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
@@ -133,6 +136,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
                                              license.Expires?.AddDays(-Constants
                                                  .OrganizationSelfHostSubscriptionGracePeriodDays);
         }
+
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public string StorageName { get; set; }
@@ -149,4 +154,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Date when a self-hosted organization expires (includes grace period).
     /// </summary>
     public DateTime? Expiration { get; set; }
+
+    public bool SecretsManagerBeta { get; set; }
 }
