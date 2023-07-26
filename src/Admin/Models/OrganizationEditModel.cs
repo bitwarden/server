@@ -67,6 +67,7 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
+        SecretsManagerBeta = org.SecretsManagerBeta;
     }
 
     public BillingInfo BillingInfo { get; set; }
@@ -146,6 +147,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmServiceAccounts { get; set; }
     [Display(Name = "Max Autoscale Service Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    [Display(Name = "Secrets Manager Beta")]
+    public bool SecretsManagerBeta { get; set; }
 
     public Organization CreateOrganization(Provider provider)
     {
@@ -190,6 +193,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxAutoscaleSmSeats = MaxAutoscaleSmSeats;
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
+        existingOrganization.SecretsManagerBeta = SecretsManagerBeta;
         return existingOrganization;
     }
 }
