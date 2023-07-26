@@ -460,7 +460,7 @@ public class OrganizationUsersController : Controller
             orgUser.AccessSecretsManager = true;
         }
 
-        _organizationUserRepository.ReplaceManyAsync(orgUsers);
+        await _organizationUserRepository.ReplaceManyAsync(orgUsers);
     }
 
     private async Task RestoreOrRevokeUserAsync(

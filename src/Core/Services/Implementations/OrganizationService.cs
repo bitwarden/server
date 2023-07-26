@@ -858,7 +858,7 @@ public class OrganizationService : IOrganizationService
         {
             smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true);
             smSubscriptionUpdate.AdjustSeats(additionalSmSeatsRequired);
-            _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
+            await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
