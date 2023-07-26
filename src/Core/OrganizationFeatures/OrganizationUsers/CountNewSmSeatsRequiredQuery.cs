@@ -18,6 +18,11 @@ public class CountNewSmSeatsRequiredQuery : ICountNewSmSeatsRequiredQuery
 
     public async Task<int> CountNewSmSeatsRequiredAsync(Guid organizationId, int usersToAdd)
     {
+        if (usersToAdd == 0)
+        {
+            return 0;
+        }
+
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         if (organization == null)
         {
@@ -29,7 +34,7 @@ public class CountNewSmSeatsRequiredQuery : ICountNewSmSeatsRequiredQuery
             throw new BadRequestException("Organization does not use Secrets Manager");
         }
 
-        if (!organization.SmSeats.HasValue || usersToAdd == 0 || organization.SecretsManagerBeta)
+        if (!organization.SmSeats.HasValue || organization.SecretsManagerBeta)
         {
             return 0;
         }
