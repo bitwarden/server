@@ -222,7 +222,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private async Task ValidateSmSeatsUpdateAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
-        if (!organization.SmSeats.HasValue)
+        if (organization.SmSeats == null)
         {
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
         }
@@ -232,7 +232,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Cannot use autoscaling to subtract seats.");
         }
 
-        if (update.MaxAutoscaleSmSeats.HasValue && update.SmSeats > update.MaxAutoscaleSmSeats.Value)
+        if (update.MaxAutoscaleSmSeats.HasValue && update.SmSeats.Value > update.MaxAutoscaleSmSeats.Value)
         {
             var message = update.Autoscaling
                 ? "Secrets Manager seat limit has been reached."
@@ -255,12 +255,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Plan does not allow additional Secrets Manager seats.");
         }
 
-        if (plan.BaseSeats > update.SmSeats)
+        if (plan.BaseSeats > update.SmSeats.Value)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} Secrets Manager  seats.");
         }
 
-        if (update.SmSeats <= 0)
+        if (update.SmSeats.Value <= 0)
         {
             throw new BadRequestException("You must have at least 1 Secrets Manager seat.");
         }
@@ -271,10 +271,10 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                                           $"{plan.MaxAdditionalSeats.Value} additional Secrets Manager seats.");
         }
 
-        if (organization.SmSeats.Value > update.SmSeats)
+        if (organization.SmSeats.Value > update.SmSeats.Value)
         {
             var currentSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
-            if (currentSeats > update.SmSeats)
+            if (currentSeats > update.SmSeats.Value)
             {
                 throw new BadRequestException($"Your organization currently has {currentSeats} Secrets Manager seats. " +
                                               $"Your plan only allows {update.SmSeats} Secrets Manager seats. Remove some Secrets Manager users.");
@@ -295,7 +295,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
 
         if (update.MaxAutoscaleSmServiceAccounts.HasValue &&
-            update.SmServiceAccounts > update.MaxAutoscaleSmServiceAccounts.Value)
+            update.SmServiceAccounts.Value > update.MaxAutoscaleSmServiceAccounts.Value)
         {
             var message = update.Autoscaling
                 ? "Secrets Manager service account limit has been reached."
@@ -318,12 +318,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Plan does not allow additional Service Accounts.");
         }
 
-        if (plan.BaseServiceAccount > update.SmServiceAccounts)
+        if (plan.BaseServiceAccount.HasValue && plan.BaseServiceAccount.Value > update.SmServiceAccounts.Value)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} Service Accounts.");
         }
 
-        if (update.SmServiceAccounts <= 0)
+        if (update.SmServiceAccounts.Value <= 0)
         {
             throw new BadRequestException("You must have at least 1 Service Account.");
         }
@@ -334,7 +334,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                                           $"{plan.MaxAdditionalServiceAccount.Value} additional Service Accounts.");
         }
 
-        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > update.SmServiceAccounts)
+        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > update.SmServiceAccounts.Value)
         {
             var currentServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
             if (currentServiceAccounts > update.SmServiceAccounts)
