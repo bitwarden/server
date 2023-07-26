@@ -14,8 +14,8 @@ public interface ICipherService
         string key, string fileName, long fileSize, bool adminRequest, Guid savingUserId);
     Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
         long requestLength, Guid savingUserId, bool orgAdmin = false);
-    Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, long requestLength, string attachmentId,
-        Guid organizationShareId);
+    Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key, long requestLength,
+        string attachmentId, Guid organizationShareId);
     Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
     Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId, bool orgAdmin = false);

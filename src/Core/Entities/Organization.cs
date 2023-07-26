@@ -112,6 +112,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         return "organization_id";
     }
 
+    public string BraintreeCloudRegionField()
+    {
+        return "region";
+    }
+
     public string GatewayIdField()
     {
         return "organizationId";
