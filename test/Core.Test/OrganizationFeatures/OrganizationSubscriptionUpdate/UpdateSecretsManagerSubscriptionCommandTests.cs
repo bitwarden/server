@@ -608,7 +608,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var expectedSmServiceAccounts = organizationServiceAccounts + smServiceAccountsAdjustment;
         var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault();
 
-        await sutProvider.Sut.AutoAddServiceAccountsAsync(organization, smServiceAccountsAdjustment);
+        await sutProvider.Sut.AdjustServiceAccountsAsync(organization, smServiceAccountsAdjustment);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustServiceAccountsAsync(
             Arg.Is<Organization>(o => o.Id == organizationId),
