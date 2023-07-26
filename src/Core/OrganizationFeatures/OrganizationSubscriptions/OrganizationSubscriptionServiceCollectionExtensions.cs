@@ -9,5 +9,6 @@ public static class OrganizationSubscriptionServiceCollectionExtensions
     {
         services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
         services.AddScoped<IUpgradeOrganizationPlanCommand, UpgradeOrganizationPlanCommand>();
+        services.AddScoped<IAddSecretsManagerSubscriptionCommand, AddSecretsManagerSubscriptionCommand>();
     }
 }
