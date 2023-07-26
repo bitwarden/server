@@ -241,10 +241,8 @@ public class SecretsController : Controller
             var userId = _userService.GetProperUserId(User).Value;
             var org = await _organizationRepository.GetByIdAsync(organizationId);
             await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, EventType.Secret_Retrieved);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(
-                ReferenceEventType.SmServiceAccountAccessedSecret, org,
-                _currentContext)
-            { ReferenceData = $"{secrets.Count} secrets were retrieved" });
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org, _currentContext));
         }
 
         var responses = secrets.Select(s => new BaseSecretResponseModel(s));
