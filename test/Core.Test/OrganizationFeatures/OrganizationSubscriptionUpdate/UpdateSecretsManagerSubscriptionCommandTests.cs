@@ -695,13 +695,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         update.AdjustSeats(-2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Cannot use autoscaling to subtract service accounts.", exception.Message);
+        Assert.Contains("Cannot use autoscaling to subtract seats.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
     [BitAutoData(false, "Cannot update subscription on a self-hosted instance.")]
-    [BitAutoData(true, "Cannot autoscale on a self-hosted instance;")]
+    [BitAutoData(true, "Cannot autoscale on a self-hosted instance.")]
     public async Task UpdatingSubscription_WhenSelfHosted_ThrowsBadRequestException(
         bool autoscaling,
         string expectedError,
