@@ -985,9 +985,8 @@ public class OrganizationService : IOrganizationService
             if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
                 currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
             {
-                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(organization, false)
+                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
                 {
-                    // Use the temp var just in case the organization reference has been updated
                     SmSeats = initialSmSeatCount.Value,
                     ProrationDate = prorationDate
                 };
