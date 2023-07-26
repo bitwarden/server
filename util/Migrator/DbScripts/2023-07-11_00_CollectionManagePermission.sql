@@ -62,6 +62,36 @@ BEGIN
 END
 GO
 
+IF OBJECT_ID('[dbo].[UserCollectionDetails]') IS NOT NULL
+BEGIN
+    DROP FUNCTION [dbo].[UserCollectionDetails]
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_ReadByIdUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_ReadByIdUserId]
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_ReadByUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_ReadByUserId]
+END
+
+GO
+IF OBJECT_ID('[dbo].[Collection_ReadWithGroupsAndUsersByUserId]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
+END
+
+GO
+IF OBJECT_ID('[dbo].[Group_ReadWithCollectionsById]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Group_ReadWithCollectionsById]
+END
+GO
+
 IF TYPE_ID('[dbo].[SelectionReadOnlyArray]') IS NOT NULL
 BEGIN
     DROP TYPE [dbo].[SelectionReadOnlyArray]
@@ -632,5 +662,179 @@ BEGIN
         [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[OrganizationUserId] = [OU].[Id]
     WHERE
         [OrganizationUserId] = @Id
+END
+GO
+
+CREATE FUNCTION [dbo].[UserCollectionDetails](@UserId UNIQUEIDENTIFIER)
+RETURNS TABLE
+AS RETURN
+SELECT
+    C.*,
+    CASE
+        WHEN
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+        THEN 0
+        ELSE 1
+    END [ReadOnly],
+    CASE
+        WHEN
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+        THEN 0
+        ELSE 1
+    END [HidePasswords],
+    CASE
+        WHEN
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+        THEN 0
+        ELSE 1
+    END [Manage]
+FROM
+    [dbo].[CollectionView] C
+INNER JOIN
+    [dbo].[OrganizationUser] OU ON C.[OrganizationId] = OU.[OrganizationId]
+INNER JOIN
+    [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
+LEFT JOIN
+    [dbo].[CollectionUser] CU ON OU.[AccessAll] = 0 AND CU.[CollectionId] = C.[Id] AND CU.[OrganizationUserId] = [OU].[Id]
+LEFT JOIN
+    [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND OU.[AccessAll] = 0 AND GU.[OrganizationUserId] = OU.[Id]
+LEFT JOIN
+    [dbo].[Group] G ON G.[Id] = GU.[GroupId]
+LEFT JOIN
+    [dbo].[CollectionGroup] CG ON G.[AccessAll] = 0 AND CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
+WHERE
+    OU.[UserId] = @UserId
+    AND OU.[Status] = 2 -- 2 = Confirmed
+    AND O.[Enabled] = 1
+    AND (
+        OU.[AccessAll] = 1
+        OR CU.[CollectionId] IS NOT NULL
+        OR G.[AccessAll] = 1
+        OR CG.[CollectionId] IS NOT NULL
+    )
+GO
+
+CREATE PROCEDURE [dbo].[Collection_ReadByIdUserId]
+    @Id UNIQUEIDENTIFIER,
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+    SELECT
+        Id,
+        OrganizationId,
+        [Name],
+        CreationDate,
+        RevisionDate,
+        ExternalId,
+        MIN([ReadOnly]) AS [ReadOnly],
+        MIN([HidePasswords]) AS [HidePasswords],
+        MIN([Manage]) AS [Manage]
+    FROM
+        [dbo].[UserCollectionDetails](@UserId)
+    WHERE
+        [Id] = @Id
+    GROUP BY
+        Id,
+        OrganizationId,
+        [Name],
+        CreationDate,
+        RevisionDate,
+        ExternalId
+END
+GO
+
+CREATE PROCEDURE [dbo].[Collection_ReadByUserId]
+    @UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    SELECT
+        Id,
+        OrganizationId,
+        [Name],
+        CreationDate,
+        RevisionDate,
+        ExternalId,
+        MIN([ReadOnly]) AS [ReadOnly],
+        MIN([HidePasswords]) AS [HidePasswords],
+        MIN([Manage]) AS [Manage]
+    FROM
+        [dbo].[UserCollectionDetails](@UserId)
+    GROUP BY
+        Id,
+        OrganizationId,
+        [Name],
+        CreationDate,
+        RevisionDate,
+        ExternalId
+END
+GO
+
+CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
+	@UserId UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+	
+    DECLARE @TempUserCollections TABLE(
+        Id UNIQUEIDENTIFIER, 
+        OrganizationId UNIQUEIDENTIFIER, 
+        Name VARCHAR(MAX), 
+        CreationDate DATETIME2(7), 
+        RevisionDate DATETIME2(7), 
+        ExternalId NVARCHAR(300), 
+        ReadOnly BIT, 
+        HidePasswords BIT,
+        Manage BIT)
+
+    INSERT INTO @TempUserCollections EXEC [dbo].[Collection_ReadByUserId] @UserId
+	 
+    SELECT
+        *
+    FROM
+        @TempUserCollections C
+	 	 
+    SELECT
+        CG.*
+    FROM
+        [dbo].[CollectionGroup] CG
+    INNER JOIN
+        @TempUserCollections C ON C.[Id] = CG.[CollectionId]
+	    
+    SELECT
+        CU.*
+    FROM
+        [dbo].[CollectionUser] CU
+    INNER JOIN
+        @TempUserCollections C ON C.[Id] = CU.[CollectionId]
+		
+END
+GO
+
+CREATE PROCEDURE [dbo].[Group_ReadWithCollectionsById]
+    @Id UNIQUEIDENTIFIER
+AS
+BEGIN
+    SET NOCOUNT ON
+
+    EXEC [dbo].[Group_ReadById] @Id
+
+    SELECT
+        [CollectionId] [Id],
+        [ReadOnly],
+        [HidePasswords],
+        [Manage]
+    FROM
+        [dbo].[CollectionGroup]
+    WHERE
+        [GroupId] = @Id
 END
 GO

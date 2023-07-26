@@ -18,7 +18,15 @@ SELECT
             OR COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
         THEN 0
         ELSE 1
-    END [HidePasswords]
+    END [HidePasswords],
+    CASE
+        WHEN
+            OU.[AccessAll] = 1
+            OR G.[AccessAll] = 1
+            OR COALESCE(CU.[Manage], CG.[Manage], 0) = 0
+        THEN 0
+        ELSE 1
+    END [Manage]
 FROM
     [dbo].[CollectionView] C
 INNER JOIN
