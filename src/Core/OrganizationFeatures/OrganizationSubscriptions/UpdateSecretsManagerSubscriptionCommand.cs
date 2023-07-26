@@ -189,7 +189,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (_globalSettings.SelfHosted)
         {
             var message = update.Autoscaling
-                ? "Cannot autoscale on a self-hosted instance;"
+                ? "Cannot autoscale on a self-hosted instance."
                 : "Cannot update subscription on a self-hosted instance.";
             throw new BadRequestException(message);
         }
