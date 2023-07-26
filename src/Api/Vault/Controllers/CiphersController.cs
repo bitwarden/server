@@ -696,7 +696,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
-            await _cipherService.CreateAttachmentShareAsync(cipher, stream,
+            await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName, key,
                 Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
         });
     }
