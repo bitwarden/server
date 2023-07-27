@@ -17,10 +17,10 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
-using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager;
-using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -35,18 +35,19 @@ public static class OrganizationServiceCollectionExtensions
     public static void AddOrganizationServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
-        services.AddScoped<IEnableAccessSecretsManagerCommand, EnableAccessSecretsManagerCommand>();
         services.AddTokenizers();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
         services.AddOrganizationSponsorshipCommands(globalSettings);
-        services.AddOrganizationUserCommands();
         services.AddOrganizationApiKeyCommandsQueries();
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationAuthCommands();
+        services.AddOrganizationUserCommands();
+        services.AddOrganizationUserCommandsQueries();
+        services.AddBaseOrganizationSubscriptionCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -125,6 +126,18 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationAuthCommands(this IServiceCollection services)
     {
         services.AddScoped<IUpdateOrganizationAuthRequestCommand, UpdateOrganizationAuthRequestCommand>();
+    }
+
+    private static void AddOrganizationUserCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
+    }
+
+    // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of
+    // TODO: OrganizationService - see PM-1880
+    private static void AddBaseOrganizationSubscriptionCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

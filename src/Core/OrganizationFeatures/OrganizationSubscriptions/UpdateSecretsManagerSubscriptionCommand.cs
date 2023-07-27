@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -8,6 +7,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
@@ -15,63 +15,57 @@ namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubscriptionCommand
 {
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPaymentService _paymentService;
-    private readonly IOrganizationService _organizationService;
     private readonly IMailService _mailService;
     private readonly ILogger<UpdateSecretsManagerSubscriptionCommand> _logger;
     private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IGlobalSettings _globalSettings;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IApplicationCacheService _applicationCacheService;
+    private readonly IEventService _eventService;
 
     public UpdateSecretsManagerSubscriptionCommand(
-        IOrganizationRepository organizationRepository,
-        IOrganizationService organizationService,
         IOrganizationUserRepository organizationUserRepository,
         IPaymentService paymentService,
         IMailService mailService,
         ILogger<UpdateSecretsManagerSubscriptionCommand> logger,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository,
+        IGlobalSettings globalSettings,
+        IOrganizationRepository organizationRepository,
+        IApplicationCacheService applicationCacheService,
+        IEventService eventService)
     {
-        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _paymentService = paymentService;
-        _organizationService = organizationService;
         _mailService = mailService;
         _logger = logger;
         _serviceAccountRepository = serviceAccountRepository;
+        _globalSettings = globalSettings;
+        _organizationRepository = organizationRepository;
+        _applicationCacheService = applicationCacheService;
+        _eventService = eventService;
     }
 
-    public async Task UpdateSecretsManagerSubscription(SecretsManagerSubscriptionUpdate update)
+    public async Task UpdateSubscriptionAsync(SecretsManagerSubscriptionUpdate update)
     {
-        var organization = await _organizationRepository.GetByIdAsync(update.OrganizationId);
+        await ValidateUpdate(update);
 
-        ValidateOrganization(organization);
+        await FinalizeSubscriptionAdjustmentAsync(update.Organization, update.Plan, update);
 
-        var plan = GetPlanForOrganization(organization);
+        await SendEmailIfAutoscaleLimitReached(update.Organization);
+    }
 
-        if (update.SmSeatsChanged)
+    public async Task AdjustServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(
+            organization, seatAdjustment: 0, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
+            serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts)
         {
-            await ValidateSmSeatsUpdateAsync(organization, update, plan);
-        }
+            Autoscaling = true
+        };
 
-        if (update.SmServiceAccountsChanged)
-        {
-            await ValidateSmServiceAccountsUpdateAsync(organization, update, plan);
-        }
-
-        if (update.MaxAutoscaleSmSeatsChanged)
-        {
-            ValidateMaxAutoscaleSmSeatsUpdateAsync(organization, update.MaxAutoscaleSmSeats, plan);
-        }
-
-        if (update.MaxAutoscaleSmServiceAccountsChanged)
-        {
-            ValidateMaxAutoscaleSmServiceAccountUpdate(organization, update.MaxAutoscaleSmServiceAccounts, plan);
-        }
-
-        await FinalizeSubscriptionAdjustmentAsync(organization, plan, update);
-
-        await SendEmailIfAutoscaleLimitReached(organization);
+        await UpdateSubscriptionAsync(update);
     }
 
     private Plan GetPlanForOrganization(Organization organization)
@@ -88,7 +82,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (organization == null)
         {
-            throw new NotFoundException("Organization is not found");
+            throw new NotFoundException("Organization is not found.");
         }
 
         if (!organization.UseSecretsManager)
@@ -122,13 +116,13 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             organization.MaxAutoscaleSmServiceAccounts = update.MaxAutoscaleSmServiceAccounts;
         }
 
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await ReplaceAndUpdateCacheAsync(organization);
     }
 
     private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
         SecretsManagerSubscriptionUpdate update)
     {
-        await _paymentService.AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
+        await _paymentService.AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase, update.ProrationDate);
 
         // TODO: call ReferenceEventService - see AC-1481
     }
@@ -137,7 +131,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         SecretsManagerSubscriptionUpdate update)
     {
         await _paymentService.AdjustServiceAccountsAsync(organization, plan,
-            update.SmServiceAccountsExcludingBase);
+            update.SmServiceAccountsExcludingBase, update.ProrationDate);
 
         // TODO: call ReferenceEventService - see AC-1481
     }
@@ -170,7 +164,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             _logger.LogError(e, $"Error encountered notifying organization owners of Seats limit reached.");
         }
-
     }
 
     private async Task SendServiceAccountLimitEmailAsync(Organization organization, int MaxAutoscaleValue)
@@ -191,6 +184,42 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     }
 
+    public async Task ValidateUpdate(SecretsManagerSubscriptionUpdate update)
+    {
+        if (_globalSettings.SelfHosted)
+        {
+            var message = update.Autoscaling
+                ? "Cannot autoscale on a self-hosted instance."
+                : "Cannot update subscription on a self-hosted instance.";
+            throw new BadRequestException(message);
+        }
+
+        var organization = update.Organization;
+        ValidateOrganization(organization);
+
+        var plan = GetPlanForOrganization(organization);
+
+        if (update.SmSeatsChanged)
+        {
+            await ValidateSmSeatsUpdateAsync(organization, update, plan);
+        }
+
+        if (update.SmServiceAccountsChanged)
+        {
+            await ValidateSmServiceAccountsUpdateAsync(organization, update, plan);
+        }
+
+        if (update.MaxAutoscaleSmSeatsChanged)
+        {
+            ValidateMaxAutoscaleSmSeatsUpdateAsync(organization, update.MaxAutoscaleSmSeats, plan);
+        }
+
+        if (update.MaxAutoscaleSmServiceAccountsChanged)
+        {
+            ValidateMaxAutoscaleSmServiceAccountUpdate(organization, update.MaxAutoscaleSmServiceAccounts, plan);
+        }
+    }
+
     private async Task ValidateSmSeatsUpdateAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
         if (organization.SmSeats == null)
@@ -198,9 +227,17 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
         }
 
-        if (update.MaxAutoscaleSmSeats.HasValue && update.SmSeats > update.MaxAutoscaleSmSeats.Value)
+        if (update.Autoscaling && update.SmSeats.Value < organization.SmSeats.Value)
         {
-            throw new BadRequestException("Cannot set max seat autoscaling below seat count.");
+            throw new BadRequestException("Cannot use autoscaling to subtract seats.");
+        }
+
+        if (update.MaxAutoscaleSmSeats.HasValue && update.SmSeats.Value > update.MaxAutoscaleSmSeats.Value)
+        {
+            var message = update.Autoscaling
+                ? "Secrets Manager seat limit has been reached."
+                : "Cannot set max seat autoscaling below seat count.";
+            throw new BadRequestException(message);
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -218,12 +255,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Plan does not allow additional Secrets Manager seats.");
         }
 
-        if (plan.BaseSeats > update.SmSeats)
+        if (plan.BaseSeats > update.SmSeats.Value)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} Secrets Manager  seats.");
         }
 
-        if (update.SmSeats <= 0)
+        if (update.SmSeats.Value <= 0)
         {
             throw new BadRequestException("You must have at least 1 Secrets Manager seat.");
         }
@@ -234,10 +271,10 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                                           $"{plan.MaxAdditionalSeats.Value} additional Secrets Manager seats.");
         }
 
-        if (organization.SmSeats.Value > update.SmSeats)
+        if (organization.SmSeats.Value > update.SmSeats.Value)
         {
             var currentSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
-            if (currentSeats > update.SmSeats)
+            if (currentSeats > update.SmSeats.Value)
             {
                 throw new BadRequestException($"Your organization currently has {currentSeats} Secrets Manager seats. " +
                                               $"Your plan only allows {update.SmSeats} Secrets Manager seats. Remove some Secrets Manager users.");
@@ -252,9 +289,18 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no Service Accounts limit, no need to adjust Service Accounts");
         }
 
-        if (update.MaxAutoscaleSmServiceAccounts.HasValue && update.SmServiceAccounts > update.MaxAutoscaleSmServiceAccounts.Value)
+        if (update.Autoscaling && update.SmServiceAccounts.Value < organization.SmServiceAccounts.Value)
         {
-            throw new BadRequestException("Cannot set max Service Accounts autoscaling below Service Accounts count.");
+            throw new BadRequestException("Cannot use autoscaling to subtract service accounts.");
+        }
+
+        if (update.MaxAutoscaleSmServiceAccounts.HasValue &&
+            update.SmServiceAccounts.Value > update.MaxAutoscaleSmServiceAccounts.Value)
+        {
+            var message = update.Autoscaling
+                ? "Secrets Manager service account limit has been reached."
+                : "Cannot set max service accounts autoscaling below service account amount.";
+            throw new BadRequestException(message);
         }
 
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
@@ -272,12 +318,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Plan does not allow additional Service Accounts.");
         }
 
-        if (plan.BaseServiceAccount > update.SmServiceAccounts)
+        if (plan.BaseServiceAccount.HasValue && plan.BaseServiceAccount.Value > update.SmServiceAccounts.Value)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} Service Accounts.");
         }
 
-        if (update.SmServiceAccounts <= 0)
+        if (update.SmServiceAccounts.Value <= 0)
         {
             throw new BadRequestException("You must have at least 1 Service Account.");
         }
@@ -288,7 +334,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                                           $"{plan.MaxAdditionalServiceAccount.Value} additional Service Accounts.");
         }
 
-        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > update.SmServiceAccounts)
+        if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > update.SmServiceAccounts.Value)
         {
             var currentServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
             if (currentServiceAccounts > update.SmServiceAccounts)
@@ -351,6 +397,19 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 $"Your plan has a Service Accounts limit of {plan.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {maxAutoscaleServiceAccounts}.",
                 "Reduce your max autoscale count."));
+        }
+    }
+
+    // TODO: This is a temporary duplication of OrganizationService.ReplaceAndUpdateCache to avoid a circular dependency.
+    // TODO: This should no longer be necessary when user-related methods are extracted from OrganizationService: see PM-1880
+    private async Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null)
+    {
+        await _organizationRepository.ReplaceAsync(org);
+        await _applicationCacheService.UpsertOrganizationAbilityAsync(org);
+
+        if (orgEvent.HasValue)
+        {
+            await _eventService.LogOrganizationEventAsync(org, orgEvent.Value);
         }
     }
 }
