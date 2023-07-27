@@ -20,6 +20,14 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "EventsProcessor-SelfHost": {
+      "commandName": "Project",
+      "applicationUrl": "http://localhost:54104/",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "developSelfHosted": "true"
+      }
     }
   }
 }

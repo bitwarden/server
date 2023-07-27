@@ -199,6 +199,7 @@ public class Startup
         {
             config.Conventions.Add(new ApiExplorerGroupConvention());
             config.Conventions.Add(new PublicApiControllersModelConvention());
+            config.Filters.Add(new TracingAttribute()); // Add tracing to controller actions and results
         });
 
         services.AddSwagger(globalSettings);
@@ -217,10 +218,14 @@ public class Startup
         IWebHostEnvironment env,
         IHostApplicationLifetime appLifetime,
         GlobalSettings globalSettings,
-        ILogger<Startup> logger)
+        ILogger<Startup> logger,
+        IServiceProvider serviceProvider)
     {
         IdentityModelEventSource.ShowPII = true;
         app.UseSerilog(env, appLifetime, globalSettings);
+
+        // Middleware telemetry
+        DiagnosticsHelpers.AddMiddlewareDiagnostics(serviceProvider);
 
         // Add general security headers
         app.UseMiddleware<SecurityHeadersMiddleware>();
