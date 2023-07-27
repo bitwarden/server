@@ -14,6 +14,8 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -27,6 +29,7 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 using Organization = Bit.Core.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
@@ -584,6 +587,97 @@ public class OrganizationServiceTests
                 Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(v => v.Count() == invites.SelectMany(i => i.invite.Emails).Count()), organization.PlanType == PlanType.Free);
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteUser_WithSecretsManager_Passes(Organization organization,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
+
+        // Set up some invites to grant access to SM
+        invites.First().invite.AccessSecretsManager = true;
+        var invitedSmUsers = invites.First().invite.Emails.Count();
+
+        // Assume we need to add seats for all invited SM users
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, invitedSmUsers).Returns(invitedSmUsers);
+
+        sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites);
+
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
+                update.SmSeats == organization.SmSeats + invitedSmUsers &&
+                !update.SmServiceAccountsChanged &&
+                !update.MaxAutoscaleSmSeatsChanged &&
+                !update.MaxAutoscaleSmSeatsChanged));
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteUser_WithSecretsManager_WhenErrorIsThrown_RevertsAutoscaling(Organization organization,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var initialSmSeats = organization.SmSeats;
+        InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
+
+        // Set up some invites to grant access to SM
+        invites.First().invite.AccessSecretsManager = true;
+        var invitedSmUsers = invites.First().invite.Emails.Count();
+
+        // Assume we need to add seats for all invited SM users
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, invitedSmUsers).Returns(invitedSmUsers);
+
+        // Mock SecretsManagerSubscriptionUpdateCommand to actually change the organization's subscription in memory
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
+            .ReturnsForAnyArgs(Task.FromResult(0)).AndDoes(x => organization.SmSeats += invitedSmUsers);
+
+        // Throw error at the end of the try block
+        sutProvider.GetDependency<IReferenceEventService>().RaiseEventAsync(default).ThrowsForAnyArgs<BadRequestException>();
+
+        sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites);
+
+        // OrgUser is reverted
+        // Note: we don't know what their guids are so comparing length is the best we can do
+        var invitedEmails = invites.SelectMany(i => i.invite.Emails);
+        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == invitedEmails.Count()));
+
+        Received.InOrder(() =>
+        {
+            // Initial autoscaling
+            sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+                .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
+                    update.SmSeats == initialSmSeats + invitedSmUsers &&
+                    !update.SmServiceAccountsChanged &&
+                    !update.MaxAutoscaleSmSeatsChanged &&
+                    !update.MaxAutoscaleSmSeatsChanged));
+
+            // Revert autoscaling
+            sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+                .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
+                    update.SmSeats == initialSmSeats &&
+                    !update.SmServiceAccountsChanged &&
+                    !update.MaxAutoscaleSmSeatsChanged &&
+                    !update.MaxAutoscaleSmSeatsChanged));
+        });
+    }
+
+    private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
+    SutProvider<OrganizationService> sutProvider)
+    {
+        savingUser.OrganizationId = organization.Id;
+        organization.UseCustomPermissions = true;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { savingUser });
     }
 
     [Theory, BitAutoData]
