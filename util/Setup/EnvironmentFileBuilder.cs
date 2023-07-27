@@ -84,6 +84,7 @@ public class EnvironmentFileBuilder
                 Helpers.SecureRandomString(64, alpha: true, numeric: true),
             ["globalSettings__installation__id"] = _context.Install?.InstallationId.ToString(),
             ["globalSettings__installation__key"] = _context.Install?.InstallationKey,
+            ["globalSettings__baseServiceUri__cloudRegion"] = _context.Install?.CloudRegion.ToString(),
             ["globalSettings__yubico__clientId"] = "REPLACE",
             ["globalSettings__yubico__key"] = "REPLACE",
             ["globalSettings__mail__replyToEmail"] = $"no-reply@{_context.Config.Domain}",
