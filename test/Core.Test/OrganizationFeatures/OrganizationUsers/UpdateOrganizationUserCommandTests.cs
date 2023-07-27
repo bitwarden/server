@@ -219,6 +219,8 @@ public class UpdateOrganizationUserCommandTests
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { organizationOwner });
         currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
         currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
         currentContext.AccessReports(savingUser.OrganizationId).Returns(true);
@@ -282,9 +284,14 @@ public class UpdateOrganizationUserCommandTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = oldUserData.OrganizationId = organization.Id;
-        newUserData.Permissions = null;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        currentContext.OrganizationCustom(oldUserData.OrganizationId).Returns(true);
         currentContext.ManageUsers(oldUserData.OrganizationId).Returns(true);
+        currentContext.AccessReports(oldUserData.OrganizationId).Returns(false);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateUserAsync(newUserData, oldUserData.UserId, collections, groups));

@@ -2,7 +2,9 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -14,18 +16,24 @@ public class UpdateOrganizationUserCommand : OrganizationUserCommand, IUpdateOrg
     private readonly IEventService _eventService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
+    private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
     public UpdateOrganizationUserCommand(
         ICurrentContext currentContext,
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService,
+        ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
         : base(currentContext, organizationRepository)
     {
         _eventService = eventService;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
+        _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
 
     public async Task UpdateUserAsync(OrganizationUser user, Guid? savingUserId,
@@ -54,6 +62,20 @@ public class UpdateOrganizationUserCommand : OrganizationUserCommand, IUpdateOrg
             !await _organizationService.HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
+        }
+
+        // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
+        // updating Stripe
+        if (!originalUser.AccessSecretsManager && user.AccessSecretsManager)
+        {
+            var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
+            if (additionalSmSeatsRequired > 0)
+            {
+                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
+                var update = new SecretsManagerSubscriptionUpdate(organization, true);
+                update.AdjustSeats(additionalSmSeatsRequired);
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+            }
         }
 
         if (user.AccessAll)
