@@ -145,6 +145,58 @@ public class OrganizationServiceTests
             referenceEvent.Users == expectedNewUsersCount));
     }
 
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUp_PM_Family_Passes(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.Plan = planType;
+
+        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(signup.Plan);
+
+        signup.AdditionalSeats = 0;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+
+        var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan).ToList();
+
+        var result = await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o =>
+                o.Seats == passwordManagerPlan.BaseSeats + signup.AdditionalSeats
+                && o.SmSeats == null
+                && o.SmServiceAccounts == null));
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
+            Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
+
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
+                referenceEvent.Type == ReferenceEventType.Signup &&
+                referenceEvent.PlanName == purchaseOrganizationPlan[0].Name &&
+                referenceEvent.PlanType == purchaseOrganizationPlan[0].Type &&
+                referenceEvent.Seats == result.Item1.Seats &&
+                referenceEvent.Storage == result.Item1.MaxStorageGb));
+        // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Item1);
+        Assert.NotNull(result.Item2);
+        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
+
+        await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
+            Arg.Any<Organization>(),
+            signup.PaymentMethodType.Value,
+            signup.PaymentToken,
+            Arg.Is<List<Plan>>(plan => plan.All(p => purchaseOrganizationPlan.Contains(p))),
+            signup.AdditionalStorageGb,
+            signup.AdditionalSeats,
+            signup.PremiumAccessAddon,
+            signup.TaxInfo,
+            false,
+            signup.AdditionalSmSeats.GetValueOrDefault(),
+            signup.AdditionalServiceAccounts.GetValueOrDefault()
+        );
+    }
 
     [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
