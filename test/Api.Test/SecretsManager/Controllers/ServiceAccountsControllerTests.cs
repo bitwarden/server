@@ -19,7 +19,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
-using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Api.Test.SecretsManager.Controllers;
@@ -94,59 +93,38 @@ public class ServiceAccountsControllerTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async void CreateServiceAccount_OrgDoesntExist_Throws(SutProvider<ServiceAccountsController> sutProvider,
-        ServiceAccountCreateRequestModel data, Guid organizationId)
+    [BitAutoData(0)]
+    public async void CreateServiceAccount_WhenAutoscalingNotRequired_DoesNotCallUpdateSubscription(
+        int newSlotsRequired, SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccountCreateRequestModel data, Organization organization)
     {
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organizationId),
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        ArrangeCreateServiceAccountAutoScalingTest(newSlotsRequired, sutProvider, data, organization);
 
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Is(organizationId)).ReturnsNull();
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        var resultServiceAccount = data.ToServiceAccount(organizationId);
-        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
-            .ReturnsForAnyArgs(resultServiceAccount);
+        await sutProvider.Sut.CreateAsync(organization.Id, data);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAsync(organizationId, data));
-        await sutProvider.GetDependency<ICreateServiceAccountCommand>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
+            .CreateAsync(Arg.Is<ServiceAccount>(sa => sa.Name == data.Name), Arg.Any<Guid>());
+
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<int>());
     }
 
     [Theory]
-    [BitAutoData(0)]
     [BitAutoData(1)]
     [BitAutoData(2)]
-    public async void CreateServiceAccount_NewServiceAccountSlotsRequired_CheckCallsUpdate(int newSlotsRequired, SutProvider<ServiceAccountsController> sutProvider,
-        ServiceAccountCreateRequestModel data, Guid organizationId, Organization mockOrg)
+    public async void CreateServiceAccount_WhenAutoscalingRequired_CallsUpdateSubscription(int newSlotsRequired,
+        SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccountCreateRequestModel data, Organization organization)
     {
-        mockOrg.Id = organizationId;
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organizationId),
-                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Is(organizationId)).Returns(mockOrg);
-        sutProvider.GetDependency<ICountNewServiceAccountSlotsRequiredQuery>()
-            .CountNewServiceAccountSlotsRequiredAsync(Arg.Is(organizationId), Arg.Is(1))
-            .ReturnsForAnyArgs(newSlotsRequired);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        var resultServiceAccount = data.ToServiceAccount(organizationId);
-        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
-            .ReturnsForAnyArgs(resultServiceAccount);
+        ArrangeCreateServiceAccountAutoScalingTest(newSlotsRequired, sutProvider, data, organization);
 
-        await sutProvider.Sut.CreateAsync(organizationId, data);
+        await sutProvider.Sut.CreateAsync(organization.Id, data);
+
         await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
-            .CreateAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid>());
+            .CreateAsync(Arg.Is<ServiceAccount>(sa => sa.Name == data.Name), Arg.Any<Guid>());
 
-        if (newSlotsRequired > 0)
-        {
-            await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
-                .AdjustServiceAccountsAsync(Arg.Is(mockOrg), Arg.Is(newSlotsRequired));
-        }
-        else
-        {
-            await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
-                .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<int>());
-        }
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+            .AdjustServiceAccountsAsync(Arg.Is(organization), Arg.Is(newSlotsRequired));
     }
 
     [Theory]
@@ -426,5 +404,21 @@ public class ServiceAccountsControllerTests
         {
             Assert.Null(result.Error);
         }
+    }
+
+    private static void ArrangeCreateServiceAccountAutoScalingTest(int newSlotsRequired, SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccountCreateRequestModel data, Organization organization)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organization.Id),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Is(organization.Id)).Returns(organization);
+        sutProvider.GetDependency<ICountNewServiceAccountSlotsRequiredQuery>()
+            .CountNewServiceAccountSlotsRequiredAsync(organization.Id, 1)
+            .ReturnsForAnyArgs(newSlotsRequired);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var resultServiceAccount = data.ToServiceAccount(organization.Id);
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
+            .ReturnsForAnyArgs(resultServiceAccount);
     }
 }

@@ -117,16 +117,11 @@ public class ServiceAccountsController : Controller
             throw new NotFoundException();
         }
 
-        var org = await _organizationRepository.GetByIdAsync(organizationId);
-        if (org == null)
-        {
-            throw new NotFoundException();
-        }
-
         var newServiceAccountSlotsRequired = await _countNewServiceAccountSlotsRequiredQuery
             .CountNewServiceAccountSlotsRequiredAsync(organizationId, 1);
         if (newServiceAccountSlotsRequired > 0)
         {
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
             await _updateSecretsManagerSubscriptionCommand.AdjustServiceAccountsAsync(org,
                 newServiceAccountSlotsRequired);
         }
