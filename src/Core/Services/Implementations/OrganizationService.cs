@@ -11,6 +11,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
@@ -50,6 +52,8 @@ public class OrganizationService : IOrganizationService
     private readonly ILogger<OrganizationService> _logger;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
     private readonly IProviderUserRepository _providerUserRepository;
+    private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -76,7 +80,9 @@ public class OrganizationService : IOrganizationService
         ICurrentContext currentContext,
         ILogger<OrganizationService> logger,
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
+        IProviderUserRepository providerUserRepository,
+        ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -103,6 +109,8 @@ public class OrganizationService : IOrganizationService
         _logger = logger;
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
+        _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -816,9 +824,12 @@ public class OrganizationService : IOrganizationService
             throw new NotFoundException();
         }
 
-        var newSeatsRequired = 0;
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
+
+        // Seat autoscaling
+        var initialSmSeatCount = organization.SmSeats;
+        var newSeatsRequired = 0;
         if (organization.Seats.HasValue)
         {
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
@@ -833,6 +844,21 @@ public class OrganizationService : IOrganizationService
             {
                 throw new BadRequestException(failureReason);
             }
+        }
+
+        // Secrets Manager seat autoscaling
+        SecretsManagerSubscriptionUpdate smSubscriptionUpdate = null;
+        var inviteWithSmAccessCount = invites
+            .Where(i => i.invite.AccessSecretsManager)
+            .SelectMany(i => i.invite.Emails)
+            .Count(email => !existingEmails.Contains(email));
+
+        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
+        if (additionalSmSeatsRequired > 0)
+        {
+            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true);
+            smSubscriptionUpdate.AdjustSeats(additionalSmSeatsRequired);
+            await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
         }
 
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
@@ -928,6 +954,11 @@ public class OrganizationService : IOrganizationService
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
 
+            if (additionalSmSeatsRequired > 0)
+            {
+                smSubscriptionUpdate.ProrationDate = prorationDate;
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
+            }
             await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
@@ -942,11 +973,24 @@ public class OrganizationService : IOrganizationService
             // Revert any added users.
             var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
-            var currentSeatCount = (await _organizationRepository.GetByIdAsync(organization.Id)).Seats;
+            var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
-            if (initialSeatCount.HasValue && currentSeatCount.HasValue && currentSeatCount.Value != initialSeatCount.Value)
+            // Revert autoscaling
+            if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
             {
-                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentSeatCount.Value, prorationDate);
+                await AdjustSeatsAsync(organization, initialSeatCount.Value - currentOrganization.Seats.Value, prorationDate);
+            }
+
+            // Revert SmSeat autoscaling
+            if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
+                currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
+            {
+                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
+                {
+                    SmSeats = initialSmSeatCount.Value,
+                    ProrationDate = prorationDate
+                };
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
             }
 
             exceptions.Add(e);
@@ -1778,7 +1822,6 @@ public class OrganizationService : IOrganizationService
             organizationId.ToString());
         await _pushNotificationService.PushSyncOrgKeysAsync(userId);
     }
-
 
     private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
     {
