@@ -205,7 +205,13 @@ public class Program
         }
         else
         {
-            installationId = Helpers.ReadInput("Enter your installation id (get at https://bitwarden.com/host)");
+            var prompt = "Enter your installation id (get at https://bitwarden.com/host)";
+            installationId = Helpers.ReadInput(prompt);
+            while (installationId == string.Empty)
+            {
+                Helpers.WriteError("Invalid input for installation id. Please try again.");
+                installationId = Helpers.ReadInput(prompt);
+            }
         }
 
         if (!Guid.TryParse(installationId.Trim(), out var installationidGuid))
@@ -220,7 +226,13 @@ public class Program
         }
         else
         {
-            installationKey = Helpers.ReadInput("Enter your installation key");
+            var prompt = "Enter your installation key";
+            installationKey = Helpers.ReadInput(prompt);
+            while (installationKey == string.Empty)
+            {
+                Helpers.WriteError("Invalid input for installation key. Please try again.");
+                installationKey = Helpers.ReadInput(prompt);
+            }
         }
 
         if (_context.Parameters.ContainsKey("cloud-region"))
@@ -229,8 +241,16 @@ public class Program
         }
         else
         {
-            var region = Helpers.ReadInput("Enter your region [US/EU] (US)");
-            Enum.TryParse(region, out cloudRegion);
+            var prompt = "Enter your region (US/EU) [US]";
+            var region = Helpers.ReadInput(prompt);
+            if (region == string.Empty) region = "US";
+
+            while (!Enum.TryParse(region, out cloudRegion))
+            {
+                Helpers.WriteError("Invalid input for region. Please try again.");
+                region = Helpers.ReadInput(prompt);
+                if (region == string.Empty) region = "US";
+            }
         }
 
         _context.Install.InstallationId = installationidGuid;
