@@ -2,6 +2,30 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "buildCore",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Core/Core.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "buildSharedWeb",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/SharedWeb/SharedWeb.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
             "label": "buildIcons",
             "command": "dotnet",
             "type": "process",
@@ -11,7 +35,11 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "dependsOn": [
+                "buildCore",
+                "buildSharedWeb"
+            ]
         },
         {
             "label": "buildPortal",
@@ -23,7 +51,10 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "dependsOn": [
+                "buildCore"
+            ]
         },
         {
             "label": "buildSso",
@@ -35,7 +66,10 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "dependsOn": [
+                "buildCore"
+            ]
         },
         {
             "label": "buildEventsProcessor",
@@ -47,7 +81,11 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "dependsOn": [
+                "buildCore",
+                "buildSharedWeb"
+            ]
         },
         {
             "label": "buildAdmin",
@@ -59,7 +97,11 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "dependsOn": [
+                "buildCore",
+                "buildSharedWeb"
+            ]
         },
         {
             "label": "buildIdentity",
@@ -71,7 +113,11 @@
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "dependsOn": [
+                "buildCore",
+                "buildSharedWeb"
+            ]
         },
         {
             "label": "buildAPI",
@@ -87,7 +133,11 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "dependsOn": [
+                "buildCore",
+                "buildSharedWeb"
+            ]
         },
         {
             "label": "buildNotifications",
@@ -103,7 +153,11 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "dependsOn": [
+                "buildCore",
+                "buildSharedWeb"
+            ]
         },
         {
             "label": "buildBilling",
@@ -119,7 +173,11 @@
             "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "dependsOn": [
+                "buildCore",
+                "buildSharedWeb"
+            ]
         },
         {
             "label": "clean",
@@ -133,7 +191,10 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "dependsOn": [
+                "buildCore"
+            ]
         },
         {
             "label": "test",
@@ -151,7 +212,10 @@
                 "showReuseMessage": true,
                 "clear": false
             },
-            "problemMatcher": "$msCompile"
+            "problemMatcher": "$msCompile",
+            "dependsOn": [
+                "buildCore"
+            ]
         }
     ]
 }
