@@ -1,4 +1,5 @@
-﻿using YamlDotNet.Serialization;
+﻿using Bit.Core.Enums;
+using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace Bit.Setup;
@@ -183,6 +184,7 @@ public class Context
     {
         public Guid InstallationId { get; set; }
         public string InstallationKey { get; set; }
+        public CloudRegion CloudRegion { get; set; }
         public bool DiffieHellman { get; set; }
         public bool Trusted { get; set; }
         public bool SelfSignedCert { get; set; }

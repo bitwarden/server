@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Net.Http.Json;
 using Bit.Migrator;
+using Bit.Core.Enums;
 
 namespace Bit.Setup;
 
@@ -196,6 +197,7 @@ public class Program
     {
         var installationId = string.Empty;
         var installationKey = string.Empty;
+        CloudRegion cloudRegion;
 
         if (_context.Parameters.ContainsKey("install-id"))
         {
@@ -221,13 +223,34 @@ public class Program
             installationKey = Helpers.ReadInput("Enter your installation key");
         }
 
+        if (_context.Parameters.ContainsKey("cloud-region"))
+        {
+            Enum.TryParse(_context.Parameters["cloud-region"], out cloudRegion);
+        }
+        else
+        {
+            var region = Helpers.ReadInput("Enter your region [US/EU] (US)");
+            Enum.TryParse(region, out cloudRegion);
+        }
+
         _context.Install.InstallationId = installationidGuid;
         _context.Install.InstallationKey = installationKey;
+        _context.Install.CloudRegion = cloudRegion;
 
         try
         {
-            var response = new HttpClient().GetAsync("https://api.bitwarden.com/installations/" +
-                _context.Install.InstallationId).GetAwaiter().GetResult();
+            string url;
+            switch (cloudRegion)
+            {
+                case CloudRegion.EU:
+                    url = "https://api.bitwarden.eu/installations/";
+                    break;
+                case CloudRegion.US:
+                default:
+                    url = "https://api.bitwarden.com/installations/";
+                    break;
+            }
+            var response = new HttpClient().GetAsync(url + _context.Install.InstallationId).GetAwaiter().GetResult();
 
             if (!response.IsSuccessStatusCode)
             {
