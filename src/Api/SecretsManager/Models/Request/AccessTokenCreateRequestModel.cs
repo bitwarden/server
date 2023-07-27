@@ -37,7 +37,7 @@ public class AccessTokenCreateRequestModel : IValidatableObject
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        if (ExpireAt <= DateTime.Now)
+        if (ExpireAt <= DateTime.UtcNow)
         {
             yield return new ValidationResult(
                $"Please select an expiration date that is in the future.");
