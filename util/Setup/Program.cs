@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
 using System.Net.Http.Json;
 using Bit.Migrator;
-using Bit.Core.Enums;
+using Bit.Setup.Enums;
 
 namespace Bit.Setup;
 
@@ -256,11 +256,11 @@ public class Program
             {
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    Console.WriteLine("Invalid installation id.");
+                    Console.WriteLine($"Invalid installation id for {cloudRegion.ToString()} region.");
                 }
                 else
                 {
-                    Console.WriteLine("Unable to validate installation id.");
+                    Console.WriteLine($"Unable to validate installation id for {cloudRegion.ToString()} region.");
                 }
 
                 return false;
@@ -269,7 +269,7 @@ public class Program
             var result = response.Content.ReadFromJsonAsync<InstallationValidationResponseModel>().GetAwaiter().GetResult();
             if (!result.Enabled)
             {
-                Console.WriteLine("Installation id has been disabled.");
+                Console.WriteLine($"Installation id has been disabled in the {cloudRegion.ToString()} region.");
                 return false;
             }
 
@@ -277,7 +277,7 @@ public class Program
         }
         catch
         {
-            Console.WriteLine("Unable to validate installation id. Problem contacting Bitwarden server.");
+            Console.WriteLine($"Unable to validate installation id. Problem contacting Bitwarden {cloudRegion.ToString()} server.");
             return false;
         }
     }
