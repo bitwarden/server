@@ -18,8 +18,8 @@ public class OrganizationUserResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(organizationUser));
         }
 
-        Id = organizationUser.Id.ToString();
-        UserId = organizationUser.UserId?.ToString();
+        Id = organizationUser.Id;
+        UserId = organizationUser.UserId;
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
@@ -37,8 +37,8 @@ public class OrganizationUserResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(organizationUser));
         }
 
-        Id = organizationUser.Id.ToString();
-        UserId = organizationUser.UserId?.ToString();
+        Id = organizationUser.Id;
+        UserId = organizationUser.UserId;
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
@@ -50,8 +50,8 @@ public class OrganizationUserResponseModel : ResponseModel
         HasMasterPassword = organizationUser.HasMasterPassword;
     }
 
-    public string Id { get; set; }
-    public string UserId { get; set; }
+    public Guid Id { get; set; }
+    public Guid? UserId { get; set; }
     public OrganizationUserType Type { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public bool AccessAll { get; set; }
