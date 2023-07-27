@@ -11,14 +11,15 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.MySqlMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20230710114621_SecretsManagerBetaColumn")]
+    [Migration("20230726191551_SecretsManagerBetaColumn")]
     partial class SecretsManagerBetaColumn
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.12")
+                .HasAnnotation("ProductVersion", "7.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
@@ -1333,6 +1334,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>

@@ -11,13 +11,14 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Bit.SqliteMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20230710114629_SecretsManagerBetaColumn")]
+    [Migration("20230726191546_SecretsManagerBetaColumn")]
     partial class SecretsManagerBetaColumn
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "6.0.12");
+            modelBuilder.HasAnnotation("ProductVersion", "7.0.5");
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
@@ -1331,6 +1332,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>

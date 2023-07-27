@@ -12,15 +12,16 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20230710114625_SecretsManagerBetaColumn")]
+    [Migration("20230726191555_SecretsManagerBetaColumn")]
     partial class SecretsManagerBetaColumn
     {
+        /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
-                .HasAnnotation("ProductVersion", "6.0.12")
+                .HasAnnotation("ProductVersion", "7.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -1344,6 +1345,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>
