@@ -1,6 +1,6 @@
-﻿using YamlDotNet.Serialization;
+﻿using Bit.Setup.Enums;
+using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Bit.Setup.Enums;
 
 namespace Bit.Setup;
 
