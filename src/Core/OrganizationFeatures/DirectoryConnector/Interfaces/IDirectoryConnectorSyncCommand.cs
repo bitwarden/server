@@ -1,4 +1,4 @@
-using Bit.Core.Models.Business;
+﻿using Bit.Core.Models.Business;
 
 namespace Bit.Core.OrganizationFeatures.DirectoryConnector.Interfaces;
 

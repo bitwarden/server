@@ -3,7 +3,7 @@ using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
+using Bit.Core.OrganizationFeatures.DirectoryConnector.Interfaces;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,16 +14,16 @@ namespace Bit.Api.Public.Controllers;
 [Authorize("Organization")]
 public class OrganizationController : Controller
 {
-    private readonly IOrganizationService _organizationService;
+    private readonly IDirectoryConnectorSyncCommand _directoryConnectorSyncCommand;
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationController(
-        IOrganizationService organizationService,
+        IDirectoryConnectorSyncCommand directoryConnectorSyncCommand,
         ICurrentContext currentContext,
         GlobalSettings globalSettings)
     {
-        _organizationService = organizationService;
+        _directoryConnectorSyncCommand = directoryConnectorSyncCommand;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
     }
@@ -46,7 +46,7 @@ public class OrganizationController : Controller
             throw new BadRequestException("You cannot import this much data at once.");
         }
 
-        await _organizationService.ImportAsync(
+        await _directoryConnectorSyncCommand.SyncOrganizationAsync(
             _currentContext.OrganizationId.Value,
             null,
             model.Groups.Select(g => g.ToImportedGroup(_currentContext.OrganizationId.Value)),

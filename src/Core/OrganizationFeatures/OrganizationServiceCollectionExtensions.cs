@@ -1,6 +1,8 @@
 ﻿using Bit.Core.AdminConsole.OrganizationAuth;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
 using Bit.Core.Models.Business.Tokenables;
+using Bit.Core.OrganizationFeatures.DirectoryConnector;
+using Bit.Core.OrganizationFeatures.DirectoryConnector.Interfaces;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
@@ -43,6 +45,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationCollectionCommands();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
+        services.AddOrganizationImportCommands();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationAuthCommands();
         services.AddOrganizationUserCommands();
@@ -107,6 +110,11 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<ICreateGroupCommand, CreateGroupCommand>();
         services.AddScoped<IDeleteGroupCommand, DeleteGroupCommand>();
         services.AddScoped<IUpdateGroupCommand, UpdateGroupCommand>();
+    }
+
+    private static void AddOrganizationImportCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IDirectoryConnectorSyncCommand, DirectoryConnectorSyncCommand>();
     }
 
     private static void AddOrganizationLicenseCommandsQueries(this IServiceCollection services)
