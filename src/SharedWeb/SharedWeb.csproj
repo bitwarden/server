@@ -10,4 +10,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerGen" Version="6.5.0" />
   </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.5.1" />
+      <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.5.1" />
+      <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.5.1-beta.1" />
+    </ItemGroup>
+
 </Project>
