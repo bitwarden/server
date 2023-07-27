@@ -17,7 +17,7 @@ public abstract class OrganizationUserCommand
         _organizationRepository = organizationRepository;
     }
 
-    protected async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
+    protected async Task ValidateOrganizationUserUpdatePermissionsAsync(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
     {
         if (await _currentContext.OrganizationOwner(organizationId))
         {
@@ -44,7 +44,7 @@ public abstract class OrganizationUserCommand
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
         }
 
-        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organizationId, permissions))
+        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrantAsync(organizationId, permissions))
         {
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
@@ -69,7 +69,7 @@ public abstract class OrganizationUserCommand
         }
     }
 
-    private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
+    private async Task<bool> ValidateCustomPermissionsGrantAsync(Guid organizationId, Permissions permissions)
     {
         if (permissions == null || await _currentContext.OrganizationOwner(organizationId) || await _currentContext.OrganizationAdmin(organizationId))
         {

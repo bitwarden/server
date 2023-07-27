@@ -3,8 +3,8 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Scim.Context;
 using Bit.Scim.Models;
@@ -15,16 +15,16 @@ namespace Bit.Scim.Users;
 public class PostUserCommand : IPostUserCommand
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IOrganizationService _organizationService;
+    private readonly IInviteOrganizationUserCommand _inviteOrganizationUserCommand;
     private readonly IScimContext _scimContext;
 
     public PostUserCommand(
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationService organizationService,
+        IInviteOrganizationUserCommand inviteOrganizationUserCommand,
         IScimContext scimContext)
     {
         _organizationUserRepository = organizationUserRepository;
-        _organizationService = organizationService;
+        _inviteOrganizationUserCommand = inviteOrganizationUserCommand;
         _scimContext = scimContext;
     }
 
@@ -80,7 +80,7 @@ public class PostUserCommand : IPostUserCommand
             throw new ConflictException();
         }
 
-        var invitedOrgUser = await _organizationService.InviteUserAsync(organizationId, EventSystemUser.SCIM, email,
+        var invitedOrgUser = await _inviteOrganizationUserCommand.InviteUserAsync(organizationId, EventSystemUser.SCIM, email,
             OrganizationUserType.User, false, externalId, new List<CollectionAccessSelection>(), new List<Guid>());
         var orgUser = await _organizationUserRepository.GetDetailsByIdAsync(invitedOrgUser.Id);
 

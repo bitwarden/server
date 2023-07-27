@@ -6,6 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -27,6 +28,8 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
     private readonly IOrganizationService _organizationService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IGlobalSettings _globalSettings;
+    private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
     public InviteOrganizationUserCommand(
         ICurrentContext currentContext,
@@ -37,7 +40,9 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
         IReferenceEventService referenceEventService,
-        IGlobalSettings globalSettings)
+        IGlobalSettings globalSettings,
+        ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
         : base(currentContext, organizationRepository)
     {
         _eventService = eventService;
@@ -47,37 +52,8 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
         _organizationService = organizationService;
         _referenceEventService = referenceEventService;
         _globalSettings = globalSettings;
-    }
-
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
-    {
-        var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
-            .Select(i => i.invite.Type.Value));
-        if (invitingUserId.HasValue && inviteTypes.Count > 0)
-        {
-            foreach (var (invite, _) in invites)
-            {
-                await ValidateOrganizationUserUpdatePermissions(organizationId, invite.Type.Value, null, invite.Permissions);
-                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, invite.Type.Value);
-            }
-        }
-
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
-
-        await _eventService.LogOrganizationUserEventsAsync(events);
-
-        return organizationUsers;
-    }
-
-    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
-        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
-    {
-        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites);
-
-        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser, e.Item3)));
-
-        return organizationUsers;
+        _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
 
     public async Task<OrganizationUser> InviteUserAsync(Guid organizationId, Guid? invitingUserId, string email,
@@ -94,8 +70,61 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
         return await SaveUserSendInviteAsync(organizationId, invitingUserId: null, systemUser, email, type, accessAll, externalId, collections, groups);
     }
 
-    private async Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)> SaveUsersSendInvitesAsync(Guid organizationId,
+    private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
+        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
+    {
+        var invite = new OrganizationUserInvite()
+        {
+            Emails = new List<string> { email },
+            Type = type,
+            AccessAll = accessAll,
+            Collections = collections,
+            Groups = groups
+        };
+        var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
+            new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
+            new (OrganizationUserInvite, string)[] { (invite, externalId) });
+        var result = results.FirstOrDefault();
+        if (result == null)
+        {
+            throw new BadRequestException("This user has already been invited.");
+        }
+        return result;
+    }
+
+    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+    {
+        var inviteTypes = new HashSet<OrganizationUserType>(invites.Where(i => i.invite.Type.HasValue)
+            .Select(i => i.invite.Type.Value));
+        if (invitingUserId.HasValue && inviteTypes.Count > 0)
+        {
+            foreach (var (invite, _) in invites)
+            {
+                await ValidateOrganizationUserUpdatePermissionsAsync(organizationId, invite.Type.Value, null, invite.Permissions);
+                await ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, invite.Type.Value);
+            }
+        }
+
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser: null);
+
+        await _eventService.LogOrganizationUserEventsAsync(events);
+
+        return organizationUsers;
+    }
+
+    public async Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, EventSystemUser systemUser,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites)
+    {
+        var (organizationUsers, events) = await SaveUsersSendInvitesAsync(organizationId, invites, systemUser);
+
+        await _eventService.LogOrganizationUserEventsAsync(events.Select(e => (e.Item1, e.Item2, systemUser, e.Item3)));
+
+        return organizationUsers;
+    }
+
+    private async Task<(List<OrganizationUser> organizationUsers, List<(OrganizationUser, EventType, DateTime?)> events)> SaveUsersSendInvitesAsync(Guid organizationId,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, EventSystemUser? systemUser)
     {
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         var initialSeatCount = organization.Seats;
@@ -104,9 +133,12 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
             throw new NotFoundException();
         }
 
-        var newSeatsRequired = 0;
         var existingEmails = new HashSet<string>(await _organizationUserRepository.SelectKnownEmailsAsync(
             organizationId, invites.SelectMany(i => i.invite.Emails), false), StringComparer.InvariantCultureIgnoreCase);
+
+        // Seat autoscaling
+        var initialSmSeatCount = organization.SmSeats;
+        var newSeatsRequired = 0;
         if (organization.Seats.HasValue)
         {
             var occupiedSeats = await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
@@ -123,8 +155,23 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
             }
         }
 
+        // Secrets Manager seat autoscaling
+        SecretsManagerSubscriptionUpdate smSubscriptionUpdate = null;
+        var inviteWithSmAccessCount = invites
+            .Where(i => i.invite.AccessSecretsManager)
+            .SelectMany(i => i.invite.Emails)
+            .Count(email => !existingEmails.Contains(email));
+
+        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
+        if (additionalSmSeatsRequired > 0)
+        {
+            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true);
+            smSubscriptionUpdate.AdjustSeats(additionalSmSeatsRequired);
+            await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
+        }
+
         var invitedAreAllOwners = invites.All(i => i.invite.Type == OrganizationUserType.Owner);
-        if (!invitedAreAllOwners && !await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }))
+        if (!invitedAreAllOwners && !await _organizationService.HasConfirmedOwnersExceptAsync(organizationId, new Guid[] { }, includeProvider: true))
         {
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
@@ -216,6 +263,11 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
                 throw new BadRequestException("Cannot add seats. Cannot manage organization users.");
             }
 
+            if (additionalSmSeatsRequired > 0)
+            {
+                smSubscriptionUpdate.ProrationDate = prorationDate;
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
+            }
             await _organizationService.AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
             await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
@@ -230,11 +282,24 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
             // Revert any added users.
             var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
-            var currentSeatCount = (await _organizationRepository.GetByIdAsync(organization.Id)).Seats;
+            var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
-            if (initialSeatCount.HasValue && currentSeatCount.HasValue && currentSeatCount.Value != initialSeatCount.Value)
+            // Revert autoscaling
+            if (initialSeatCount.HasValue && currentOrganization.Seats.HasValue && currentOrganization.Seats.Value != initialSeatCount.Value)
             {
-                await _organizationService.AdjustSeatsAsync(organization.Id, initialSeatCount.Value - currentSeatCount.Value, prorationDate);
+                await _organizationService.AdjustSeatsAsync(organization.Id, initialSeatCount.Value - currentOrganization.Seats.Value, prorationDate);
+            }
+
+            // Revert SmSeat autoscaling
+            if (initialSmSeatCount.HasValue && currentOrganization.SmSeats.HasValue &&
+                currentOrganization.SmSeats.Value != initialSmSeatCount.Value)
+            {
+                var smSubscriptionUpdateRevert = new SecretsManagerSubscriptionUpdate(currentOrganization, false)
+                {
+                    SmSeats = initialSmSeatCount.Value,
+                    ProrationDate = prorationDate
+                };
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdateRevert);
             }
 
             exceptions.Add(e);
@@ -248,28 +313,6 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
         return (orgUsers, events);
     }
 
-    private async Task<OrganizationUser> SaveUserSendInviteAsync(Guid organizationId, Guid? invitingUserId, EventSystemUser? systemUser, string email,
-        OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups)
-    {
-        var invite = new OrganizationUserInvite()
-        {
-            Emails = new List<string> { email },
-            Type = type,
-            AccessAll = accessAll,
-            Collections = collections,
-            Groups = groups
-        };
-        var results = systemUser.HasValue ? await InviteUsersAsync(organizationId, systemUser.Value,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) }) : await InviteUsersAsync(organizationId, invitingUserId,
-            new (OrganizationUserInvite, string)[] { (invite, externalId) });
-        var result = results.FirstOrDefault();
-        if (result == null)
-        {
-            throw new BadRequestException("This user has already been invited.");
-        }
-        return result;
-    }
-
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
     {
         string MakeToken(OrganizationUser orgUser) =>
@@ -279,7 +322,7 @@ public class InviteOrganizationUserCommand : OrganizationUserCommand, IInviteOrg
             orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))), organization.PlanType == PlanType.Free);
     }
 
-    private (bool canScale, string failureReason) CanScale(Organization organization,
+    internal (bool canScale, string failureReason) CanScale(Organization organization,
         int seatsToAdd)
     {
         var failureReason = "";
