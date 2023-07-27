@@ -753,6 +753,7 @@ public class OrganizationsController : Controller
         }
 
         organization.UseSecretsManager = model.Enabled;
+        organization.SecretsManagerBeta = model.Enabled;
         await _organizationService.UpdateAsync(organization);
 
         // Turn on Secrets Manager for the user
