@@ -1,4 +1,5 @@
 #!/bin/sh
+export DATABASE_NAME=${DATABASE_NAME:-vault}
 BACKUP_INTERVAL=${BACKUP_INTERVAL:-next day}
 BACKUP_INTERVAL_FORMAT=${BACKUP_INTERVAL_FORMAT:-%Y-%m-%d 00:00:00}
 
@@ -14,7 +15,7 @@ do
   export now=$(date +%Y%m%d_%H%M%S)
 
   # Do a new backup
-  /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD} -i /backup-db.sql
+  /opt/mssql-tools/bin/sqlcmd -S localhost -d ${DATABASE_NAME} -U sa -P ${SA_PASSWORD} -i /backup-db.sql
 
   # Delete backup files older than 30 days
   grep -B1 "BACKUP DATABASE successfully" /var/opt/mssql/log/errorlog | grep -q _$now.BAK &&
