@@ -17,6 +17,10 @@
     <EmbeddedResource Include="licensing.cer" />
     <EmbeddedResource Include="licensing_dev.cer" />
     <EmbeddedResource Include="MailTemplates\Handlebars\**\*.hbs" />
+    <EmbeddedResource Update="Resources\ErrorMessages.en.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>ErrorMessages.en.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
@@ -60,7 +64,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Resources\" />
     <Folder Include="Properties\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Resources\ErrorMessages.en.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>ErrorMessages.en.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
 </Project>
