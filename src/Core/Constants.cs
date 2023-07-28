@@ -46,3 +46,16 @@ public static class FeatureFlagKeys
             .ToList();
     }
 }
+
+public static class ErrorCodes
+{
+    public const string Error = "ERR000";
+    public const string OrganizationNotFound = "ERR001";
+    public const string OrganizationCannotUsePolicies = "ERR002";
+    public const string UserNotFound = "ERR003";
+    public const string ResourceNotFound = "ERR004";
+    public const string InvalidToken = "ERR005";
+    public const string Unauthorized = "ERR006";
+    public const string PolicyRequiredByTrustedDeviceEncryption = "ERR007";
+    public const string UnhandledError = "ERR500";
+}
