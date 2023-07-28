@@ -48,4 +48,5 @@ public class OrganizationUserOrganizationDetails
     public bool UsePasswordManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+    public bool LimitCollectionCdOwnerAdmin { get; set; }
 }

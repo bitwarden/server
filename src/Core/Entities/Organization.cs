@@ -78,7 +78,8 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
     public bool SecretsManagerBeta { get; set; }
-
+    public bool LimitCollectionCdOwnerAdmin { get; set; }
+    
     public void SetNewId()
     {
         if (Id == default(Guid))
