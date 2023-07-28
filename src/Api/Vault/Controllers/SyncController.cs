@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -59,7 +60,7 @@ public class SyncController : Controller
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
         {
-            throw new BadRequestException("User not found.");
+            throw new BadRequestException(ErrorCodes.UserNotFound);
         }
 
         var organizationUserDetails = await _organizationUserRepository.GetManyDetailsByUserAsync(user.Id,
