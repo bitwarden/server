@@ -8,6 +8,11 @@ BEGIN
 END
 GO
 
+
+/**
+  ORGANIZATION STORED PROCEDURES
+ */
+ 
 --Alter `Organization_Create` sproc to include `LimitCollectionCdOwnerAdmin` column and default value
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
@@ -301,7 +306,12 @@ BEGIN
 END
 GO
 
---Add 'LimitCollectionCdOwnerAdmin` to OrganizationUserOrganizationDetailsView--
+
+/**
+  ORGANIZATION VIEWS
+ */
+ 
+--Add 'LimitCollectionCdOwnerAdmin` to OrganizationUserOrganizationDetailsView
 CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
@@ -366,9 +376,27 @@ FROM
     [dbo].[OrganizationSponsorship] OS ON OS.[SponsoringOrganizationUserID] = OU.[Id]
 GO
 
---Manually refresh OrganizationView (will include new column added)
+--Manually refresh OrganizationView
 IF OBJECT_ID('[dbo].[OrganizationView]') IS NOT NULL
     BEGIN
         EXECUTE sp_refreshsqlmodule N'[dbo].[OrganizationView]';
+    END
+GO
+
+/**
+  PROVIDER VIEWS - not directly modified, but access Organization table
+ */
+ 
+--Manually refresh ProviderOrganizationOrganizationDetailsView
+IF OBJECT_ID('[dbo].[ProviderOrganizationOrganizationDetailsView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderOrganizationOrganizationDetailsView]';
+    END
+GO
+
+--Manually refresh ProviderUserProviderOrganizationDetailsView
+IF OBJECT_ID('[dbo].[ProviderUserProviderOrganizationDetailsView]') IS NOT NULL
+    BEGIN
+        EXECUTE sp_refreshsqlmodule N'[dbo].[ProviderUserProviderOrganizationDetailsView]';
     END
 GO
