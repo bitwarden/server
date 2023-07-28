@@ -258,8 +258,8 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
     }
 
-    public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, long requestLength,
-        string attachmentId, Guid organizationId)
+    public async Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key,
+        long requestLength, string attachmentId, Guid organizationId)
     {
         try
         {
@@ -296,8 +296,28 @@ public class CipherService : ICipherService
                 throw new BadRequestException($"Cipher does not own specified attachment");
             }
 
+            var originalAttachmentMetadata = attachments[attachmentId];
+
+            if (originalAttachmentMetadata.TempMetadata != null)
+            {
+                throw new BadRequestException("Another process is trying to migrate this attachment");
+            }
+
+            // Clone metadata to be modified and saved into the TempMetadata,
+            // we cannot change the metadata here directly because if the subsequent endpoint fails
+            // to be called, then the metadata would stay corrupted.
+            var attachmentMetadata = CoreHelpers.CloneObject(originalAttachmentMetadata);
+            attachmentMetadata.AttachmentId = originalAttachmentMetadata.AttachmentId;
+            originalAttachmentMetadata.TempMetadata = attachmentMetadata;
+
+            if (key != null)
+            {
+                attachmentMetadata.Key = key;
+                attachmentMetadata.FileName = fileName;
+            }
+
             await _attachmentStorageService.UploadShareAttachmentAsync(stream, cipher.Id, organizationId,
-                attachments[attachmentId]);
+                attachmentMetadata);
 
             // Previous call may alter metadata
             var updatedAttachment = new CipherAttachment
@@ -306,7 +326,7 @@ public class CipherService : ICipherService
                 UserId = cipher.UserId,
                 OrganizationId = cipher.OrganizationId,
                 AttachmentId = attachmentId,
-                AttachmentData = JsonSerializer.Serialize(attachments[attachmentId])
+                AttachmentData = JsonSerializer.Serialize(originalAttachmentMetadata)
             };
 
             await _cipherRepository.UpdateAttachmentAsync(updatedAttachment);
@@ -489,10 +509,10 @@ public class CipherService : ICipherService
         IEnumerable<Guid> collectionIds, Guid sharingUserId, DateTime? lastKnownRevisionDate)
     {
         var attachments = cipher.GetAttachments();
-        var hasOldAttachments = attachments?.Any(a => a.Key == null) ?? false;
+        var hasOldAttachments = attachments?.Values?.Any(a => a.Key == null) ?? false;
         var updatedCipher = false;
         var migratedAttachments = false;
-        var originalAttachments = CoreHelpers.CloneObject(attachments);
+        var originalAttachments = CoreHelpers.CloneObject(originalCipher.GetAttachments());
 
         try
         {
@@ -502,6 +522,21 @@ public class CipherService : ICipherService
             cipher.UserId = sharingUserId;
             cipher.OrganizationId = organizationId;
             cipher.RevisionDate = DateTime.UtcNow;
+
+            if (hasOldAttachments)
+            {
+                var attachmentsWithUpdatedMetadata = originalCipher.GetAttachments();
+                var attachmentsToUpdateMetadata = CoreHelpers.CloneObject(attachments);
+                foreach (var updatedMetadata in attachmentsWithUpdatedMetadata.Where(a => a.Value?.TempMetadata != null))
+                {
+                    if (attachmentsToUpdateMetadata.ContainsKey(updatedMetadata.Key))
+                    {
+                        attachmentsToUpdateMetadata[updatedMetadata.Key] = updatedMetadata.Value.TempMetadata;
+                    }
+                }
+                cipher.SetAttachments(attachmentsToUpdateMetadata);
+            }
+
             if (!await _cipherRepository.ReplaceAsync(cipher, collectionIds))
             {
                 throw new BadRequestException("Unable to save.");
@@ -513,25 +548,36 @@ public class CipherService : ICipherService
             if (hasOldAttachments)
             {
                 // migrate old attachments
-                foreach (var attachment in attachments.Where(a => a.Key == null))
+                foreach (var attachment in attachments.Values.Where(a => a.TempMetadata != null).Select(a => a.TempMetadata))
                 {
                     await _attachmentStorageService.StartShareAttachmentAsync(cipher.Id, organizationId,
-                        attachment.Value);
+                        attachment);
                     migratedAttachments = true;
                 }
 
                 // commit attachment migration
                 await _attachmentStorageService.CleanupAsync(cipher.Id);
             }
-
-            // push
-            await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
         }
         catch
         {
             // roll everything back
             if (updatedCipher)
             {
+                if (hasOldAttachments)
+                {
+                    foreach (var item in originalAttachments)
+                    {
+                        item.Value.TempMetadata = null;
+                    }
+                    originalCipher.SetAttachments(originalAttachments);
+                }
+
+                var currentCollectionsForCipher = await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(sharingUserId, originalCipher.Id);
+                var currentCollectionIdsForCipher = currentCollectionsForCipher.Select(c => c.CollectionId).ToList();
+                currentCollectionIdsForCipher.RemoveAll(id => collectionIds.Contains(id));
+
+                await _collectionCipherRepository.UpdateCollectionsAsync(originalCipher.Id, sharingUserId, currentCollectionIdsForCipher);
                 await _cipherRepository.ReplaceAsync(originalCipher);
             }
 
@@ -546,7 +592,7 @@ public class CipherService : ICipherService
                 await _organizationRepository.UpdateStorageAsync(organizationId);
             }
 
-            foreach (var attachment in attachments.Where(a => a.Key == null))
+            foreach (var attachment in attachments.Where(a => a.Value.Key == null))
             {
                 await _attachmentStorageService.RollbackShareAttachmentAsync(cipher.Id, organizationId,
                     attachment.Value, originalAttachments[attachment.Key].ContainerName);
@@ -555,6 +601,9 @@ public class CipherService : ICipherService
             await _attachmentStorageService.CleanupAsync(cipher.Id);
             throw;
         }
+
+        // push
+        await _pushService.PushSyncCipherUpdateAsync(cipher, collectionIds);
     }
 
     public async Task ShareManyAsync(IEnumerable<(Cipher cipher, DateTime? lastKnownRevisionDate)> cipherInfos,
