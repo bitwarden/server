@@ -13,6 +13,10 @@ public class SendEntityTypeConfiguration : IEntityTypeConfiguration<Send>
             .ValueGeneratedNever();
 
         builder
+            .HasIndex(s => s.UserId)
+            .IsClustered(false);
+
+        builder
             .HasIndex(s => new { s.UserId, s.OrganizationId })
             .IsClustered(false);
 

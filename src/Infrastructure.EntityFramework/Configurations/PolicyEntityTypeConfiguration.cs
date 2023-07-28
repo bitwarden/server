@@ -13,6 +13,10 @@ public class PolicyEntityTypeConfiguration : IEntityTypeConfiguration<Policy>
             .ValueGeneratedNever();
 
         builder
+            .HasIndex(p => p.OrganizationId)
+            .IsClustered(false);
+
+        builder
             .HasIndex(p => new { p.OrganizationId, p.Type })
             .IsUnique()
             .IsClustered(false);

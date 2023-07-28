@@ -8,6 +8,10 @@ public class SsoUserEntityTypeConfiguration : IEntityTypeConfiguration<SsoUser>
 {
     public void Configure(EntityTypeBuilder<SsoUser> builder)
     {
+        builder
+            .HasIndex(su => su.OrganizationId)
+            .IsClustered(false);
+
         NpgsqlIndexBuilderExtensions.IncludeProperties(
             builder.HasIndex(su => new { su.OrganizationId, su.ExternalId })
                 .IsUnique()

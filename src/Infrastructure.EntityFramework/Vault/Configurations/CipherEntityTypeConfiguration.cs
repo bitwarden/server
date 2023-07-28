@@ -36,6 +36,10 @@ public class CipherEntityTypeConfiguration : IEntityTypeConfiguration<Cipher>
             .HasIndex(c => c.DeletedDate)
             .IsClustered(false);
 
+        builder
+           .HasIndex(c => c.UserId)
+           .IsClustered(false);
+
         builder.ToTable(nameof(Cipher));
     }
 }

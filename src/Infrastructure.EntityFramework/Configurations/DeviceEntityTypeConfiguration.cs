@@ -9,6 +9,10 @@ public class DeviceEntityTypeConfiguration : IEntityTypeConfiguration<Device>
     public void Configure(EntityTypeBuilder<Device> builder)
     {
         builder
+            .HasIndex(d => d.UserId)
+            .IsClustered(false);
+
+        builder
             .HasIndex(d => new { d.UserId, d.Identifier })
             .IsUnique()
             .IsClustered(false);

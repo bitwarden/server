@@ -13,6 +13,10 @@ public class TransactionEntityTypeConfiguration : IEntityTypeConfiguration<Trans
             .ValueGeneratedNever();
 
         builder
+            .HasIndex(t => t.UserId)
+            .IsClustered(false);
+
+        builder
             .HasIndex(t => new { t.UserId, t.OrganizationId, t.CreationDate })
             .IsClustered(false);
 

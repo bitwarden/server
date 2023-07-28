@@ -20,6 +20,10 @@ public class OrganizationUserEntityTypeConfiguration : IEntityTypeConfiguration<
             .HasIndex(ou => ou.OrganizationId)
             .IsClustered(false);
 
+        builder
+            .HasIndex(ou => ou.UserId)
+            .IsClustered(false);
+
         builder.ToTable(nameof(OrganizationUser));
     }
 }
