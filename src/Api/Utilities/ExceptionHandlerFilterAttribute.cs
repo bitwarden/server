@@ -1,7 +1,11 @@
-﻿using Bit.Api.Models.Public.Response;
+﻿using System.Reflection;
+using Bit.Api.Models.Public.Response;
+using Bit.Core;
 using Bit.Core.Exceptions;
+using Bit.Core.Resources;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Localization;
 using Microsoft.IdentityModel.Tokens;
 using Stripe;
 using InternalApi = Bit.Core.Models.Api;
@@ -19,7 +23,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
 
     public override void OnException(ExceptionContext context)
     {
-        var errorMessage = "An error has occurred.";
+        var errorMessage = GetFormattedMessageFromErrorCode(context);
 
         var exception = context.Exception;
         if (exception == null)
@@ -44,10 +48,6 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
                     internalErrorModel = new InternalApi.ErrorResponseModel(badRequestException.ModelState);
                 }
             }
-            else
-            {
-                errorMessage = badRequestException.Message;
-            }
         }
         else if (exception is StripeException stripeException && stripeException?.StripeError?.Type == "card_error")
         {
@@ -65,12 +65,10 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is GatewayException)
         {
-            errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 400;
         }
         else if (exception is NotSupportedException && !string.IsNullOrWhiteSpace(exception.Message))
         {
-            errorMessage = exception.Message;
             context.HttpContext.Response.StatusCode = 400;
         }
         else if (exception is ApplicationException)
@@ -79,17 +77,17 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is NotFoundException)
         {
-            errorMessage = "Resource not found.";
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.ResourceNotFound);
             context.HttpContext.Response.StatusCode = 404;
         }
         else if (exception is SecurityTokenValidationException)
         {
-            errorMessage = "Invalid token.";
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.InvalidToken);
             context.HttpContext.Response.StatusCode = 403;
         }
         else if (exception is UnauthorizedAccessException)
         {
-            errorMessage = "Unauthorized.";
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.Unauthorized);
             context.HttpContext.Response.StatusCode = 401;
         }
         else if (exception is ConflictException)
@@ -114,7 +112,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         {
             var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<ExceptionHandlerFilterAttribute>>();
             logger.LogError(0, exception, exception.Message);
-            errorMessage = "An unhandled server error has occurred.";
+            errorMessage = GetFormattedMessageFromErrorCode(context, ErrorCodes.UnhandledError);
             context.HttpContext.Response.StatusCode = 500;
         }
 
@@ -135,5 +133,24 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             }
             context.Result = new ObjectResult(errorModel);
         }
+    }
+
+    private string GetFormattedMessageFromErrorCode(ExceptionContext context, string alternativeErrorCode = null)
+    {
+        var localizerFactory = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizerFactory>();
+
+        var assemblyName = new AssemblyName(typeof(SharedResources).GetTypeInfo().Assembly.FullName);
+        var localizer = localizerFactory.Create("ErrorMessages", assemblyName.Name);
+
+        var errorCode = alternativeErrorCode ?? context.Exception.Message;
+        var errorMessage = localizer[errorCode];
+
+        // Get localized error message for the exception message
+        if (errorMessage.ResourceNotFound is false)
+        {
+            return $"({errorCode}) {localizer[errorCode]}";
+        }
+
+        return context.Exception.Message;
     }
 }
