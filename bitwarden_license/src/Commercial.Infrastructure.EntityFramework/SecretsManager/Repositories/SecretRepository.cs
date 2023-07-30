@@ -57,16 +57,6 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return await secrets.ToListAsync();
     }
 
-    public async Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId)
-    {
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            return await dbContext.Secret
-                .CountAsync(ou => ou.OrganizationId == organizationId);
-        }
-    }
-
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
