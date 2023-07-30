@@ -145,7 +145,7 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.ServiceAccount.Where(x =>  x.OrganizationId == organizationId);
+            var query = dbContext.ServiceAccount.Where(x => x.OrganizationId == organizationId);
             var serviceAccounts = await query.ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.ServiceAccount>>(serviceAccounts);
         }

@@ -149,13 +149,12 @@ public class OrganizationsController : Controller
         }
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
-        //when secret manager enabled
         var secrets = organization.UseSecretsManager ? await _secretRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<Secret>();
         var projects = organization.UseSecretsManager ? await _projectRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<Project>();
         var serviceAccounts = organization.UseSecretsManager ? await _serviceAccountRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<ServiceAccount>();
 
         return View(new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies,
-            secrets,projects,serviceAccounts));
+            secrets, projects, serviceAccounts));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -183,13 +182,12 @@ public class OrganizationsController : Controller
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(organization);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
-        //when secret manager enabled
         var secrets = organization.UseSecretsManager ? await _secretRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<Secret>();
         var projects = organization.UseSecretsManager ? await _projectRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<Project>();
         var serviceAccounts = organization.UseSecretsManager ? await _serviceAccountRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<ServiceAccount>();
 
         return View(new OrganizationEditModel(organization, provider, users, ciphers, collections, groups, policies,
-            billingInfo, billingSyncConnection, _globalSettings,secrets,projects,serviceAccounts));
+            billingInfo, billingSyncConnection, _globalSettings, secrets, projects, serviceAccounts));
     }
 
     [HttpPost]

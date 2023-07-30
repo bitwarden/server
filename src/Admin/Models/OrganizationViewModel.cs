@@ -14,7 +14,7 @@ public class OrganizationViewModel
 
     public OrganizationViewModel(Organization org, Provider provider, IEnumerable<OrganizationConnection> connections,
         IEnumerable<OrganizationUserUserDetails> orgUsers, IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<Group> groups, IEnumerable<Policy> policies,IEnumerable<Secret> secrets,IEnumerable<Project> projects,
+        IEnumerable<Group> groups, IEnumerable<Policy> policies, IEnumerable<Secret> secrets, IEnumerable<Project> projects,
         IEnumerable<ServiceAccount> serviceAccounts)
     {
         Organization = org;

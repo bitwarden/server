@@ -72,7 +72,7 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.Secret.Where(x =>  x.OrganizationId == organizationId);
+            var query = dbContext.Secret.Where(x => x.OrganizationId == organizationId);
             var secrets = await query.ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Secret>>(secrets);
         }

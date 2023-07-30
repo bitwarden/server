@@ -45,7 +45,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = dbContext.Project.Where(x =>  x.OrganizationId == organizationId);
+            var query = dbContext.Project.Where(x => x.OrganizationId == organizationId);
             var projects = await query.ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
         }
