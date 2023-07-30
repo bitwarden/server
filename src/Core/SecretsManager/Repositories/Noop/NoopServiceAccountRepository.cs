@@ -56,4 +56,9 @@ public class NoopServiceAccountRepository : IServiceAccountRepository
     {
         return Task.FromResult(0);
     }
+
+    public Task<IEnumerable<ServiceAccount>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        return Task.FromResult(null as IEnumerable<ServiceAccount>);
+    }
 }
