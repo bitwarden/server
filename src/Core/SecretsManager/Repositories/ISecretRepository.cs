@@ -21,4 +21,5 @@ public interface ISecretRepository
     Task UpdateRevisionDates(IEnumerable<Guid> ids);
     Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType);
     Task EmptyTrash(DateTime nowTime, uint deleteAfterThisNumberOfDays);
+    Task<IEnumerable<Secret>> GetManyByOrganizationIdAsync(Guid organizationId);
 }

@@ -8,6 +8,8 @@ using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
@@ -17,6 +19,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Secret = Bit.Core.SecretsManager.Entities.Secret;
 
 namespace Bit.Admin.Controllers;
 
@@ -42,6 +45,9 @@ public class OrganizationsController : Controller
     private readonly ILogger<OrganizationsController> _logger;
     private readonly IAccessControlService _accessControlService;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -62,7 +68,10 @@ public class OrganizationsController : Controller
         IProviderRepository providerRepository,
         ILogger<OrganizationsController> logger,
         IAccessControlService accessControlService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISecretRepository secretRepository,
+        IProjectRepository projectRepository,
+        IServiceAccountRepository serviceAccountRepository)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -83,6 +92,9 @@ public class OrganizationsController : Controller
         _logger = logger;
         _accessControlService = accessControlService;
         _currentContext = currentContext;
+        _secretRepository = secretRepository;
+        _projectRepository = projectRepository;
+        _serviceAccountRepository = serviceAccountRepository;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -137,7 +149,13 @@ public class OrganizationsController : Controller
         }
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
-        return View(new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies));
+        //when secret manager enabled
+        var secrets = organization.UseSecretsManager ? await _secretRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<Secret>();
+        var projects = organization.UseSecretsManager ? await _projectRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<Project>();
+        var serviceAccounts = organization.UseSecretsManager ? await _serviceAccountRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<ServiceAccount>();
+
+        return View(new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies,
+            secrets,projects,serviceAccounts));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -165,8 +183,13 @@ public class OrganizationsController : Controller
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(organization);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
+        //when secret manager enabled
+        var secrets = organization.UseSecretsManager ? await _secretRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<Secret>();
+        var projects = organization.UseSecretsManager ? await _projectRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<Project>();
+        var serviceAccounts = organization.UseSecretsManager ? await _serviceAccountRepository.GetManyByOrganizationIdAsync(id) : Enumerable.Empty<ServiceAccount>();
+
         return View(new OrganizationEditModel(organization, provider, users, ciphers, collections, groups, policies,
-            billingInfo, billingSyncConnection, _globalSettings));
+            billingInfo, billingSyncConnection, _globalSettings,secrets,projects,serviceAccounts));
     }
 
     [HttpPost]

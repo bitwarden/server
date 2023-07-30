@@ -5,6 +5,7 @@ using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
@@ -27,8 +28,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
         IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
-        GlobalSettings globalSettings)
-        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies)
+        GlobalSettings globalSettings,IEnumerable<Secret> secrets,IEnumerable<Project> projects, IEnumerable<ServiceAccount> serviceAccounts)
+        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies,secrets,projects,serviceAccounts)
     {
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;

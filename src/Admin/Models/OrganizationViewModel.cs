@@ -2,17 +2,20 @@
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Admin.Models;
 
 public class OrganizationViewModel
 {
+    private const string NotApplicable = "N/A";
     public OrganizationViewModel() { }
 
     public OrganizationViewModel(Organization org, Provider provider, IEnumerable<OrganizationConnection> connections,
         IEnumerable<OrganizationUserUserDetails> orgUsers, IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<Group> groups, IEnumerable<Policy> policies)
+        IEnumerable<Group> groups, IEnumerable<Policy> policies,IEnumerable<Secret> secrets,IEnumerable<Project> projects,
+        IEnumerable<ServiceAccount> serviceAccounts)
     {
         Organization = org;
         Provider = provider;
@@ -37,6 +40,9 @@ public class OrganizationViewModel
             orgUsers
             .Where(u => u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus)
             .Select(u => u.Email));
+        Secrets = org.UseSecretsManager ? secrets.Count().ToString() : NotApplicable;
+        Projects = org.UseSecretsManager ? projects.Count().ToString() : NotApplicable;
+        ServiceAccounts = org.UseSecretsManager ? serviceAccounts.Count().ToString() : NotApplicable;
     }
 
     public Organization Organization { get; set; }
@@ -53,4 +59,7 @@ public class OrganizationViewModel
     public int GroupCount { get; set; }
     public int PolicyCount { get; set; }
     public bool HasPublicPrivateKeys { get; set; }
+    public string Secrets { get; set; }
+    public string Projects { get; set; }
+    public string ServiceAccounts { get; set; }
 }

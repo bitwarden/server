@@ -140,6 +140,17 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         }
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.ServiceAccount>> GetManyByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var query = dbContext.ServiceAccount.Where(x =>  x.OrganizationId == organizationId);
+            var serviceAccounts = await query.ToListAsync();
+            return Mapper.Map<List<Core.SecretsManager.Entities.ServiceAccount>>(serviceAccounts);
+        }
+    }
+
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>
         sa.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
         sa.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read));
