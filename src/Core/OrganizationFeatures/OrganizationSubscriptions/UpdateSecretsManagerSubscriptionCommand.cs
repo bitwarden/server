@@ -197,7 +197,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
     }
 
-    private static void ValidateOrganization(Organization organization)
+    private void ValidateOrganization(Organization organization)
     {
         if (organization == null)
         {
@@ -207,6 +207,23 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (!organization.UseSecretsManager)
         {
             throw new BadRequestException("Organization has no access to Secrets Manager.");
+        }
+
+        var plan = GetPlanForOrganization(organization);
+        if (plan.Product == ProductType.Free)
+        {
+            // No need to check the organization is set up with Stripe
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
+        {
+            throw new BadRequestException("No payment method found.");
+        }
+
+        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
+        {
+            throw new BadRequestException("No subscription found.");
         }
     }
 
@@ -222,6 +239,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private async Task ValidateSmSeatsUpdateAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
+        // Check if the organization has unlimited seats
         if (organization.SmSeats == null)
         {
             throw new BadRequestException("Organization has no Secrets Manager seat limit, no need to adjust seats");
@@ -232,6 +250,15 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Cannot use autoscaling to subtract seats.");
         }
 
+        // Check plan maximum seats
+        if (!plan.HasAdditionalSeatsOption ||
+            (plan.MaxAdditionalSeats.HasValue && update.SmSeatsExcludingBase > plan.MaxAdditionalSeats.Value))
+        {
+            var planMaxSeats = plan.BaseSeats + plan.MaxAdditionalSeats.GetValueOrDefault();
+            throw new BadRequestException($"You have reached the maximum number of Secrets Manager seats ({planMaxSeats}) for this plan.");
+        }
+
+        // Check autoscale maximum seats
         if (update.MaxAutoscaleSmSeats.HasValue && update.SmSeats.Value > update.MaxAutoscaleSmSeats.Value)
         {
             var message = update.Autoscaling
@@ -240,37 +267,19 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException(message);
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
-        {
-            throw new BadRequestException("No payment method found.");
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            throw new BadRequestException("No subscription found.");
-        }
-
-        if (!plan.HasAdditionalSeatsOption)
-        {
-            throw new BadRequestException("Plan does not allow additional Secrets Manager seats.");
-        }
-
+        // Check minimum seats included with plan
         if (plan.BaseSeats > update.SmSeats.Value)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} Secrets Manager  seats.");
         }
 
+        // Check minimum seats required by business logic
         if (update.SmSeats.Value <= 0)
         {
             throw new BadRequestException("You must have at least 1 Secrets Manager seat.");
         }
 
-        if (plan.MaxAdditionalSeats.HasValue && update.SmSeatsExcludingBase > plan.MaxAdditionalSeats.Value)
-        {
-            throw new BadRequestException($"Organization plan allows a maximum of " +
-                                          $"{plan.MaxAdditionalSeats.Value} additional Secrets Manager seats.");
-        }
-
+        // Check minimum seats currently in use by the organization
         if (organization.SmSeats.Value > update.SmSeats.Value)
         {
             var currentSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
@@ -284,6 +293,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private async Task ValidateSmServiceAccountsUpdateAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
     {
+        // Check if the organization has unlimited service accounts
         if (organization.SmServiceAccounts == null)
         {
             throw new BadRequestException("Organization has no Service Accounts limit, no need to adjust Service Accounts");
@@ -294,6 +304,16 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Cannot use autoscaling to subtract service accounts.");
         }
 
+        // Check plan maximum service accounts
+        if (!plan.HasAdditionalServiceAccountOption ||
+            (plan.MaxAdditionalServiceAccount.HasValue && update.SmServiceAccountsExcludingBase > plan.MaxAdditionalServiceAccount.Value))
+        {
+            var planMaxServiceAccounts = plan.BaseServiceAccount.GetValueOrDefault() +
+                                         plan.MaxAdditionalServiceAccount.GetValueOrDefault();
+            throw new BadRequestException($"You have reached the maximum number of service accounts ({planMaxServiceAccounts}) for this plan.");
+        }
+
+        // Check autoscale maximum service accounts
         if (update.MaxAutoscaleSmServiceAccounts.HasValue &&
             update.SmServiceAccounts.Value > update.MaxAutoscaleSmServiceAccounts.Value)
         {
@@ -303,37 +323,19 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException(message);
         }
 
-        if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
-        {
-            throw new BadRequestException("No payment method found.");
-        }
-
-        if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
-        {
-            throw new BadRequestException("No subscription found.");
-        }
-
-        if (!plan.HasAdditionalServiceAccountOption)
-        {
-            throw new BadRequestException("Plan does not allow additional Service Accounts.");
-        }
-
+        // Check minimum service accounts included with plan
         if (plan.BaseServiceAccount.HasValue && plan.BaseServiceAccount.Value > update.SmServiceAccounts.Value)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} Service Accounts.");
         }
 
+        // Check minimum service accounts required by business logic
         if (update.SmServiceAccounts.Value <= 0)
         {
             throw new BadRequestException("You must have at least 1 Service Account.");
         }
 
-        if (plan.MaxAdditionalServiceAccount.HasValue && update.SmServiceAccountsExcludingBase > plan.MaxAdditionalServiceAccount.Value)
-        {
-            throw new BadRequestException($"Organization plan allows a maximum of " +
-                                          $"{plan.MaxAdditionalServiceAccount.Value} additional Service Accounts.");
-        }
-
+        // Check minimum service accounts currently in use by the organization
         if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > update.SmServiceAccounts.Value)
         {
             var currentServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
