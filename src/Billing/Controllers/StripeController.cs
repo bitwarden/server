@@ -501,27 +501,29 @@ public class StripeController : Controller
             case HandledStripeWebhook.SubscriptionUpdated:
                 {
                     var subscription = await GetSubscriptionAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(subscription.Customer.Metadata);
+                    customerRegion = GetCustomerRegionFromMetadata(subscription.Customer?.Metadata);
                     break;
                 }
             case HandledStripeWebhook.ChargeSucceeded:
             case HandledStripeWebhook.ChargeRefunded:
                 {
                     var charge = await GetChargeAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(charge.Customer.Metadata);
+                    customerRegion = GetCustomerRegionFromMetadata(charge.Customer?.Metadata);
                     break;
                 }
             case HandledStripeWebhook.UpcomingInvoice:
-                var eventInvoice = await GetInvoiceAsync(parsedEvent);
-                var customer = await GetCustomerAsync(eventInvoice.CustomerId);
-                customerRegion = GetCustomerRegionFromMetadata(customer.Metadata);
-                break;
+                {
+                    var eventInvoice = await GetInvoiceAsync(parsedEvent);
+                    var customer = await GetCustomerAsync(eventInvoice.CustomerId);
+                    customerRegion = GetCustomerRegionFromMetadata(customer.Metadata);
+                    break;
+                }
             case HandledStripeWebhook.PaymentSucceeded:
             case HandledStripeWebhook.PaymentFailed:
             case HandledStripeWebhook.InvoiceCreated:
                 {
                     var invoice = await GetInvoiceAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(invoice.Customer.Metadata);
+                    customerRegion = GetCustomerRegionFromMetadata(invoice.Customer?.Metadata);
                     break;
                 }
             default:
@@ -541,6 +543,12 @@ public class StripeController : Controller
     /// <returns></returns>
     private static string GetCustomerRegionFromMetadata(Dictionary<string, string> customerMetadata)
     {
+        if (customerMetadata is null)
+        {
+            // If customer is deleted on Stripe's side, just return 200
+            return null;
+        }
+
         return customerMetadata.TryGetValue("region", out var value)
             ? value
             : "US";
