@@ -640,7 +640,7 @@ public class OrganizationServiceTests
         // Throw error at the end of the try block
         sutProvider.GetDependency<IReferenceEventService>().RaiseEventAsync(default).ThrowsForAnyArgs<BadRequestException>();
 
-        sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites);
+        await Assert.ThrowsAsync<AggregateException>(async () => await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites));
 
         // OrgUser is reverted
         // Note: we don't know what their guids are so comparing length is the best we can do
