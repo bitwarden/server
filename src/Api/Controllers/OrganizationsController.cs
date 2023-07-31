@@ -767,4 +767,19 @@ public class OrganizationsController : Controller
             }
         }
     }
+    
+    [HttpPut("{id}/collection-management")]
+    public async Task<OrganizationResponseModel> PutCollectionManagement(string id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
+    {
+        var orgIdGuid = new Guid(id);
+
+        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+        
+        await _organizationService.UpdateAsync(model.ToOrganization(organization));
+        return new OrganizationResponseModel(organization);
+    }
 }

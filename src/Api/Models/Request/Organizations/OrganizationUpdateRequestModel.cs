@@ -18,7 +18,6 @@ public class OrganizationUpdateRequestModel
     public string BillingEmail { get; set; }
     public Permissions Permissions { get; set; }
     public OrganizationKeysRequestModel Keys { get; set; }
-    public bool LimitCollectionCdOwnerAdmin { get; set; }
 
     public virtual Organization ToOrganization(Organization existingOrganization, GlobalSettings globalSettings)
     {
@@ -30,7 +29,6 @@ public class OrganizationUpdateRequestModel
             existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
         }
         Keys?.ToOrganization(existingOrganization);
-        existingOrganization.LimitCollectionCdOwnerAdmin = LimitCollectionCdOwnerAdmin;
         return existingOrganization;
     }
 }
