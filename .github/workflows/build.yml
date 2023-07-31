@@ -427,7 +427,7 @@ jobs:
 
           sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
 
-          Remove extra directories and files
+          # Remove extra directories and files
           rm -rf $STUB_OUTPUT/US/letsencrypt
           rm -rf $STUB_OUTPUT/EU/letsencrypt
           rm $STUB_OUTPUT/US/env/uid.env $STUB_OUTPUT/US/config.yml
