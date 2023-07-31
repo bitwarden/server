@@ -207,7 +207,7 @@ public class Program
         {
             var prompt = "Enter your installation id (get at https://bitwarden.com/host)";
             installationId = Helpers.ReadInput(prompt);
-            while (installationId == string.Empty)
+            while (string.IsNullOrEmpty(installationId))
             {
                 Helpers.WriteError("Invalid input for installation id. Please try again.");
                 installationId = Helpers.ReadInput(prompt);
@@ -228,7 +228,7 @@ public class Program
         {
             var prompt = "Enter your installation key";
             installationKey = Helpers.ReadInput(prompt);
-            while (installationKey == string.Empty)
+            while (string.IsNullOrEmpty(installationKey))
             {
                 Helpers.WriteError("Invalid input for installation key. Please try again.");
                 installationKey = Helpers.ReadInput(prompt);
@@ -243,13 +243,13 @@ public class Program
         {
             var prompt = "Enter your region (US/EU) [US]";
             var region = Helpers.ReadInput(prompt);
-            if (region == string.Empty) region = "US";
+            if (string.IsNullOrEmpty(region)) region = "US";
 
             while (!Enum.TryParse(region, out cloudRegion))
             {
                 Helpers.WriteError("Invalid input for region. Please try again.");
                 region = Helpers.ReadInput(prompt);
-                if (region == string.Empty) region = "US";
+                if (string.IsNullOrEmpty(region)) region = "US";
             }
         }
 
