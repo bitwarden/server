@@ -605,7 +605,7 @@ public class OrganizationServiceTests
         sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
             .CountNewSmSeatsRequiredAsync(organization.Id, invitedSmUsers).Returns(invitedSmUsers);
 
-        sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites);
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites);
 
         sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
             .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
