@@ -446,6 +446,7 @@ public class OrganizationService : IOrganizationService
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
+            UseSecretsManager = signup.UseSecretsManager,
         };
 
         if (signup.UseSecretsManager)
@@ -453,7 +454,6 @@ public class OrganizationService : IOrganizationService
             organization.SmSeats = secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
             organization.SmServiceAccounts = secretsManagerPlan.BaseServiceAccount.GetValueOrDefault() +
                                              signup.AdditionalServiceAccounts.GetValueOrDefault();
-            organization.UseSecretsManager = signup.UseSecretsManager;
         }
 
         if (passwordManagerPlan.Type == PlanType.Free && !provider)
