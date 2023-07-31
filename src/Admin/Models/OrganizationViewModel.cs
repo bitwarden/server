@@ -9,13 +9,13 @@ namespace Bit.Admin.Models;
 
 public class OrganizationViewModel
 {
-    private const string NotApplicable = "N/A";
     public OrganizationViewModel() { }
 
     public OrganizationViewModel(Organization org, Provider provider, IEnumerable<OrganizationConnection> connections,
         IEnumerable<OrganizationUserUserDetails> orgUsers, IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<Group> groups, IEnumerable<Policy> policies, IEnumerable<Secret> secrets, IEnumerable<Project> projects,
-        IEnumerable<ServiceAccount> serviceAccounts)
+        IEnumerable<Group> groups, IEnumerable<Policy> policies, int secretsCount, int projectCount, int serviceAccountsCount,
+        int smSeatsCount)
+
     {
         Organization = org;
         Provider = provider;
@@ -40,9 +40,10 @@ public class OrganizationViewModel
             orgUsers
             .Where(u => u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus)
             .Select(u => u.Email));
-        Secrets = org.UseSecretsManager ? secrets.Count().ToString() : NotApplicable;
-        Projects = org.UseSecretsManager ? projects.Count().ToString() : NotApplicable;
-        ServiceAccounts = org.UseSecretsManager ? serviceAccounts.Count().ToString() : NotApplicable;
+        Secrets = secretsCount;
+        Projects = projectCount;
+        ServiceAccounts = serviceAccountsCount;
+        SmSeats = smSeatsCount;
     }
 
     public Organization Organization { get; set; }
@@ -59,7 +60,8 @@ public class OrganizationViewModel
     public int GroupCount { get; set; }
     public int PolicyCount { get; set; }
     public bool HasPublicPrivateKeys { get; set; }
-    public string Secrets { get; set; }
-    public string Projects { get; set; }
-    public string ServiceAccounts { get; set; }
+    public int Secrets { get; set; }
+    public int Projects { get; set; }
+    public int ServiceAccounts { get; set; }
+    public int SmSeats { get; set; }
 }
