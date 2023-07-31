@@ -767,7 +767,7 @@ public class OrganizationsController : Controller
             }
         }
     }
-    
+
     [HttpPut("{id}/collection-management")]
     public async Task<OrganizationResponseModel> PutCollectionManagement(string id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
@@ -778,7 +778,7 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-        
+
         await _organizationService.UpdateAsync(model.ToOrganization(organization));
         return new OrganizationResponseModel(organization);
     }
