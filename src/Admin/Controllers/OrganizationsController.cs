@@ -8,7 +8,6 @@ using Bit.Core.Enums;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,7 +18,6 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Secret = Bit.Core.SecretsManager.Entities.Secret;
 
 namespace Bit.Admin.Controllers;
 
@@ -156,7 +154,7 @@ public class OrganizationsController : Controller
             ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
             : -1;
         return View(new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies,
-            secrets, projects, serviceAccounts,smSeats));
+            secrets, projects, serviceAccounts, smSeats));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -191,7 +189,7 @@ public class OrganizationsController : Controller
             ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
             : -1;
         return View(new OrganizationEditModel(organization, provider, users, ciphers, collections, groups, policies,
-            billingInfo, billingSyncConnection, _globalSettings, secrets, projects, serviceAccounts,smSeats));
+            billingInfo, billingSyncConnection, _globalSettings, secrets, projects, serviceAccounts, smSeats));
     }
 
     [HttpPost]
