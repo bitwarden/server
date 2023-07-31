@@ -8,6 +8,7 @@ using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Business.Provider;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -511,7 +512,7 @@ public class ProviderServiceTests
         await sutProvider.GetDependency<IEventService>()
             .Received().LogProviderOrganizationEventAsync(providerOrganization,
                 EventType.ProviderOrganization_Created);
-        await sutProvider.GetDependency<IOrganizationService>()
+        await sutProvider.GetDependency<IInviteOrganizationUserCommand>()
             .Received().InviteUsersAsync(organization.Id, user.Id, Arg.Is<IEnumerable<(OrganizationUserInvite, string)>>(
                 t => t.Count() == 1 &&
                 t.First().Item1.Emails.Count() == 1 &&

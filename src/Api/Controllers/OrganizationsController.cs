@@ -16,6 +16,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.DirectoryConnector.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -54,6 +55,7 @@ public class OrganizationsController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
     private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
+    private readonly IDirectoryConnectorSyncCommand _directoryConnectorSyncCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -77,7 +79,8 @@ public class OrganizationsController : Controller
         ILicensingService licensingService,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
-        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand)
+        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand,
+        IDirectoryConnectorSyncCommand directoryConnectorSyncCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -101,6 +104,7 @@ public class OrganizationsController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
         _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
+        _directoryConnectorSyncCommand = directoryConnectorSyncCommand;
     }
 
     [HttpGet("{id}")]
@@ -513,7 +517,7 @@ public class OrganizationsController : Controller
         }
 
         var userId = _userService.GetProperUserId(User);
-        await _organizationService.ImportAsync(
+        await _directoryConnectorSyncCommand.SyncOrganizationAsync(
             orgIdGuid,
             userId.Value,
             model.Groups.Select(g => g.ToImportedGroup(orgIdGuid)),

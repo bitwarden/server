@@ -152,7 +152,7 @@ public class UpgradeOrganizationPlanCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
         Assert.Contains("Your organization currently has 2 Secrets Manager seats filled. Your new plan only has", exception.Message);
 
-        sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
     }
 
     [Theory, FreeOrganizationUpgradeCustomize]
@@ -180,6 +180,6 @@ public class UpgradeOrganizationPlanCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
         Assert.Contains($"Your organization currently has {currentServiceAccounts} service accounts. Your new plan only allows", exception.Message);
 
-        sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
+        await sutProvider.GetDependency<IOrganizationService>().DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(default);
     }
 }

@@ -27,7 +27,7 @@ public class UpdateOrganizationUserGroupsCommand : OrganizationUserCommand, IUpd
     {
         if (loggedInUserId.HasValue)
         {
-            await ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null, organizationUser.GetPermissions());
+            await ValidateOrganizationUserUpdatePermissionsAsync(organizationUser.OrganizationId, organizationUser.Type, null, organizationUser.GetPermissions());
         }
         await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
         await _eventService.LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_UpdatedGroups);
