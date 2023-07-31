@@ -156,6 +156,7 @@ public class OrganizationServiceTests
         signup.AdditionalSeats = 0;
         signup.PaymentMethodType = PaymentMethodType.Card;
         signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
 
         var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan).ToList();
 
@@ -172,8 +173,8 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IReferenceEventService>().Received(1)
             .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
                 referenceEvent.Type == ReferenceEventType.Signup &&
-                referenceEvent.PlanName == purchaseOrganizationPlan[0].Name &&
-                referenceEvent.PlanType == purchaseOrganizationPlan[0].Type &&
+                referenceEvent.PlanName == passwordManagerPlan.Name &&
+                referenceEvent.PlanType == passwordManagerPlan.Type &&
                 referenceEvent.Seats == result.Item1.Seats &&
                 referenceEvent.Storage == result.Item1.MaxStorageGb));
         // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
@@ -187,7 +188,7 @@ public class OrganizationServiceTests
             Arg.Any<Organization>(),
             signup.PaymentMethodType.Value,
             signup.PaymentToken,
-            Arg.Is<List<Plan>>(plan => plan.All(p => purchaseOrganizationPlan.Contains(p))),
+            Arg.Is<List<Plan>>(plan => plan.Single() == passwordManagerPlan),
             signup.AdditionalStorageGb,
             signup.AdditionalSeats,
             signup.PremiumAccessAddon,
