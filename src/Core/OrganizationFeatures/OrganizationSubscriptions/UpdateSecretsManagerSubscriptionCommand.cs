@@ -68,29 +68,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await UpdateSubscriptionAsync(update);
     }
 
-    private Plan GetPlanForOrganization(Organization organization)
-    {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
-        if (plan == null)
-        {
-            throw new BadRequestException("Existing plan not found.");
-        }
-        return plan;
-    }
-
-    private static void ValidateOrganization(Organization organization)
-    {
-        if (organization == null)
-        {
-            throw new NotFoundException("Organization is not found.");
-        }
-
-        if (!organization.UseSecretsManager)
-        {
-            throw new BadRequestException("Organization has no access to Secrets Manager.");
-        }
-    }
-
     private async Task FinalizeSubscriptionAdjustmentAsync(Organization organization,
         Plan plan, SecretsManagerSubscriptionUpdate update)
     {
@@ -218,6 +195,29 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         {
             ValidateMaxAutoscaleSmServiceAccountUpdate(organization, update.MaxAutoscaleSmServiceAccounts, plan);
         }
+    }
+
+    private static void ValidateOrganization(Organization organization)
+    {
+        if (organization == null)
+        {
+            throw new NotFoundException("Organization is not found.");
+        }
+
+        if (!organization.UseSecretsManager)
+        {
+            throw new BadRequestException("Organization has no access to Secrets Manager.");
+        }
+    }
+
+    private Plan GetPlanForOrganization(Organization organization)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
+        if (plan == null)
+        {
+            throw new BadRequestException("Existing plan not found.");
+        }
+        return plan;
     }
 
     private async Task ValidateSmSeatsUpdateAsync(Organization organization, SecretsManagerSubscriptionUpdate update, Plan plan)
