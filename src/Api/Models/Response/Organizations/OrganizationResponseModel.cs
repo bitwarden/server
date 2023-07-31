@@ -27,7 +27,7 @@ public class OrganizationResponseModel : ResponseModel
         BusinessTaxNumber = organization.BusinessTaxNumber;
         BillingEmail = organization.BillingEmail;
         Plan = new PlanResponseModel(StaticStore.PasswordManagerPlans.FirstOrDefault(plan => plan.Type == organization.PlanType));
-        var matchingPlan = StaticStore.SecretManagerPlans.FirstOrDefault(plan => plan.Type == organization.PlanType);
+        var matchingPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
         if (matchingPlan != null)
         {
             SecretsManagerPlan = new PlanResponseModel(matchingPlan);

@@ -267,9 +267,14 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.PublicKey = upgrade.PublicKey;
         organization.PrivateKey = upgrade.PrivateKey;
         organization.UsePasswordManager = true;
-        organization.SmSeats = newSecretsManagerPlan?.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault();
-        organization.SmServiceAccounts = newSecretsManagerPlan?.BaseServiceAccount + upgrade.AdditionalServiceAccounts.GetValueOrDefault();
-        organization.UseSecretsManager = upgrade.UseSecretsManager;
+
+        if (upgrade.UseSecretsManager)
+        {
+            organization.SmSeats = newSecretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault();
+            organization.SmServiceAccounts = newSecretsManagerPlan.BaseServiceAccount.GetValueOrDefault() +
+                                             upgrade.AdditionalServiceAccounts.GetValueOrDefault();
+            organization.UseSecretsManager = upgrade.UseSecretsManager;
+        }
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
 

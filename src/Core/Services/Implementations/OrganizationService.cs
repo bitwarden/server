@@ -446,10 +446,15 @@ public class OrganizationService : IOrganizationService
             RevisionDate = DateTime.UtcNow,
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
-            SmSeats = secretsManagerPlan?.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault(),
-            SmServiceAccounts = secretsManagerPlan?.BaseServiceAccount + signup.AdditionalServiceAccounts.GetValueOrDefault(),
-            UseSecretsManager = signup.UseSecretsManager
         };
+
+        if (signup.UseSecretsManager)
+        {
+            organization.SmSeats = secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
+            organization.SmServiceAccounts = secretsManagerPlan.BaseServiceAccount.GetValueOrDefault() +
+                                             signup.AdditionalServiceAccounts.GetValueOrDefault();
+            organization.UseSecretsManager = signup.UseSecretsManager;
+        }
 
         if (passwordManagerPlan.Type == PlanType.Free && !provider)
         {
