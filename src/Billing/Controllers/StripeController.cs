@@ -10,12 +10,18 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Braintree;
+using Braintree.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Stripe;
+using Customer = Stripe.Customer;
 using Event = Stripe.Event;
+using Subscription = Stripe.Subscription;
 using TaxRate = Bit.Core.Entities.TaxRate;
+using Transaction = Bit.Core.Entities.Transaction;
+using TransactionType = Bit.Core.Enums.TransactionType;
 
 namespace Bit.Billing.Controllers;
 
@@ -716,8 +722,11 @@ public class StripeController : Controller
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
     {
+        _logger.LogDebug("Attempting to pay invoice with Braintree");
         if (!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
         {
+            _logger.LogWarning(
+                "Attempted to pay invoice with Braintree but btCustomerId wasn't on Stripe customer metadata");
             return false;
         }
 
@@ -726,6 +735,8 @@ public class StripeController : Controller
         var ids = GetIdsFromMetaData(subscription?.Metadata);
         if (!ids.Item1.HasValue && !ids.Item2.HasValue)
         {
+            _logger.LogWarning(
+                "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId");
             return false;
         }
 
@@ -748,25 +759,36 @@ public class StripeController : Controller
             return false;
         }
 
-        var transactionResult = await _btGateway.Transaction.SaleAsync(
-            new Braintree.TransactionRequest
-            {
-                Amount = btInvoiceAmount,
-                CustomerId = customer.Metadata["btCustomerId"],
-                Options = new Braintree.TransactionOptionsRequest
+        Result<Braintree.Transaction> transactionResult;
+        try
+        {
+            transactionResult = await _btGateway.Transaction.SaleAsync(
+                new Braintree.TransactionRequest
                 {
-                    SubmitForSettlement = true,
-                    PayPal = new Braintree.TransactionOptionsPayPalRequest
+                    Amount = btInvoiceAmount,
+                    CustomerId = customer.Metadata["btCustomerId"],
+                    Options = new Braintree.TransactionOptionsRequest
                     {
-                        CustomField = $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
+                        SubmitForSettlement = true,
+                        PayPal = new Braintree.TransactionOptionsPayPalRequest
+                        {
+                            CustomField =
+                                $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
+                        }
+                    },
+                    CustomFields = new Dictionary<string, string>
+                    {
+                        [btObjIdField] = btObjId.ToString(),
+                        ["region"] = _globalSettings.BaseServiceUri.CloudRegion
                     }
-                },
-                CustomFields = new Dictionary<string, string>
-                {
-                    [btObjIdField] = btObjId.ToString(),
-                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion
-                }
-            });
+                });
+        }
+        catch (NotFoundException e)
+        {
+            _logger.LogError(e,
+                "Attempted to make a payment with Braintree, but customer did not exist for the given btCustomerId present on the Stripe metadata");
+            throw;
+        }
 
         if (!transactionResult.IsSuccess())
         {
