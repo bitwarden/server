@@ -43,7 +43,6 @@ public class OrganizationViewModel
         Projects = projectCount;
         ServiceAccounts = serviceAccountsCount;
         SmSeats = smSeatsCount;
-        UseSecretsManager = org.UseSecretsManager;
     }
 
     public Organization Organization { get; set; }
@@ -64,5 +63,4 @@ public class OrganizationViewModel
     public int Projects { get; set; }
     public int ServiceAccounts { get; set; }
     public int SmSeats { get; set; }
-    public bool UseSecretsManager { get; set; }
 }
