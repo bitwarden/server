@@ -403,11 +403,12 @@ jobs:
       - name: Restore
         run: dotnet tool restore
 
-      - name: Make Docker stub
+      - name: Make Docker stubs
         if: github.ref == 'refs/heads/master' ||
           github.ref == 'refs/heads/rc' ||
           github.ref == 'refs/heads/hotfix-rc'
         run: |
+          # Set proper image based on branch
           if [[ "${{ github.ref }}" == "rc" ]]; then
             SETUP_IMAGE="bitwarden/setup:rc"
           elif [[ "${{ github.ref }}" == "hotfix-rc" ]]; then
@@ -417,32 +418,65 @@ jobs:
           fi
 
           STUB_OUTPUT=$(pwd)/docker-stub
-          docker run -i --rm --name setup -v $STUB_OUTPUT:/bitwarden $SETUP_IMAGE \
-            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin
+
+          # Run setup
+          docker run -i --rm --name setup -v $STUB_OUTPUT/US:/bitwarden $SETUP_IMAGE \
+            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region US
+          docker run -i --rm --name setup -v $STUB_OUTPUT/EU:/bitwarden $SETUP_IMAGE \
+            dotnet Setup.dll -stub 1 -install 1 -domain bitwarden.example.com -os lin -cloud-region EU
+
           sudo chown -R $(whoami):$(whoami) $STUB_OUTPUT
-          rm -rf $STUB_OUTPUT/letsencrypt
-          rm $STUB_OUTPUT/env/uid.env $STUB_OUTPUT/config.yml
-          touch $STUB_OUTPUT/env/uid.env
-          cd docker-stub; zip -r ../docker-stub.zip *; cd ..
 
-      - name: Make Docker stub checksum
+          # Remove extra directories and files
+          rm -rf $STUB_OUTPUT/US/letsencrypt
+          rm -rf $STUB_OUTPUT/EU/letsencrypt
+          rm $STUB_OUTPUT/US/env/uid.env $STUB_OUTPUT/US/config.yml
+          rm $STUB_OUTPUT/EU/env/uid.env $STUB_OUTPUT/EU/config.yml
+
+          # Create uid environment files
+          touch $STUB_OUTPUT/US/env/uid.env
+          touch $STUB_OUTPUT/EU/env/uid.env
+
+          # Zip up the Docker stub files
+          cd docker-stub/US; zip -r ../../docker-stub-US.zip *; cd ../..
+          cd docker-stub/EU; zip -r ../../docker-stub-EU.zip *; cd ../..
+
+      - name: Make Docker stub checksums
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
-        run: sha256sum docker-stub.zip > docker-stub-sha256.txt
+        run: |
+          sha256sum docker-stub-US.zip > docker-stub-US-sha256.txt
+          sha256sum docker-stub-EU.zip > docker-stub-EU-sha256.txt
 
-      - name: Upload Docker stub artifact
+      - name: Upload Docker stub US artifact
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: docker-stub.zip
-          path: docker-stub.zip
+          name: docker-stub-US.zip
+          path: docker-stub-US.zip
           if-no-files-found: error
 
-      - name: Upload Docker stub checksum artifact
+      - name: Upload Docker stub EU artifact
         if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: docker-stub-sha256.txt
-          path: docker-stub-sha256.txt
+          name: docker-stub-EU.zip
+          path: docker-stub-EU.zip
+          if-no-files-found: error
+
+      - name: Upload Docker stub US checksum artifact
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: docker-stub-US-sha256.txt
+          path: docker-stub-US-sha256.txt
+          if-no-files-found: error
+
+      - name: Upload Docker stub EU checksum artifact
+        if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/rc' || github.ref == 'refs/heads/hotfix-rc'
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: docker-stub-EU-sha256.txt
+          path: docker-stub-EU-sha256.txt
           if-no-files-found: error
 
       - name: Build Swagger
