@@ -36,6 +36,7 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
+    private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -246,9 +247,6 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var folderId = string.IsNullOrWhiteSpace(model.FolderId) ? null : (Guid?)new Guid(model.FolderId);
         var cipherId = new Guid(id);
-
-        ValidateItemLevelEncryptionIsAvailable(await _cipherRepository.GetByIdAsync(cipherId, userId));
-
         await _cipherRepository.UpdatePartialAsync(cipherId, userId, folderId, model.Favorite);
 
         var cipher = await _cipherRepository.GetByIdAsync(cipherId, userId);
@@ -790,7 +788,7 @@ public class CiphersController : Controller
 
     private void ValidateItemLevelEncryptionIsAvailable(Cipher cipher)
     {
-        if (cipher.Key != null && _currentContext.ClientVersion < new Version(Constants.CipherKeyEncryptionMinimumVersion))
+        if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
         {
             throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
         }
