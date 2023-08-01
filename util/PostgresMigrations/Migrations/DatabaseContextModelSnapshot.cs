@@ -18,7 +18,7 @@ namespace Bit.PostgresMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
-                .HasAnnotation("ProductVersion", "6.0.12")
+                .HasAnnotation("ProductVersion", "7.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -617,6 +617,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<int?>("Seats")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("SecretsManagerBeta")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("SelfHost")
                         .HasColumnType("boolean");
@@ -1339,6 +1342,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>

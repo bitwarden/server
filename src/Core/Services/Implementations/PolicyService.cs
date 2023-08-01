@@ -63,6 +63,7 @@ public class PolicyService : IPolicyService
                     await RequiredBySsoAsync(org);
                     await RequiredByVaultTimeoutAsync(org);
                     await RequiredByKeyConnectorAsync(org);
+                    await RequiredByAccountRecoveryAsync(org);
                 }
                 break;
 
@@ -81,6 +82,11 @@ public class PolicyService : IPolicyService
                 if (!policy.Enabled || policy.GetDataModel<ResetPasswordDataModel>()?.AutoEnrollEnabled == false)
                 {
                     await RequiredBySsoTrustedDeviceEncryptionAsync(org);
+                }
+
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
                 }
                 break;
 
@@ -250,6 +256,15 @@ public class PolicyService : IPolicyService
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
             throw new BadRequestException("Key Connector is enabled.");
+        }
+    }
+
+    private async Task RequiredByAccountRecoveryAsync(Organization org)
+    {
+        var requireSso = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.ResetPassword);
+        if (requireSso?.Enabled == true)
+        {
+            throw new BadRequestException("Account recovery policy is enabled.");
         }
     }
 

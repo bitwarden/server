@@ -101,6 +101,11 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
         return "user_id";
     }
 
+    public string BraintreeCloudRegionField()
+    {
+        return "region";
+    }
+
     public string GatewayIdField()
     {
         return "userId";

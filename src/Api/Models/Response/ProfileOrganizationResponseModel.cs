@@ -29,6 +29,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UseApi = organization.UseApi;
         UseResetPassword = organization.UseResetPassword;
         UseSecretsManager = organization.UseSecretsManager;
+        UsePasswordManager = organization.UsePasswordManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
         UseActivateAutofillPolicy = organization.PlanType == PlanType.EnterpriseAnnually ||
@@ -82,6 +83,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool UseApi { get; set; }
     public bool UseResetPassword { get; set; }
     public bool UseSecretsManager { get; set; }
+    public bool UsePasswordManager { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool UseCustomPermissions { get; set; }
     public bool UseActivateAutofillPolicy { get; set; }
