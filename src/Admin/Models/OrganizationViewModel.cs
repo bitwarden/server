@@ -63,4 +63,5 @@ public class OrganizationViewModel
     public int Projects { get; set; }
     public int ServiceAccounts { get; set; }
     public int SmSeats { get; set; }
+    public bool UseSecretsManager => Organization.UseSecretsManager;
 }

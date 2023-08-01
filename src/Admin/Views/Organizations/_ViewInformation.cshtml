@@ -33,16 +33,16 @@
     <dd class="col-sm-8 col-lg-9">@Model.CollectionCount</dd>
 
     <dt class="col-sm-4 col-lg-3">Secrets</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.Organization.UseSecretsManager ? Model.Secrets: "N/A")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.Secrets: "N/A")</dd>
 
     <dt class="col-sm-4 col-lg-3">Projects</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.Organization.UseSecretsManager ? Model.Projects: "N/A")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.Projects: "N/A")</dd>
 
     <dt class="col-sm-4 col-lg-3">Service Accounts</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.Organization.UseSecretsManager ? Model.ServiceAccounts: "N/A")</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ServiceAccounts: "N/A")</dd>
 
     <dt class="col-sm-4 col-lg-3">Secrets Manager Seats</dt>
-    <dd class="col-sm-8 col-lg-9">@(Model.Organization.UseSecretsManager ? Model.SmSeats: "N/A" )</dd>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.SmSeats: "N/A" )</dd>
 
     <dt class="col-sm-4 col-lg-3">Groups</dt>
     <dd class="col-sm-8 col-lg-9">@Model.GroupCount</dd>
