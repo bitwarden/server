@@ -1,4 +1,6 @@
-﻿using Bit.Core.Models.Business.Tokenables;
+﻿using Bit.Core.AdminConsole.OrganizationAuth;
+using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+using Bit.Core.Models.Business.Tokenables;
 using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
@@ -15,6 +17,8 @@ using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterpri
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
+using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager;
+using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -29,6 +33,7 @@ public static class OrganizationServiceCollectionExtensions
     public static void AddOrganizationServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
+        services.AddScoped<IEnableAccessSecretsManagerCommand, EnableAccessSecretsManagerCommand>();
         services.AddTokenizers();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
@@ -38,6 +43,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationGroupCommands();
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
+        services.AddOrganizationAuthCommands();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -107,6 +113,11 @@ public static class OrganizationServiceCollectionExtensions
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
     }
 
+    private static void AddOrganizationAuthCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IUpdateOrganizationAuthRequestCommand, UpdateOrganizationAuthRequestCommand>();
+    }
+
     private static void AddTokenizers(this IServiceCollection services)
     {
         services.AddSingleton<IDataProtectorTokenFactory<OrganizationSponsorshipOfferTokenable>>(serviceProvider =>
@@ -118,3 +129,4 @@ public static class OrganizationServiceCollectionExtensions
         );
     }
 }
+

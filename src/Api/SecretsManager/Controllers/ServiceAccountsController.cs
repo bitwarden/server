@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -130,38 +131,52 @@ public class ServiceAccountsController : Controller
     [HttpPost("delete")]
     public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccounts = (await _serviceAccountRepository.GetManyByIds(ids)).ToList();
+        if (!serviceAccounts.Any() || serviceAccounts.Count != ids.Count)
+        {
+            throw new NotFoundException();
+        }
 
-        var results = await _deleteServiceAccountsCommand.DeleteServiceAccounts(ids, userId);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
+        // Ensure all service accounts belong to the same organization
+        var organizationId = serviceAccounts.First().OrganizationId;
+        if (serviceAccounts.Any(sa => sa.OrganizationId != organizationId) ||
+            !_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var serviceAccountsToDelete = new List<ServiceAccount>();
+        var results = new List<(ServiceAccount ServiceAccount, string Error)>();
+
+        foreach (var serviceAccount in serviceAccounts)
+        {
+            var authorizationResult =
+                await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Delete);
+            if (authorizationResult.Succeeded)
+            {
+                serviceAccountsToDelete.Add(serviceAccount);
+                results.Add((serviceAccount, ""));
+            }
+            else
+            {
+                results.Add((serviceAccount, "access denied"));
+            }
+        }
+
+        await _deleteServiceAccountsCommand.DeleteServiceAccounts(serviceAccountsToDelete);
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.ServiceAccount.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 
     [HttpGet("{id}/access-tokens")]
     public async Task<ListResponseModel<AccessTokenResponseModel>> GetAccessTokens([FromRoute] Guid id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount,
+                ServiceAccountOperations.ReadAccessTokens);
 
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasReadAccessToServiceAccount(id, userId),
-            _ => false,
-        };
-        if (!hasAccess)
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }
@@ -175,38 +190,29 @@ public class ServiceAccountsController : Controller
     public async Task<AccessTokenCreationResponseModel> CreateAccessTokenAsync([FromRoute] Guid id,
         [FromBody] AccessTokenCreateRequestModel request)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount,
+                ServiceAccountOperations.CreateAccessToken);
 
-        var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id), userId);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var result = await _createAccessTokenCommand.CreateAsync(request.ToApiKey(id));
         return new AccessTokenCreationResponseModel(result);
     }
 
     [HttpPost("{id}/access-tokens/revoke")]
     public async Task RevokeAccessTokensAsync(Guid id, [FromBody] RevokeAccessTokensRequest request)
     {
-        var userId = _userService.GetProperUserId(User).Value;
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        if (serviceAccount == null)
-        {
-            throw new NotFoundException();
-        }
+        var authorizationResult =
+            await _authorizationService.AuthorizeAsync(User, serviceAccount,
+                ServiceAccountOperations.RevokeAccessTokens);
 
-        if (!_currentContext.AccessSecretsManager(serviceAccount.OrganizationId))
-        {
-            throw new NotFoundException();
-        }
-
-        var orgAdmin = await _currentContext.OrganizationAdmin(serviceAccount.OrganizationId);
-        var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
-
-        var hasAccess = accessClient switch
-        {
-            AccessClientType.NoAccessCheck => true,
-            AccessClientType.User => await _serviceAccountRepository.UserHasWriteAccessToServiceAccount(id, userId),
-            _ => false,
-        };
-
-        if (!hasAccess)
+        if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();
         }

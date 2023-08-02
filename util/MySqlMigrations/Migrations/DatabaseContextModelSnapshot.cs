@@ -16,7 +16,7 @@ namespace Bit.MySqlMigrations.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "6.0.12")
+                .HasAnnotation("ProductVersion", "7.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
@@ -42,6 +42,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("MasterPasswordHash")
                         .HasColumnType("longtext");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("char(36)");
 
                     b.Property<string>("PublicKey")
                         .HasColumnType("longtext");
@@ -70,6 +73,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
 
                     b.HasIndex("ResponseDeviceId");
 
@@ -602,6 +607,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<int?>("Seats")
                         .HasColumnType("int");
+
+                    b.Property<bool>("SecretsManagerBeta")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("SelfHost")
                         .HasColumnType("tinyint(1)");
@@ -1323,6 +1331,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>
@@ -1330,9 +1340,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("ClientSecret")
-                        .HasMaxLength(30)
-                        .HasColumnType("varchar(30)");
+                    b.Property<string>("ClientSecretHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("datetime(6)");
@@ -1658,6 +1668,10 @@ namespace Bit.MySqlMigrations.Migrations
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Device", "ResponseDevice")
                         .WithMany()
                         .HasForeignKey("ResponseDeviceId");
@@ -1667,6 +1681,8 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Organization");
 
                     b.Navigation("ResponseDevice");
 

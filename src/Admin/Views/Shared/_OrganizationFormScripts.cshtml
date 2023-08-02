@@ -34,6 +34,18 @@
                     'subscriptions/' + subId.value, '_blank');
             }
         });
+        document.getElementById('@(nameof(Model.UseSecretsManager))').addEventListener('change', (event) => {
+            document.getElementById('organization-secrets-configuration').hidden  = !event.target.checked;
+            
+            if (event.target.checked) {
+                return;
+            }
+            
+            document.getElementById('@(nameof(Model.SmSeats))').value = '';
+            document.getElementById('@(nameof(Model.MaxAutoscaleSmSeats))').value = '';
+            document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '';
+            document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
+        });
     })();
     
     function togglePlanSettings(planType, trial = false) {
@@ -95,6 +107,10 @@
                 document.getElementById('@(nameof(Model.Seats))').value = '10';
                 document.getElementById('@(nameof(Model.MaxCollections))').value = '';
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                // Secrets
+                if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '50';
+                }
                 // Features
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
                 document.getElementById('@(nameof(Model.UseSso))').checked = false;
@@ -121,6 +137,10 @@
                 document.getElementById('@(nameof(Model.Seats))').value = '10';
                 document.getElementById('@(nameof(Model.MaxCollections))').value = '';
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                // Secrets
+                if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '200';
+                }
                 // Features
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
                 document.getElementById('@(nameof(Model.UseSso))').checked = true;

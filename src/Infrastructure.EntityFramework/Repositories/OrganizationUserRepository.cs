@@ -588,7 +588,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -606,7 +606,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         join o in dbContext.Organizations
                             on p.OrganizationId equals o.Id
                         let email = dbContext.Users.Find(userId).Email  // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
-                        where o.UsePolicies && p.Type == policyType && (ou.UserId == userId || ou.Email == email)
+                        where o.UsePolicies && (ou.UserId == userId || ou.Email == email)
                         select new OrganizationUserPolicyDetails
                         {
                             OrganizationUserId = ou.Id,
@@ -622,4 +622,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             return await query.ToListAsync();
         }
     }
+
+    public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
+        return await GetCountFromQuery(query);
+    }
+
 }
