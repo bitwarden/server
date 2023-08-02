@@ -624,6 +624,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int?>("Seats")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("SecretsManagerBeta")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("SelfHost")
                         .HasColumnType("boolean");
 
