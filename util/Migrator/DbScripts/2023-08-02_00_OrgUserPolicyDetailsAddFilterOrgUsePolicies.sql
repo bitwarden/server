@@ -1,4 +1,3 @@
---Added filter to only include Organizations that have UsePolicies = 1
 CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_ReadByUserIdWithPolicyDetails]
     @UserId UNIQUEIDENTIFIER
 AS
