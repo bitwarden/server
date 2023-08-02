@@ -16,6 +16,8 @@ SELECT
 FROM [dbo].[PolicyView] P
 INNER JOIN [dbo].[OrganizationUserView] OU
     ON P.[OrganizationId] = OU.[OrganizationId]
+INNER JOIN [dbo].[OrganizationView] O
+    ON P.[OrganizationId] = O.[Id]
 LEFT JOIN [dbo].[ProviderUserView] PU
     ON PU.[UserId] = OU.[UserId]
 LEFT JOIN [dbo].[ProviderOrganizationView] PO
