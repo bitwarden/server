@@ -50,6 +50,9 @@ public class ApplicationCacheHostedService : IHostedService, IDisposable
                 LockDuration = TimeSpan.FromSeconds(30),
                 EnableDeadLetteringOnFilterEvaluationExceptions = true,
                 DeadLetteringOnMessageExpiration = true,
+            }, new CreateRuleOptions
+            {
+                Filter = new SqlRuleFilter($"sys.label != '{_subName}'")
             }, cancellationToken);
         }
         catch (ServiceBusException e)
