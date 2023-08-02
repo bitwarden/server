@@ -496,50 +496,49 @@ public class StripeController : Controller
     /// <exception cref="Exception"></exception>
     private async Task<bool> ValidateCloudRegionAsync(Event parsedEvent)
     {
-        string customerRegion;
-
         var serverRegion = _globalSettings.BaseServiceUri.CloudRegion;
         var eventType = parsedEvent.Type;
+        var expandOptions = new List<string> { "customer" };
 
-        switch (eventType)
+        try
         {
-            case HandledStripeWebhook.SubscriptionDeleted:
-            case HandledStripeWebhook.SubscriptionUpdated:
-                {
-                    var subscription = await GetSubscriptionAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(subscription.Customer?.Metadata);
-                    break;
-                }
-            case HandledStripeWebhook.ChargeSucceeded:
-            case HandledStripeWebhook.ChargeRefunded:
-                {
-                    var charge = await GetChargeAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(charge.Customer?.Metadata);
-                    break;
-                }
-            case HandledStripeWebhook.UpcomingInvoice:
-                {
-                    var eventInvoice = await GetInvoiceAsync(parsedEvent);
-                    var customer = await GetCustomerAsync(eventInvoice.CustomerId);
-                    customerRegion = GetCustomerRegionFromMetadata(customer.Metadata);
-                    break;
-                }
-            case HandledStripeWebhook.PaymentSucceeded:
-            case HandledStripeWebhook.PaymentFailed:
-            case HandledStripeWebhook.InvoiceCreated:
-                {
-                    var invoice = await GetInvoiceAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(invoice.Customer?.Metadata);
-                    break;
-                }
-            default:
-                {
-                    // For all Stripe events that we're not listening to, just return 200
-                    return false;
-                }
-        }
+            var customerMetadata = eventType switch
+            {
+                HandledStripeWebhook.SubscriptionDeleted or HandledStripeWebhook.SubscriptionUpdated
+                    => (await GetSubscriptionAsync(parsedEvent, true, expandOptions))
+                    ?.Customer
+                    ?.Metadata,
+                HandledStripeWebhook.ChargeSucceeded or HandledStripeWebhook.ChargeRefunded
+                    => (await GetChargeAsync(parsedEvent, true, expandOptions))
+                    ?.Customer
+                    ?.Metadata,
+                HandledStripeWebhook.UpcomingInvoice
+                    => (await GetInvoiceAsync(parsedEvent))
+                    ?.Customer
+                    ?.Metadata,
+                HandledStripeWebhook.PaymentSucceeded or
+                    HandledStripeWebhook.PaymentFailed or
+                    HandledStripeWebhook.InvoiceCreated
+                    => (await GetInvoiceAsync(parsedEvent, true, expandOptions))
+                    ?.Customer
+                    ?.Metadata,
+                _ => null
+            };
 
-        return customerRegion == serverRegion;
+            if (customerMetadata is null)
+            {
+                return false;
+            }
+
+            var customerRegion = GetCustomerRegionFromMetadata(customerMetadata);
+
+            return customerRegion == serverRegion;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Encountered unexpected error while validating cloud region for event type {EventType}", eventType);
+            throw;
+        }
     }
 
     /// <summary>
