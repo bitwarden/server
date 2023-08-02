@@ -31,4 +31,3 @@ WHERE O.[UsePolicies] = 1 AND
         )
     )
 END
-GO
