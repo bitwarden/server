@@ -15,6 +15,9 @@ public class CreateProviderModel : IValidatableObject
     [Display(Name = "Owner Email")]
     public string OwnerEmail { get; set; }
 
+    [Display(Name = "Name")]
+    public string Name { get; set; }
+
     [Display(Name = "Business Name")]
     public string BusinessName { get; set; }
 
@@ -26,6 +29,7 @@ public class CreateProviderModel : IValidatableObject
         return new Provider()
         {
             Type = Type,
+            Name = Name,
             BusinessName = BusinessName,
             BillingEmail = BillingEmail?.ToLowerInvariant().Trim()
         };
@@ -43,6 +47,11 @@ public class CreateProviderModel : IValidatableObject
                 }
                 break;
             case ProviderType.Reseller:
+                if (string.IsNullOrWhiteSpace(Name))
+                {
+                    var nameDisplayName = nameof(Name).GetDisplayAttribute<CreateProviderModel>()?.GetName();
+                    yield return new ValidationResult($"The {nameDisplayName} field is required.");
+                }
                 if (string.IsNullOrWhiteSpace(BusinessName))
                 {
                     var businessNameDisplayName = nameof(BusinessName).GetDisplayAttribute<CreateProviderModel>()?.GetName();
