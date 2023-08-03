@@ -542,21 +542,39 @@ public class StripeController : Controller
     }
 
     /// <summary>
-    /// Gets the region from the customer metadata. If no region is present, defaults to "US"
+    /// Gets the customer's region from the metadata.
     /// </summary>
-    /// <param name="customerMetadata"></param>
-    /// <returns></returns>
-    private static string GetCustomerRegionFromMetadata(Dictionary<string, string> customerMetadata)
+    /// <param name="customerMetadata">The metadata of the customer.</param>
+    /// <returns>The region of the customer. If the region is not specified, it returns "US", if metadata is null,
+    /// it returns null. It is case insensitive.</returns>
+    private static string GetCustomerRegionFromMetadata(IDictionary<string, string> customerMetadata)
     {
+        const string defaultRegion = "US";
+
         if (customerMetadata is null)
         {
-            // If customer is deleted on Stripe's side, just return 200
             return null;
         }
 
-        return customerMetadata.TryGetValue("region", out var value)
-            ? value
-            : "US";
+        if (customerMetadata.TryGetValue("region", out var value))
+        {
+            return value;
+        }
+
+        var miscasedRegionKey = customerMetadata.Keys
+            .FirstOrDefault(key =>
+                key.Equals("region", StringComparison.OrdinalIgnoreCase));
+
+        if (miscasedRegionKey is null)
+        {
+            return defaultRegion;
+        }
+
+        _ = customerMetadata.TryGetValue(miscasedRegionKey, out var regionValue);
+
+        return !string.IsNullOrWhiteSpace(regionValue)
+            ? regionValue
+            : defaultRegion;
     }
 
     private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
