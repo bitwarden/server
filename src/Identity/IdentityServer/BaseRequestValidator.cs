@@ -24,6 +24,7 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -43,6 +44,8 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
+    private readonly IDistributedCache _distributedMemoryCache;
+    private readonly DistributedCacheEntryOptions _cacheEntryOptions;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -67,7 +70,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
-        ISsoConfigRepository ssoConfigRepository)
+        ISsoConfigRepository ssoConfigRepository,
+        IDistributedCache distributedCache)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -87,6 +91,11 @@ public abstract class BaseRequestValidator<T> where T : class
         _tokenDataFactory = tokenDataFactory;
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
+        _distributedMemoryCache = distributedCache;
+        _cacheEntryOptions = new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = new TimeSpan(0, 1, 0)
+        };
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -133,6 +142,15 @@ public abstract class BaseRequestValidator<T> where T : class
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
 
+            bool isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedMemoryCache, user.Email, out string cachedToken);
+            if (isOtpCached)
+            {
+                // Delay for brute force.
+                await Task.Delay(2000);
+                await BuildErrorResultAsync("Two-step token has already been used.", true, context, user);
+                return;
+            }
+
             if ((!verified || isBot) && twoFactorProviderType != TwoFactorProviderType.Remember)
             {
                 await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
@@ -146,6 +164,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
                 return;
             }
+            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedMemoryCache, user.Email, twoFactorToken, _cacheEntryOptions);
         }
         else
         {
