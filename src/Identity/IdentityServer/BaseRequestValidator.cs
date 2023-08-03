@@ -3,12 +3,12 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
@@ -352,6 +352,7 @@ public abstract class BaseRequestValidator<T> where T : class
             return true;
         }
 
+
         // Check if user belongs to any organization with an active SSO policy
         var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
@@ -591,12 +592,14 @@ public abstract class BaseRequestValidator<T> where T : class
     /// </summary>
     private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, Device device, ClaimsPrincipal subject)
     {
-        var ssoConfigurationData = await GetSsoConfigurationDataAsync(subject);
+        var ssoConfiguration = await GetSsoConfigurationDataAsync(subject);
 
         var userDecryptionOption = new UserDecryptionOptions
         {
             HasMasterPassword = !string.IsNullOrEmpty(user.MasterPassword)
         };
+
+        var ssoConfigurationData = ssoConfiguration?.GetData();
 
         if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
         {
@@ -628,17 +631,21 @@ public abstract class BaseRequestValidator<T> where T : class
             var hasManageResetPasswordPermission = false;
 
             // when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
-            var org = CurrentContext.Organizations.FirstOrDefault();
-
-            if (org != null)
+            if (CurrentContext.Organizations.Any(o => o.Id == ssoConfiguration!.OrganizationId))
             {
                 // TDE requires single org so grabbing first org & id is fine.
-                hasManageResetPasswordPermission = await CurrentContext.ManageResetPassword(org.Id);
+                hasManageResetPasswordPermission = await CurrentContext.ManageResetPassword(ssoConfiguration!.OrganizationId);
             }
 
-            var hasAdminApproval = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.ResetPassword);
+            // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
+            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(ssoConfiguration!.OrganizationId, user.Id);
+
+            // They are only able to be approved by an admin if they have enrolled is reset password
+            var hasAdminApproval = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+
             // TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
-            userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(hasAdminApproval,
+            userDecryptionOption.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
+                hasAdminApproval,
                 hasLoginApprovingDevice,
                 hasManageResetPasswordPermission,
                 encryptedPrivateKey,
@@ -648,7 +655,7 @@ public abstract class BaseRequestValidator<T> where T : class
         return userDecryptionOption;
     }
 
-    private async Task<SsoConfigurationData?> GetSsoConfigurationDataAsync(ClaimsPrincipal subject)
+    private async Task<SsoConfig?> GetSsoConfigurationDataAsync(ClaimsPrincipal subject)
     {
         var organizationClaim = subject?.FindFirstValue("organizationId");
 
@@ -663,6 +670,6 @@ public abstract class BaseRequestValidator<T> where T : class
             return null;
         }
 
-        return ssoConfig.GetData();
+        return ssoConfig;
     }
 }

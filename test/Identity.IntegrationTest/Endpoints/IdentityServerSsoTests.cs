@@ -34,33 +34,10 @@ public class IdentityServerSsoTests
     public async Task Test_MasterPassword_DecryptionType()
     {
         // Arrange
-        var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
-        {
-            MemberDecryptionType = MemberDecryptionType.MasterPassword,
-        }, challenge);
-
-        // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        using var responseBody = await RunSuccessTestAsync(MemberDecryptionType.MasterPassword);
 
         // Assert
         // If the organization has a member decryption type of MasterPassword that should be the only option in the reply
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
         var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
@@ -81,34 +58,11 @@ public class IdentityServerSsoTests
     public async Task SsoLogin_TrustedDeviceEncryption_ReturnsOptions()
     {
         // Arrange
-        var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
-        {
-            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-        }, challenge);
-
-        // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        using var responseBody = await RunSuccessTestAsync(MemberDecryptionType.TrustedDeviceEncryption);
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
         // they can decrypt with either option
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
         var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
@@ -133,47 +87,25 @@ public class IdentityServerSsoTests
     public async Task SsoLogin_TrustedDeviceEncryption_WithAdminResetPolicy_ReturnsOptions()
     {
         // Arrange
-        var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        using var responseBody = await RunSuccessTestAsync(async factory =>
         {
-            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-        }, challenge);
+            var database = factory.GetDatabaseContext();
 
-        var database = factory.GetDatabaseContext();
+            var organization = await database.Organizations.SingleAsync();
 
-        var organization = await database.Organizations.SingleAsync();
+            var user = await database.Users.SingleAsync(u => u.Email == TestEmail);
 
-        var policyRepository = factory.Services.GetRequiredService<IPolicyRepository>();
-        await policyRepository.CreateAsync(new Policy
-        {
-            Type = PolicyType.ResetPassword,
-            Enabled = true,
-            Data = "{\"autoEnrollEnabled\": false }",
-            OrganizationId = organization.Id,
-        });
+            var organizationUser = await database.OrganizationUsers.SingleAsync(
+                ou => ou.OrganizationId == organization.Id && ou.UserId == user.Id);
 
-        // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+            organizationUser.ResetPasswordKey = "something";
+
+            await database.SaveChangesAsync();
+        }, MemberDecryptionType.TrustedDeviceEncryption);
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
         // they can decrypt with either option
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
 
@@ -199,37 +131,15 @@ public class IdentityServerSsoTests
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_ReturnsOneOption()
     {
-        // Arrange
-        var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        using var responseBody = await RunSuccessTestAsync(async factory =>
         {
-            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-        }, challenge);
+            await UpdateUserAsync(factory, user => user.MasterPassword = null);
 
-        await UpdateUserAsync(factory, user => user.MasterPassword = null);
-
-        // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+        }, MemberDecryptionType.TrustedDeviceEncryption);
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
         // they can decrypt with either option
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
         var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
@@ -277,48 +187,25 @@ public class IdentityServerSsoTests
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryptionAndNoMasterPassword_HasLoginApprovingDevice_ReturnsTrue()
     {
-        // Arrange
-        var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        using var responseBody = await RunSuccessTestAsync(async factory =>
         {
-            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-        }, challenge);
+            await UpdateUserAsync(factory, user => user.MasterPassword = null);
+            var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+            var user = await userRepository.GetByEmailAsync(TestEmail);
 
-        await UpdateUserAsync(factory, user => user.MasterPassword = null);
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-        var user = await userRepository.GetByEmailAsync(TestEmail);
-
-        var deviceRepository = factory.Services.GetRequiredService<IDeviceRepository>();
-        await deviceRepository.CreateAsync(new Device
-        {
-            Identifier = "my_other_device",
-            Type = DeviceType.Android,
-            Name = "Android",
-            UserId = user.Id,
-        });
-
-        // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+            var deviceRepository = factory.Services.GetRequiredService<IDeviceRepository>();
+            await deviceRepository.CreateAsync(new Device
+            {
+                Identifier = "my_other_device",
+                Type = DeviceType.Android,
+                Name = "Android",
+                UserId = user.Id,
+            });
+        }, MemberDecryptionType.TrustedDeviceEncryption);
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
         // they can decrypt with either option
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
         var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
@@ -499,42 +386,18 @@ public class IdentityServerSsoTests
     [Fact]
     public async Task SsoLogin_TrustedDeviceEncryption_FlagTurnedOff_DoesNotReturnOption()
     {
-        // Arrange
-        var challenge = new string('c', 50);
-
         // This creates SsoConfig that HAS enabled trusted device encryption which should have only been
         // done with the feature flag turned on but we are testing that even if they have done that, this will turn off
         // if returning as an option if the flag has later been turned off.  We should be very careful turning the flag
         // back off.
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        using var responseBody = await RunSuccessTestAsync(async factory =>
         {
-            MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
-        }, challenge, trustedDeviceEnabled: false);
-
-        await UpdateUserAsync(factory, user => user.MasterPassword = null);
-
-        // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
+            await UpdateUserAsync(factory, user => user.MasterPassword = null);
+        }, MemberDecryptionType.TrustedDeviceEncryption, trustedDeviceEnabled: false);
 
         // Assert
         // If the organization has selected TrustedDeviceEncryption but the user still has their master password
         // they can decrypt with either option
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
         var userDecryptionOptions = AssertHelper.AssertJsonProperty(root, "UserDecryptionOptions", JsonValueKind.Object);
@@ -552,36 +415,11 @@ public class IdentityServerSsoTests
     [Fact]
     public async Task SsoLogin_KeyConnector_ReturnsOptions()
     {
-        // Arrange
-        var challenge = new string('c', 50);
-        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        using var responseBody = await RunSuccessTestAsync(async factory =>
         {
-            MemberDecryptionType = MemberDecryptionType.KeyConnector,
-            KeyConnectorUrl = "https://key_connector.com"
-        }, challenge);
+            await UpdateUserAsync(factory, user => user.MasterPassword = null);
+        }, MemberDecryptionType.KeyConnector, "https://key_connector.com");
 
-        await UpdateUserAsync(factory, user => user.MasterPassword = null);
-
-        // Act
-        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "deviceType", "10" },
-            { "deviceIdentifier", "test_id" },
-            { "deviceName", "firefox" },
-            { "twoFactorToken", "TEST"},
-            { "twoFactorProvider", "5" }, // RememberMe Provider
-            { "twoFactorRemember", "0" },
-            { "grant_type", "authorization_code" },
-            { "code", "test_code" },
-            { "code_verifier", challenge },
-            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
-        }));
-
-        // Assert
-        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
-        using var responseBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = responseBody.RootElement;
         AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
 
@@ -605,12 +443,51 @@ public class IdentityServerSsoTests
         Assert.Equal("https://key_connector.com", keyConnectorUrl);
     }
 
+    private static async Task<JsonDocument> RunSuccessTestAsync(MemberDecryptionType memberDecryptionType)
+    {
+        return await RunSuccessTestAsync(factory => Task.CompletedTask, memberDecryptionType);
+    }
+
+    private static async Task<JsonDocument> RunSuccessTestAsync(Func<IdentityApplicationFactory, Task> configureFactory,
+        MemberDecryptionType memberDecryptionType,
+        string? keyConnectorUrl = null,
+        bool trustedDeviceEnabled = true)
+    {
+        var challenge = new string('c', 50);
+        var factory = await CreateFactoryAsync(new SsoConfigurationData
+        {
+            MemberDecryptionType = memberDecryptionType,
+            KeyConnectorUrl = keyConnectorUrl,
+        }, challenge, trustedDeviceEnabled);
+
+        await configureFactory(factory);
+        var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", "10" },
+            { "deviceIdentifier", "test_id" },
+            { "deviceName", "firefox" },
+            { "twoFactorToken", "TEST"},
+            { "twoFactorProvider", "5" }, // RememberMe Provider
+            { "twoFactorRemember", "0" },
+            { "grant_type", "authorization_code" },
+            { "code", "test_code" },
+            { "code_verifier", challenge },
+            { "redirect_uri", "https://localhost:8080/sso-connector.html" }
+        }));
+
+        // Only calls that result in a 200 OK should call this helper
+        Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+
+        return await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+    }
+
     private static async Task<IdentityApplicationFactory> CreateFactoryAsync(
         SsoConfigurationData ssoConfigurationData,
         string challenge,
         bool trustedDeviceEnabled = true,
-        Permissions? permissions = null
-        )
+        Permissions? permissions = null)
     {
         var factory = new IdentityApplicationFactory();
 
