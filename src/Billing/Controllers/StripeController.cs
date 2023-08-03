@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using Stripe;
 using Customer = Stripe.Customer;
 using Event = Stripe.Event;
+using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 using TaxRate = Bit.Core.Entities.TaxRate;
 using Transaction = Bit.Core.Entities.Transaction;
@@ -478,6 +479,11 @@ public class StripeController : Controller
                 await AttemptToPayInvoiceAsync(invoice);
             }
         }
+        else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentMethodAttached))
+        {
+            var paymentMethod = await GetPaymentMethodAsync(parsedEvent);
+            await HandlePaymentMethodAttachedAsync(paymentMethod);
+        }
         else
         {
             _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
@@ -507,20 +513,32 @@ public class StripeController : Controller
             {
                 case HandledStripeWebhook.SubscriptionDeleted:
                 case HandledStripeWebhook.SubscriptionUpdated:
-                    customerMetadata = (await GetSubscriptionAsync(parsedEvent, true, expandOptions))?.Customer
+                    customerMetadata = (await GetSubscriptionAsync(parsedEvent, true, expandOptions))
+                        ?.Customer
                         ?.Metadata;
                     break;
                 case HandledStripeWebhook.ChargeSucceeded:
                 case HandledStripeWebhook.ChargeRefunded:
-                    customerMetadata = (await GetChargeAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
+                    customerMetadata = (await GetChargeAsync(parsedEvent, true, expandOptions))
+                        ?.Customer
+                        ?.Metadata;
                     break;
                 case HandledStripeWebhook.UpcomingInvoice:
-                    customerMetadata = (await GetInvoiceAsync(parsedEvent))?.Customer?.Metadata;
+                    customerMetadata = (await GetInvoiceAsync(parsedEvent))
+                        ?.Customer
+                        ?.Metadata;
                     break;
                 case HandledStripeWebhook.PaymentSucceeded:
                 case HandledStripeWebhook.PaymentFailed:
                 case HandledStripeWebhook.InvoiceCreated:
-                    customerMetadata = (await GetInvoiceAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
+                    customerMetadata = (await GetInvoiceAsync(parsedEvent, true, expandOptions))
+                        ?.Customer
+                        ?.Metadata;
+                    break;
+                case HandledStripeWebhook.PaymentMethodAttached:
+                    customerMetadata = (await GetPaymentMethodAsync(parsedEvent, true, expandOptions))
+                        ?.Customer
+                        ?.Metadata;
                     break;
                 default:
                     customerMetadata = null;
@@ -579,6 +597,100 @@ public class StripeController : Controller
             : defaultRegion;
     }
 
+    /// <summary>
+    /// Handles the attachment of a payment method asynchronously.
+    /// </summary>
+    /// <param name="paymentMethod">The method of payment to process.</param>
+    /// <returns>A Task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// If the payment method is null, a warning is written in the log and the operation terminates.
+    /// An attempt is made to retrieve the list of all the unpaid subscriptions for the customer and then
+    /// attempts to pay the open subscriptions. If an exception is encountered while retrieving the subscription list,
+    /// an error is logged and the operation terminates. Otherwise, payment is attempted on each open subscription.
+    /// </remarks>
+    private async Task HandlePaymentMethodAttachedAsync(PaymentMethod paymentMethod)
+    {
+        if (paymentMethod is null)
+        {
+            _logger.LogWarning("Attempted to handle the event payment_method.attached but paymentMethod was null");
+            return;
+        }
+
+        var subscriptionService = new SubscriptionService();
+        var subscriptionListOptions = new SubscriptionListOptions
+        {
+            Customer = paymentMethod.CustomerId,
+            Status = StripeSubscriptionStatus.Unpaid,
+            Expand = new List<string> { nameof(Subscription.LatestInvoice) }
+        };
+
+        StripeList<Subscription> unpaidSubscriptions;
+        try
+        {
+            unpaidSubscriptions = await subscriptionService.ListAsync(subscriptionListOptions);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e,
+                "Attempted to get unpaid invoices for customer {CustomerId} but encountered an error while calling Stripe",
+                paymentMethod.CustomerId);
+
+            return;
+        }
+
+        foreach (var unpaidSubscription in unpaidSubscriptions)
+        {
+            await AttemptToPayOpenSubscriptionAsync(unpaidSubscription);
+        }
+    }
+
+    /// <summary>
+    /// Attempts to pay the open subscription.
+    /// </summary>
+    /// <param name="unpaidSubscription">The unpaid subscription to attempt payment on.</param>
+    /// <exception cref="System.Exception">
+    /// Throws an exception if an error is encountered during the payment attempt.
+    /// </exception>
+    /// <remarks>
+    /// If the subscription's latest invoice doesn't exist or is not open (according to Stripe standards), a warning is
+    /// logged and no further action is taken.
+    /// </remarks>
+    /// <returns>A Task that represents the asynchronous operation.</returns>
+    private async Task AttemptToPayOpenSubscriptionAsync(Subscription unpaidSubscription)
+    {
+        var latestInvoice = unpaidSubscription.LatestInvoice;
+
+        if (unpaidSubscription.LatestInvoice is null)
+        {
+            _logger.LogWarning(
+                "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice didn't exist",
+                unpaidSubscription.Id);
+
+            return;
+        }
+
+        if (latestInvoice.Status != StripeInvoiceStatus.Open)
+        {
+            _logger.LogWarning(
+                "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice wasn't \"open\"",
+                unpaidSubscription.Id);
+
+            return;
+        }
+
+        try
+        {
+            await AttemptToPayInvoiceAsync(latestInvoice, true);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e,
+                "Attempted to pay open invoice {InvoiceId} on unpaid subscription {SubscriptionId} but encountered an error",
+                latestInvoice.Id, unpaidSubscription.Id);
+            throw;
+        }
+    }
+
     private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
     {
         if (metaData == null || !metaData.Any())
@@ -631,7 +743,23 @@ public class StripeController : Controller
         }
     }
 
-    private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice)
+    /// <summary>
+    /// Attempts to asynchronously pay an invoice.
+    /// </summary>
+    /// <param name="invoice">The instance of the Invoice class that needs to be paid.</param>
+    /// <param name="attemptToPayWithStripe">
+    /// Boolean value indicating whether an attempt must be made to pay with Stripe. Default value is false.
+    /// </param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. The task result contains a boolean value that signifies
+    /// whether the attempt to pay the invoice was successful or not.
+    /// </returns>
+    /// <remarks>
+    /// If customer metadata contains "appleReceipt", it attempts payment using the Apple Receipt, else it checks for
+    /// "btCustomerId" to attempt payment with Braintree. If neither conditions are met and attemptToPayWithStripe is
+    /// set to true, it attempts payment with Stripe. If all conditions fail, it returns a task with result being false.
+    /// </remarks>
+    private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false)
     {
         var customerService = new CustomerService();
         var customer = await customerService.GetAsync(invoice.CustomerId);
@@ -639,10 +767,17 @@ public class StripeController : Controller
         {
             return await AttemptToPayInvoiceWithAppleReceiptAsync(invoice, customer);
         }
-        else if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
+
+        if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
         {
             return await AttemptToPayInvoiceWithBraintreeAsync(invoice, customer);
         }
+
+        if (attemptToPayWithStripe)
+        {
+            return await AttemptToPayInvoiceWithStripeAsync(invoice);
+        }
+
         return false;
     }
 
@@ -851,6 +986,33 @@ public class StripeController : Controller
         return true;
     }
 
+    /// <summary>
+    /// Attempts to pay the specified invoice using Stripe.
+    /// </summary>
+    /// <param name="invoice">The invoice to attempt to pay.</param>
+    /// <returns>
+    /// A task that represents the asynchronous operation. The task result contains true if the payment succeeded;
+    /// otherwise, false.
+    /// </returns>
+    private async Task<bool> AttemptToPayInvoiceWithStripeAsync(Invoice invoice)
+    {
+        try
+        {
+            var invoiceService = new InvoiceService();
+            await invoiceService.PayAsync(invoice.Id);
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(
+                e,
+                "Exception occurred while trying to pay Stripe invoice with Id: {InvoiceId}",
+                invoice.Id);
+
+            throw;
+        }
+    }
+
     private bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
     {
         return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
@@ -933,6 +1095,44 @@ public class StripeController : Controller
         }
 
         return customer;
+    }
+
+    /// <summary>
+    /// Fetches the payment method from a parsed event. It involves the possibility to freshly fetch the payment method
+    /// and to expand certain properties of the payment method.
+    /// </summary>
+    /// <param name="parsedEvent">The event that includes the payment method information.</param>
+    /// <param name="fresh">
+    /// Indicates whether a fresh copy of the payment method should be fetched from the service or not.
+    /// </param>
+    /// <param name="expandOptions">Specifies the properties of the payment method to expand.</param>
+    /// <exception cref="Exception">
+    /// Thrown if the payment method from the parsed event is null or retrieved payment is null.
+    /// </exception>
+    /// <returns>Returns an object of type PaymentMethod, which holds all payment method details.</returns>
+    private async Task<PaymentMethod> GetPaymentMethodAsync(Event parsedEvent, bool fresh = false,
+        List<string> expandOptions = null)
+    {
+        if (parsedEvent.Data.Object is not PaymentMethod eventPaymentMethod)
+        {
+            throw new Exception("Invoice is null (from parsed event). " + parsedEvent.Id);
+        }
+
+        if (!fresh)
+        {
+            return eventPaymentMethod;
+        }
+
+        var paymentMethodService = new PaymentMethodService();
+        var paymentMethodGetOptions = new PaymentMethodGetOptions { Expand = expandOptions };
+        var paymentMethod = await paymentMethodService.GetAsync(eventPaymentMethod.Id, paymentMethodGetOptions);
+
+        if (paymentMethod == null)
+        {
+            throw new Exception($"Payment method is null. {eventPaymentMethod.Id}");
+        }
+
+        return paymentMethod;
     }
 
     private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
