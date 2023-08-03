@@ -29,5 +29,6 @@
     <EmbeddedResource Include="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.sql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.sql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.sql" />
+    <EmbeddedResource Include="Scripts\2023-08-03_00_PopulateResellerNames.sql" />
   </ItemGroup>
 </Project>
