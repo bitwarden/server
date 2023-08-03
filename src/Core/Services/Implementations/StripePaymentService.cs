@@ -49,8 +49,9 @@ public class StripePaymentService : IPaymentService
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-        string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
-        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false)
+        string paymentToken, List<StaticStore.Plan> plans, short additionalStorageGb,
+        int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
+        int additionalSmSeats = 0, int additionalServiceAccount = 0)
     {
         Braintree.Customer braintreeCustomer = null;
         string stipeCustomerSourceToken = null;
@@ -83,7 +84,8 @@ public class StripePaymentService : IPaymentService
                 Id = org.BraintreeCustomerIdPrefix() + org.Id.ToString("N").ToLower() + randomSuffix,
                 CustomFields = new Dictionary<string, string>
                 {
-                    [org.BraintreeIdField()] = org.Id.ToString()
+                    [org.BraintreeIdField()] = org.Id.ToString(),
+                    [org.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                 }
             });
 
@@ -117,7 +119,8 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
+        , additionalSmSeats, additionalServiceAccount);
 
         Stripe.Customer customer = null;
         Stripe.Subscription subscription;
@@ -228,8 +231,8 @@ public class StripePaymentService : IPaymentService
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
-    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
-        short additionalStorageGb, int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo)
+    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, List<StaticStore.Plan> plans,
+        OrganizationUpgrade upgrade)
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
         {
@@ -245,6 +248,7 @@ public class StripePaymentService : IPaymentService
             throw new GatewayException("Could not find customer payment profile.");
         }
 
+        var taxInfo = upgrade.TaxInfo;
         if (taxInfo != null && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressCountry) && !string.IsNullOrWhiteSpace(taxInfo.BillingAddressPostalCode))
         {
             var taxRateSearch = new TaxRate
@@ -262,7 +266,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon);
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plans, upgrade);
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
         var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
@@ -406,7 +410,8 @@ public class StripePaymentService : IPaymentService
                     Id = user.BraintreeCustomerIdPrefix() + user.Id.ToString("N").ToLower() + randomSuffix,
                     CustomFields = new Dictionary<string, string>
                     {
-                        [user.BraintreeIdField()] = user.Id.ToString()
+                        [user.BraintreeIdField()] = user.Id.ToString(),
+                        [user.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                     }
                 });
 
@@ -602,12 +607,13 @@ public class StripePaymentService : IPaymentService
                                     SubmitForSettlement = true,
                                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                                     {
-                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
+                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id},{subscriber.BraintreeCloudRegionField()}:{_globalSettings.BaseServiceUri.CloudRegion}"
                                     }
                                 },
                                 CustomFields = new Dictionary<string, string>
                                 {
-                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
+                                    [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                                 }
                             });
 
@@ -857,6 +863,11 @@ public class StripePaymentService : IPaymentService
         return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
     }
 
+    public Task<string> AdjustServiceAccountsAsync(Organization organization, StaticStore.Plan plan, int additionalServiceAccounts, DateTime? prorationDate = null)
+    {
+        return FinalizeSubscriptionChangeAsync(organization, new ServiceAccountSubscriptionUpdate(organization, plan, additionalServiceAccounts), prorationDate);
+    }
+
     public Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage,
         string storagePlanId, DateTime? prorationDate = null)
     {
@@ -991,12 +1002,13 @@ public class StripePaymentService : IPaymentService
                             SubmitForSettlement = true,
                             PayPal = new Braintree.TransactionOptionsPayPalRequest
                             {
-                                CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
+                                CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id},{subscriber.BraintreeCloudRegionField()}:{_globalSettings.BaseServiceUri.CloudRegion}"
                             }
                         },
                         CustomFields = new Dictionary<string, string>
                         {
-                            [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                            [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
+                            [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                         }
                     });
 
@@ -1290,7 +1302,8 @@ public class StripePaymentService : IPaymentService
                         Utilities.CoreHelpers.RandomString(3, upper: false, numeric: false),
                     CustomFields = new Dictionary<string, string>
                     {
-                        [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                        [subscriber.BraintreeIdField()] = subscriber.Id.ToString(),
+                        [subscriber.BraintreeCloudRegionField()] = _globalSettings.BaseServiceUri.CloudRegion
                     }
                 });
 
