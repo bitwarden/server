@@ -42,24 +42,24 @@ public class CreateProviderModel : IValidatableObject
             case ProviderType.Msp:
                 if (string.IsNullOrWhiteSpace(OwnerEmail))
                 {
-                    var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName();
+                    var ownerEmailDisplayName = nameof(OwnerEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(OwnerEmail);
                     yield return new ValidationResult($"The {ownerEmailDisplayName} field is required.");
                 }
                 break;
             case ProviderType.Reseller:
                 if (string.IsNullOrWhiteSpace(Name))
                 {
-                    var nameDisplayName = nameof(Name).GetDisplayAttribute<CreateProviderModel>()?.GetName();
+                    var nameDisplayName = nameof(Name).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(Name);
                     yield return new ValidationResult($"The {nameDisplayName} field is required.");
                 }
                 if (string.IsNullOrWhiteSpace(BusinessName))
                 {
-                    var businessNameDisplayName = nameof(BusinessName).GetDisplayAttribute<CreateProviderModel>()?.GetName();
+                    var businessNameDisplayName = nameof(BusinessName).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(BusinessName);
                     yield return new ValidationResult($"The {businessNameDisplayName} field is required.");
                 }
                 if (string.IsNullOrWhiteSpace(BillingEmail))
                 {
-                    var billingEmailDisplayName = nameof(BillingEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName();
+                    var billingEmailDisplayName = nameof(BillingEmail).GetDisplayAttribute<CreateProviderModel>()?.GetName() ?? nameof(BillingEmail);
                     yield return new ValidationResult($"The {billingEmailDisplayName} field is required.");
                 }
                 break;
