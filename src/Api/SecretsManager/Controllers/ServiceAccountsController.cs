@@ -32,6 +32,7 @@ public class ServiceAccountsController : Controller
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ICountNewServiceAccountSlotsRequiredQuery _countNewServiceAccountSlotsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IServiceAccountSecretsDetailsQuery _serviceAccountSecretsDetailsQuery;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
     private readonly ICreateServiceAccountCommand _createServiceAccountCommand;
     private readonly IUpdateServiceAccountCommand _updateServiceAccountCommand;
@@ -47,6 +48,7 @@ public class ServiceAccountsController : Controller
         IOrganizationRepository organizationRepository,
         ICountNewServiceAccountSlotsRequiredQuery countNewServiceAccountSlotsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IServiceAccountSecretsDetailsQuery serviceAccountSecretsDetailsQuery,
         ICreateAccessTokenCommand createAccessTokenCommand,
         ICreateServiceAccountCommand createServiceAccountCommand,
         IUpdateServiceAccountCommand updateServiceAccountCommand,
@@ -60,6 +62,7 @@ public class ServiceAccountsController : Controller
         _apiKeyRepository = apiKeyRepository;
         _organizationRepository = organizationRepository;
         _countNewServiceAccountSlotsRequiredQuery = countNewServiceAccountSlotsRequiredQuery;
+        _serviceAccountSecretsDetailsQuery = serviceAccountSecretsDetailsQuery;
         _createServiceAccountCommand = createServiceAccountCommand;
         _updateServiceAccountCommand = updateServiceAccountCommand;
         _deleteServiceAccountsCommand = deleteServiceAccountsCommand;
@@ -69,8 +72,8 @@ public class ServiceAccountsController : Controller
     }
 
     [HttpGet("/organizations/{organizationId}/service-accounts")]
-    public async Task<ListResponseModel<ServiceAccountResponseModel>> ListByOrganizationAsync(
-        [FromRoute] Guid organizationId)
+    public async Task<ListResponseModel<ServiceAccountSecretsDetailsResponseModel>> ListByOrganizationAsync(
+        [FromRoute] Guid organizationId, [FromQuery] bool includeAccessToSecrets = false)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
         {
@@ -81,11 +84,11 @@ public class ServiceAccountsController : Controller
         var orgAdmin = await _currentContext.OrganizationAdmin(organizationId);
         var accessClient = AccessClientHelper.ToAccessClient(_currentContext.ClientType, orgAdmin);
 
-        var serviceAccounts =
-            await _serviceAccountRepository.GetManyByOrganizationIdAsync(organizationId, userId, accessClient);
-
-        var responses = serviceAccounts.Select(serviceAccount => new ServiceAccountResponseModel(serviceAccount));
-        return new ListResponseModel<ServiceAccountResponseModel>(responses);
+        var results =
+            await _serviceAccountSecretsDetailsQuery.GetManyByOrganizationIdAsync(organizationId, userId, accessClient,
+                includeAccessToSecrets);
+        var responses = results.Select(r => new ServiceAccountSecretsDetailsResponseModel(r));
+        return new ListResponseModel<ServiceAccountSecretsDetailsResponseModel>(responses);
     }
 
     [HttpGet("{id}")]
