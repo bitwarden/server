@@ -24,6 +24,6 @@
     <EmbeddedResource Include="HelperScripts\2021-10-21_00_SetMaxAutoscaleSeatCount.psql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Up_MigrateOrganizationApiKeys.psql" />
     <EmbeddedResource Include="HelperScripts\2022-03-01_00_Down_MigrateOrganizationApiKeys.psql" />
-    <EmbeddedResource Include="HelperScripts\2023-08-03_00_PopulateResellerNames.psql" />
+    <EmbeddedResource Include="Scripts\2023-08-03_00_PopulateResellerNames.sql" />
   </ItemGroup>
 </Project>
