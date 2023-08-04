@@ -41,7 +41,10 @@ if [[ $globalSettings__selfHosted == "true" ]]; then
 fi
 
 if [ -f "/etc/krb5/bitwarden.keytab" ]; then
-  gosu $USERNAME:$GROUPNAME kinit bitwarden -k -t /etc/krb5/bitwarden.keytab
+  mkdir -p /etc/bitwarden/kerberos
+  chown -R $USERNAME:$GROUPNAME /etc/bitwarden/kerberos
+  cp -f /etc/bitwarden/kerberos/krb5.conf /etc/krb5.conf
+  gosu $USERNAME:$GROUPNAME kinit bitwarden -k -t /etc/bitwarden/kerberos/bitwarden.keytab
 fi
 
 
