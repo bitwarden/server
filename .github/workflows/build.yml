@@ -198,64 +198,48 @@ jobs:
         include:
           - project_name: Admin
             base_path: ./src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Api
             base_path: ./src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Attachments
             base_path: ./util
-            docker_repos: [ ${AZ_REGISTRY} ]
           - project_name: Events
             base_path: ./src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: EventsProcessor
             base_path: ./src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Icons
             base_path: ./src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Identity
             base_path: ./src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: MsSql
             base_path: ./util
-            docker_repos: [ ${AZ_REGISTRY} ]
           - project_name: Nginx
             base_path: ./util
-            docker_repos: [ ${AZ_REGISTRY} ]
           - project_name: Notifications
             base_path: ./src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Server
             base_path: ./util
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Setup
             base_path: ./util
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Sso
             base_path: ./bitwarden_license/src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Scim
             base_path: ./bitwarden_license/src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Billing
             base_path: ./src
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: MsSqlMigratorUtility
             base_path: ./util
-            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
     steps:
       - name: Checkout repo
