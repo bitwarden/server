@@ -1,4 +1,4 @@
-FROM bitwardenprod.azurerc.io/server:dev
+FROM bitwarden/server:dev
 
 LABEL com.bitwarden.product="bitwarden"
 

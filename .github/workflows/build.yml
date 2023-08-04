@@ -320,12 +320,12 @@ jobs:
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" #TODO
+          tags: ${AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
       - name: Push to Prod ACR
-        if: env.is_publish_branch == 'true' #TODO
+        if: env.is_publish_branch == 'true'
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
