@@ -502,28 +502,30 @@ public class StripeController : Controller
 
         try
         {
-            var customerMetadata = eventType switch
+            Dictionary<string, string> customerMetadata;
+            switch (eventType)
             {
-                HandledStripeWebhook.SubscriptionDeleted or HandledStripeWebhook.SubscriptionUpdated
-                    => (await GetSubscriptionAsync(parsedEvent, true, expandOptions))
-                    ?.Customer
-                    ?.Metadata,
-                HandledStripeWebhook.ChargeSucceeded or HandledStripeWebhook.ChargeRefunded
-                    => (await GetChargeAsync(parsedEvent, true, expandOptions))
-                    ?.Customer
-                    ?.Metadata,
-                HandledStripeWebhook.UpcomingInvoice
-                    => (await GetInvoiceAsync(parsedEvent))
-                    ?.Customer
-                    ?.Metadata,
-                HandledStripeWebhook.PaymentSucceeded or
-                    HandledStripeWebhook.PaymentFailed or
-                    HandledStripeWebhook.InvoiceCreated
-                    => (await GetInvoiceAsync(parsedEvent, true, expandOptions))
-                    ?.Customer
-                    ?.Metadata,
-                _ => null
-            };
+                case HandledStripeWebhook.SubscriptionDeleted:
+                case HandledStripeWebhook.SubscriptionUpdated:
+                    customerMetadata = (await GetSubscriptionAsync(parsedEvent, true, expandOptions))?.Customer
+                        ?.Metadata;
+                    break;
+                case HandledStripeWebhook.ChargeSucceeded:
+                case HandledStripeWebhook.ChargeRefunded:
+                    customerMetadata = (await GetChargeAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
+                    break;
+                case HandledStripeWebhook.UpcomingInvoice:
+                    customerMetadata = (await GetInvoiceAsync(parsedEvent))?.Customer?.Metadata;
+                    break;
+                case HandledStripeWebhook.PaymentSucceeded:
+                case HandledStripeWebhook.PaymentFailed:
+                case HandledStripeWebhook.InvoiceCreated:
+                    customerMetadata = (await GetInvoiceAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
+                    break;
+                default:
+                    customerMetadata = (Dictionary<string, string>)null;
+                    break;
+            }
 
             if (customerMetadata is null)
             {
