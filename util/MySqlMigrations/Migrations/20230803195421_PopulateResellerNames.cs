@@ -19,6 +19,6 @@ public partial class PopulateResellerNames : Migration
     /// <inheritdoc />
     protected override void Down(MigrationBuilder migrationBuilder)
     {
-
+        throw new Exception("Irreversible migration");
     }
 }
