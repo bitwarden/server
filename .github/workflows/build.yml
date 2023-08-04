@@ -10,6 +10,10 @@ on:
       - ".github/workflows/**"
   workflow_dispatch:
 
+env:
+  AZ_REGISTRY: 'bitwardenprod.azurecr.io'
+
+
 jobs:
   cloc:
     name: CLOC
@@ -194,64 +198,64 @@ jobs:
         include:
           - project_name: Admin
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Api
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Attachments
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
           - project_name: Events
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: EventsProcessor
             base_path: ./src
-            docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Icons
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Identity
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: MsSql
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
           - project_name: Nginx
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
           - project_name: Notifications
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Server
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Setup
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Sso
             base_path: ./bitwarden_license/src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Scim
             base_path: ./bitwarden_license/src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: Billing
             base_path: ./src
-            docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
           - project_name: MsSqlMigratorUtility
             base_path: ./util
-            docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            docker_repos: [ ${AZ_REGISTRY} ]
             dotnet: true
     steps:
       - name: Checkout repo
@@ -271,14 +275,6 @@ jobs:
           fi
 
       ########## ACRs ##########
-      - name: Login to Azure - QA Subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
-
-      - name: Login to QA ACR
-        run: az acr login -n bitwardenqa
-
       - name: Login to Azure - PROD Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
@@ -299,31 +295,6 @@ jobs:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
-      - name: Retrieve secrets
-        if: ${{ env.is_publish_branch == 'true' }}
-        id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
-        with:
-          keyvault: "bitwarden-ci"
-          secrets: "docker-password,
-            docker-username,
-            dct-delegate-2-repo-passphrase,
-            dct-delegate-2-key"
-
-      - name: Log into Docker
-        if: ${{ env.is_publish_branch == 'true' }}
-        env:
-          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
-          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
-        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-      - name: Setup Docker Content Trust (DCT)
-        if: ${{ env.is_publish_branch == 'true' }}
-        uses: bitwarden/gh-actions/setup-docker-trust@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
-        with:
-          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-          azure-keyvault-name: "bitwarden-ci"
-
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
         id: tag
@@ -342,13 +313,6 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Generate tag list
-        id: tag-list
-        env:
-          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
-
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
@@ -364,34 +328,39 @@ jobs:
 
       - name: Build Docker image
         uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3.3.1
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         with:
           context: ${{ matrix.base_path }}/${{ matrix.project_name }}
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.tag-list.outputs.tags }}
+          tags: ${AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" #TODO
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
-      - name: Push to DockerHub
-        if: contains(matrix.docker_repos, 'bitwarden') && env.is_publish_branch == 'true'
+      - name: Push to Prod ACR
+        if: env.is_publish_branch == 'true' #TODO
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          docker tag bitwardenprod.azurecr.io/$PROJECT_NAME:$IMAGE_TAG bitwarden/$PROJECT_NAME:$IMAGE_TAG
-          docker push bitwarden/$PROJECT_NAME:$IMAGE_TAG
-
-      - name: Log out of Docker
-        run: |
-          docker logout
-          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
+          docker push ${AZ_REGISTRY}/$PROJECT_NAME:$IMAGE_TAG
 
   upload:
     name: Upload
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
+      - name: Login to Azure - PROD Subscription
+        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Login to PROD ACR
+        run: az acr login -n bitwardenprod
+
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
         with:
@@ -410,11 +379,11 @@ jobs:
         run: |
           # Set proper image based on branch
           if [[ "${{ github.ref }}" == "rc" ]]; then
-            SETUP_IMAGE="bitwarden/setup:rc"
+            SETUP_IMAGE="${AZ_REGISTRY}/setup:rc"
           elif [[ "${{ github.ref }}" == "hotfix-rc" ]]; then
-            SETUP_IMAGE="bitwarden/setup:hotfix-rc"
+            SETUP_IMAGE="${AZ_REGISTRY}/setup:hotfix-rc"
           else
-            SETUP_IMAGE="bitwarden/setup:dev"
+            SETUP_IMAGE="${AZ_REGISTRY}/setup:dev"
           fi
 
           STUB_OUTPUT=$(pwd)/docker-stub
