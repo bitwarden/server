@@ -3,7 +3,7 @@
   <PropertyGroup>
     <UserSecretsId>bitwarden-Admin</UserSecretsId>
   </PropertyGroup>
-  
+
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Admin' " />
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Admin-SelfHost' " />
   <ItemGroup>
@@ -19,6 +19,7 @@
     <When Condition="!$(DefineConstants.Contains('OSS'))">
       <ItemGroup>
         <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Core\Commercial.Core.csproj" />
+        <ProjectReference Include="..\..\bitwarden_license\src\Commercial.Infrastructure.EntityFramework\Commercial.Infrastructure.EntityFramework.csproj" />
       </ItemGroup>
     </When>
   </Choose>

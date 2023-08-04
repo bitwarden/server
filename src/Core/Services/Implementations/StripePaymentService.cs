@@ -1710,6 +1710,12 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    public async Task<string> AddSecretsManagerToSubscription(Organization org, StaticStore.Plan plan, int additionalSmSeats,
+        int additionalServiceAccount, DateTime? prorationDate = null)
+    {
+        return await FinalizeSubscriptionChangeAsync(org, new SecretsManagerSubscribeUpdate(org, plan, additionalSmSeats, additionalServiceAccount), prorationDate);
+    }
+
     private Stripe.PaymentMethod GetLatestCardPaymentMethod(string customerId)
     {
         var cardPaymentMethods = _stripeAdapter.PaymentMethodListAutoPaging(
