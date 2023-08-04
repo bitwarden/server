@@ -27,9 +27,9 @@ public class OrganizationEditModel : OrganizationViewModel
     public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
         IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
-        GlobalSettings globalSettings, int secrets, int projects, int serviceAccounts, int smSeats)
+        GlobalSettings globalSettings, int secrets, int projects, int serviceAccounts, int occupiedSmSeats)
         : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies, secrets, projects,
-            serviceAccounts, smSeats)
+            serviceAccounts, occupiedSmSeats)
     {
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
