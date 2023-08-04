@@ -329,8 +329,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          docker push ${AZ_REGISTRY}/$PROJECT_NAME:$IMAGE_TAG
+        run: docker push ${AZ_REGISTRY}/$PROJECT_NAME:$IMAGE_TAG
 
   upload:
     name: Upload
