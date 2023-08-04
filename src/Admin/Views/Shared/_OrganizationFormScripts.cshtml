@@ -103,7 +103,7 @@
     */
     function setInitialSecretsManagerConfiguration() {
         // Seats
-        document.getElementById('@(nameof(Model.SmSeats))').value = Math.max(@Model.OccupiedSmSeatsCount, 0);
+        document.getElementById('@(nameof(Model.SmSeats))').value = Math.max(@Model.OccupiedSmSeatsCount, 1);
 
         // Service accounts
         const baseServiceAccounts = getBaseServiceAccountValue('@((byte)Model.PlanType)');
