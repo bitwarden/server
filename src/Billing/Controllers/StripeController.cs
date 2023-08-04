@@ -154,7 +154,17 @@ public class StripeController : Controller
                 // user
                 else if (userId != Guid.Empty)
                 {
-                    await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+                    if (subUnpaid && subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
+                    {
+                        await CancelSubscription(subscription.Id);
+                        await VoidOpenInvoices(subscription.Id);
+                    }
+
+                    var user = await _userService.GetUserByIdAsync(userId);
+                    if (user.Premium)
+                    {
+                        await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+                    }
                 }
             }
 
@@ -1171,12 +1181,8 @@ public class StripeController : Controller
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
             // attempt count 4 = 11 days after initial failure
-            if (invoice.AttemptCount > 3 && subscription.Items.Any(i => i.Price.Id == PremiumPlanId || i.Price.Id == PremiumPlanIdAppStore))
-            {
-                await CancelSubscription(invoice.SubscriptionId);
-                await VoidOpenInvoices(invoice.SubscriptionId);
-            }
-            else
+            if (invoice.AttemptCount <= 3 ||
+                !subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
             {
                 await AttemptToPayInvoiceAsync(invoice);
             }
