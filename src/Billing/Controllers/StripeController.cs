@@ -631,7 +631,7 @@ public class StripeController : Controller
         {
             Customer = paymentMethod.CustomerId,
             Status = StripeSubscriptionStatus.Unpaid,
-            Expand = new List<string> { nameof(Subscription.LatestInvoice) }
+            Expand = new List<string> { "data.latest_invoice" }
         };
 
         StripeList<Subscription> unpaidSubscriptions;
