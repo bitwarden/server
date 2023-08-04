@@ -21,7 +21,7 @@
                     return;
                 }
                 setTrialDefaults('@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)');
-                togglePlanSettings('@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)');
+                togglePlanFeatures('@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)');
                 document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
             });
             document.getElementById('enterprise-trial').addEventListener('click', () => {
@@ -30,7 +30,7 @@
                     return;
                 }
                 setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
-                togglePlanSettings('@((byte)PlanType.EnterpriseAnnually)');
+                togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
                 document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
             });
 
@@ -44,7 +44,7 @@
                 // Secret Manager
                 if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
                     document.getElementById('@(nameof(Model.SmSeats))').value = '10';
-                    setBaseServiceAccounts(planType);
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = getBaseServiceAccountValue(planType);
                 }
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
