@@ -139,10 +139,10 @@ public class StripeController : Controller
             var ids = GetIdsFromMetaData(subscription.Metadata);
             var organizationId = ids.Item1 ?? Guid.Empty;
             var userId = ids.Item2 ?? Guid.Empty;
-            var subCanceled = subDeleted && subscription.Status == "canceled";
-            var subUnpaid = subUpdated && subscription.Status == "unpaid";
-            var subActive = subUpdated && subscription.Status == "active";
-            var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
+            var subCanceled = subDeleted && subscription.Status == StripeSubscriptionStatus.Canceled;
+            var subUnpaid = subUpdated && subscription.Status == StripeSubscriptionStatus.Unpaid;
+            var subActive = subUpdated && subscription.Status == StripeSubscriptionStatus.Active;
+            var subIncompleteExpired = subUpdated && subscription.Status == StripeSubscriptionStatus.IncompleteExpired;
 
             if (subCanceled || subUnpaid || subIncompleteExpired)
             {
@@ -282,7 +282,7 @@ public class StripeController : Controller
                 });
                 foreach (var sub in subscriptions)
                 {
-                    if (sub.Status != "canceled" && sub.Status != "incomplete_expired")
+                    if (sub.Status != StripeSubscriptionStatus.Canceled && sub.Status != StripeSubscriptionStatus.IncompleteExpired)
                     {
                         ids = GetIdsFromMetaData(sub.Metadata);
                         if (ids.Item1.HasValue || ids.Item2.HasValue)
@@ -432,7 +432,7 @@ public class StripeController : Controller
             {
                 var subscriptionService = new SubscriptionService();
                 var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                if (subscription?.Status == "active")
+                if (subscription?.Status == StripeSubscriptionStatus.Active)
                 {
                     if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
                     {
@@ -1199,7 +1199,7 @@ public class StripeController : Controller
         var invoiceService = new InvoiceService();
         var options = new InvoiceListOptions
         {
-            Status = "open",
+            Status = StripeInvoiceStatus.Open,
             Subscription = subscriptionId
         };
         var invoices = invoiceService.List(options);
