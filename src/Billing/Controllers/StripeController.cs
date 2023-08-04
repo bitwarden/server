@@ -523,7 +523,7 @@ public class StripeController : Controller
                     customerMetadata = (await GetInvoiceAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
                     break;
                 default:
-                    customerMetadata = (Dictionary<string, string>)null;
+                    customerMetadata = null;
                     break;
             }
 
@@ -538,7 +538,7 @@ public class StripeController : Controller
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Encountered unexpected error while validating cloud region for event type {EventType}", eventType);
+            _logger.LogError(e, "Encountered unexpected error while validating cloud region");
             throw;
         }
     }
