@@ -72,6 +72,12 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public int? MaxAutoscaleSeats { get; set; } = null;
     public DateTime? OwnersNotifiedOfAutoscaling { get; set; } = null;
     public OrganizationStatusType Status { get; set; }
+    public bool UsePasswordManager { get; set; }
+    public int? SmSeats { get; set; }
+    public int? SmServiceAccounts { get; set; }
+    public int? MaxAutoscaleSmSeats { get; set; }
+    public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    public bool SecretsManagerBeta { get; set; }
 
     public void SetNewId()
     {
@@ -104,6 +110,11 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public string BraintreeIdField()
     {
         return "organization_id";
+    }
+
+    public string BraintreeCloudRegionField()
+    {
+        return "region";
     }
 
     public string GatewayIdField()

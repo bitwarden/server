@@ -10,10 +10,12 @@ namespace Bit.Notifications;
 public class SendController : Controller
 {
     private readonly IHubContext<NotificationsHub> _hubContext;
+    private readonly IHubContext<AnonymousNotificationsHub> _anonymousHubContext;
 
-    public SendController(IHubContext<NotificationsHub> hubContext)
+    public SendController(IHubContext<NotificationsHub> hubContext, IHubContext<AnonymousNotificationsHub> anonymousHubContext)
     {
         _hubContext = hubContext;
+        _anonymousHubContext = anonymousHubContext;
     }
 
     [HttpPost("~/send")]
@@ -25,7 +27,7 @@ public class SendController : Controller
             var notificationJson = await reader.ReadToEndAsync();
             if (!string.IsNullOrWhiteSpace(notificationJson))
             {
-                await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext, null);
+                await HubHelpers.SendNotificationToHubAsync(notificationJson, _hubContext, _anonymousHubContext);
             }
         }
     }

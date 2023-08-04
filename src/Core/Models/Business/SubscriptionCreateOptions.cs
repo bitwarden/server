@@ -1,36 +1,61 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
 
 public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
 {
-    public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats, int additionalStorageGb, bool premiumAccessAddon)
+    public OrganizationSubscriptionOptionsBase(Organization org, List<StaticStore.Plan> plans, TaxInfo taxInfo, int additionalSeats,
+        int additionalStorageGb, bool premiumAccessAddon, int additionalSmSeats, int additionalServiceAccounts)
     {
         Items = new List<SubscriptionItemOptions>();
         Metadata = new Dictionary<string, string>
         {
             [org.GatewayIdField()] = org.Id.ToString()
         };
+        foreach (var plan in plans)
+        {
+            AddPlanIdToSubscription(plan);
 
-        if (plan.StripePlanId != null)
+            switch (plan.BitwardenProduct)
+            {
+                case BitwardenProductType.PasswordManager:
+                    {
+                        AddPremiumAccessAddon(premiumAccessAddon, plan);
+                        AddAdditionalSeatToSubscription(additionalSeats, plan);
+                        AddAdditionalStorage(additionalStorageGb, plan);
+                        break;
+                    }
+                case BitwardenProductType.SecretsManager:
+                    {
+                        AddAdditionalSeatToSubscription(additionalSmSeats, plan);
+                        AddServiceAccount(additionalServiceAccounts, plan);
+                        break;
+                    }
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
+        {
+            DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
+        }
+    }
+
+    private void AddServiceAccount(int additionalServiceAccounts, StaticStore.Plan plan)
+    {
+        if (additionalServiceAccounts > 0 && plan.StripeServiceAccountPlanId != null)
         {
             Items.Add(new SubscriptionItemOptions
             {
-                Plan = plan.StripePlanId,
-                Quantity = 1
+                Plan = plan.StripeServiceAccountPlanId,
+                Quantity = additionalServiceAccounts
             });
         }
+    }
 
-        if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
-        {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.StripeSeatPlanId,
-                Quantity = additionalSeats
-            });
-        }
-
+    private void AddAdditionalStorage(int additionalStorageGb, StaticStore.Plan plan)
+    {
         if (additionalStorageGb > 0)
         {
             Items.Add(new SubscriptionItemOptions
@@ -39,19 +64,29 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
                 Quantity = additionalStorageGb
             });
         }
+    }
 
+    private void AddPremiumAccessAddon(bool premiumAccessAddon, StaticStore.Plan plan)
+    {
         if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
         {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.StripePremiumAccessPlanId,
-                Quantity = 1
-            });
+            Items.Add(new SubscriptionItemOptions { Plan = plan.StripePremiumAccessPlanId, Quantity = 1 });
         }
+    }
 
-        if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
+    private void AddAdditionalSeatToSubscription(int additionalSeats, StaticStore.Plan plan)
+    {
+        if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
         {
-            DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
+            Items.Add(new SubscriptionItemOptions { Plan = plan.StripeSeatPlanId, Quantity = additionalSeats });
+        }
+    }
+
+    private void AddPlanIdToSubscription(StaticStore.Plan plan)
+    {
+        if (plan.StripePlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions { Plan = plan.StripePlanId, Quantity = 1 });
         }
     }
 }
@@ -59,13 +94,14 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
 public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionOptionsBase
 {
     public OrganizationPurchaseSubscriptionOptions(
-        Organization org, StaticStore.Plan plan,
-        TaxInfo taxInfo, int additionalSeats = 0,
-        int additionalStorageGb = 0, bool premiumAccessAddon = false) :
-        base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+        Organization org, List<StaticStore.Plan> plans,
+        TaxInfo taxInfo, int additionalSeats,
+        int additionalStorageGb, bool premiumAccessAddon,
+        int additionalSmSeats, int additionalServiceAccounts) :
+        base(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon, additionalSmSeats, additionalServiceAccounts)
     {
         OffSession = true;
-        TrialPeriodDays = plan.TrialPeriodDays;
+        TrialPeriodDays = plans.FirstOrDefault(x => x.BitwardenProduct == BitwardenProductType.PasswordManager)!.TrialPeriodDays;
     }
 }
 
@@ -73,10 +109,10 @@ public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOp
 {
     public OrganizationUpgradeSubscriptionOptions(
         string customerId, Organization org,
-        StaticStore.Plan plan, TaxInfo taxInfo,
-        int additionalSeats = 0, int additionalStorageGb = 0,
-        bool premiumAccessAddon = false) :
-        base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+        List<StaticStore.Plan> plans, OrganizationUpgrade upgrade) :
+        base(org, plans, upgrade.TaxInfo, upgrade.AdditionalSeats, upgrade.AdditionalStorageGb,
+        upgrade.PremiumAccessAddon, upgrade.AdditionalSmSeats.GetValueOrDefault(),
+        upgrade.AdditionalServiceAccounts.GetValueOrDefault())
     {
         Customer = customerId;
     }

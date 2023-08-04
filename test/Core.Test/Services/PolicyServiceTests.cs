@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -208,12 +209,17 @@ public class PolicyServiceTests
         [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Id = default;
+        policy.Data = null;
 
         SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
             Id = policy.OrganizationId,
             UsePolicies = true,
         });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.SingleOrg)
+            .Returns(Task.FromResult(new Policy { Enabled = true }));
 
         var utcNow = DateTime.UtcNow;
 
@@ -396,6 +402,116 @@ public class PolicyServiceTests
         Assert.True(policy.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
     }
 
+    [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(false, false)]
+    public async Task SaveAsync_PolicyRequiredByTrustedDeviceEncryption_DisablePolicyOrDisableAutomaticEnrollment_ThrowsBadRequest(
+        bool policyEnabled,
+        bool autoEnrollEnabled,
+        [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy,
+        SutProvider<PolicyService> sutProvider)
+    {
+        policy.Enabled = policyEnabled;
+        policy.SetDataModel(new ResetPasswordDataModel
+        {
+            AutoEnrollEnabled = autoEnrollEnabled
+        });
+
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
+        {
+            Id = policy.OrganizationId,
+            UsePolicies = true,
+        });
+
+        var ssoConfig = new SsoConfig { Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption });
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policy.OrganizationId)
+            .Returns(ssoConfig);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Trusted device encryption is on and requires this policy.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogPolicyEventAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_PolicyRequiredForAccountRecovery_NotEnabled_ThrowsBadRequestAsync(
+        [PolicyFixtures.Policy(Enums.PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
+    {
+        policy.Enabled = true;
+        policy.SetDataModel(new ResetPasswordDataModel());
+
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
+        {
+            Id = policy.OrganizationId,
+            UsePolicies = true,
+        });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.SingleOrg)
+            .Returns(Task.FromResult(new Policy { Enabled = false }));
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Single Organization policy not enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogPolicyEventAsync(default, default, default);
+    }
+
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_SingleOrg_AccountRecoveryEnabled_ThrowsBadRequest(
+        [PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
+    {
+        policy.Enabled = false;
+
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
+        {
+            Id = policy.OrganizationId,
+            UsePolicies = true,
+        });
+
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.ResetPassword)
+            .Returns(new Policy { Enabled = true });
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Account recovery policy is enabled.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+    }
+
     [Theory, BitAutoData]
     public async Task GetPoliciesApplicableToUserAsync_WithRequireSsoTypeFilter_WithDefaultOrganizationUserStatusFilter_ReturnsNoPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
     {
@@ -508,18 +624,12 @@ public class PolicyServiceTests
     private static void SetupUserPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.RequireSso)
+            .GetByUserIdWithPolicyDetailsAsync(userId)
             .Returns(new List<OrganizationUserPolicyDetails>
             {
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = false, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false},
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
-                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = true }
-            });
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.DisableSend)
-            .Returns(new List<OrganizationUserPolicyDetails>
-            {
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = true },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
             });

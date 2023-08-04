@@ -15,7 +15,10 @@ public class Plan
     public short? BaseStorageGb { get; set; }
     public short? MaxCollections { get; set; }
     public short? MaxUsers { get; set; }
+    public short? MaxServiceAccounts { get; set; }
     public bool AllowSeatAutoscale { get; set; }
+
+    public bool AllowServiceAccountsAutoscale { get; set; }
 
     public bool HasAdditionalSeatsOption { get; set; }
     public int? MaxAdditionalSeats { get; set; }
@@ -47,9 +50,16 @@ public class Plan
     public string StripePlanId { get; set; }
     public string StripeSeatPlanId { get; set; }
     public string StripeStoragePlanId { get; set; }
+    public string StripeServiceAccountPlanId { get; set; }
     public string StripePremiumAccessPlanId { get; set; }
     public decimal BasePrice { get; set; }
     public decimal SeatPrice { get; set; }
     public decimal AdditionalStoragePricePerGb { get; set; }
     public decimal PremiumAccessOptionPrice { get; set; }
+    public decimal? AdditionalPricePerServiceAccount { get; set; }
+    public short? BaseServiceAccount { get; set; }
+    public short? MaxAdditionalServiceAccount { get; set; }
+    public bool HasAdditionalServiceAccountOption { get; set; }
+    public short? MaxProjects { get; set; }
+    public BitwardenProductType BitwardenProduct { get; set; }
 }

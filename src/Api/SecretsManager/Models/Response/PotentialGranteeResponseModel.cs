@@ -17,7 +17,7 @@ public class PotentialGranteeResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(group));
         }
 
-        Id = group.Id.ToString();
+        Id = group.Id;
         Name = group.Name;
         Type = "group";
     }
@@ -30,7 +30,7 @@ public class PotentialGranteeResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(user));
         }
 
-        Id = user.Id.ToString();
+        Id = user.Id;
         Name = user.Name;
         Email = user.Email;
         Type = "user";
@@ -44,7 +44,7 @@ public class PotentialGranteeResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(serviceAccount));
         }
 
-        Id = serviceAccount.Id.ToString();
+        Id = serviceAccount.Id;
         Name = serviceAccount.Name;
         Type = "serviceAccount";
     }
@@ -57,7 +57,7 @@ public class PotentialGranteeResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(project));
         }
 
-        Id = project.Id.ToString();
+        Id = project.Id;
         Name = project.Name;
         Type = "project";
     }
@@ -66,10 +66,10 @@ public class PotentialGranteeResponseModel : ResponseModel
     {
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
 
     public string Name { get; set; }
 
     public string Type { get; set; }
-    public string? Email { get; set; }
+    public string Email { get; set; }
 }

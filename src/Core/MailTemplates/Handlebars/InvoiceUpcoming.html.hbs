@@ -17,7 +17,10 @@
     {{/if}}
     <tr style="margin: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: none;">
         <td class="content-block" style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; box-sizing: border-box; font-size: 16px; color: #333; line-height: 25px; margin: 0; -webkit-font-smoothing: antialiased; padding: 0 0 10px; -webkit-text-size-adjust: none;" valign="top">
-            To avoid any interruption in service, please ensure that your payment method on file is up to date and can be charged for the above amount. You can manage your subscription, payment method, and invoices by logging into the web vault at {{{link WebVaultUrl}}}.
+            To avoid any interruption in service, please ensure that your payment method on file is up to date and can be charged for the above amount. You can manage your subscription, payment method, and invoices by logging into the web vault.
+            <a href="{{{UpdateBillingInfoUrl}}}" style="text-decoration: none">
+                <img src="https://assets.bitwarden.com/email/v1/BillingLearnMore.png" alt="update-billing-info" width="20" height="20" style="display: inline-block;vertical-align: top;">
+            </a>
         </td>
     </tr>
     {{#if MentionInvoices}}

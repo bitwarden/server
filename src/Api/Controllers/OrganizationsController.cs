@@ -7,7 +7,6 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
-using Bit.Api.SecretsManager;
 using Bit.Core;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -19,6 +18,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -50,6 +50,9 @@ public class OrganizationsController : Controller
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
+    private readonly ILicensingService _licensingService;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -69,7 +72,10 @@ public class OrganizationsController : Controller
         IUpdateOrganizationLicenseCommand updateOrganizationLicenseCommand,
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IFeatureService featureService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        ILicensingService licensingService,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -89,6 +95,9 @@ public class OrganizationsController : Controller
         _cloudGetOrganizationLicenseQuery = cloudGetOrganizationLicenseQuery;
         _featureService = featureService;
         _globalSettings = globalSettings;
+        _licensingService = licensingService;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
     }
 
     [HttpGet("{id}")]
@@ -156,10 +165,14 @@ public class OrganizationsController : Controller
 
             return new OrganizationSubscriptionResponseModel(organization, subscriptionInfo, hideSensitiveData);
         }
-        else
+
+        if (_globalSettings.SelfHosted)
         {
-            return new OrganizationSubscriptionResponseModel(organization);
+            var orgLicense = await _licensingService.ReadOrganizationLicenseAsync(organization);
+            return new OrganizationSubscriptionResponseModel(organization, orgLicense);
         }
+
+        return new OrganizationSubscriptionResponseModel(organization);
     }
 
     [HttpGet("{id}/license")]
@@ -300,7 +313,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+        var result = await _upgradeOrganizationPlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
         return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
     }
 
@@ -313,8 +326,32 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-
         await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
+    }
+
+    [HttpPost("{id}/sm-subscription")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!await _currentContext.EditSubscription(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (secretsManagerPlan == null)
+        {
+            throw new NotFoundException("Invalid Secrets Manager plan.");
+        }
+
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization, secretsManagerPlan);
+        await _updateSecretsManagerSubscriptionCommand.UpdateSecretsManagerSubscription(organizationUpdate);
     }
 
     [HttpPost("{id}/seat")]
@@ -481,7 +518,7 @@ public class OrganizationsController : Controller
         if (model.Type == OrganizationApiKeyType.BillingSync || model.Type == OrganizationApiKeyType.Scim)
         {
             // Non-enterprise orgs should not be able to create or view an apikey of billing sync/scim key types
-            var plan = StaticStore.GetPlan(organization.PlanType);
+            var plan = StaticStore.GetPasswordManagerPlan(organization.PlanType);
             if (plan.Product != ProductType.Enterprise)
             {
                 throw new NotFoundException();
@@ -699,7 +736,6 @@ public class OrganizationsController : Controller
     }
 
     // This is a temporary endpoint to self-enroll in secrets manager
-    [SecretsManager]
     [SelfHosted(NotSelfHostedOnly = true)]
     [HttpPost("{id}/enroll-secrets-manager")]
     public async Task EnrollSecretsManager(Guid id, [FromBody] OrganizationEnrollSecretsManagerRequestModel model)
@@ -717,6 +753,7 @@ public class OrganizationsController : Controller
         }
 
         organization.UseSecretsManager = model.Enabled;
+        organization.SecretsManagerBeta = model.Enabled;
         await _organizationService.UpdateAsync(organization);
 
         // Turn on Secrets Manager for the user

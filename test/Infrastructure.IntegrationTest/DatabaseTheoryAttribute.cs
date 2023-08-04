@@ -7,24 +7,18 @@ public class DatabaseTheoryAttribute : TheoryAttribute
 {
     private static IConfiguration? _cachedConfiguration;
 
-    public const string DapperSqlServerKey = "Dapper:SqlServer";
-    public const string EfPostgresKey = "Ef:Postgres";
-    public const string EfMySqlKey = "Ef:MySql";
-
     public DatabaseTheoryAttribute()
     {
         if (!HasAnyDatabaseSetup())
         {
-            Skip = "No database connections strings setup.";
+            Skip = "No databases setup.";
         }
     }
 
     private static bool HasAnyDatabaseSetup()
     {
         var config = GetConfiguration();
-        return config.TryGetConnectionString(DapperSqlServerKey, out _) ||
-          config.TryGetConnectionString(EfPostgresKey, out _) ||
-          config.TryGetConnectionString(EfMySqlKey, out _);
+        return config.GetDatabases().Length > 0;
     }
 
     public static IConfiguration GetConfiguration()

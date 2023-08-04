@@ -65,7 +65,7 @@ public class ProviderUsersController : Controller
             throw new NotFoundException();
         }
 
-        var invite = ProviderUserInviteFactory.CreateIntialInvite(model.Emails, model.Type.Value,
+        var invite = ProviderUserInviteFactory.CreateInitialInvite(model.Emails, model.Type.Value,
             _userService.GetProperUserId(User).Value, providerId);
         await _providerService.InviteUserAsync(invite);
     }
