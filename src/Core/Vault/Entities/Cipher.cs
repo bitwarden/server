@@ -45,6 +45,10 @@ public class Cipher : ITableObject<Guid>, ICloneable
             foreach (var kvp in _attachmentData)
             {
                 kvp.Value.AttachmentId = kvp.Key;
+                if (kvp.Value.TempMetadata != null)
+                {
+                    kvp.Value.TempMetadata.AttachmentId = kvp.Key;
+                }
             }
             return _attachmentData;
         }
