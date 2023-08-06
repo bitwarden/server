@@ -1,3 +1,4 @@
+@using Bit.Core.Utilities
 <script>
     (() => {
         document.getElementById('@(nameof(Model.PlanType))').addEventListener('change', () => {
@@ -126,26 +127,7 @@
     }
 
     function getBaseServiceAccountValue(planType) {
-        switch(planType) {
-            case '@((byte)PlanType.Free)':
-                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.Free).BaseServiceAccount;
-                break;
-
-            case '@((byte)PlanType.TeamsMonthly)':
-                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.TeamsMonthly).BaseServiceAccount;
-                break;
-
-            case '@((byte)PlanType.TeamsAnnually)':
-                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.TeamsAnnually).BaseServiceAccount;
-                break;
-
-            case '@((byte)PlanType.EnterpriseMonthly)':
-                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseMonthly).BaseServiceAccount;
-                break;
-
-            case '@((byte)PlanType.EnterpriseAnnually)':
-                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually).BaseServiceAccount;
-                break;
-        }
+        const plans = @Html.Raw(Json.Serialize(StaticStore.SecretManagerPlans));
+        return plans.find(p => p.type == planType)?.baseServiceAccount;
     }
 </script>
