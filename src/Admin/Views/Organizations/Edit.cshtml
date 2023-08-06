@@ -16,16 +16,16 @@
     <script>
         (() => {
             document.getElementById('teams-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
                     alert('Organization is not on a free plan.');
                     return;
                 }
-                setTrialDefaults('@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)');
-                togglePlanFeatures('@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)');
+                setTrialDefaults('@((byte)PlanType.TeamsAnnually)');
+                togglePlanFeatures('@((byte)PlanType.TeamsAnnually)');
                 document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
             });
             document.getElementById('enterprise-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
                     alert('Organization is not on a free plan.');
                     return;
                 }
