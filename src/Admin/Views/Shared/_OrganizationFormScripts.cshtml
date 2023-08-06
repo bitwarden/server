@@ -103,12 +103,14 @@
     * Set Secrets Manager values based on current usage (for migrating from SM beta or reinstating an old subscription)
     */
     function setInitialSecretsManagerConfiguration() {
+        const planType = document.getElementById('@(nameof(Model.PlanType))').value;
+
         // Seats
         document.getElementById('@(nameof(Model.SmSeats))').value = Math.max(@Model.OccupiedSmSeatsCount, 1);
 
         // Service accounts
-        const baseServiceAccounts = getPlan('@((byte)Model.PlanType)')?.baseServiceAccount;
-        if ('@((byte)Model.PlanType)' !== '@((byte)PlanType.Free)' && @Model.ServiceAccountsCount > baseServiceAccounts) {
+        const baseServiceAccounts = getPlan(planType)?.baseServiceAccount;
+        if (planType !== '@((byte)PlanType.Free)' && @Model.ServiceAccountsCount > baseServiceAccounts) {
             document.getElementById('@(nameof(Model.SmServiceAccounts))').value = @Model.ServiceAccountsCount;
         } else {
             document.getElementById('@(nameof(Model.SmServiceAccounts))').value = baseServiceAccounts;
@@ -128,7 +130,6 @@
 
     function getPlan(planType) {
         const plans = @Html.Raw(Json.Serialize(Model.GetPlansHelper()));
-        console.log(plans);
         return plans.find(p => p.type == planType);
     }
 </script>
