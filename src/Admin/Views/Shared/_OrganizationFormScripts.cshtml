@@ -128,18 +128,24 @@
     function getBaseServiceAccountValue(planType) {
         switch(planType) {
             case '@((byte)PlanType.Free)':
-                return 3;
+                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.Free).BaseServiceAccount;
                 break;
 
             case '@((byte)PlanType.TeamsMonthly)':
+                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.TeamsMonthly).BaseServiceAccount;
+                break;
+
             case '@((byte)PlanType.TeamsAnnually)':
-                return 50;
-            break;
+                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.TeamsAnnually).BaseServiceAccount;
+                break;
 
             case '@((byte)PlanType.EnterpriseMonthly)':
+                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseMonthly).BaseServiceAccount;
+                break;
+
             case '@((byte)PlanType.EnterpriseAnnually)':
-                return 200;
-            break;
+                return @Bit.Core.Utilities.StaticStore.GetSecretsManagerPlan(PlanType.EnterpriseAnnually).BaseServiceAccount;
+                break;
         }
     }
 </script>
