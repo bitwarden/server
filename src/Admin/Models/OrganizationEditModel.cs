@@ -22,6 +22,7 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
         PlanType = Core.Enums.PlanType.TeamsMonthly;
         Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+        LicenseKey = RandomLicenseKey;
     }
 
     public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
