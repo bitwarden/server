@@ -44,7 +44,7 @@
                 // Secret Manager
                 if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
                     document.getElementById('@(nameof(Model.SmSeats))').value = '10';
-                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = getBaseServiceAccountValue(planType);
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = getPlan(planType)?.baseServiceAccount;
                 }
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';

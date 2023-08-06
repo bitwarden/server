@@ -107,7 +107,7 @@
         document.getElementById('@(nameof(Model.SmSeats))').value = Math.max(@Model.OccupiedSmSeatsCount, 1);
 
         // Service accounts
-        const baseServiceAccounts = getBaseServiceAccountValue('@((byte)Model.PlanType)');
+        const baseServiceAccounts = getPlan('@((byte)Model.PlanType)')?.baseServiceAccount;
         if ('@((byte)Model.PlanType)' !== '@((byte)PlanType.Free)' && @Model.ServiceAccountsCount > baseServiceAccounts) {
             document.getElementById('@(nameof(Model.SmServiceAccounts))').value = @Model.ServiceAccountsCount;
         } else {
@@ -126,8 +126,8 @@
         document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
     }
 
-    function getBaseServiceAccountValue(planType) {
+    function getPlan(planType) {
         const plans = @Html.Raw(Json.Serialize(StaticStore.SecretManagerPlans));
-        return plans.find(p => p.type == planType)?.baseServiceAccount;
+        return plans.find(p => p.type == planType);
     }
 </script>
