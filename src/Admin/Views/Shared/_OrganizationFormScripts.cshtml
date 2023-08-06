@@ -127,7 +127,8 @@
     }
 
     function getPlan(planType) {
-        const plans = @Html.Raw(Json.Serialize(StaticStore.SecretManagerPlans));
+        const plans = @Html.Raw(Json.Serialize(Model.GetPlansHelper()));
+        console.log(plans);
         return plans.find(p => p.type == planType);
     }
 </script>

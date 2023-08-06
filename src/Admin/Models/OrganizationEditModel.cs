@@ -152,6 +152,19 @@ public class OrganizationEditModel : OrganizationViewModel
     [Display(Name = "Secrets Manager Beta")]
     public bool SecretsManagerBeta { get; set; }
 
+    /**
+     * Creates a Plan[] object for use in Javascript
+     * This is mapped manually below to provide some type safety in case the plan objects change
+     * Add mappings for individual properties as you need them
+     */
+    public IEnumerable<Dictionary<string, object>> GetPlansHelper() =>
+        StaticStore.SecretManagerPlans.Select(p =>
+            new Dictionary<string, object>
+            {
+                { "type", p.Type },
+                { "baseServiceAccount", p.BaseServiceAccount }
+            });
+
     public Organization CreateOrganization(Provider provider)
     {
         BillingEmail = provider.BillingEmail;
