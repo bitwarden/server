@@ -505,13 +505,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
                 $"[{Schema}].[{Table}_ReadByUserIdWithPolicyDetails]",
-                new { UserId = userId, PolicyType = policyType },
+                new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
