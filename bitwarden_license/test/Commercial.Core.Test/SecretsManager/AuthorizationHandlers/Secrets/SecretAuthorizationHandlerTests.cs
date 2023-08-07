@@ -272,6 +272,10 @@ public class SecretAuthorizationHandlerTests
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, false)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
     public async Task CanReadSecret_AccessCheck(PermissionType permissionType, bool read, bool write,
         bool expected,
         SutProvider<SecretAuthorizationHandler> sutProvider, Secret secret,
