@@ -15,6 +15,7 @@ public class HttpResponseBuilder : IDisposable
     {
         var copiedContentStream = new MemoryStream();
         await Content.CopyToAsync(copiedContentStream); // This is important, otherwise the content stream will be disposed when the response is disposed.
+        copiedContentStream.Seek(0, SeekOrigin.Begin);
         var message = new HttpResponseMessage(StatusCode)
         {
             Content = new StreamContent(copiedContentStream),
