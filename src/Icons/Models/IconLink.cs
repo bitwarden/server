@@ -23,12 +23,15 @@ public class IconLink
     private const string _jpegMediaType = "image/jpeg";
     private static readonly byte[] _jpegHeader = new byte[] { 255, 216, 255 };
 
+    private const string _svgXmlMediaType = "image/svg+xml";
+
     private static readonly HashSet<string> _allowedMediaTypes = new(StringComparer.InvariantCultureIgnoreCase)
     {
         _pngMediaType,
         _icoMediaType,
         _icoAltMediaType,
         _jpegMediaType,
+        _svgXmlMediaType,
     };
 
     private bool _useUriDirectly = false;
