@@ -43,6 +43,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly ILicensingService _licensingService;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
+    private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -69,13 +70,14 @@ public class OrganizationsControllerTests : IDisposable
         _licensingService = Substitute.For<ILicensingService>();
         _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
         _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
+        _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
             _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
             _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService,
-            _updateSecretsManagerSubscriptionCommand, _upgradeOrganizationPlanCommand);
+            _updateSecretsManagerSubscriptionCommand, _upgradeOrganizationPlanCommand, _addSecretsManagerSubscriptionCommand);
     }
 
     public void Dispose()
