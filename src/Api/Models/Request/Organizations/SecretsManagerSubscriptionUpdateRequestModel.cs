@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.StaticStore;
 
 namespace Bit.Api.Models.Request.Organizations;
 
@@ -13,32 +12,12 @@ public class SecretsManagerSubscriptionUpdateRequestModel
     public int ServiceAccountAdjustment { get; set; }
     public int? MaxAutoscaleServiceAccounts { get; set; }
 
-    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization, Plan plan)
+    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
     {
-        var newTotalSeats = organization.SmSeats.GetValueOrDefault() + SeatAdjustment;
-        var newTotalServiceAccounts = organization.SmServiceAccounts.GetValueOrDefault() + ServiceAccountAdjustment;
-
-        var orgUpdate = new SecretsManagerSubscriptionUpdate
-        {
-            OrganizationId = organization.Id,
-
-            SmSeatsAdjustment = SeatAdjustment,
-            SmSeats = newTotalSeats,
-            SmSeatsExcludingBase = newTotalSeats - plan.BaseSeats,
-
-            MaxAutoscaleSmSeats = MaxAutoscaleSeats,
-
-            SmServiceAccountsAdjustment = ServiceAccountAdjustment,
-            SmServiceAccounts = newTotalServiceAccounts,
-            SmServiceAccountsExcludingBase = newTotalServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault(),
-
-            MaxAutoscaleSmServiceAccounts = MaxAutoscaleServiceAccounts,
-
-            MaxAutoscaleSmSeatsChanged =
-                MaxAutoscaleSeats.GetValueOrDefault() != organization.MaxAutoscaleSmSeats.GetValueOrDefault(),
-            MaxAutoscaleSmServiceAccountsChanged =
-                MaxAutoscaleServiceAccounts.GetValueOrDefault() != organization.MaxAutoscaleSmServiceAccounts.GetValueOrDefault()
-        };
+        var orgUpdate = new SecretsManagerSubscriptionUpdate(
+            organization,
+            seatAdjustment: SeatAdjustment, maxAutoscaleSeats: MaxAutoscaleSeats,
+            serviceAccountAdjustment: ServiceAccountAdjustment, maxAutoscaleServiceAccounts: MaxAutoscaleServiceAccounts);
 
         return orgUpdate;
     }
