@@ -285,7 +285,7 @@ jobs:
         run: |
           IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
           if [[ "$IMAGE_TAG" == "master" ]]; then
-            IMAGE_TAG=dev
+            IMAGE_TAG=latest
           fi
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
