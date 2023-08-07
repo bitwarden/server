@@ -564,6 +564,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
+                    b.Property<bool>("LimitCollectionCdOwnerAdmin")
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");
 

@@ -562,6 +562,10 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("LimitCollectionCdOwnerAdmin")
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("INTEGER");
 
