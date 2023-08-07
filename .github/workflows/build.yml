@@ -320,7 +320,7 @@ jobs:
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          tags: ${env.AZ_REGISTRY}/${env.PROJECT_NAME}:${env.IMAGE_TAG}"
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
@@ -342,7 +342,7 @@ jobs:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to PROD ACR
-        run: az acr login -n bitwardenprod
+        run: az acr login -n $AZ_REGISTRY
 
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
