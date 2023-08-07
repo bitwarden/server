@@ -320,7 +320,7 @@ jobs:
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${env.AZ_REGISTRY}/${env.PROJECT_NAME}:${env.IMAGE_TAG}"
+          tags: ${{ env.AZ_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ env.IMAGE_TAG }}"
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
