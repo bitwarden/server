@@ -294,7 +294,7 @@ jobs:
 
       - name: Retrieve github PAT secrets
         id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/get-keyvault-secrets@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
@@ -302,7 +302,7 @@ jobs:
       - name: Retrieve secrets
         if: ${{ env.is_publish_branch == 'true' }}
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/get-keyvault-secrets@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           keyvault: "bitwarden-ci"
           secrets: "docker-password,
@@ -319,7 +319,7 @@ jobs:
 
       - name: Setup Docker Content Trust (DCT)
         if: ${{ env.is_publish_branch == 'true' }}
-        uses: bitwarden/gh-actions/setup-docker-trust@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/setup-docker-trust@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
           azure-keyvault-name: "bitwarden-ci"
@@ -620,7 +620,7 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/get-keyvault-secrets@f096207b7a2f31723165aee6ad03e91716686e78
         if: failure()
         with:
           keyvault: "bitwarden-ci"
