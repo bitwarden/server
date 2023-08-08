@@ -8,6 +8,8 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +29,8 @@ public class OrganizationUsersController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -36,7 +40,9 @@ public class OrganizationUsersController : Controller
         IGroupRepository groupRepository,
         IUserService userService,
         IPolicyRepository policyRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -46,6 +52,8 @@ public class OrganizationUsersController : Controller
         _userService = userService;
         _policyRepository = policyRepository;
         _currentContext = currentContext;
+        _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
 
     [HttpGet("{id}")]
@@ -418,6 +426,41 @@ public class OrganizationUsersController : Controller
     public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkRestoreAsync(Guid orgId, [FromBody] OrganizationUserBulkRequestModel model)
     {
         return await RestoreOrRevokeUsersAsync(orgId, model, (orgId, orgUserIds, restoringUserId) => _organizationService.RestoreUsersAsync(orgId, orgUserIds, restoringUserId, _userService));
+    }
+
+    [HttpPatch("enable-secrets-manager")]
+    [HttpPut("enable-secrets-manager")]
+    public async Task BulkEnableSecretsManagerAsync(Guid orgId,
+        [FromBody] OrganizationUserBulkRequestModel model)
+    {
+        if (!await _currentContext.ManageUsers(orgId))
+        {
+            throw new NotFoundException();
+        }
+
+        var orgUsers = (await _organizationUserRepository.GetManyAsync(model.Ids))
+            .Where(ou => ou.OrganizationId == orgId && !ou.AccessSecretsManager).ToList();
+        if (orgUsers.Count == 0)
+        {
+            throw new BadRequestException("Users invalid.");
+        }
+
+        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(orgId,
+            orgUsers.Count);
+        if (additionalSmSeatsRequired > 0)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(orgId);
+            var update = new SecretsManagerSubscriptionUpdate(organization, true);
+            update.AdjustSeats(additionalSmSeatsRequired);
+            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+        }
+
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.AccessSecretsManager = true;
+        }
+
+        await _organizationUserRepository.ReplaceManyAsync(orgUsers);
     }
 
     private async Task RestoreOrRevokeUserAsync(

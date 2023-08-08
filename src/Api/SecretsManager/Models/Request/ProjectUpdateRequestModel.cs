@@ -8,6 +8,7 @@ public class ProjectUpdateRequestModel
 {
     [Required]
     [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string Name { get; set; }
 
     public Project ToProject(Guid id)
