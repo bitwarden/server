@@ -10,6 +10,7 @@ public class IconFetchingServiceTests : ServiceTestBase<IconFetchingService>
     [InlineData("www.google.com")] // https site
     [InlineData("neverssl.com")] // http site
     [InlineData("neopets.com")] // uses favicon.ico
+    [InlineData("hopin.com")] // uses svg+xml format
     [InlineData("ameritrade.com")] // redirects to tdameritrace.com
     [InlineData("icloud.com")]
     [InlineData("bofa.com", Skip = "Broken in pipeline for .NET 6. Tracking link: https://bitwarden.atlassian.net/browse/PS-982")]
