@@ -151,6 +151,11 @@ public class IconLink
             format = DetermineImageFormatFromFile(bytes);
         }
 
+        if (format == null || !_allowedMediaTypes.Contains(format))
+        {
+            return null;
+        }
+
         return new Icon { Image = bytes, Format = format };
     }
 

@@ -61,7 +61,7 @@ public class IconHttpResponse : IDisposable
             .Take(_maxRetrievedIcons)
             .ToArray() ?? Array.Empty<IconLink>();
         var results = await Task.WhenAll(links.Select(l => l.FetchAsync(_logger, _httpClientFactory, _uriService)));
-        return results.Where(r => r != null && !string.IsNullOrWhiteSpace(r.Format)).Select(r => r!);
+        return results.Where(r => r != null).Select(r => r!);
     }
 
 
