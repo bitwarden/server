@@ -106,17 +106,21 @@ public class StaticStore
 
         #region Plans
 
-        PasswordManagerPlans = PasswordManagerPlanStore.CreatePlan();
-        SecretManagerPlans = SecretsManagerPlanStore.CreatePlan();
+        // PasswordManagerPlans = PasswordManagerPlanStore.CreatePlan();
+        // SecretManagerPlans = SecretsManagerPlanStore.CreatePlan();
 
-        Plans = PasswordManagerPlans.Concat(SecretManagerPlans);
-
+        //Plans = PasswordManagerPlans.Concat(SecretManagerPlans);
+        Plans = new List<Plan>
+        {
+            new EnterprisePlan(true),
+            new EnterprisePlan(false),
+        };
 
         #endregion
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
-    public static IEnumerable<Plan> Plans { get; set; }
+    public static IEnumerable<Plan> Plans { get; }
     public static IEnumerable<Plan> SecretManagerPlans { get; set; }
     public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
@@ -151,12 +155,12 @@ public class StaticStore
     /// </returns>
     public static bool IsAddonSubscriptionItem(string stripePlanId)
     {
-        if (PasswordManagerPlans.Select(p => p.StripeStoragePlanId).Contains(stripePlanId))
+        if (Plans.Select(p => p.PasswordManager.StripeStoragePlanId).Contains(stripePlanId))
         {
             return true;
         }
 
-        if (SecretManagerPlans.Select(p => p.StripeServiceAccountPlanId).Contains(stripePlanId))
+        if (SecretManagerPlans.Select(p => p.SecretsManager.StripeServiceAccountPlanId).Contains(stripePlanId))
         {
             return true;
         }
@@ -182,10 +186,11 @@ public class StaticStore
     {
         return Plans.FirstOrDefault(p =>
             p.StripePlanId == stripeId ||
-            p.StripeSeatPlanId == stripeId ||
-            p.StripeStoragePlanId == stripeId ||
-            p.StripeServiceAccountPlanId == stripeId ||
-            p.StripePremiumAccessPlanId == stripeId
+            p.PasswordManager.StripeSeatPlanId == stripeId ||
+            p.PasswordManager.StripeStoragePlanId == stripeId ||
+            p.SecretsManager.StripeSeatPlanId == stripeId ||
+            p.SecretsManager.StripeServiceAccountPlanId == stripeId ||
+            p.PasswordManager.StripePremiumAccessPlanId == stripeId
         );
     }
 }
