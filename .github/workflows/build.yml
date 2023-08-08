@@ -329,7 +329,27 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: docker push ${AZ_REGISTRY}/$PROJECT_NAME:$IMAGE_TAG
+        run: docker push ${{ env.AZ_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ env.IMAGE_TAG }}
+
+      ########## Setup DockerHub and push only the Server image ##########
+      - name: Setup Docker Trust
+        if: ${{ env.is_publish_branch == 'true' }}
+        uses: bitwarden/gh-actions/setup-docker-trust@f955298c7a982b3fb5dbb73afd582c584fd5beec
+        with:
+          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+          azure-keyvault-name: "bitwarden-ci"
+
+      - name: Push Server image to DockerHub
+        if: ${{ env.is_publish_branch == 'true' && matrix.project_name == 'Server' }}
+        run: |
+          docker tag ${{ env.AZ_REGISTRY }}/server:${{ env.IMAGE_TAG }} bitwarden/server:${{ env.IMAGE_TAG }}
+          docker push bitwarden/server:${{ env.IMAGE_TAG }}
+
+      - name: Log out of Docker and disable Docker Notary
+        if: ${{ env.is_publish_branch == 'true' }}
+        run: |
+          docker logout
+          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
   upload:
     name: Upload
