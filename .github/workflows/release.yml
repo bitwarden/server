@@ -306,7 +306,6 @@ jobs:
           fi
 
       - name: Tag version and latest
-        if: matrix.origin_docker_repo == 'bitwardenprod.azurecr.io'
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
@@ -320,7 +319,7 @@ jobs:
           fi
 
       - name: Push version and latest image
-        if: ${{ github.event.inputs.release_type != 'Dry Run' && matrix.origin_docker_repo == 'bitwardenprod.azurecr.io' }}
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
@@ -338,34 +337,40 @@ jobs:
       - setup
       - deploy
     steps:
-      - name: Download latest Release docker-stub
+      - name: Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
         with:
           workflow: build.yml
           workflow_conclusion: success
           branch: ${{ needs.setup.outputs.branch-name }}
-          artifacts: "docker-stub.zip,
-            docker-stub-sha256.txt,
+          artifacts: "docker-stub-US.zip,
+            docker-stub-US-sha256.txt,
+            docker-stub-EU.zip,
+            docker-stub-EU-sha256.txt,
             swagger.json"
 
-      - name: Download latest Release docker-stub
+      - name: Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
         with:
           workflow: build.yml
           workflow_conclusion: success
           branch: master
-          artifacts: "docker-stub.zip,
-            docker-stub-sha256.txt,
+          artifacts: "docker-stub-US.zip,
+            docker-stub-US-sha256.txt,
+            docker-stub-EU.zip,
+            docker-stub-EU-sha256.txt,
             swagger.json"
 
       - name: Create release
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e # v1.12.0
         with:
-          artifacts: "docker-stub.zip,
-            docker-stub-sha256.txt,
+          artifacts: "docker-stub-US.zip,
+            docker-stub-US-sha256.txt,
+            docker-stub-EU.zip,
+            docker-stub-EU-sha256.txt,
             swagger.json"
           commit: ${{ github.sha }}
           tag: "v${{ needs.setup.outputs.release_version }}"

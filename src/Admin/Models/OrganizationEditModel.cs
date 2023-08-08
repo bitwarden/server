@@ -22,13 +22,15 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
         PlanType = Core.Enums.PlanType.TeamsMonthly;
         Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+        LicenseKey = RandomLicenseKey;
     }
 
     public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
         IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
-        GlobalSettings globalSettings)
-        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies)
+        GlobalSettings globalSettings, int secrets, int projects, int serviceAccounts, int smSeats)
+        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies, secrets, projects,
+            serviceAccounts, smSeats)
     {
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -67,6 +69,7 @@ public class OrganizationEditModel : OrganizationViewModel
         MaxAutoscaleSmSeats = org.MaxAutoscaleSmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
         MaxAutoscaleSmServiceAccounts = org.MaxAutoscaleSmServiceAccounts;
+        SecretsManagerBeta = org.SecretsManagerBeta;
     }
 
     public BillingInfo BillingInfo { get; set; }
@@ -146,6 +149,8 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmServiceAccounts { get; set; }
     [Display(Name = "Max Autoscale Service Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
+    [Display(Name = "Secrets Manager Beta")]
+    public bool SecretsManagerBeta { get; set; }
 
     public Organization CreateOrganization(Provider provider)
     {
@@ -190,6 +195,7 @@ public class OrganizationEditModel : OrganizationViewModel
         existingOrganization.MaxAutoscaleSmSeats = MaxAutoscaleSmSeats;
         existingOrganization.SmServiceAccounts = SmServiceAccounts;
         existingOrganization.MaxAutoscaleSmServiceAccounts = MaxAutoscaleSmServiceAccounts;
+        existingOrganization.SecretsManagerBeta = SecretsManagerBeta;
         return existingOrganization;
     }
 }
