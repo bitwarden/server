@@ -110,7 +110,7 @@
         document.getElementById('@(nameof(Model.SmSeats))').value = Math.max(@Model.OccupiedSmSeatsCount, 1);
 
         // Service accounts
-        const baseServiceAccounts = getPlan(planType)?.baseServiceAccount;
+        const baseServiceAccounts = getPlan(planType)?.baseServiceAccount ?? 0;
         if (planType !== '@((byte)PlanType.Free)' && @Model.ServiceAccountsCount > baseServiceAccounts) {
             document.getElementById('@(nameof(Model.SmServiceAccounts))').value = @Model.ServiceAccountsCount;
         } else {
