@@ -73,6 +73,33 @@
           "StackExchange.Redis": "2.5.43"
         }
       },
+      "AutoFixture": {
+        "type": "Transitive",
+        "resolved": "4.17.0",
+        "contentHash": "efMRCG3Epc4QDELwdmQGf6/caQUleRXPRCnLAq5gLMpTuOTcOQWV12vEJ8qo678Rj97/TjjxHYu/34rGkXdVAA==",
+        "dependencies": {
+          "Fare": "[2.1.1, 3.0.0)",
+          "System.ComponentModel.Annotations": "4.3.0"
+        }
+      },
+      "AutoFixture.AutoNSubstitute": {
+        "type": "Transitive",
+        "resolved": "4.17.0",
+        "contentHash": "iWsRiDQ7T8s6F4mvYbSvPTq0GDtxJD6D+E1Fu9gVbHUvJiNikC1yIDNTH+3tQF7RK864HH/3R8ETj9m2X8UXvg==",
+        "dependencies": {
+          "AutoFixture": "4.17.0",
+          "NSubstitute": "[2.0.3, 5.0.0)"
+        }
+      },
+      "AutoFixture.Xunit2": {
+        "type": "Transitive",
+        "resolved": "4.17.0",
+        "contentHash": "lrURL/LhJLPkn2tSPUEW8Wscr5LoV2Mr8A+ikn5gwkofex3o7qWUsBswlLw+KCA7EOpeqwZOldp3k91zDF+48Q==",
+        "dependencies": {
+          "AutoFixture": "4.17.0",
+          "xunit.extensibility.core": "[2.2.0, 3.0.0)"
+        }
+      },
       "AutoMapper": {
         "type": "Transitive",
         "resolved": "12.0.1",
@@ -246,6 +273,14 @@
           "Microsoft.Win32.Registry": "5.0.0"
         }
       },
+      "Fare": {
+        "type": "Transitive",
+        "resolved": "2.1.1",
+        "contentHash": "HaI8puqA66YU7/9cK4Sgbs1taUTP1Ssa4QT2PIzqJ7GvAbN1QgkjbRsjH+FSbMh1MJdvS0CIwQNLtFT+KF6KpA==",
+        "dependencies": {
+          "NETStandard.Library": "1.6.1"
+        }
+      },
       "Fido2": {
         "type": "Transitive",
         "resolved": "3.0.1",
@@ -324,6 +359,15 @@
         "contentHash": "KoSffyZyyeCNTIyJiZnCuPakJ1QbCHlpty6gbWUj/7yl+w0PXIchgmmJnJSvddzBb8iZ2xew/vGlxWUIP17P2g==",
         "dependencies": {
           "IdentityModel": "4.4.0"
+        }
+      },
+      "Kralizek.AutoFixture.Extensions.MockHttp": {
+        "type": "Transitive",
+        "resolved": "1.2.0",
+        "contentHash": "6zmks7/5mVczazv910N7V2EdiU6B+rY61lwdgVO0o2iZuTI6KI3T+Hgkrjv0eGOKYucq2OMC+gnAc5Ej2ajoTQ==",
+        "dependencies": {
+          "AutoFixture": "4.11.0",
+          "RichardSzalay.MockHttp": "6.0.0"
         }
       },
       "LaunchDarkly.Cache": {
@@ -1148,6 +1192,11 @@
           "System.Diagnostics.DiagnosticSource": "4.7.1"
         }
       },
+      "RichardSzalay.MockHttp": {
+        "type": "Transitive",
+        "resolved": "6.0.0",
+        "contentHash": "bStGNqIX/MGYtML7K3EzdsE/k5HGVAcg7XgN23TQXGXqxNC9fvYFR94fA0sGM5hAT36R+BBGet6ZDQxXL/IPxg=="
+      },
       "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl": {
         "type": "Transitive",
         "resolved": "4.3.2",
@@ -1566,6 +1615,24 @@
         "contentHash": "VyGn1jGRZVfxnh8EdvDCi71v3bMXrsu8aYJOwoV7SNDLVhiEqwP86pPMyRGsDsxhXAm2b3o9OIqeETfN5qfezw==",
         "dependencies": {
           "System.Runtime": "4.3.0"
+        }
+      },
+      "System.ComponentModel.Annotations": {
+        "type": "Transitive",
+        "resolved": "4.3.0",
+        "contentHash": "SY2RLItHt43rd8J9D8M8e8NM4m+9WLN2uUd9G0n1I4hj/7w+v3pzK6ZBjexlG1/2xvLKQsqir3UGVSyBTXMLWA==",
+        "dependencies": {
+          "System.Collections": "4.3.0",
+          "System.ComponentModel": "4.3.0",
+          "System.Globalization": "4.3.0",
+          "System.Linq": "4.3.0",
+          "System.Reflection": "4.3.0",
+          "System.Reflection.Extensions": "4.3.0",
+          "System.Resources.ResourceManager": "4.3.0",
+          "System.Runtime": "4.3.0",
+          "System.Runtime.Extensions": "4.3.0",
+          "System.Text.RegularExpressions": "4.3.0",
+          "System.Threading": "4.3.0"
         }
       },
       "System.ComponentModel.Primitives": {
@@ -2768,6 +2835,18 @@
         "contentHash": "uP5F3Ko1gqZi3lwS2R/jAAwhBxXs/6PKDpS6FdQjsBA5qmF0hQmbtfxM6QHTXOMoWbUtfetG7+LtgmG8T5zDIg==",
         "dependencies": {
           "NETStandard.Library": "1.6.1"
+        }
+      },
+      "common": {
+        "type": "Project",
+        "dependencies": {
+          "AutoFixture.AutoNSubstitute": "[4.17.0, )",
+          "AutoFixture.Xunit2": "[4.17.0, )",
+          "Core": "[2023.5.1, )",
+          "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
+          "Microsoft.NET.Test.Sdk": "[17.1.0, )",
+          "NSubstitute": "[4.3.0, )",
+          "xunit": "[2.4.1, )"
         }
       },
       "core": {
