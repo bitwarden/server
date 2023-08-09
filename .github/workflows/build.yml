@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZ_REGISTRY: 'bitwardenprod.azurecr.io'
+  _AZ_REGISTRY: 'bitwardenprod.azurecr.io'
 
 
 jobs:
@@ -320,7 +320,7 @@ jobs:
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ env.AZ_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ env.IMAGE_TAG }}
+          tags: $_AZ_REGISTRY/$PROJECT_NAME:$IMAGE_TAG
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
@@ -329,7 +329,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: docker push ${{ env.AZ_REGISTRY }}/${{ env.PROJECT_NAME }}:${{ env.IMAGE_TAG }}
+        run: docker push $_AZ_REGISTRY/$PROJECT_NAME:$IMAGE_TAG
 
       ########## Setup DockerHub and push only the Server image ##########
       - name: Setup Docker Trust
@@ -342,8 +342,8 @@ jobs:
       - name: Push Server image to DockerHub
         if: ${{ env.is_publish_branch == 'true' && matrix.project_name == 'Server' }}
         run: |
-          docker tag ${{ env.AZ_REGISTRY }}/server:${{ env.IMAGE_TAG }} bitwarden/server:${{ env.IMAGE_TAG }}
-          docker push bitwarden/server:${{ env.IMAGE_TAG }}
+          docker tag $_AZ_REGISTRY/server:$IMAGE_TAG bitwarden/server:$IMAGE_TAG
+          docker push bitwarden/server:$IMAGE_TAG
 
       - name: Log out of Docker and disable Docker Notary
         if: ${{ env.is_publish_branch == 'true' }}
@@ -362,7 +362,7 @@ jobs:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to PROD ACR
-        run: az acr login -n $AZ_REGISTRY --only-show-errors
+        run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
@@ -382,11 +382,11 @@ jobs:
         run: |
           # Set proper image based on branch
           if [[ "${{ github.ref }}" == "rc" ]]; then
-            SETUP_IMAGE="${AZ_REGISTRY}/setup:rc"
+            SETUP_IMAGE="$_AZ_REGISTRY/setup:rc"
           elif [[ "${{ github.ref }}" == "hotfix-rc" ]]; then
-            SETUP_IMAGE="${AZ_REGISTRY}/setup:hotfix-rc"
+            SETUP_IMAGE="$_AZ_REGISTRY/setup:hotfix-rc"
           else
-            SETUP_IMAGE="${AZ_REGISTRY}/setup:dev"
+            SETUP_IMAGE="$_AZ_REGISTRY/setup:latest"
           fi
 
           STUB_OUTPUT=$(pwd)/docker-stub
