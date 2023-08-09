@@ -101,7 +101,6 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -124,7 +123,6 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -147,7 +145,6 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -172,7 +169,6 @@
             "OS-COMMENT5": "Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser",
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -195,7 +191,6 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -218,7 +213,6 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -241,7 +235,6 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -264,7 +257,6 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -289,7 +281,6 @@
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:33657",
                 "developSelfHosted": "true",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -314,7 +305,6 @@
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:4001",
                 "developSelfHosted": "true",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -341,7 +331,6 @@
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:62912",
                 "developSelfHosted": "true",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -366,7 +355,6 @@
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:51822",
                 "developSelfHosted": "true",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -391,7 +379,6 @@
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:61841",
                 "developSelfHosted": "true",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -416,7 +403,6 @@
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:46274",
                 "developSelfHosted": "true",
-                "WEBSITE_INSTANCE_ID": "dev",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
