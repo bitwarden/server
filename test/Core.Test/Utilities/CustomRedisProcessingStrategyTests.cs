@@ -73,7 +73,7 @@ public class CustomRedisProcessingStrategyTests
 
         // Assert
         Assert.Equal(0, result.Count);
-        NotCalled();
+        VerifyRedisNotCalled();
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public class CustomRedisProcessingStrategyTests
 
         // Assert
         Assert.Equal(0, result.Count);
-        NotCalled();
+        VerifyRedisNotCalled();
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class CustomRedisProcessingStrategyTests
             .ScriptEvaluateAsync(Arg.Any<LuaScript>(), Arg.Any<object>(), Arg.Any<CommandFlags>());
     }
 
-    private void NotCalled()
+    private void VerifyRedisNotCalled()
     {
         _mockDb
             .DidNotReceive()
