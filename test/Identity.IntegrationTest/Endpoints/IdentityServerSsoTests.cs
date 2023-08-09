@@ -367,7 +367,7 @@ public class IdentityServerSsoTests
             RedirectUri = "https://localhost:8080/sso-connector.html",
             RequestedScopes = new[] { "api", "offline_access" },
             CodeChallenge = challenge.Sha256(),
-            CodeChallengeMethod = "plain", // 
+            CodeChallengeMethod = "plain", //
             Subject = null, // Temporarily set it to null
         };
 
@@ -397,6 +397,7 @@ public class IdentityServerSsoTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
+            UsePolicies = true
         });
 
         var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
