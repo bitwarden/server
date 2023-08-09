@@ -791,11 +791,9 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{id}/collection-management")]
-    public async Task<OrganizationResponseModel> PutCollectionManagement(string id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
+    public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
-        var orgIdGuid = new Guid(id);
-
-        var organization = await _organizationRepository.GetByIdAsync(orgIdGuid);
+        var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
         {
             throw new NotFoundException();
