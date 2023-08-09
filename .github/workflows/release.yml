@@ -260,28 +260,9 @@ jobs:
           docker push $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
           docker push $_AZ_REGISTRY/$PROJECT_NAME:latest
 
-      ########## Push Server to DockerHub ##########
-
-      - name: Setup DCT
-        id: setup-dct
-        if: matrix.project_name == 'Server'
-        uses: bitwarden/gh-actions/setup-docker-trust@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
-        with:
-          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-          azure-keyvault-name: "bitwarden-ci"
-
-      - name: Push Server to DockerHub
-        if: ${{ github.event.inputs.release_type != 'Dry Run' && matrix.project_name == 'Server' }}
-        env:
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          docker push bitwarden/$PROJECT_NAME:$_RELEASE_VERSION
-          docker push bitwarden/$PROJECT_NAME:latest
-
-      - name: Log out of Docker and disable Docker Notary
+      - name: Log out of Docker
         run: |
           docker logout
-          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
   release:
     name: Create GitHub Release
