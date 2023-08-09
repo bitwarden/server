@@ -22,13 +22,15 @@ public class OrganizationEditModel : OrganizationViewModel
         BillingEmail = provider.Type == ProviderType.Reseller ? provider.BillingEmail : string.Empty;
         PlanType = Core.Enums.PlanType.TeamsMonthly;
         Plan = Core.Enums.PlanType.TeamsMonthly.GetDisplayAttribute()?.GetName();
+        LicenseKey = RandomLicenseKey;
     }
 
     public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
         IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
-        GlobalSettings globalSettings)
-        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies)
+        GlobalSettings globalSettings, int secrets, int projects, int serviceAccounts, int smSeats)
+        : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies, secrets, projects,
+            serviceAccounts, smSeats)
     {
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;

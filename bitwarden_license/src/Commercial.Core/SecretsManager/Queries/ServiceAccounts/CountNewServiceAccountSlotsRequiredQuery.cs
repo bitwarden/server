@@ -26,7 +26,7 @@ public class CountNewServiceAccountSlotsRequiredQuery : ICountNewServiceAccountS
             throw new NotFoundException();
         }
 
-        if (!organization.SmServiceAccounts.HasValue || serviceAccountsToAdd == 0)
+        if (!organization.SmServiceAccounts.HasValue || serviceAccountsToAdd == 0 || organization.SecretsManagerBeta)
         {
             return 0;
         }

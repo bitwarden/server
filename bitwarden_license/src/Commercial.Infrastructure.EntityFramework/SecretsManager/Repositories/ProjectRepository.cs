@@ -40,6 +40,16 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         return await projects.ToListAsync();
     }
 
+    public async Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.Project
+                .CountAsync(ou => ou.OrganizationId == organizationId);
+        }
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByOrganizationIdWriteAccessAsync(
         Guid organizationId, Guid userId, AccessClientType accessType)
     {
