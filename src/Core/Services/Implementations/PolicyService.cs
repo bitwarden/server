@@ -12,6 +12,7 @@ namespace Bit.Core.Services;
 
 public class PolicyService : IPolicyService
 {
+    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -23,6 +24,7 @@ public class PolicyService : IPolicyService
     private IEnumerable<OrganizationUserPolicyDetails> _cachedOrganizationUserPolicyDetails;
 
     public PolicyService(
+        IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -31,6 +33,7 @@ public class PolicyService : IPolicyService
         IMailService mailService,
         GlobalSettings globalSettings)
     {
+        _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -206,7 +209,9 @@ public class PolicyService : IPolicyService
         }
 
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         return _cachedOrganizationUserPolicyDetails.Where(o =>
+            (!orgAbilities.ContainsKey(o.OrganizationId) || orgAbilities[o.OrganizationId].Enabled && orgAbilities[o.OrganizationId].UsePolicies) &&
             (policyType == null || o.PolicyType == policyType) &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
