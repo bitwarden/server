@@ -264,7 +264,7 @@ jobs:
 
       - name: Setup DCT
         id: setup-dct
-        if: matrix.origin_docker_repo == 'bitwarden'
+        if: matrix.project_name == 'Server'
         uses: bitwarden/gh-actions/setup-docker-trust@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
         with:
           azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
