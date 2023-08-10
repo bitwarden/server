@@ -6,7 +6,7 @@
             document.getElementById('@(nameof(Model.Plan))').value = selectText;
             togglePlanSettings(selectEl.options[selectEl.selectedIndex].value);
         });
-        document.getElementById('gateway-customer-link').addEventListener('click', () => {
+        document.getElementById('gateway-customer-link')?.addEventListener('click', () => {
             const gateway = document.getElementById('@(nameof(Model.Gateway))');
             const customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
             if (!gateway || gateway.value === '' || !customerId || customerId.value === '') {
@@ -19,7 +19,7 @@
                     + customerId.value, '_blank');
             }
         });
-        document.getElementById('gateway-subscription-link').addEventListener('click', () => {
+        document.getElementById('gateway-subscription-link')?.addEventListener('click', () => {
             const gateway = document.getElementById('@(nameof(Model.Gateway))');
             const subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
             if (!gateway || gateway.value === '' || !subId || subId.value === '') {
@@ -34,24 +34,28 @@
         });
         document.getElementById('@(nameof(Model.UseSecretsManager))').addEventListener('change', (event) => {
             document.getElementById('organization-secrets-configuration').hidden  = !event.target.checked;
-            
+
             if (event.target.checked) {
                 return;
             }
-            
+
             document.getElementById('@(nameof(Model.SmSeats))').value = '';
             document.getElementById('@(nameof(Model.MaxAutoscaleSmSeats))').value = '';
             document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '';
             document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
         });
+
+        // Set initial state
+        document.getElementById('organization-secrets-configuration').hidden  =
+            !document.getElementById('@(nameof(Model.UseSecretsManager))').checked;
     })();
-    
+
     function togglePlanSettings(planType) {
         document.getElementById('@(nameof(Model.PlanType))').value = planType;
         switch(planType) {
             case '@((byte)Bit.Core.Enums.PlanType.TeamsMonthly)':
             case '@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)':
-                // Plan                
+                // Plan
                 document.getElementById('@(nameof(Model.Seats))').value = '10';
                 document.getElementById('@(nameof(Model.MaxCollections))').value = '';
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
@@ -66,7 +70,7 @@
                 document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
                 document.getElementById('@(nameof(Model.UseEvents))').checked = true;
                 document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
-                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;                
+                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;
                 document.getElementById('@(nameof(Model.UseTotp))').checked = true;
                 document.getElementById('@(nameof(Model.Use2fa))').checked = true;
                 document.getElementById('@(nameof(Model.UseApi))').checked = true;
@@ -78,7 +82,7 @@
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
                 document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
             break;
-            
+
             case '@((byte)Bit.Core.Enums.PlanType.EnterpriseMonthly)':
             case '@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)':
                 // Plan
@@ -109,6 +113,6 @@
                 document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
             break;
         }
-        
+
     }
 </script>

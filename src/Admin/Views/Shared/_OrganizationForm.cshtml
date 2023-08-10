@@ -83,7 +83,7 @@
                         var planTypes = Enum.GetValues<PlanType>()
                             .Where(p => Model.Provider == null || p is >= PlanType.TeamsMonthly and <= PlanType.EnterpriseAnnually)
                             .Select(e => new SelectListItem
-                            { 
+                            {
                                 Value = ((int)e).ToString(),
                                 Text = e.GetDisplayAttribute()?.GetName() ?? e.ToString()
                             })
@@ -176,7 +176,7 @@
             </div>
         </div>
     }
-    
+
     @if (canViewPlan)
     {
         <h2>Password Manager Configuration</h2>
@@ -212,7 +212,7 @@
 
     @if (canViewPlan)
     {
-        <div id="organization-secrets-configuration" hidden="@(!Model.UseSecretsManager)">
+        <div id="organization-secrets-configuration">
             <h2>Secrets Manager Configuration</h2>
             <div class="row">
                 <div class="col-sm">
@@ -265,7 +265,7 @@
     }
 
     @if (canViewBilling)
-    { 
+    {
         <h2>Billing</h2>
         <div class="row">
             <div class="col-sm">
@@ -315,7 +315,7 @@
                     <label asp-for="GatewaySubscriptionId"></label>
                     <div class="input-group">
                         <input type="text" class="form-control" asp-for="GatewaySubscriptionId" readonly='@(!canEditBilling)'>
-                        @if (canLaunchGateway) 
+                        @if (canLaunchGateway)
                         {
                             <div class="input-group-append">
                                 <button class="btn btn-secondary" type="button" id="gateway-subscription-link">
