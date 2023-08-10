@@ -39,15 +39,11 @@
                 return;
             }
 
-            document.getElementById('@(nameof(Model.SmSeats))').value = '';
+            document.getElementById('@(nameof(Model.SmSeats))').value = 1;
             document.getElementById('@(nameof(Model.MaxAutoscaleSmSeats))').value = '';
             document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '';
             document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
         });
-
-        // Set initial state
-        document.getElementById('organization-secrets-configuration').hidden  =
-            !document.getElementById('@(nameof(Model.UseSecretsManager))').checked;
     })();
 
     function togglePlanSettings(planType) {
