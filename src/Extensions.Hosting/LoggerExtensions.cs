@@ -1,10 +1,6 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Hosting;
 using Serilog;
-using Serilog.Events;
+using Serilog.Formatting.Compact;
 
 namespace Bit.Extensions.Hosting;
 
@@ -13,6 +9,10 @@ public static class LoggerExtensions
     public static void UseBitwardenLogging(
         this IHostBuilder hostBuilder)
     {
-        // TODO
+        hostBuilder.UseSerilog((context, services, configuration) => configuration
+            .ReadFrom.Configuration(context.Configuration)
+            .ReadFrom.Services(services)
+            .Enrich.FromLogContext()
+            .WriteTo.Console(new RenderedCompactJsonFormatter()));
     }
 }

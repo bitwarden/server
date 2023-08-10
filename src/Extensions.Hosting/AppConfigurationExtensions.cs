@@ -4,11 +4,11 @@ using Microsoft.Extensions.Hosting;
 
 namespace Bit.Extensions.Hosting;
 
-public static class HostBuilderExtensions
+public static class AppConfigurationExtensions
 {
-    public static IHostBuilder ConfigureCustomAppConfiguration(this IHostBuilder hostBuilder, string[] args)
+    public static IHostBuilder UseBitwardenAppConfiguration(this IHostBuilder hostBuilder, string[] args)
     {
-        // Reload app configuration with SelfHosted overrides.
+        // Reload app configuration with SelfHosted overrides
         return hostBuilder.ConfigureAppConfiguration((hostingContext, config) =>
         {
             if (Environment.GetEnvironmentVariable("globalSettings__selfHosted")?.ToLower() != "true")
