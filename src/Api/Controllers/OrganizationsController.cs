@@ -18,6 +18,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -50,6 +51,9 @@ public class OrganizationsController : Controller
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
     private readonly ILicensingService _licensingService;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
+    private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
 
     public OrganizationsController(
         IOrganizationRepository organizationRepository,
@@ -70,7 +74,10 @@ public class OrganizationsController : Controller
         ICloudGetOrganizationLicenseQuery cloudGetOrganizationLicenseQuery,
         IFeatureService featureService,
         GlobalSettings globalSettings,
-        ILicensingService licensingService)
+        ILicensingService licensingService,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IUpgradeOrganizationPlanCommand upgradeOrganizationPlanCommand,
+        IAddSecretsManagerSubscriptionCommand addSecretsManagerSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -91,6 +98,9 @@ public class OrganizationsController : Controller
         _featureService = featureService;
         _globalSettings = globalSettings;
         _licensingService = licensingService;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _upgradeOrganizationPlanCommand = upgradeOrganizationPlanCommand;
+        _addSecretsManagerSubscriptionCommand = addSecretsManagerSubscriptionCommand;
     }
 
     [HttpGet("{id}")]
@@ -306,7 +316,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _organizationService.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+        var result = await _upgradeOrganizationPlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
         return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
     }
 
@@ -319,8 +329,51 @@ public class OrganizationsController : Controller
         {
             throw new NotFoundException();
         }
-
         await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
+    }
+
+    [HttpPost("{id}/sm-subscription")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!await _currentContext.EditSubscription(id))
+        {
+            throw new NotFoundException();
+        }
+
+        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization);
+        await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
+    }
+
+    [HttpPost("{id}/subscribe-secrets-manager")]
+    [SelfHosted(NotSelfHostedOnly = true)]
+    public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(id);
+        if (organization == null)
+        {
+            throw new NotFoundException();
+        }
+
+        if (!await _currentContext.EditSubscription(id))
+        {
+            throw new NotFoundException();
+        }
+
+        await _addSecretsManagerSubscriptionCommand.SignUpAsync(organization, model.AdditionalSmSeats,
+            model.AdditionalServiceAccounts);
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var organizationDetails = await _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
+            OrganizationUserStatusType.Confirmed);
+
+        return new ProfileOrganizationResponseModel(organizationDetails);
     }
 
     [HttpPost("{id}/seat")]
@@ -722,6 +775,7 @@ public class OrganizationsController : Controller
         }
 
         organization.UseSecretsManager = model.Enabled;
+        organization.SecretsManagerBeta = model.Enabled;
         await _organizationService.UpdateAsync(organization);
 
         // Turn on Secrets Manager for the user
