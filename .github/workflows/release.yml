@@ -56,18 +56,17 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-22.04
-    needs:
-      - setup
+    needs: setup
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: Api
           - name: Admin
+          - name: Api
           - name: Billing
           - name: Events
-          - name: Sso
           - name: Identity
+          - name: Sso
     steps:
       - name: Setup
         id: setup
@@ -97,7 +96,7 @@ jobs:
           branch: ${{ needs.setup.outputs.branch-name }}
           artifacts: ${{ matrix.name }}.zip
 
-      - name: Download latest Release ${{ matrix.name }} asset
+      - name: Dry Run - Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@f096207b7a2f31723165aee6ad03e91716686e78
         with:
@@ -176,8 +175,7 @@ jobs:
   release-docker:
     name: Build Docker images
     runs-on: ubuntu-22.04
-    needs:
-      - setup
+    needs: setup
     env:
       _RELEASE_VERSION: ${{ needs.setup.outputs.release_version }}
       _BRANCH_NAME: ${{ needs.setup.outputs.branch-name }}
@@ -188,20 +186,19 @@ jobs:
           - project_name: Admin
           - project_name: Api
           - project_name: Attachments
+          - project_name: Billing
           - project_name: Events
           - project_name: EventsProcessor
           - project_name: Icons
           - project_name: Identity
           - project_name: MsSql
+          - project_name: MsSqlMigratorUtility
           - project_name: Nginx
           - project_name: Notifications
+          - project_name: Scim
           - project_name: Server
           - project_name: Setup
           - project_name: Sso
-          - project_name: Scim
-          - project_name: Billing
-          - project_name: MsSqlMigratorUtility
-
     steps:
       - name: Print environment
         env:
@@ -247,18 +244,23 @@ jobs:
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          if [[ "${{ github.event.inputs.release_type }}" != "Dry Run" ]]; then
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker tag $_AZ_REGISTRY/$PROJECT_NAME:latest $_AZ_REGISTRY/$PROJECT_NAME:dryrun
+          else
             docker tag $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
             docker tag $_AZ_REGISTRY/$PROJECT_NAME:$_BRANCH_NAME $_AZ_REGISTRY/$PROJECT_NAME:latest
           fi
 
       - name: Push version and latest image
-        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: |
-          docker push $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
-          docker push $_AZ_REGISTRY/$PROJECT_NAME:latest
+          if [[ "${{ github.event.inputs.release_type }}" == "Dry Run" ]]; then
+            docker push $_AZ_REGISTRY/$PROJECT_NAME:dryrun
+          else
+            docker push $_AZ_REGISTRY/$PROJECT_NAME:$_RELEASE_VERSION
+            docker push $_AZ_REGISTRY/$PROJECT_NAME:latest
+          fi
 
       - name: Log out of Docker
         run: docker logout
@@ -283,7 +285,7 @@ jobs:
             docker-stub-EU-sha256.txt,
             swagger.json"
 
-      - name: Download latest Release Docker Stubs
+      - name: Dry Run - Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
         uses: bitwarden/gh-actions/download-artifacts@f096207b7a2f31723165aee6ad03e91716686e78
         with:
