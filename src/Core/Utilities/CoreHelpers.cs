@@ -531,7 +531,8 @@ public static class CoreHelpers
         var subName = globalSettings.ServiceBus.ApplicationCacheSubscriptionName;
         if (string.IsNullOrWhiteSpace(subName))
         {
-            var websiteInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID");
+            var websiteInstanceId = Environment.GetEnvironmentVariable("WEBSITE_INSTANCE_ID") ??
+                                    globalSettings.ServiceBus.WebSiteInstanceId;
             if (string.IsNullOrWhiteSpace(websiteInstanceId))
             {
                 throw new Exception("No service bus subscription name available.");

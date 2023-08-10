@@ -669,6 +669,19 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+    public async Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.ExecuteScalarAsync<DateTime>(
+                $"[{Schema}].[Cipher_RestoreByIdsOrganizationId]",
+                new { Ids = ids.ToGuidIdArrayTVP(), OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return results;
+        }
+    }
+
     public async Task DeleteDeletedAsync(DateTime deletedDateBefore)
     {
         using (var connection = new SqlConnection(ConnectionString))
