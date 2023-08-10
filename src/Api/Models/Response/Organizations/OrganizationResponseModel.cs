@@ -27,6 +27,11 @@ public class OrganizationResponseModel : ResponseModel
         BusinessTaxNumber = organization.BusinessTaxNumber;
         BillingEmail = organization.BillingEmail;
         Plan = new PlanResponseModel(StaticStore.PasswordManagerPlans.FirstOrDefault(plan => plan.Type == organization.PlanType));
+        var matchingPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (matchingPlan != null)
+        {
+            SecretsManagerPlan = new PlanResponseModel(matchingPlan);
+        }
         PlanType = organization.PlanType;
         Seats = organization.Seats;
         MaxAutoscaleSeats = organization.MaxAutoscaleSeats;
@@ -65,6 +70,7 @@ public class OrganizationResponseModel : ResponseModel
     public string BusinessTaxNumber { get; set; }
     public string BillingEmail { get; set; }
     public PlanResponseModel Plan { get; set; }
+    public PlanResponseModel SecretsManagerPlan { get; set; }
     public PlanType PlanType { get; set; }
     public int? Seats { get; set; }
     public int? MaxAutoscaleSeats { get; set; } = null;
@@ -102,6 +108,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
@@ -117,6 +124,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             Subscription.Items = null;
             UpcomingInvoice.Amount = null;
         }
+
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
@@ -131,6 +140,8 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
                                              license.Expires?.AddDays(-Constants
                                                  .OrganizationSelfHostSubscriptionGracePeriodDays);
         }
+
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public string StorageName { get; set; }
@@ -147,4 +158,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Date when a self-hosted organization expires (includes grace period).
     /// </summary>
     public DateTime? Expiration { get; set; }
+
+    public bool SecretsManagerBeta { get; set; }
 }

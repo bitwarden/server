@@ -57,6 +57,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return await secrets.ToListAsync();
     }
 
+    public async Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.Secret
+                .CountAsync(ou => ou.OrganizationId == organizationId && ou.DeletedDate == null);
+        }
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -291,6 +301,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         var policy = await query.FirstOrDefaultAsync();
 
         return policy == null ? (false, false) : (policy.Read, policy.Write);
+    }
+
+    public async Task EmptyTrash(DateTime currentDate, uint deleteAfterThisNumberOfDays)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.Secret.Where(s => s.DeletedDate != null && s.DeletedDate < currentDate.AddDays(-deleteAfterThisNumberOfDays)).ExecuteDeleteAsync();
+
+        await dbContext.SaveChangesAsync();
     }
 
     private IQueryable<SecretPermissionDetails> SecretToPermissionDetails(IQueryable<Secret> query, Guid userId, AccessClientType accessType)

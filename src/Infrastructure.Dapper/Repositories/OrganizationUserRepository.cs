@@ -99,6 +99,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
+    public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.ExecuteScalarAsync<int>(
+                "[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
     public async Task<ICollection<string>> SelectKnownEmailsAsync(Guid organizationId, IEnumerable<string> emails,
         bool onlyRegisteredUsers)
     {
@@ -492,13 +505,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
                 $"[{Schema}].[{Table}_ReadByUserIdWithPolicyDetails]",
-                new { UserId = userId, PolicyType = policyType },
+                new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
