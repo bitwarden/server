@@ -261,8 +261,7 @@ jobs:
           docker push $_AZ_REGISTRY/$PROJECT_NAME:latest
 
       - name: Log out of Docker
-        run: |
-          docker logout
+        run: docker logout
 
   release:
     name: Create GitHub Release
