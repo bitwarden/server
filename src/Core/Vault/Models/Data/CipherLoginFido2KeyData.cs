@@ -12,6 +12,6 @@ public class CipherLoginFido2KeyData
     public string RpId { get; set; }
     public string RpName { get; set; }
     public string UserHandle { get; set; }
-    public string UserName { get; set; }
+    public string UserDisplayName { get; set; }
     public string Counter { get; set; }
 }
