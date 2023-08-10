@@ -302,7 +302,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: echo "name=bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+        run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
