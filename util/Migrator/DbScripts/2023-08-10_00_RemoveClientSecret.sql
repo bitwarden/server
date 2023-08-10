@@ -36,7 +36,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    INSERT INTO [dbo].[ApiKey] 
+    INSERT INTO [dbo].[ApiKey]
     (
         [Id],
         [ServiceAccountId],
@@ -49,7 +49,7 @@ BEGIN
         [CreationDate],
         [RevisionDate]
     )
-    VALUES 
+    VALUES
     (
         @Id,
         @ServiceAccountId,
