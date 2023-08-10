@@ -118,8 +118,14 @@ jobs:
             base_path: ./src
           - project_name: Identity
             base_path: ./src
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            dotnet: true
           - project_name: Notifications
             base_path: ./src
+          - project_name: Scim
+            base_path: ./bitwarden_license/src
+            dotnet: true
           - project_name: Server
             base_path: ./util
           - project_name: Setup
@@ -127,12 +133,6 @@ jobs:
           - project_name: Sso
             base_path: ./bitwarden_license/src
             node: true
-          - project_name: Scim
-            base_path: ./bitwarden_license/src
-            dotnet: true
-          - project_name: MsSqlMigratorUtility
-            base_path: ./util
-            dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
@@ -204,6 +204,9 @@ jobs:
             dotnet: true
           - project_name: Attachments
             base_path: ./util
+          - project_name: Billing
+            base_path: ./src
+            dotnet: true
           - project_name: Events
             base_path: ./src
             dotnet: true
@@ -218,10 +221,16 @@ jobs:
             dotnet: true
           - project_name: MsSql
             base_path: ./util
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            dotnet: true
           - project_name: Nginx
             base_path: ./util
           - project_name: Notifications
             base_path: ./src
+            dotnet: true
+          - project_name: Scim
+            base_path: ./bitwarden_license/src
             dotnet: true
           - project_name: Server
             base_path: ./util
@@ -231,15 +240,6 @@ jobs:
             dotnet: true
           - project_name: Sso
             base_path: ./bitwarden_license/src
-            dotnet: true
-          - project_name: Scim
-            base_path: ./bitwarden_license/src
-            dotnet: true
-          - project_name: Billing
-            base_path: ./src
-            dotnet: true
-          - project_name: MsSqlMigratorUtility
-            base_path: ./util
             dotnet: true
     steps:
       - name: Checkout repo
@@ -285,7 +285,7 @@ jobs:
         run: |
           IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
           if [[ "$IMAGE_TAG" == "master" ]]; then
-            IMAGE_TAG=latest
+            IMAGE_TAG=dev
           fi
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
@@ -324,33 +324,6 @@ jobs:
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
-      - name: Push to Prod ACR
-        if: env.is_publish_branch == 'true'
-        env:
-          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: docker push $_AZ_REGISTRY/$PROJECT_NAME:$IMAGE_TAG
-
-      ########## Setup DockerHub and push only the Server image ##########
-      - name: Setup Docker Trust
-        if: ${{ env.is_publish_branch == 'true' }}
-        uses: bitwarden/gh-actions/setup-docker-trust@f955298c7a982b3fb5dbb73afd582c584fd5beec
-        with:
-          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-          azure-keyvault-name: "bitwarden-ci"
-
-      - name: Push Server image to DockerHub
-        if: ${{ env.is_publish_branch == 'true' && matrix.project_name == 'Server' }}
-        run: |
-          docker tag $_AZ_REGISTRY/server:$IMAGE_TAG bitwarden/server:$IMAGE_TAG
-          docker push bitwarden/server:$IMAGE_TAG
-
-      - name: Log out of Docker and disable Docker Notary
-        if: ${{ env.is_publish_branch == 'true' }}
-        run: |
-          docker logout
-          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
-
   upload:
     name: Upload
     runs-on: ubuntu-22.04
@@ -381,12 +354,12 @@ jobs:
           github.ref == 'refs/heads/hotfix-rc'
         run: |
           # Set proper image based on branch
-          if [[ "${{ github.ref }}" == "rc" ]]; then
+          if [[ "${{ github.ref }}" == "master" ]]; then
+            SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
+          elif [[ "${{ github.ref }}" == "rc" ]]; then
             SETUP_IMAGE="$_AZ_REGISTRY/setup:rc"
           elif [[ "${{ github.ref }}" == "hotfix-rc" ]]; then
             SETUP_IMAGE="$_AZ_REGISTRY/setup:hotfix-rc"
-          else
-            SETUP_IMAGE="$_AZ_REGISTRY/setup:latest"
           fi
 
           STUB_OUTPUT=$(pwd)/docker-stub
@@ -480,8 +453,7 @@ jobs:
   build-mssqlmigratorutility:
     name: Build MsSqlMigratorUtility
     runs-on: ubuntu-22.04
-    needs:
-      - lint
+    needs: lint
     defaults:
       run:
         shell: bash
@@ -493,7 +465,6 @@ jobs:
           - osx-x64
           - linux-x64
           - win-x64
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
@@ -511,7 +482,9 @@ jobs:
           dotnet restore
 
       - name: Publish project
-        run: dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
+        run: |
+          dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} -p:PublishSingleFile=true \
+          -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
 
       - name: Upload project artifact Windows
         if: ${{ contains(matrix.target, 'win') == true }}
