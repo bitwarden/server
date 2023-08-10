@@ -297,6 +297,13 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
+      - name: Generate image full name
+        id: image-name
+        env:
+          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
+          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
+        run: echo "name=bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
@@ -312,15 +319,12 @@ jobs:
 
       - name: Build Docker image
         uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3.3.1
-        env:
-          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         with:
           context: ${{ matrix.base_path }}/${{ matrix.project_name }}
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: $_AZ_REGISTRY/$PROJECT_NAME:$IMAGE_TAG
+          tags: ${{ steps.image-name.outputs.name }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
