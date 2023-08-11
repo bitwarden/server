@@ -44,7 +44,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
-    private readonly IDistributedCache _distributedMemoryCache;
+    private readonly IDistributedCache _distributedCache;
     private readonly DistributedCacheEntryOptions _cacheEntryOptions;
 
     protected ICurrentContext CurrentContext { get; }
@@ -91,7 +91,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _tokenDataFactory = tokenDataFactory;
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
-        _distributedMemoryCache = distributedCache;
+        _distributedCache = distributedCache;
         _cacheEntryOptions = new DistributedCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = new TimeSpan(0, 15, 0)
@@ -142,7 +142,7 @@ public abstract class BaseRequestValidator<T> where T : class
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
 
-            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedMemoryCache, user.Email, out string cachedToken);
+            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, user.Email, out string cachedToken);
             if (isOtpCached)
             {
                 // Delay for brute force.
@@ -164,7 +164,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
                 return;
             }
-            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedMemoryCache, user.Email, twoFactorToken, _cacheEntryOptions);
+            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, user.Email, twoFactorToken, _cacheEntryOptions);
         }
         else
         {
