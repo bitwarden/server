@@ -357,14 +357,18 @@ jobs:
           github.ref == 'refs/heads/rc' ||
           github.ref == 'refs/heads/hotfix-rc'
         run: |
-          # Set proper image based on branch
-          if [[ "${{ github.ref }}" == "master" ]]; then
-            SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
-          elif [[ "${{ github.ref }}" == "rc" ]]; then
-            SETUP_IMAGE="$_AZ_REGISTRY/setup:rc"
-          elif [[ "${{ github.ref }}" == "hotfix-rc" ]]; then
-            SETUP_IMAGE="$_AZ_REGISTRY/setup:hotfix-rc"
-          fi
+          # Set proper setup image based on branch
+          case "${{ github.ref }}" in
+            "refs/heads/master")
+                SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
+                ;;
+            "refs/heads/rc")
+                SETUP_IMAGE="$_AZ_REGISTRY/setup:rc"
+                ;;
+            "refs/heads/hotfix-rc")
+                SETUP_IMAGE="$_AZ_REGISTRY/setup:hotfix-rc"
+                ;;
+          esac
 
           STUB_OUTPUT=$(pwd)/docker-stub
 
