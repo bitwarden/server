@@ -70,7 +70,8 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
                             {
                                 Id = c.CollectionId,
                                 HidePasswords = c.HidePasswords,
-                                ReadOnly = c.ReadOnly
+                                ReadOnly = c.ReadOnly,
+                                Manage = c.Manage
                             }
                             ).ToList() ?? new List<CollectionAccessSelection>())
                 ).ToList();

@@ -19,7 +19,8 @@ BEGIN
         [Target]
     SET
         [Target].[ReadOnly] = [Source].[ReadOnly],
-        [Target].[HidePasswords] = [Source].[HidePasswords]
+        [Target].[HidePasswords] = [Source].[HidePasswords],
+        [Target].[Manage] = [Source].[Manage]
     FROM
         [dbo].[CollectionUser] [Target]
     INNER JOIN
@@ -29,6 +30,7 @@ BEGIN
         AND (
             [Target].[ReadOnly] != [Source].[ReadOnly]
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
+            OR [Target].[Manage] != [Source].[Manage]
         )
 
     -- Insert
@@ -38,7 +40,8 @@ BEGIN
         @CollectionId,
         [Source].[Id],
         [Source].[ReadOnly],
-        [Source].[HidePasswords]
+        [Source].[HidePasswords],
+        [Source].[Manage]
     FROM
         @Users [Source]
     INNER JOIN

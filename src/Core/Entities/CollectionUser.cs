@@ -6,4 +6,5 @@ public class CollectionUser
     public Guid OrganizationUserId { get; set; }
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
+    public bool Manage { get; set; }
 }

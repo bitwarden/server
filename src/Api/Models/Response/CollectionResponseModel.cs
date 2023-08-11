@@ -33,10 +33,12 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
     {
         ReadOnly = collectionDetails.ReadOnly;
         HidePasswords = collectionDetails.HidePasswords;
+        Manage = collectionDetails.Manage;
     }
 
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
+    public bool Manage { get; set; }
 }
 
 public class CollectionAccessDetailsResponseModel : CollectionResponseModel

@@ -27,13 +27,15 @@ BEGIN
         [CollectionId],
         [GroupId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         @Id,
         [Id],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     FROM
         @Groups
     WHERE
@@ -53,13 +55,15 @@ BEGIN
         [CollectionId],
         [OrganizationUserId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         @Id,
         [Id],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     FROM
         @Users
     WHERE
