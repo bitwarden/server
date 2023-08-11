@@ -89,13 +89,15 @@ public class SecretsManagerSubscriptionUpdate
         Autoscaling = autoscaling;
     }
 
-    public void AdjustSeats(int adjustment)
+    public SecretsManagerSubscriptionUpdate AdjustSeats(int adjustment)
     {
         SmSeats = SmSeats.GetValueOrDefault() + adjustment;
+        return this;
     }
 
-    public void AdjustServiceAccounts(int adjustment)
+    public SecretsManagerSubscriptionUpdate AdjustServiceAccounts(int adjustment)
     {
         SmServiceAccounts = SmServiceAccounts.GetValueOrDefault() + adjustment;
+        return this;
     }
 }
