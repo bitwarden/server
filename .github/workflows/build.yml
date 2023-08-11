@@ -148,6 +148,11 @@ jobs:
           cache-dependency-path: "**/package-lock.json"
           node-version: "16"
 
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+        with:
+          dotnet-version: "6.0.x"
+
       - name: Print environment
         run: |
           whoami
@@ -480,6 +485,11 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+        with:
+          dotnet-version: "6.0.x"
 
       - name: Print environment
         run: |
