@@ -7,9 +7,9 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Infrastructure;
 using IdentityModel;
-using IdentityServer4;
-using IdentityServer4.Infrastructure;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.Extensions.Options;
@@ -34,7 +34,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
     private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedSchemes;
     private readonly Dictionary<string, DynamicAuthenticationScheme> _cachedHandlerSchemes;
     private readonly SemaphoreSlim _semaphore;
-    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IServiceProvider _serviceProvider;
 
     private DateTime? _lastSchemeLoad;
     private IEnumerable<DynamicAuthenticationScheme> _schemesCopy = Array.Empty<DynamicAuthenticationScheme>();
@@ -50,7 +50,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         ILogger<DynamicAuthenticationSchemeProvider> logger,
         GlobalSettings globalSettings,
         SamlEnvironment samlEnvironment,
-        IHttpContextAccessor httpContextAccessor)
+        IServiceProvider serviceProvider)
         : base(options)
     {
         _oidcPostConfigureOptions = oidcPostConfigureOptions;
@@ -77,7 +77,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         _cachedSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
         _cachedHandlerSchemes = new Dictionary<string, DynamicAuthenticationScheme>();
         _semaphore = new SemaphoreSlim(1);
-        _httpContextAccessor = httpContextAccessor ?? throw new ArgumentNullException(nameof(httpContextAccessor));
+        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
     }
 
     private bool CacheIsValid
@@ -324,7 +324,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
             oidcOptions.Scope.AddIfNotExists(OpenIdConnectScopes.Acr);
         }
 
-        oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_httpContextAccessor, name);
+        oidcOptions.StateDataFormat = new DistributedCacheStateDataFormatter(_serviceProvider, name);
 
         // see: https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest (acr_values)
         if (!string.IsNullOrWhiteSpace(config.AcrValues))

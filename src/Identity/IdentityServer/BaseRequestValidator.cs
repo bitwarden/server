@@ -24,7 +24,7 @@ using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
-using IdentityServer4.Validation;
+using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 
