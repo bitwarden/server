@@ -6,7 +6,7 @@ namespace Bit.Core.Models.Business;
 
 public class SecretsManagerSubscriptionUpdate
 {
-    public Organization Organization { get; set; }
+    public Organization Organization { get; }
 
     /// <summary>
     /// The total seats the organization will have after the update, including any base seats included in the plan

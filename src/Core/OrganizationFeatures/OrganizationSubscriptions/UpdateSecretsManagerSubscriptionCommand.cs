@@ -187,11 +187,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private void ValidateOrganization(Organization organization)
     {
-        if (organization == null)
-        {
-            throw new NotFoundException("Organization is not found.");
-        }
-
         if (!organization.UseSecretsManager)
         {
             throw new BadRequestException("Organization has no access to Secrets Manager.");

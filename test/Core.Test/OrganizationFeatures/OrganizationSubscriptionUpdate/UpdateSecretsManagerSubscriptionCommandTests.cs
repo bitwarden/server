@@ -21,21 +21,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 {
     [Theory]
     [BitAutoData]
-    public async Task UpdateSubscriptionAsync_NoOrganization_Throws(
-        SecretsManagerSubscriptionUpdate secretsManagerSubscriptionUpdate,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        secretsManagerSubscriptionUpdate.Organization = null;
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate));
-
-        Assert.Contains("Organization is not found", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
     public async Task UpdateSubscriptionAsync_NoSecretsManagerAccess_ThrowsException(
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
