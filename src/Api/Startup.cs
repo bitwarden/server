@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.Tools;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -133,6 +134,7 @@ public class Startup
 
         // Services
         services.AddBaseServices(globalSettings);
+        services.AddToolsServices();
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();

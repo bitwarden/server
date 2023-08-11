@@ -8,7 +8,6 @@ public static class ToolsServiceCollectionExtensions
 {
     public static void AddToolsServices(this IServiceCollection services)
     {
-        // TODO Add other Tools services/commands/queries
         services.AddReportsQueries();
     }
 
