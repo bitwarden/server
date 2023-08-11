@@ -4,6 +4,7 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
@@ -125,8 +126,9 @@ public class ServiceAccountsController : Controller
         if (newServiceAccountSlotsRequired > 0)
         {
             var org = await _organizationRepository.GetByIdAsync(organizationId);
-            await _updateSecretsManagerSubscriptionCommand.AdjustServiceAccountsAsync(org,
-                newServiceAccountSlotsRequired);
+            var update = new SecretsManagerSubscriptionUpdate(org, true);
+            update.AdjustServiceAccounts(newServiceAccountSlotsRequired);
+            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }
 
         var userId = _userService.GetProperUserId(User).Value;

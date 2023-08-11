@@ -56,18 +56,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         await SendEmailIfAutoscaleLimitReached(update.Organization);
     }
 
-    public async Task AdjustServiceAccountsAsync(Organization organization, int smServiceAccountsAdjustment)
-    {
-        var update = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 0, maxAutoscaleSeats: organization?.MaxAutoscaleSmSeats,
-            serviceAccountAdjustment: smServiceAccountsAdjustment, maxAutoscaleServiceAccounts: organization?.MaxAutoscaleSmServiceAccounts)
-        {
-            Autoscaling = true
-        };
-
-        await UpdateSubscriptionAsync(update);
-    }
-
     private async Task FinalizeSubscriptionAdjustmentAsync(Organization organization,
         Plan plan, SecretsManagerSubscriptionUpdate update)
     {
