@@ -68,6 +68,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         GroupId = g.Id,
                         ReadOnly = g.ReadOnly,
                         HidePasswords = g.HidePasswords,
+                        Manage = g.Manage
                     });
                 await dbContext.AddRangeAsync(collectionGroups);
             }
@@ -85,6 +86,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         OrganizationUserId = u.Id,
                         ReadOnly = u.ReadOnly,
                         HidePasswords = u.HidePasswords,
+                        Manage = u.Manage
                     });
                 await dbContext.AddRangeAsync(collectionUsers);
             }
@@ -130,6 +132,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                  Id = cg.GroupId,
                                  ReadOnly = cg.ReadOnly,
                                  HidePasswords = cg.HidePasswords,
+                                 Manage = cg.Manage
                              };
             var groups = await groupQuery.ToArrayAsync();
 
@@ -140,6 +143,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                 Id = cg.OrganizationUserId,
                                 ReadOnly = cg.ReadOnly,
                                 HidePasswords = cg.HidePasswords,
+                                Manage = cg.Manage
                             };
             var users = await userQuery.ToArrayAsync();
             var access = new CollectionAccessDetails { Users = users, Groups = groups };
@@ -161,6 +165,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                  Id = cg.GroupId,
                                  ReadOnly = cg.ReadOnly,
                                  HidePasswords = cg.HidePasswords,
+                                 Manage = cg.Manage
                              };
             var groups = await groupQuery.ToArrayAsync();
 
@@ -171,6 +176,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                 Id = cg.OrganizationUserId,
                                 ReadOnly = cg.ReadOnly,
                                 HidePasswords = cg.HidePasswords,
+                                Manage = cg.Manage,
                             };
             var users = await userQuery.ToArrayAsync();
             var access = new CollectionAccessDetails { Users = users, Groups = groups };
@@ -207,7 +213,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             {
                                 Id = g.GroupId,
                                 HidePasswords = g.HidePasswords,
-                                ReadOnly = g.ReadOnly
+                                ReadOnly = g.ReadOnly,
+                                Manage = g.Manage
                             }).ToList() ?? new List<CollectionAccessSelection>(),
                         Users = users
                             .FirstOrDefault(u => u.Key == collection.Id)?
@@ -215,7 +222,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             {
                                 Id = c.OrganizationUserId,
                                 HidePasswords = c.HidePasswords,
-                                ReadOnly = c.ReadOnly
+                                ReadOnly = c.ReadOnly,
+                                Manage = c.Manage
                             }).ToList() ?? new List<CollectionAccessSelection>()
                     }
                 )
@@ -251,7 +259,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             {
                                 Id = g.GroupId,
                                 HidePasswords = g.HidePasswords,
-                                ReadOnly = g.ReadOnly
+                                ReadOnly = g.ReadOnly,
+                                Manage = g.Manage
                             }).ToList() ?? new List<CollectionAccessSelection>(),
                         Users = users
                             .FirstOrDefault(u => u.Key == collection.Id)?
@@ -259,7 +268,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                             {
                                 Id = c.OrganizationUserId,
                                 HidePasswords = c.HidePasswords,
-                                ReadOnly = c.ReadOnly
+                                ReadOnly = c.ReadOnly,
+                                Manage = c.Manage
                             }).ToList() ?? new List<CollectionAccessSelection>()
                     }
                 )
@@ -329,6 +339,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         ExternalId = collectionGroup.Key.ExternalId,
                         ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                         HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                        Manage = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.Manage))),
                     })
                     .ToList();
             }
@@ -353,6 +364,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                               ExternalId = collectionGroup.Key.ExternalId,
                               ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
                               HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                              Manage = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.Manage))),
                           }).ToListAsync();
         }
     }
@@ -371,6 +383,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 Id = cu.OrganizationUserId,
                 ReadOnly = cu.ReadOnly,
                 HidePasswords = cu.HidePasswords,
+                Manage = cu.Manage
             }).ToArray();
         }
     }
@@ -415,6 +428,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         OrganizationUserId = requestedUser.Id,
                         HidePasswords = requestedUser.HidePasswords,
                         ReadOnly = requestedUser.ReadOnly,
+                        Manage = requestedUser.Manage
                     });
                     continue;
                 }
@@ -422,6 +436,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 // It already exists, update it
                 existingCollectionUser.HidePasswords = requestedUser.HidePasswords;
                 existingCollectionUser.ReadOnly = requestedUser.ReadOnly;
+                existingCollectionUser.Manage = requestedUser.Manage;
                 dbContext.CollectionUsers.Update(existingCollectionUser);
             }
 
@@ -487,13 +502,15 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 GroupId = x.g.Id,
                 ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
                 HidePasswords = groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords,
+                Manage = groups.FirstOrDefault(g => g.Id == x.g.Id).Manage
             }).ToList();
         var update = union
             .Where(
                 x => x.g != null &&
                 x.cg != null &&
                 (x.cg.ReadOnly != groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly ||
-                x.cg.HidePasswords != groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords)
+                x.cg.HidePasswords != groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords ||
+                x.cg.Manage != groups.FirstOrDefault(g => g.Id == x.g.Id).Manage)
             )
             .Select(x => new CollectionGroup
             {
@@ -501,6 +518,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 GroupId = x.g.Id,
                 ReadOnly = groups.FirstOrDefault(g => g.Id == x.g.Id).ReadOnly,
                 HidePasswords = groups.FirstOrDefault(g => g.Id == x.g.Id).HidePasswords,
+                Manage = groups.FirstOrDefault(g => g.Id == x.g.Id).Manage,
             });
         var delete = union
             .Where(
@@ -549,13 +567,15 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 OrganizationUserId = x.u.Id,
                 ReadOnly = users.FirstOrDefault(u => u.Id == x.u.Id).ReadOnly,
                 HidePasswords = users.FirstOrDefault(u => u.Id == x.u.Id).HidePasswords,
+                Manage = users.FirstOrDefault(u => u.Id == x.u.Id).Manage,
             }).ToList();
         var update = union
             .Where(
                 x => x.u != null &&
                 x.cu != null &&
                 (x.cu.ReadOnly != users.FirstOrDefault(u => u.Id == x.u.Id).ReadOnly ||
-                x.cu.HidePasswords != users.FirstOrDefault(u => u.Id == x.u.Id).HidePasswords)
+                x.cu.HidePasswords != users.FirstOrDefault(u => u.Id == x.u.Id).HidePasswords ||
+                x.cu.Manage != users.FirstOrDefault(u => u.Id == x.u.Id).Manage)
             )
             .Select(x => new CollectionUser
             {
@@ -563,6 +583,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                 OrganizationUserId = x.u.Id,
                 ReadOnly = users.FirstOrDefault(u => u.Id == x.u.Id).ReadOnly,
                 HidePasswords = users.FirstOrDefault(u => u.Id == x.u.Id).HidePasswords,
+                Manage = users.FirstOrDefault(u => u.Id == x.u.Id).Manage,
             });
         var delete = union
             .Where(

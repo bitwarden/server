@@ -97,6 +97,7 @@ public class CipherRepositoryTests
                 Id = orgUser.Id,
                 HidePasswords = true,
                 ReadOnly = true,
+                Manage = true
             },
         });
 

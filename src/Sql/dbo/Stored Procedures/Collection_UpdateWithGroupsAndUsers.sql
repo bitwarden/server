@@ -36,14 +36,17 @@ BEGIN
             @Id,
             [Source].[Id],
             [Source].[ReadOnly],
-            [Source].[HidePasswords]
+            [Source].[HidePasswords],
+            [Source].[Manage]
         )
     WHEN MATCHED AND (
         [Target].[ReadOnly] != [Source].[ReadOnly]
         OR [Target].[HidePasswords] != [Source].[HidePasswords]
+        OR [Target].[Manage] != [Source].[Manage]
     ) THEN
         UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly],
-                   [Target].[HidePasswords] = [Source].[HidePasswords]
+                   [Target].[HidePasswords] = [Source].[HidePasswords],
+                   [Target].[Manage] = [Source].[Manage]
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[CollectionId] = @Id THEN
         DELETE
@@ -72,14 +75,17 @@ BEGIN
             @Id,
             [Source].[Id],
             [Source].[ReadOnly],
-            [Source].[HidePasswords]
+            [Source].[HidePasswords],
+            [Source].[Manage]
         )
     WHEN MATCHED AND (
         [Target].[ReadOnly] != [Source].[ReadOnly]
         OR [Target].[HidePasswords] != [Source].[HidePasswords]
+        OR [Target].[Manage] != [Source].[Manage]
     ) THEN
         UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly],
-                   [Target].[HidePasswords] = [Source].[HidePasswords]
+                   [Target].[HidePasswords] = [Source].[HidePasswords],
+                   [Target].[Manage] = [Source].[Manage]
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[CollectionId] = @Id THEN
         DELETE

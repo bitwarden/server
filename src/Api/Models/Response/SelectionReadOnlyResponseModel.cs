@@ -14,9 +14,11 @@ public class SelectionReadOnlyResponseModel
         Id = selection.Id;
         ReadOnly = selection.ReadOnly;
         HidePasswords = selection.HidePasswords;
+        Manage = selection.Manage;
     }
 
     public Guid Id { get; set; }
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
+    public bool Manage { get; set; }
 }

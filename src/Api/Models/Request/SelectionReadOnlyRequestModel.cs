@@ -9,6 +9,7 @@ public class SelectionReadOnlyRequestModel
     public string Id { get; set; }
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
+    public bool Manage { get; set; }
 
     public CollectionAccessSelection ToSelectionReadOnly()
     {
@@ -17,6 +18,7 @@ public class SelectionReadOnlyRequestModel
             Id = new Guid(Id),
             ReadOnly = ReadOnly,
             HidePasswords = HidePasswords,
+            Manage = Manage,
         };
     }
 }

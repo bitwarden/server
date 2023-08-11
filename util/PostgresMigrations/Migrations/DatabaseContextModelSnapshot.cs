@@ -293,6 +293,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("HidePasswords")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("Manage")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("ReadOnly")
                         .HasColumnType("boolean");
 
@@ -312,6 +315,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<bool>("HidePasswords")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Manage")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("ReadOnly")
