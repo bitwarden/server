@@ -2,27 +2,28 @@
  * Add Manage permission to collections
  */
 
-IF OBJECT_ID('[dbo].[CollectionUser_ReadByCollectionId]') IS NOT NULL
-    BEGIN
-        DROP PROCEDURE [dbo].[CollectionUser_ReadByCollectionId]
-    END
-GO
-
-IF OBJECT_ID('[dbo].[CollectionGroup_ReadByCollectionId]') IS NOT NULL
-    BEGIN
-        DROP PROCEDURE [dbo].[CollectionGroup_ReadByCollectionId]
-    END
-GO
-
+-- Drop procedures that use the SelectionReadOnlyArray type
 IF OBJECT_ID('[dbo].[Group_CreateWithCollections]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Group_CreateWithCollections]
 END
 GO
 
+IF OBJECT_ID('[dbo].[CollectionUser_UpdateUsers]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[CollectionUser_UpdateUsers]
+END
+GO
+
 IF OBJECT_ID('[dbo].[Group_UpdateWithCollections]') IS NOT NULL
 BEGIN
     DROP PROCEDURE [dbo].[Group_UpdateWithCollections]
+END
+GO
+
+IF OBJECT_ID('[dbo].[Collection_UpdateWithGroupsAndUsers]') IS NOT NULL
+BEGIN
+    DROP PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
 END
 GO
 
@@ -44,54 +45,6 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('[dbo].[Collection_UpdateWithGroupsAndUsers]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers]
-END
-GO
-
-IF OBJECT_ID('[dbo].[CollectionUser_UpdateUsers]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[CollectionUser_UpdateUsers]
-END
-GO
-
-IF OBJECT_ID('[dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]
-END
-GO
-
-IF OBJECT_ID('[dbo].[UserCollectionDetails]') IS NOT NULL
-BEGIN
-    DROP FUNCTION [dbo].[UserCollectionDetails]
-END
-GO
-
-IF OBJECT_ID('[dbo].[Collection_ReadByIdUserId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_ReadByIdUserId]
-END
-GO
-
-IF OBJECT_ID('[dbo].[Collection_ReadByUserId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_ReadByUserId]
-END
-
-GO
-IF OBJECT_ID('[dbo].[Collection_ReadWithGroupsAndUsersByUserId]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
-END
-
-GO
-IF OBJECT_ID('[dbo].[Group_ReadWithCollectionsById]') IS NOT NULL
-BEGIN
-    DROP PROCEDURE [dbo].[Group_ReadWithCollectionsById]
-END
-GO
-
 IF TYPE_ID('[dbo].[SelectionReadOnlyArray]') IS NOT NULL
 BEGIN
     DROP TYPE [dbo].[SelectionReadOnlyArray]
@@ -104,6 +57,7 @@ CREATE TYPE [dbo].[SelectionReadOnlyArray] AS TABLE (
     [HidePasswords] BIT              NOT NULL,
     [Manage]        BIT              NOT NULL);
 GO
+
 
 
 --Add Manage Column
@@ -120,7 +74,7 @@ IF COL_LENGTH('[dbo].[CollectionGroup]', 'Manage') IS NULL
     END
 GO
 
-CREATE PROCEDURE [dbo].[CollectionUser_ReadByCollectionId]
+CREATE OR ALTER PROCEDURE [dbo].[CollectionUser_ReadByCollectionId]
     @CollectionId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -138,7 +92,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[CollectionGroup_ReadByCollectionId]
+CREATE OR ALTER PROCEDURE [dbo].[CollectionGroup_ReadByCollectionId]
     @CollectionId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -643,7 +597,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationUserUserDetails_ReadWithCollectionsById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -665,7 +619,7 @@ BEGIN
 END
 GO
 
-CREATE FUNCTION [dbo].[UserCollectionDetails](@UserId UNIQUEIDENTIFIER)
+CREATE OR ALTER FUNCTION [dbo].[UserCollectionDetails](@UserId UNIQUEIDENTIFIER)
 RETURNS TABLE
 AS RETURN
 SELECT
@@ -720,7 +674,7 @@ WHERE
     )
 GO
 
-CREATE PROCEDURE [dbo].[Collection_ReadByIdUserId]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByIdUserId]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER
 AS
@@ -750,7 +704,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[Collection_ReadByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadByUserId]
     @UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -778,7 +732,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
+CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadWithGroupsAndUsersByUserId]
 	@UserId UNIQUEIDENTIFIER
 AS
 BEGIN
@@ -819,7 +773,7 @@ BEGIN
 END
 GO
 
-CREATE PROCEDURE [dbo].[Group_ReadWithCollectionsById]
+CREATE OR ALTER PROCEDURE [dbo].[Group_ReadWithCollectionsById]
     @Id UNIQUEIDENTIFIER
 AS
 BEGIN
