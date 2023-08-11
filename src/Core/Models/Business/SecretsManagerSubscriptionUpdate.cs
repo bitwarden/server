@@ -14,8 +14,7 @@ public class SecretsManagerSubscriptionUpdate
     public int? SmSeats { get; set; }
 
     /// <summary>
-    /// The new autoscale limit for seats, expressed as a total (not an adjustment).
-    /// This may or may not be the same as the current autoscale limit.
+    /// The new autoscale limit for seats after the update
     /// </summary>
     public int? MaxAutoscaleSmSeats { get; set; }
 
@@ -26,8 +25,7 @@ public class SecretsManagerSubscriptionUpdate
     public int? SmServiceAccounts { get; set; }
 
     /// <summary>
-    /// The new autoscale limit for service accounts, expressed as a total (not an adjustment).
-    /// This may or may not be the same as the current autoscale limit.
+    /// The new autoscale limit for service accounts after the update
     /// </summary>
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
 
@@ -39,7 +37,7 @@ public class SecretsManagerSubscriptionUpdate
     /// <summary>
     /// Whether the subscription update is a result of autoscaling
     /// </summary>
-    public bool Autoscaling { get; init; }
+    public bool Autoscaling { get; }
 
     /// <summary>
     /// The seats the organization will have after the update, excluding the base seats included in the plan
