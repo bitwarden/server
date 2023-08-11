@@ -112,7 +112,7 @@ public class CollectionsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
     {
-        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(orgId);
+        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
 
         var responses = orgCollections.Select(c => new CollectionResponseModel(c));
         return new ListResponseModel<CollectionResponseModel>(responses);
@@ -209,7 +209,7 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
-        var userCollections = await _collectionService.GetOrganizationCollections(orgId);
+        var userCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
         var filteredCollections = userCollections.Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == orgId);
 
         if (!filteredCollections.Any())

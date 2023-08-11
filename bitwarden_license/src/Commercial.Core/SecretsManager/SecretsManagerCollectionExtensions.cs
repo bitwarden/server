@@ -44,6 +44,7 @@ public static class SecretsManagerCollectionExtensions
         services.AddScoped<ICreateServiceAccountCommand, CreateServiceAccountCommand>();
         services.AddScoped<IUpdateServiceAccountCommand, UpdateServiceAccountCommand>();
         services.AddScoped<IDeleteServiceAccountsCommand, DeleteServiceAccountsCommand>();
+        services.AddScoped<ICountNewServiceAccountSlotsRequiredQuery, CountNewServiceAccountSlotsRequiredQuery>();
         services.AddScoped<IRevokeAccessTokensCommand, RevokeAccessTokensCommand>();
         services.AddScoped<ICreateAccessTokenCommand, CreateAccessTokenCommand>();
         services.AddScoped<ICreateAccessPoliciesCommand, CreateAccessPoliciesCommand>();
