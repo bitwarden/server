@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Test.Common.Helpers;
+using Pipelines.Sockets.Unofficial.Arenas;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
@@ -290,6 +291,25 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
+
+        var response = await _client.GetAsync($"/projects/{createdProject.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_NonExistingProject_NotFound()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var createdProject = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var deleteResponse = await _client.PostAsync("/projects/delete", JsonContent.Create(createdProject.Id));
 
         var response = await _client.GetAsync($"/projects/{createdProject.Id}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
