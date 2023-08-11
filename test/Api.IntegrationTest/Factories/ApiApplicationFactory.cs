@@ -53,4 +53,13 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     {
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
     }
+
+    /// <summary>
+    /// Helper for logging via client secret.
+    /// Currently used for Secrets Manager service accounts
+    /// </summary>
+    public async Task<string> LoginWithClientSecretAsync(Guid clientId, string clientSecret)
+    {
+        return await _identityApplicationFactory.TokenFromAccessTokenAsync(clientId, clientSecret);
+    }
 }

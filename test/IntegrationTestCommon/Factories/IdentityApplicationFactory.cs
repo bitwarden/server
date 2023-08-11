@@ -42,4 +42,22 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
 
         return (root.GetProperty("access_token").GetString(), root.GetProperty("refresh_token").GetString());
     }
+
+    public async Task<string> TokenFromAccessTokenAsync(Guid clientId, string clientSecret,
+        DeviceType deviceType = DeviceType.SDK)
+    {
+        var context = await Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "scope", "api.secrets" },
+            { "client_id", clientId.ToString() },
+            { "client_secret", clientSecret },
+            { "grant_type", "client_credentials" },
+            { "deviceType", ((int)deviceType).ToString() },
+        }));
+
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var root = body.RootElement;
+
+        return root.GetProperty("access_token").GetString();
+    }
 }
