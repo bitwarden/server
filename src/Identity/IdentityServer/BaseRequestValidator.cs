@@ -94,7 +94,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _distributedMemoryCache = distributedCache;
         _cacheEntryOptions = new DistributedCacheEntryOptions
         {
-            AbsoluteExpirationRelativeToNow = new TimeSpan(0, 1, 0)
+            AbsoluteExpirationRelativeToNow = new TimeSpan(0, 15, 0)
         };
     }
 
@@ -142,7 +142,7 @@ public abstract class BaseRequestValidator<T> where T : class
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
 
-            bool isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedMemoryCache, user.Email, out string cachedToken);
+            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedMemoryCache, user.Email, out string cachedToken);
             if (isOtpCached)
             {
                 // Delay for brute force.
