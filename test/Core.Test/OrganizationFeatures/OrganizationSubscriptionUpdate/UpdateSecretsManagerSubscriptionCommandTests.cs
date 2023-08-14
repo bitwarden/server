@@ -41,7 +41,10 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmSeats = 15, SmServiceAccounts = 300, MaxAutoscaleSmSeats = 15, MaxAutoscaleSmServiceAccounts = 300
+            SmSeats = 15,
+            SmServiceAccounts = 300,
+            MaxAutoscaleSmSeats = 15,
+            MaxAutoscaleSmServiceAccounts = 300
         };
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);

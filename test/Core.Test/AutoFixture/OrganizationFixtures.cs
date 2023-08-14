@@ -10,7 +10,6 @@ using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Braintree;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
 
