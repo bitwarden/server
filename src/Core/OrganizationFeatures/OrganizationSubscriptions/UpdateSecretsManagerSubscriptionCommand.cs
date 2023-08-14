@@ -8,7 +8,6 @@ using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
@@ -53,7 +52,15 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         await FinalizeSubscriptionAdjustmentAsync(update.Organization, update.Plan, update);
 
-        await SendEmailIfAutoscaleLimitReached(update.Organization);
+        if (update.SmSeatAutoscaleLimitReached)
+        {
+            await SendSeatLimitEmailAsync(update.Organization);
+        }
+
+        if (update.SmServiceAccountAutoscaleLimitReached)
+        {
+            await SendServiceAccountLimitEmailAsync(update.Organization);
+        }
     }
 
     private async Task FinalizeSubscriptionAdjustmentAsync(Organization organization,
@@ -61,60 +68,28 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         if (update.SmSeatsChanged)
         {
-            await ProcessChargesAndRaiseEventsForAdjustSeatsAsync(organization, plan, update);
-            organization.SmSeats = update.SmSeats;
+            await _paymentService.AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase, update.ProrationDate);
+
+            // TODO: call ReferenceEventService - see AC-1481
         }
 
         if (update.SmServiceAccountsChanged)
         {
-            await ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(organization, plan, update);
-            organization.SmServiceAccounts = update.SmServiceAccounts;
+            await _paymentService.AdjustServiceAccountsAsync(organization, plan,
+                update.SmServiceAccountsExcludingBase, update.ProrationDate);
+
+            // TODO: call ReferenceEventService - see AC-1481
         }
 
-        if (update.MaxAutoscaleSmSeatsChanged)
-        {
-            organization.MaxAutoscaleSmSeats = update.MaxAutoscaleSmSeats;
-        }
-
-        if (update.MaxAutoscaleSmServiceAccountsChanged)
-        {
-            organization.MaxAutoscaleSmServiceAccounts = update.MaxAutoscaleSmServiceAccounts;
-        }
+        organization.SmSeats = update.SmSeats;
+        organization.SmServiceAccounts = update.SmServiceAccounts;
+        organization.MaxAutoscaleSmSeats = update.MaxAutoscaleSmSeats;
+        organization.MaxAutoscaleSmServiceAccounts = update.MaxAutoscaleSmServiceAccounts;
 
         await ReplaceAndUpdateCacheAsync(organization);
     }
 
-    private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
-        SecretsManagerSubscriptionUpdate update)
-    {
-        await _paymentService.AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase, update.ProrationDate);
-
-        // TODO: call ReferenceEventService - see AC-1481
-    }
-
-    private async Task ProcessChargesAndRaiseEventsForAdjustServiceAccountsAsync(Organization organization, Plan plan,
-        SecretsManagerSubscriptionUpdate update)
-    {
-        await _paymentService.AdjustServiceAccountsAsync(organization, plan,
-            update.SmServiceAccountsExcludingBase, update.ProrationDate);
-
-        // TODO: call ReferenceEventService - see AC-1481
-    }
-
-    private async Task SendEmailIfAutoscaleLimitReached(Organization organization)
-    {
-        if (organization.SmSeats.HasValue && organization.MaxAutoscaleSmSeats.HasValue && organization.SmSeats == organization.MaxAutoscaleSmSeats)
-        {
-            await SendSeatLimitEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value);
-        }
-
-        if (organization.SmServiceAccounts.HasValue && organization.MaxAutoscaleSmServiceAccounts.HasValue && organization.SmServiceAccounts == organization.MaxAutoscaleSmServiceAccounts)
-        {
-            await SendServiceAccountLimitEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value);
-        }
-    }
-
-    private async Task SendSeatLimitEmailAsync(Organization organization, int MaxAutoscaleValue)
+    private async Task SendSeatLimitEmailAsync(Organization organization)
     {
         try
         {
@@ -122,7 +97,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                     OrganizationUserType.Owner))
                 .Select(u => u.Email).Distinct();
 
-            await _mailService.SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
+            await _mailService.SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, ownerEmails);
 
         }
         catch (Exception e)
@@ -131,7 +106,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
     }
 
-    private async Task SendServiceAccountLimitEmailAsync(Organization organization, int MaxAutoscaleValue)
+    private async Task SendServiceAccountLimitEmailAsync(Organization organization)
     {
         try
         {
@@ -139,7 +114,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                     OrganizationUserType.Owner))
                 .Select(u => u.Email).Distinct();
 
-            await _mailService.SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, MaxAutoscaleValue, ownerEmails);
+            await _mailService.SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, ownerEmails);
 
         }
         catch (Exception e)
