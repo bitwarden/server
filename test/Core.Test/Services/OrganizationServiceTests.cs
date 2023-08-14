@@ -1835,7 +1835,7 @@ public class OrganizationServiceTests
     }
 
     [Theory]
-    [EphemeralDataProtectionAutoData, BitAutoData]
+    [BitAutoData]
     public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser, User user)
     {
         var fixture = new Fixture();
