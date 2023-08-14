@@ -56,18 +56,6 @@ public class SecretsManagerSubscriptionUpdate
         MaxAutoscaleSmServiceAccounts != Organization.MaxAutoscaleSmServiceAccounts;
     public Plan Plan => Utilities.StaticStore.GetSecretsManagerPlan(Organization.PlanType);
 
-    public SecretsManagerSubscriptionUpdate(
-        Organization organization,
-        int seatAdjustment, int? maxAutoscaleSeats,
-        int serviceAccountAdjustment, int? maxAutoscaleServiceAccounts) : this(organization, false)
-    {
-        AdjustSeats(seatAdjustment);
-        AdjustServiceAccounts(serviceAccountAdjustment);
-
-        MaxAutoscaleSmSeats = maxAutoscaleSeats;
-        MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
-    }
-
     public SecretsManagerSubscriptionUpdate(Organization organization, bool autoscaling)
     {
         if (organization == null)
