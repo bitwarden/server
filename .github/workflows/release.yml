@@ -38,7 +38,7 @@ jobs:
 
       - name: Check Release Version
         id: version
-        uses: bitwarden/gh-actions/release-version-check@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/release-version-check@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           release-type: ${{ github.event.inputs.release_type }}
           project-type: dotnet
@@ -87,7 +87,7 @@ jobs:
 
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/download-artifacts@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -96,7 +96,7 @@ jobs:
 
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/download-artifacts@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -243,7 +243,7 @@ jobs:
       - name: Setup DCT
         id: setup-dct
         if: matrix.origin_docker_repo == 'bitwarden'
-        uses: bitwarden/gh-actions/setup-docker-trust@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/setup-docker-trust@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
           azure-keyvault-name: "bitwarden-ci"
@@ -306,7 +306,6 @@ jobs:
           fi
 
       - name: Tag version and latest
-        if: matrix.origin_docker_repo == 'bitwardenprod.azurecr.io'
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
@@ -320,7 +319,7 @@ jobs:
           fi
 
       - name: Push version and latest image
-        if: ${{ github.event.inputs.release_type != 'Dry Run' && matrix.origin_docker_repo == 'bitwardenprod.azurecr.io' }}
+        if: ${{ github.event.inputs.release_type != 'Dry Run' }}
         env:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           REGISTRY: bitwardenprod.azurecr.io
@@ -340,7 +339,7 @@ jobs:
     steps:
       - name: Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/download-artifacts@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -353,7 +352,7 @@ jobs:
 
       - name: Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@74f4ac01c9abe0a7331c9a5de822a558fd4a4710
+        uses: bitwarden/gh-actions/download-artifacts@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           workflow: build.yml
           workflow_conclusion: success

@@ -8,7 +8,7 @@
             document.getElementById('@(nameof(Model.Plan))').value = selectText;
             togglePlanFeatures(selectEl.options[selectEl.selectedIndex].value);
         });
-        document.getElementById('gateway-customer-link').addEventListener('click', () => {
+        document.getElementById('gateway-customer-link')?.addEventListener('click', () => {
             const gateway = document.getElementById('@(nameof(Model.Gateway))');
             const customerId = document.getElementById('@(nameof(Model.GatewayCustomerId))');
             if (!gateway || gateway.value === '' || !customerId || customerId.value === '') {
@@ -21,7 +21,7 @@
                     + customerId.value, '_blank');
             }
         });
-        document.getElementById('gateway-subscription-link').addEventListener('click', () => {
+        document.getElementById('gateway-subscription-link')?.addEventListener('click', () => {
             const gateway = document.getElementById('@(nameof(Model.Gateway))');
             const subId = document.getElementById('@(nameof(Model.GatewaySubscriptionId))');
             if (!gateway || gateway.value === '' || !subId || subId.value === '') {
