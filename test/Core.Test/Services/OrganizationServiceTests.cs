@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using AutoFixture;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
@@ -28,6 +29,7 @@ using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -1830,5 +1832,32 @@ public class OrganizationServiceTests
         };
 
         sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup);
+    }
+
+    [Theory]
+    [EphemeralDataProtectionAutoData, BitAutoData]
+    public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser, User user)
+    {
+        var fixture = new Fixture();
+        var sutProvider = new SutProvider<OrganizationService>(fixture)
+            .SetDependency<IDataProtectionProvider>(fixture.Create<EphemeralDataProtectionProvider>())
+            .Create();
+
+        user.Email = organizationUser.Email;
+
+        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("OrganizationServiceDataProtector");
+        var token = dataProtector.Protect($"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddMinutes(1))}");
+        var userService = Substitute.For<IUserService>();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
     }
 }

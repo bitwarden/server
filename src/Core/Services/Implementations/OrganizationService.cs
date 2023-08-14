@@ -1180,6 +1180,9 @@ public class OrganizationService : IOrganizationService
 
         await _organizationUserRepository.ReplaceAsync(orgUser);
 
+        user.EmailVerified = true;
+        await _userRepository.ReplaceAsync(user);
+
         var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin);
         var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
 
