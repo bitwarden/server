@@ -186,8 +186,6 @@ public class UserServiceTests
         OTP = 0x2,
     }
 
-    // This test currently doesn't work because of UserService not using my IPasswordHasher that I mocked up, giving up for now
-    // but this code is a good starter so I wanted it here.
     [Theory]
     // A user who has a password, and the password is valid should only check for that password
     [BitAutoData(true, "test_password", true, ShouldCheck.Password)]
