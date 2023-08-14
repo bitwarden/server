@@ -133,14 +133,15 @@ public class SecretsManagerOrganizationCustomization : ICustomization
     public void Customize(IFixture fixture)
     {
         var organizationId = Guid.NewGuid();
-        var useSecretsManager = true;
         var planType = PlanType.EnterpriseAnnually;
 
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
-            .With(o => o.UseSecretsManager, useSecretsManager)
+            .With(o => o.UseSecretsManager, true)
             .With(o => o.PlanType, planType)
             .With(o => o.Plan, StaticStore.GetPasswordManagerPlan(planType).Name)
+            .With(o => o.MaxAutoscaleSmSeats, (int?)null)
+            .With(o => o.MaxAutoscaleSmServiceAccounts, (int?)null)
         );
     }
 }
