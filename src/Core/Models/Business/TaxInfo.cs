@@ -35,7 +35,7 @@ public class TaxInfo
                 return _taxIdType;
             }
 
-            switch (BillingAddressCountry)
+            switch (BillingAddressCountry.ToUpper())
             {
                 case "AD":
                     _taxIdType = "ad_nrt";
