@@ -580,6 +580,10 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<bool>("LimitCollectionCdOwnerAdmin")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
 
