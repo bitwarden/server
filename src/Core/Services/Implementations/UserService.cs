@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -56,7 +55,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IOrganizationService _organizationService;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IDeviceRepository _deviceRepository;
 
     public UserService(
         IUserRepository userRepository,
@@ -87,8 +85,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IGlobalSettings globalSettings,
         IOrganizationService organizationService,
         IProviderUserRepository providerUserRepository,
-        IStripeSyncService stripeSyncService,
-        IDeviceRepository deviceRepository)
+        IStripeSyncService stripeSyncService)
         : base(
               store,
               optionsAccessor,
@@ -125,7 +122,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _organizationService = organizationService;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
-        _deviceRepository = deviceRepository;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -1459,11 +1455,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("No user email.");
         }
 
-        if (!user.HasMasterPassword() && !await IsCurrentDeviceTrustedAsync(user))
-        {
-            throw new BadRequestException("OTP Verification is only allowed for users without a password or on a trusted device.");
-        }
-
         var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
             "otp:" + user.Email);
         await _mailService.SendOTPEmailAsync(user.Email, token);
@@ -1471,19 +1462,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<bool> VerifyOTPAsync(User user, string token)
     {
-        if (!user.HasMasterPassword() && !await IsCurrentDeviceTrustedAsync(user))
-        {
-            throw new BadRequestException("OTP Verification is only allowed for users without a password or on a trusted device.");
-        }
-
         return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
             "otp:" + user.Email, token);
-    }
-
-    private async Task<bool> IsCurrentDeviceTrustedAsync(User user)
-    {
-        var currentDevice = await _deviceRepository.GetByIdentifierAsync(_currentContext.DeviceIdentifier);
-        return currentDevice.UserId == user.Id && currentDevice.IsTrusted();
     }
 
     public async Task<bool> VerifySecretAsync(User user, string secret)
@@ -1496,11 +1476,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             // device without a password (trusted device encryption) but the account
             // does still have a password we will allow the use of OTP.
             isVerified = await CheckPasswordAsync(user, secret) ||
-                (await IsCurrentDeviceTrustedAsync(user) &&
-                await VerifyOTPAsync(user, secret));
+                await VerifyOTPAsync(user, secret);
         }
         else
         {
+            // If they don't have a password at all they can only do OTP
             isVerified = await VerifyOTPAsync(user, secret);
         }
 

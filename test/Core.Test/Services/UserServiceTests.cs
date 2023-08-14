@@ -3,15 +3,20 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
+using Bit.Core.Tools.Services;
+using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Fido2NetLib;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
@@ -174,35 +179,6 @@ public class UserServiceTests
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
 
-    [Theory]
-    [BitAutoData(true, true, false)]
-    [BitAutoData(true, false, false)]
-    [BitAutoData(false, true, false)]
-    [BitAutoData(false, false, true)]
-    public async Task SendOTPAsync_ShouldAllowTheSendingOfOTP_WhenTrusted_OrWithoutPassword(
-        bool isCurrentDeviceTrusted, bool shouldHavePassword, bool shouldThrow, // inline theory data
-        SutProvider<UserService> sutProvider, string deviceIdentifier, User user) // AutoFixture injected data
-    {
-        // Arrange
-        SetupFakeTokenProvider(sutProvider, user);
-        SetupUserAndDevice(sutProvider, user, deviceIdentifier, isCurrentDeviceTrusted, shouldHavePassword);
-
-        // Act
-        if (shouldThrow)
-        {
-            await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.SendOTPAsync(user));
-        }
-        else
-        {
-            await sutProvider.Sut.SendOTPAsync(user);
-        }
-
-        // Assert
-        await sutProvider.GetDependency<IMailService>()
-            .Received(shouldThrow ? 0 : 1) // If the method should throw, then it should not have sent the OTP
-            .SendOTPEmailAsync(Arg.Any<string>(), "OTP_TOKEN");
-    }
-
     [Flags]
     public enum ShouldCheck
     {
@@ -210,81 +186,91 @@ public class UserServiceTests
         OTP = 0x2,
     }
 
-    // This test currently doesn't work because of UserService not using my IPasswordHasher that I mocked up, giving up for now
-    // but this code is a good starter so I wanted it here.
-    // [Theory]
-    // [BitAutoData(true, true, "test_password", true, ShouldCheck.Password)]
-    // public async Task VerifySecretAsync_Works(
-    //     bool isCurrentDeviceTrusted, bool shouldHavePassword, string secret, bool expectedIsVerified, ShouldCheck shouldCheck, // inline theory data
-    //     SutProvider<UserService> sutProvider, string deviceIdentifier, User user) // AutoFixture injected data
-    // {
-    //     // Arrange
-    //     var tokenProvider = SetupFakeTokenProvider(sutProvider, user);
-    //     SetupUserAndDevice(sutProvider, user, deviceIdentifier, isCurrentDeviceTrusted, shouldHavePassword);
+    [Theory]
+    // A user who has a password, and the password is valid should only check for that password
+    [BitAutoData(true, "test_password", true, ShouldCheck.Password)]
+    // A user who does not have a password, should only check if the OTP is valid
+    [BitAutoData(false, "otp_token", true, ShouldCheck.OTP)]
+    // A user who has a password but supplied a OTP, it will check password first and then try OTP
+    [BitAutoData(true, "otp_token", true, ShouldCheck.Password | ShouldCheck.OTP)]
+    // A user who does not have a password and supplied an invalid OTP token, should only check OTP and return invalid
+    [BitAutoData(false, "bad_otp_token", false, ShouldCheck.OTP)]
+    // A user who does have a password but they supply a bad one, we will check both but it will still be invalid
+    [BitAutoData(true, "bad_test_password", false, ShouldCheck.Password | ShouldCheck.OTP)]
+    public async Task VerifySecretAsync_Works(
+        bool shouldHavePassword, string secret, bool expectedIsVerified, ShouldCheck shouldCheck, // inline theory data
+        SutProvider<UserService> sutProvider, User user) // AutoFixture injected data
+    {
+        // Arrange
+        var tokenProvider = SetupFakeTokenProvider(sutProvider, user);
+        SetupUserAndDevice(user, shouldHavePassword);
 
-    //     // Setup the fake password verification
-    //     var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();
-    //     substitutedUserPasswordStore
-    //         .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
-    //         .Returns((ci) =>
-    //         {
-    //             return Task.FromResult("hashed_test_password");
-    //         });
+        // Setup the fake password verification
+        var substitutedUserPasswordStore = Substitute.For<IUserPasswordStore<User>>();
+        substitutedUserPasswordStore
+            .GetPasswordHashAsync(user, Arg.Any<CancellationToken>())
+            .Returns((ci) =>
+            {
+                return Task.FromResult("hashed_test_password");
+            });
 
-    //     sutProvider.SetDependency<IUserStore<User>>(substitutedUserPasswordStore, "store");
+        sutProvider.SetDependency<IUserStore<User>>(substitutedUserPasswordStore, "store");
 
-    //     var passwordHasher = sutProvider.GetDependency<IPasswordHasher<User>>("passwordHasher");
+        sutProvider.GetDependency<IPasswordHasher<User>>("passwordHasher")
+            .VerifyHashedPassword(user, "hashed_test_password", "test_password")
+            .Returns((ci) =>
+            {
+                return PasswordVerificationResult.Success;
+            });
 
-    //     passwordHasher
-    //         .VerifyHashedPassword(user, "hashed_test_password", "test_password")
-    //         .Returns((ci) =>
-    //         {
-    //             return PasswordVerificationResult.Success;
-    //         });
+        // HACK: SutProvider is being weird about not injecting the IPasswordHasher that I configured
+        var sut = new UserService(
+            sutProvider.GetDependency<IUserRepository>(),
+            sutProvider.GetDependency<ICipherRepository>(),
+            sutProvider.GetDependency<IOrganizationUserRepository>(),
+            sutProvider.GetDependency<IOrganizationRepository>(),
+            sutProvider.GetDependency<IMailService>(),
+            sutProvider.GetDependency<IPushNotificationService>(),
+            sutProvider.GetDependency<IUserStore<User>>(),
+            sutProvider.GetDependency<IOptions<IdentityOptions>>(),
+            sutProvider.GetDependency<IPasswordHasher<User>>(),
+            sutProvider.GetDependency<IEnumerable<IUserValidator<User>>>(),
+            sutProvider.GetDependency<IEnumerable<IPasswordValidator<User>>>(),
+            sutProvider.GetDependency<ILookupNormalizer>(),
+            sutProvider.GetDependency<IdentityErrorDescriber>(),
+            sutProvider.GetDependency<IServiceProvider>(),
+            sutProvider.GetDependency<ILogger<UserManager<User>>>(),
+            sutProvider.GetDependency<ILicensingService>(),
+            sutProvider.GetDependency<IEventService>(),
+            sutProvider.GetDependency<IApplicationCacheService>(),
+            sutProvider.GetDependency<IDataProtectionProvider>(),
+            sutProvider.GetDependency<IPaymentService>(),
+            sutProvider.GetDependency<IPolicyRepository>(),
+            sutProvider.GetDependency<IPolicyService>(),
+            sutProvider.GetDependency<IReferenceEventService>(),
+            sutProvider.GetDependency<IFido2>(),
+            sutProvider.GetDependency<ICurrentContext>(),
+            sutProvider.GetDependency<IGlobalSettings>(),
+            sutProvider.GetDependency<IOrganizationService>(),
+            sutProvider.GetDependency<IProviderUserRepository>(),
+            sutProvider.GetDependency<IStripeSyncService>());
 
-    //     sutProvider.Create();
+        var actualIsVerified = await sut.VerifySecretAsync(user, secret);
 
-    //     var actualIsVerified = await sutProvider.Sut.VerifySecretAsync(user, secret);
+        Assert.Equal(expectedIsVerified, actualIsVerified);
 
-    //     var calls = sutProvider.GetDependency<IPasswordHasher<User>>()
-    //         .ReceivedCalls();
+        await tokenProvider
+            .Received(shouldCheck.HasFlag(ShouldCheck.OTP) ? 1 : 0)
+            .ValidateAsync(Arg.Any<string>(), secret, Arg.Any<UserManager<User>>(), user);
 
-    //     Assert.Equal(expectedIsVerified, actualIsVerified);
+        sutProvider.GetDependency<IPasswordHasher<User>>()
+            .Received(shouldCheck.HasFlag(ShouldCheck.Password) ? 1 : 0)
+            .VerifyHashedPassword(user, "hashed_test_password", secret);
+    }
 
-    //     await tokenProvider
-    //         .Received(shouldCheck.HasFlag(ShouldCheck.OTP) ? 1 : 0)
-    //         .ValidateAsync(Arg.Any<string>(), secret, Arg.Any<UserManager<User>>(), user);
-
-    //     sutProvider.GetDependency<IPasswordHasher<User>>()
-    //         .Received(shouldCheck.HasFlag(ShouldCheck.Password) ? 1 : 0)
-    //         .VerifyHashedPassword(user, "hashed_test_password", secret);
-    // }
-
-    private static void SetupUserAndDevice(SutProvider<UserService> sutProvider,
-        User user,
-        string deviceIdentifier,
-        bool isCurrentDeviceTrusted,
+    private static void SetupUserAndDevice(User user,
         bool shouldHavePassword)
     {
-        sutProvider.GetDependency<ICurrentContext>()
-            .DeviceIdentifier.Returns(deviceIdentifier);
-
-        var device = new Device
-        {
-            UserId = user.Id,
-        };
-
-        if (isCurrentDeviceTrusted)
-        {
-            device.EncryptedPrivateKey = "something";
-            device.EncryptedPublicKey = "something";
-            device.EncryptedUserKey = "something";
-        }
-
-        sutProvider.GetDependency<IDeviceRepository>()
-            .GetByIdentifierAsync(deviceIdentifier)
-            .Returns(device);
-
         if (shouldHavePassword)
         {
             user.MasterPassword = "test_password";
@@ -304,11 +290,11 @@ public class UserServiceTests
             .Returns("OTP_TOKEN");
 
         fakeUserTwoFactorProvider
-            .ValidateAsync(Arg.Any<string>(), Arg.Is<string>(s => s != "OTP_TOKEN"), Arg.Any<UserManager<User>>(), user)
+            .ValidateAsync(Arg.Any<string>(), Arg.Is<string>(s => s != "otp_token"), Arg.Any<UserManager<User>>(), user)
             .Returns(false);
 
         fakeUserTwoFactorProvider
-            .ValidateAsync(Arg.Any<string>(), "OTP_TOKEN", Arg.Any<UserManager<User>>(), user)
+            .ValidateAsync(Arg.Any<string>(), "otp_token", Arg.Any<UserManager<User>>(), user)
             .Returns(true);
 
         sutProvider.GetDependency<IOptions<IdentityOptions>>()
