@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Utilities.Plan;
 
-public record EnterprisePlan : Plan
+public record EnterprisePlan : Models.StaticStore.Plan
 {
     public EnterprisePlan(bool isAnnual)
     {

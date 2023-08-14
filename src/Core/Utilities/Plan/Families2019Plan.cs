@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Utilities.Plan;
 
-public record Families2019Plan : Plan
+public record Families2019Plan : Models.StaticStore.Plan
 {
     public Families2019Plan()
     {

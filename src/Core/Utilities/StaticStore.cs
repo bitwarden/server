@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
+using Bit.Core.Utilities.Plan;
 
 namespace Bit.Core.Utilities;
 
@@ -106,21 +107,25 @@ public class StaticStore
 
         #region Plans
 
-        // PasswordManagerPlans = PasswordManagerPlanStore.CreatePlan();
-        // SecretManagerPlans = SecretsManagerPlanStore.CreatePlan();
-
-        //Plans = PasswordManagerPlans.Concat(SecretManagerPlans);
-        Plans = new List<Plan>
+        Plans = new List<Models.StaticStore.Plan>
         {
             new EnterprisePlan(true),
             new EnterprisePlan(false),
+            new TeamsPlan(true),
+            new TeamsPlan(false),
+            new FamiliesPlan(),
+            new Families2019Plan(),
+            new Enterprise2019Plan(true),
+            new Enterprise2019Plan(false),
+            new Teams2019Plan(true),
+            new Teams2019Plan(false),
         };
 
         #endregion
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
-    public static IEnumerable<Plan> Plans { get; }
+    public static IEnumerable<Models.StaticStore.Plan> Plans { get; }
     public static IEnumerable<Plan> SecretManagerPlans { get; set; }
     public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]

@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Utilities.Plan;
 
-public record Teams2019Plan: Plan
+public record Teams2019Plan: Models.StaticStore.Plan
 {
     public Teams2019Plan(bool isAnnual)
     {

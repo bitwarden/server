@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Utilities.Plan;
 
-public record FamiliesPlan : Plan
+public record FamiliesPlan : Models.StaticStore.Plan
 {
     public FamiliesPlan()
     {
