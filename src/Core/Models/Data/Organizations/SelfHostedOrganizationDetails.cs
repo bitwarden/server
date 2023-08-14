@@ -142,6 +142,7 @@ public class SelfHostedOrganizationDetails : Organization
             RevisionDate = RevisionDate,
             MaxAutoscaleSeats = MaxAutoscaleSeats,
             OwnersNotifiedOfAutoscaling = OwnersNotifiedOfAutoscaling,
+            LimitCollectionCdOwnerAdmin = LimitCollectionCdOwnerAdmin,
         };
     }
 }
