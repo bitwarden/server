@@ -1,8 +1,10 @@
-﻿using Bit.Icons.Models;
+﻿#nullable enable
+
+using Bit.Icons.Models;
 
 namespace Bit.Icons.Services;
 
 public interface IIconFetchingService
 {
-    Task<IconResult> GetIconAsync(string domain);
+    Task<Icon?> GetIconAsync(string domain);
 }

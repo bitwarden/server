@@ -8,14 +8,17 @@ public class SecretUpdateRequestModel : IValidatableObject
 {
     [Required]
     [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string Key { get; set; }
 
     [Required]
     [EncryptedString]
+    [EncryptedStringLength(5000)]
     public string Value { get; set; }
 
     [Required]
     [EncryptedString]
+    [EncryptedStringLength(10000)]
     public string Note { get; set; }
 
     public Guid[] ProjectIds { get; set; }
