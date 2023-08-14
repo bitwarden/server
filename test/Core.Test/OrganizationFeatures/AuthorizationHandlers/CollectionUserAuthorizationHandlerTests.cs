@@ -309,4 +309,143 @@ public class CollectionUserAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
         Assert.True(context.HasFailed);
     }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateForNewCollectionAsync_Success(
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        Collection collection,
+        ICollection<CollectionUser> collectionUsers,
+        ICollection<OrganizationUser> users)
+    {
+        // Ensure all collection users have the same collection id
+        foreach (var cu in collectionUsers)
+        {
+            cu.CollectionId = collection.Id;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperation.CreateForNewCollection(collection) },
+            new ClaimsPrincipal(),
+            collectionUsers
+        );
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(users);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateForNewCollectionAsync_MissingRequirement_Failure(
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        Collection collection,
+        ICollection<CollectionUser> collectionUsers,
+        ICollection<OrganizationUser> users)
+    {
+        // Ensure all collection users have the same collection id
+        foreach (var cu in collectionUsers)
+        {
+            cu.CollectionId = collection.Id;
+        }
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperation.CreateForNewCollection(null) },
+            new ClaimsPrincipal(),
+            collectionUsers
+        );
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(users);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasFailed);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateForNewCollectionAsync_WrongCollectionId_Failure(
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        Collection collection,
+        ICollection<CollectionUser> collectionUsers,
+        ICollection<OrganizationUser> users)
+    {
+        // Ensure all collection users have the same collection id
+        foreach (var cu in collectionUsers)
+        {
+            cu.CollectionId = collection.Id;
+        }
+
+        // Simulate a wrong collection id
+        collectionUsers.First().CollectionId = Guid.NewGuid();
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperation.CreateForNewCollection(collection) },
+            new ClaimsPrincipal(),
+            collectionUsers
+        );
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(users);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasFailed);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateForNewCollectionAsync_MissingTargetUser_Failure(
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        Collection collection,
+        ICollection<CollectionUser> collectionUsers,
+        IList<OrganizationUser> users)
+    {
+        // Ensure all collection users have the same collection id
+        foreach (var cu in collectionUsers)
+        {
+            cu.CollectionId = collection.Id;
+        }
+
+        // Simulate a missing target user
+        users.RemoveAt(0);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperation.CreateForNewCollection(collection) },
+            new ClaimsPrincipal(),
+            collectionUsers
+        );
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(users);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasFailed);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateForNewCollectionAsync_WrongOrgForTargetUser_Failure(
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        Collection collection,
+        ICollection<CollectionUser> collectionUsers,
+        IList<OrganizationUser> users)
+    {
+        // Ensure all collection users have the same collection id
+        foreach (var cu in collectionUsers)
+        {
+            cu.CollectionId = collection.Id;
+        }
+
+        // Simulate a target user that belongs to a different org
+        users.First().OrganizationId = Guid.NewGuid();
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperation.CreateForNewCollection(collection) },
+            new ClaimsPrincipal(),
+            collectionUsers
+        );
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(users);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasFailed);
+    }
 }

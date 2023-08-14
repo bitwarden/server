@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using StackExchange.Redis;
 
 namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
@@ -29,6 +30,9 @@ public class CollectionUserAuthorizationHandler : BulkAuthorizationHandler<Colle
                 break;
             case not null when requirement == CollectionUserOperation.Delete:
                 await CanDeleteAsync(context, requirement, resources);
+                break;
+            case not null when requirement.Name == nameof(CollectionUserOperation.CreateForNewCollection):
+                await CanCreateForNewCollectionAsync(context, requirement, resources);
                 break;
         }
     }
@@ -145,6 +149,55 @@ public class CollectionUserAuthorizationHandler : BulkAuthorizationHandler<Colle
 
         // Any target collection is not in the list of manageable collections, fail the requirement
         if (targetCollections.Any(tc => !manageableCollections.Exists(c => c.Id == tc.Id)))
+        {
+            context.Fail();
+            return;
+        }
+
+        context.Succeed(requirement);
+    }
+
+    /// <summary>
+    /// Ensure the acting user can created the requested <see cref="CollectionUser"/> resource(s) for the
+    /// specified collection (that has not be created in the database yet).
+    /// </summary>
+    /// <remarks>
+    /// Checks that the following are all true:
+    /// - The target collection is provided in the requirement
+    /// - All collection users are assigned to the target collection in the requirement
+    /// - The target users exist and belong to the same organization as the target collection
+    /// </remarks>
+    private async Task CanCreateForNewCollectionAsync(AuthorizationHandlerContext context,
+        CollectionUserOperationRequirement requirement, ICollection<CollectionUser> resource)
+    {
+        // Without the target collection, we can't check anything else
+        if (requirement.Collection == null)
+        {
+            context.Fail();
+            return;
+        }
+
+        // All collection users must be assigned to the target collection in the requirement, otherwise fail
+        if (resource.Any(cu => cu.CollectionId != requirement.Collection.Id))
+        {
+            context.Fail();
+            return;
+        }
+
+        var distinctTargetUserIds = resource.Select(c => c.OrganizationUserId).Distinct().ToList();
+
+        // List of users the user is performing the operation on
+        var targetUsers = await _organizationUserRepository.GetManyAsync(distinctTargetUserIds);
+
+        // A target user does not exist, fail the requirement
+        if (targetUsers.Count != distinctTargetUserIds.Count)
+        {
+            context.Fail();
+            return;
+        }
+
+        // If any target users belong to a different organization than the target collection, fail the requirement
+        if (targetUsers.Any(tu => tu.OrganizationId != requirement.Collection.OrganizationId))
         {
             context.Fail();
             return;
