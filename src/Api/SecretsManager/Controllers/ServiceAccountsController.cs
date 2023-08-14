@@ -126,8 +126,8 @@ public class ServiceAccountsController : Controller
         if (newServiceAccountSlotsRequired > 0)
         {
             var org = await _organizationRepository.GetByIdAsync(organizationId);
-            var update = new SecretsManagerSubscriptionUpdate(org, true);
-            update.AdjustServiceAccounts(newServiceAccountSlotsRequired);
+            var update = new SecretsManagerSubscriptionUpdate(org, true)
+                .AdjustServiceAccounts(newServiceAccountSlotsRequired);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }
 
