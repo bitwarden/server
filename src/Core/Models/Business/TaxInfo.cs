@@ -43,9 +43,6 @@ public class TaxInfo
                 case "AE":
                     _taxIdType = "ae_trn";
                     break;
-                case "AF":
-                    _taxIdType = "ae_trn";
-                    break;
                 case "AR":
                     _taxIdType = "ar_cuit";
                     break;
