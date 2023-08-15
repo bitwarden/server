@@ -11,10 +11,15 @@ public class CollectionCustomization : ICustomization
     {
         var orgId = Guid.NewGuid();
         var initialSeed = new Random().Next();
+
+        // Use the same seed for each of these so that the collection Guids are the same for each type
+        // This way when lists of various collection entities are created, they will have the same Guids
         var collectionIdRnd = new Random(initialSeed);
         var collectionDetailsIdRnd = new Random(initialSeed);
         var collectionUserCollectionIdRnd = new Random(initialSeed);
 
+        // Use the same seed for each of these so that the user Guids are the same for each type
+        // Increment the initial seed by 1 so that the user Guids are different from the collection Guids
         var userIdRnd = new Random(initialSeed + 1);
         var collectionUserUserIdRnd = new Random(initialSeed + 1);
 
