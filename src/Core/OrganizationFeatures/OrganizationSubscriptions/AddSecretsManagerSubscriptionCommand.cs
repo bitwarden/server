@@ -24,7 +24,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
     {
         ValidateOrganization(organization);
 
-        var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         var signup = SetOrganizationUpgrade(organization, additionalSmSeats, additionalServiceAccounts);
         _organizationService.ValidateSecretsManagerPlan(plan, signup);
 
@@ -33,8 +33,8 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
             await _paymentService.AddSecretsManagerToSubscription(organization, plan, additionalSmSeats, additionalServiceAccounts);
         }
 
-        organization.SmSeats = plan.BaseSeats + additionalSmSeats;
-        organization.SmServiceAccounts = plan.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts;
+        organization.SmSeats = plan.SecretsManager.BaseSeats + additionalSmSeats;
+        organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts;
         organization.UseSecretsManager = true;
 
         await _organizationService.ReplaceAndUpdateCacheAsync(organization);
@@ -62,7 +62,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
             throw new NotFoundException();
         }
 
-        var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && plan.Product != ProductType.Free)
         {
             throw new BadRequestException("No payment method found.");

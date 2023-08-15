@@ -56,7 +56,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             return false;
         }
 
-        var sponsoringOrgPlan = Utilities.StaticStore.GetPasswordManagerPlan(sponsoringOrganization.PlanType);
+        var sponsoringOrgPlan = Utilities.StaticStore.GetPlan(sponsoringOrganization.PlanType);
         if (OrgDisabledForMoreThanGracePeriod(sponsoringOrganization) ||
             sponsoredPlan.SponsoringProductType != sponsoringOrgPlan.Product ||
             existingSponsorship.ToDelete ||

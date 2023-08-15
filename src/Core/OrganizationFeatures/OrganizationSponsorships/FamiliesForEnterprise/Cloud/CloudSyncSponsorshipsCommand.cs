@@ -54,7 +54,7 @@ public class CloudSyncSponsorshipsCommand : ICloudSyncSponsorshipsCommand
         {
             var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(selfHostedSponsorship.PlanSponsorshipType)?.SponsoringProductType;
             if (requiredSponsoringProductType == null
-                || StaticStore.GetPasswordManagerPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+                || StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
             {
                 continue; // prevent unsupported sponsorships
             }

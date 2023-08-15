@@ -32,49 +32,49 @@ public abstract record Plan
     public int? LegacyYear { get; init;}
     public bool Disabled { get; init;}
     public short? MaxProjects { get; init;}
-    protected PasswordManagerPlanFeatures PasswordManager { get; init;}
-    protected SecretsManagerPlanFeatures SecretsManager { get; init;}
+    public PasswordManagerPlanFeatures PasswordManager { get; init;}
+    public SecretsManagerPlanFeatures SecretsManager { get; init;}
 
-    protected record SecretsManagerPlanFeatures
+    public record SecretsManagerPlanFeatures
     {
         public short? MaxServiceAccounts { get; init;}
-        protected bool AllowServiceAccountsAutoscale { get; init;}
-        protected string StripeServiceAccountPlanId { get; init;}
-        protected decimal? AdditionalPricePerServiceAccount { get; init;}
-        protected short? BaseServiceAccount { get; init;}
-        protected short? MaxAdditionalServiceAccount { get; init;}
-        protected bool HasAdditionalServiceAccountOption { get; init;}
-        protected string StripeSeatPlanId { get; init;}
-        protected decimal BasePrice { get; init;}
-        protected decimal SeatPrice { get; init;}
-        protected bool AllowSeatAutoscale { get; init;}
-        protected bool HasAdditionalSeatsOption { get; init;}
-        protected int? MaxAdditionalSeats { get; init;}
-        protected int BaseSeats { get; init;}
-        protected int MaxProjects { get; init; }
-        protected int MaxUsers { get; init; }
+        public bool AllowServiceAccountsAutoscale { get; init;}
+        public string StripeServiceAccountPlanId { get; init;}
+        public decimal? AdditionalPricePerServiceAccount { get; init;}
+        public short? BaseServiceAccount { get; init;}
+        public short? MaxAdditionalServiceAccount { get; init;}
+        public bool HasAdditionalServiceAccountOption { get; init;}
+        public string StripeSeatPlanId { get; init;}
+        public decimal BasePrice { get; init;}
+        public decimal SeatPrice { get; init;}
+        public bool AllowSeatAutoscale { get; init;}
+        public bool HasAdditionalSeatsOption { get; init;}
+        public int? MaxAdditionalSeats { get; init;}
+        public int BaseSeats { get; init;}
+        public int MaxProjects { get; init; }
+        public int MaxUsers { get; init; }
     }
 
-    protected record PasswordManagerPlanFeatures
+    public record PasswordManagerPlanFeatures
     {
-        protected short? BaseStorageGb { get; init;}
-        protected short? MaxCollections { get; init;}
-        protected bool HasAdditionalStorageOption { get; init;}
-        protected short? MaxAdditionalStorage { get; init;}
-        protected bool HasPremiumAccessOption { get; init;}
-        protected int? LegacyYear { get; }
-        protected string StripePremiumAccessPlanId { get; init;}
-        protected decimal AdditionalStoragePricePerGb { get; init;}
-        protected decimal PremiumAccessOptionPrice { get; init;}
-        protected string StripeStoragePlanId { get; init;}
+        public short? BaseStorageGb { get; init;}
+        public short? MaxCollections { get; init;}
+        public bool HasAdditionalStorageOption { get; init;}
+        public short? MaxAdditionalStorage { get; init;}
+        public bool HasPremiumAccessOption { get; init;}
+        public int? LegacyYear { get; }
+        public string StripePremiumAccessPlanId { get; init;}
+        public decimal AdditionalStoragePricePerGb { get; init;}
+        public decimal PremiumAccessOptionPrice { get; init;}
+        public string StripeStoragePlanId { get; init;}
         public string StripePlanId { get; init;}
-        protected string StripeSeatPlanId { get; init;}
-        protected decimal BasePrice { get; init;}
-        protected decimal SeatPrice { get; init;}
-        protected bool AllowSeatAutoscale { get; init;}
-        protected bool HasAdditionalSeatsOption { get; init;}
-        protected int? MaxAdditionalSeats { get; init;}
-        protected int BaseSeats { get; init;}
-        protected int MaxUsers { get; init; }
+        public string StripeSeatPlanId { get; init;}
+        public decimal BasePrice { get; init;}
+        public decimal SeatPrice { get; init;}
+        public bool AllowSeatAutoscale { get; init;}
+        public bool HasAdditionalSeatsOption { get; init;}
+        public int? MaxAdditionalSeats { get; init;}
+        public int BaseSeats { get; init;}
+        public int MaxUsers { get; init; }
     }
 }

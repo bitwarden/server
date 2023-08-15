@@ -126,8 +126,8 @@ public class StaticStore
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
     public static IEnumerable<Models.StaticStore.Plan> Plans { get; }
-    public static IEnumerable<Plan> SecretManagerPlans { get; set; }
-    public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
+    //public static IEnumerable<Plan> SecretManagerPlans { get; set; }
+    //public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {
             new SponsoredPlan
@@ -137,14 +137,17 @@ public class StaticStore
                 SponsoringProductType = ProductType.Enterprise,
                 StripePlanId = "2021-family-for-enterprise-annually",
                 UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPasswordManagerPlan(org.PlanType).Product == ProductType.Enterprise,
+                    GetPlan(org.PlanType).Product == ProductType.Enterprise,
             }
         };
-    public static Plan GetPasswordManagerPlan(PlanType planType) =>
-        PasswordManagerPlans.SingleOrDefault(p => p.Type == planType);
 
-    public static Plan GetSecretsManagerPlan(PlanType planType) =>
-        SecretManagerPlans.SingleOrDefault(p => p.Type == planType);
+    // public static Models.StaticStore.Plan GetPasswordManagerPlan(PlanType planType) =>
+    //     PasswordManagerPlans.SingleOrDefault(p => p.Type == planType);
+    public static Models.StaticStore.Plan GetPlan(PlanType planType) =>
+        Plans.SingleOrDefault(p => p.Type == planType);
+
+   // public static Plan GetSecretsManagerPlan(PlanType planType) =>
+    //    SecretManagerPlans.SingleOrDefault(p => p.Type == planType);
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
@@ -165,7 +168,7 @@ public class StaticStore
             return true;
         }
 
-        if (SecretManagerPlans.Select(p => p.SecretsManager.StripeServiceAccountPlanId).Contains(stripePlanId))
+        if (Plans.Select(p => p.SecretsManager.StripeServiceAccountPlanId).Contains(stripePlanId))
         {
             return true;
         }
@@ -187,10 +190,10 @@ public class StaticStore
     /// </summary>
     /// <param name="stripeId"></param>
     /// <returns>The plan if a matching stripeId was found, null otherwise</returns>
-    public static Plan GetPlanByStripeId(string stripeId)
+    public static Models.StaticStore.Plan GetPlanByStripeId(string stripeId)
     {
         return Plans.FirstOrDefault(p =>
-            p.StripePlanId == stripeId ||
+            p.PasswordManager.StripePlanId == stripeId ||
             p.PasswordManager.StripeSeatPlanId == stripeId ||
             p.PasswordManager.StripeStoragePlanId == stripeId ||
             p.SecretsManager.StripeSeatPlanId == stripeId ||

@@ -73,14 +73,14 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             throw new BadRequestException("Your account has no payment method available.");
         }
 
-        var existingPasswordManagerPlan = StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
+        var existingPasswordManagerPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
         if (existingPasswordManagerPlan == null)
         {
             throw new BadRequestException("Existing plan not found.");
         }
 
         var newPasswordManagerPlan =
-            StaticStore.PasswordManagerPlans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
+            StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
         if (newPasswordManagerPlan == null)
         {
             throw new BadRequestException("Plan not found.");
@@ -103,14 +103,14 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         _organizationService.ValidatePasswordManagerPlan(newPasswordManagerPlan, upgrade);
         var newSecretsManagerPlan =
-            StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
+            StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan && !p.Disabled);
         if (upgrade.UseSecretsManager)
         {
             _organizationService.ValidateSecretsManagerPlan(newSecretsManagerPlan, upgrade);
         }
 
-        var newPasswordManagerPlanSeats = (short)(newPasswordManagerPlan.BaseSeats +
-                                                  (newPasswordManagerPlan.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
+        var newPasswordManagerPlanSeats = (short)(newPasswordManagerPlan.PasswordManager.BaseSeats +
+                                                  (newPasswordManagerPlan.PasswordManager.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
         if (!organization.Seats.HasValue || organization.Seats.Value > newPasswordManagerPlanSeats)
         {
             var occupiedSeats =
@@ -122,15 +122,15 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             }
         }
 
-        if (newPasswordManagerPlan.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
+        if (newPasswordManagerPlan.PasswordManager.MaxCollections.HasValue && (!organization.MaxCollections.HasValue ||
                                                                organization.MaxCollections.Value >
-                                                               newPasswordManagerPlan.MaxCollections.Value))
+                                                               newPasswordManagerPlan.PasswordManager.MaxCollections.Value))
         {
             var collectionCount = await _collectionRepository.GetCountByOrganizationIdAsync(organization.Id);
-            if (collectionCount > newPasswordManagerPlan.MaxCollections.Value)
+            if (collectionCount > newPasswordManagerPlan.PasswordManager.MaxCollections.Value)
             {
                 throw new BadRequestException($"Your organization currently has {collectionCount} collections. " +
-                                              $"Your new plan allows for a maximum of ({newPasswordManagerPlan.MaxCollections.Value}) collections. " +
+                                              $"Your new plan allows for a maximum of ({newPasswordManagerPlan.PasswordManager.MaxCollections.Value}) collections. " +
                                               "Remove some collections.");
             }
         }
@@ -220,10 +220,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            var organizationUpgradePlan = upgrade.UseSecretsManager
-                ? StaticStore.Plans.Where(p => p.Type == upgrade.Plan).ToList()
-                : StaticStore.Plans.Where(p => p.Type == upgrade.Plan && p.BitwardenProduct == BitwardenProductType.PasswordManager).ToList();
-
+            // var organizationUpgradePlan = upgrade.UseSecretsManager
+            //     ? StaticStore.Plans.Where(p => p.Type == upgrade.Plan).ToList()
+            //     : StaticStore.Plans.Where(p => p.Type == upgrade.Plan && p.BitwardenProduct == BitwardenProductType.PasswordManager).ToList();
+            var organizationUpgradePlan = StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan);
             paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
                 organizationUpgradePlan, upgrade);
             success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
@@ -236,8 +236,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         organization.BusinessName = upgrade.BusinessName;
         organization.PlanType = newPasswordManagerPlan.Type;
-        organization.Seats = (short)(newPasswordManagerPlan.BaseSeats + upgrade.AdditionalSeats);
-        organization.MaxCollections = newPasswordManagerPlan.MaxCollections;
+        organization.Seats = (short)(newPasswordManagerPlan.PasswordManager.BaseSeats + upgrade.AdditionalSeats);
+        organization.MaxCollections = newPasswordManagerPlan.PasswordManager.MaxCollections;
         organization.UseGroups = newPasswordManagerPlan.HasGroups;
         organization.UseDirectory = newPasswordManagerPlan.HasDirectory;
         organization.UseEvents = newPasswordManagerPlan.HasEvents;
@@ -246,9 +246,9 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UseApi = newPasswordManagerPlan.HasApi;
         organization.SelfHost = newPasswordManagerPlan.HasSelfHost;
         organization.UsePolicies = newPasswordManagerPlan.HasPolicies;
-        organization.MaxStorageGb = !newPasswordManagerPlan.BaseStorageGb.HasValue
+        organization.MaxStorageGb = !newPasswordManagerPlan.PasswordManager.BaseStorageGb.HasValue
             ? (short?)null
-            : (short)(newPasswordManagerPlan.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
+            : (short)(newPasswordManagerPlan.PasswordManager.BaseStorageGb.Value + upgrade.AdditionalStorageGb);
         organization.UseGroups = newPasswordManagerPlan.HasGroups;
         organization.UseDirectory = newPasswordManagerPlan.HasDirectory;
         organization.UseEvents = newPasswordManagerPlan.HasEvents;
@@ -271,8 +271,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (upgrade.UseSecretsManager)
         {
-            organization.SmSeats = newSecretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault();
-            organization.SmServiceAccounts = newSecretsManagerPlan.BaseServiceAccount.GetValueOrDefault() +
+            organization.SmSeats = newSecretsManagerPlan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault();
+            organization.SmServiceAccounts = newSecretsManagerPlan.SecretsManager.BaseServiceAccount.GetValueOrDefault() +
                                              upgrade.AdditionalServiceAccounts.GetValueOrDefault();
         }
 
@@ -299,8 +299,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,
         Models.StaticStore.Plan newSecretsManagerPlan)
     {
-        var newPlanSmSeats = (short)(newSecretsManagerPlan.BaseSeats +
-                                     (newSecretsManagerPlan.HasAdditionalSeatsOption
+        var newPlanSmSeats = (short)(newSecretsManagerPlan.SecretsManager?.BaseSeats +
+                                     (newSecretsManagerPlan.SecretsManager.HasAdditionalSeatsOption
                                          ? upgrade.AdditionalSmSeats
                                          : 0));
         var occupiedSmSeats =
@@ -316,10 +316,10 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             }
         }
 
-        var additionalServiceAccounts = newSecretsManagerPlan.HasAdditionalServiceAccountOption
+        var additionalServiceAccounts = newSecretsManagerPlan.SecretsManager.HasAdditionalServiceAccountOption
             ? upgrade.AdditionalServiceAccounts
             : 0;
-        var newPlanServiceAccounts = newSecretsManagerPlan.BaseServiceAccount + additionalServiceAccounts;
+        var newPlanServiceAccounts = newSecretsManagerPlan.SecretsManager.BaseServiceAccount + additionalServiceAccounts;
 
         if (!organization.SmServiceAccounts.HasValue || organization.SmServiceAccounts.Value > newPlanServiceAccounts)
         {
@@ -329,7 +329,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             {
                 throw new BadRequestException(
                     $"Your organization currently has {currentServiceAccounts} service accounts. " +
-                    $"Your new plan only allows {newSecretsManagerPlan.MaxServiceAccounts} service accounts. " +
+                    $"Your new plan only allows {newSecretsManagerPlan.SecretsManager.MaxServiceAccounts} service accounts. " +
                     "Remove some service accounts or increase your subscription.");
             }
         }

@@ -1,11 +1,8 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Models.StaticStore;
-
-namespace Bit.Core.Utilities;
+﻿namespace Bit.Core.Utilities;
 
 public static class PasswordManagerPlanStore
 {
-    public static IEnumerable<Plan> CreatePlan()
+    /*public static IEnumerable<Models.StaticStore.Plan> CreatePlan()
     {
         return new List<Plan>
         {
@@ -394,5 +391,5 @@ public static class PasswordManagerPlanStore
                 AllowSeatAutoscale = true,
             },
         };
-    }
+    }*/
 }

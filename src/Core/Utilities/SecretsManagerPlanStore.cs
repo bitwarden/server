@@ -5,7 +5,7 @@ namespace Bit.Core.Utilities;
 
 public static class SecretsManagerPlanStore
 {
-    public static IEnumerable<Plan> CreatePlan()
+    /*public static IEnumerable<Plan> CreatePlan()
     {
         return new List<Plan>
         {
@@ -168,5 +168,5 @@ public static class SecretsManagerPlanStore
                 AllowSeatAutoscale = false,
             }
         };
-    }
+    }*/
 }

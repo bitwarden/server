@@ -90,7 +90,7 @@ public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
     private long? _prevServiceAccounts;
     private readonly StaticStore.Plan _plan;
     private readonly long? _additionalServiceAccounts;
-    protected override List<string> PlanIds => new() { _plan.StripeServiceAccountPlanId };
+    protected override List<string> PlanIds => new() { _plan.SecretsManager.StripeServiceAccountPlanId };
 
     public ServiceAccountSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalServiceAccounts)
     {
@@ -190,7 +190,7 @@ public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
 
     public SponsorOrganizationSubscriptionUpdate(StaticStore.Plan existingPlan, StaticStore.SponsoredPlan sponsoredPlan, bool applySponsorship)
     {
-        _existingPlanStripeId = existingPlan.StripePlanId;
+        _existingPlanStripeId = existingPlan.PasswordManager.StripePlanId;
         _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId;
         _applySponsorship = applySponsorship;
     }
@@ -269,7 +269,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     private readonly long? _additionalServiceAccounts;
     private readonly int _previousSeats;
     private readonly int _previousServiceAccounts;
-    protected override List<string> PlanIds => new() { _plan.StripeSeatPlanId, _plan.StripeServiceAccountPlanId };
+    protected override List<string> PlanIds => new() { _plan.SecretsManager.StripeSeatPlanId, _plan.SecretsManager.StripeServiceAccountPlanId };
     public SecretsManagerSubscribeUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
     {
         _plan = plan;
@@ -303,7 +303,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Price = _plan.StripeSeatPlanId,
+                Price = _plan.SecretsManager.StripeSeatPlanId,
                 Quantity = _additionalSeats
             });
         }
@@ -312,7 +312,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Price = _plan.StripeServiceAccountPlanId,
+                Price = _plan.SecretsManager.StripeServiceAccountPlanId,
                 Quantity = _additionalServiceAccounts
             });
         }
@@ -322,14 +322,14 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     {
         updatedItems.Add(new SubscriptionItemOptions
         {
-            Price = _plan.StripeSeatPlanId,
+            Price = _plan.SecretsManager.StripeSeatPlanId,
             Quantity = _previousSeats,
             Deleted = _previousSeats == 0 ? true : (bool?)null,
         });
 
         updatedItems.Add(new SubscriptionItemOptions
         {
-            Price = _plan.StripeServiceAccountPlanId,
+            Price = _plan.SecretsManager.StripeServiceAccountPlanId,
             Quantity = _previousServiceAccounts,
             Deleted = _previousServiceAccounts == 0 ? true : (bool?)null,
         });
