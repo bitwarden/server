@@ -17,11 +17,15 @@ public class CollectionCustomization : ICustomization
         var collectionIdRnd = new Random(initialSeed);
         var collectionDetailsIdRnd = new Random(initialSeed);
         var collectionUserCollectionIdRnd = new Random(initialSeed);
+        var collectionGroupCollectionIdRnd = new Random(initialSeed);
 
         // Use the same seed for each of these so that the user Guids are the same for each type
         // Increment the initial seed by 1 so that the user Guids are different from the collection Guids
         var userIdRnd = new Random(initialSeed + 1);
         var collectionUserUserIdRnd = new Random(initialSeed + 1);
+
+        var groupIdRnd = new Random(initialSeed + 2);
+        var collectionGroupGroupIdRnd = new Random(initialSeed + 2);
 
         fixture.Customize<OrganizationUser>(composer => composer
             .With(o => o.OrganizationId, orgId)
@@ -38,6 +42,14 @@ public class CollectionCustomization : ICustomization
         fixture.Customize<CollectionUser>(c => c
             .With(cu => cu.OrganizationUserId, () => SeededGuid(collectionUserUserIdRnd))
             .With(cu => cu.CollectionId, () => SeededGuid(collectionUserCollectionIdRnd)));
+
+        fixture.Customize<Group>(composer => composer
+            .With(o => o.OrganizationId, orgId)
+            .With(o => o.Id, () => SeededGuid(groupIdRnd)));
+
+        fixture.Customize<CollectionGroup>(c => c
+            .With(cu => cu.GroupId, () => SeededGuid(collectionGroupGroupIdRnd))
+            .With(cu => cu.CollectionId, () => SeededGuid(collectionGroupCollectionIdRnd)));
     }
 
     private static Guid SeededGuid(Random rnd)

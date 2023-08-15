@@ -51,6 +51,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddBaseOrganizationSubscriptionCommandsQueries();
 
         services.AddScoped<IAuthorizationHandler, CollectionUserAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, CollectionGroupAuthorizationHandler>();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
