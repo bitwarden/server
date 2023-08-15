@@ -2,7 +2,6 @@
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
-using StackExchange.Redis;
 
 namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
