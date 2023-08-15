@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
-using Microsoft.Identity.Client.Platforms.Features.DesktopOs.Kerberos;
 
 namespace Bit.Api.Vault.Models;
 
