@@ -70,25 +70,29 @@ public class AuthRequestService : IAuthRequestService
     /// </remarks>
     public async Task<AuthRequest> CreateAuthRequestAsync(AuthRequestCreateRequestModel model)
     {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
-        {
-            throw new NotFoundException();
-        }
-
         if (!_currentContext.DeviceType.HasValue)
         {
             throw new BadRequestException("Device type not provided.");
         }
 
-        if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
+        var notFound = false;
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+        if (user == null)
+        {
+            notFound = true;
+        }
+        else if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
         {
             var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
             if (devices == null || !devices.Any(d => d.Identifier == model.DeviceIdentifier))
             {
-                throw new BadRequestException(
-                    "Login with device is only available on devices that have been previously logged in.");
+                notFound = true;
             }
+        }
+
+        if (notFound)
+        {
+            throw new BadRequestException("User or known device not found.");
         }
 
         var authRequest = new AuthRequest
