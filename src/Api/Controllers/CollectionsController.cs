@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Api.Vault.AuthorizationHandlers;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -19,6 +20,7 @@ public class CollectionsController : Controller
     private readonly ICollectionService _collectionService;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
+    private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
 
     public CollectionsController(
@@ -26,12 +28,14 @@ public class CollectionsController : Controller
         ICollectionService collectionService,
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
+        IAuthorizationService authorizationService,
         ICurrentContext currentContext)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
         _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
+        _authorizationService = authorizationService;
         _currentContext = currentContext;
     }
 
@@ -183,6 +187,27 @@ public class CollectionsController : Controller
 
         var collection = await GetCollectionAsync(id, orgId);
         await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
+    }
+
+    [HttpPost("bulk-access")]
+    public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
+    {
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
+
+        if (collections.Count != model.CollectionIds.Count())
+        {
+            throw new NotFoundException("One or more collections not found.");
+        }
+
+        // Check if user can manage each of the collections in the request
+        var result = await _authorizationService.AuthorizeAsync(User, collections, CollectionOperation.ModifyAccess);
+
+        if (!result.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        // TODO: Perform operation
     }
 
     [HttpDelete("{id}")]
