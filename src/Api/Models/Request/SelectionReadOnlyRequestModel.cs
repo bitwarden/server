@@ -6,7 +6,7 @@ namespace Bit.Api.Models.Request;
 public class SelectionReadOnlyRequestModel
 {
     [Required]
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
 
@@ -14,7 +14,7 @@ public class SelectionReadOnlyRequestModel
     {
         return new CollectionAccessSelection
         {
-            Id = new Guid(Id),
+            Id = Id,
             ReadOnly = ReadOnly,
             HidePasswords = HidePasswords,
         };
