@@ -211,7 +211,7 @@ public class PolicyService : IPolicyService
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         return _cachedOrganizationUserPolicyDetails.Where(o =>
-            (!orgAbilities.ContainsKey(o.OrganizationId) || orgAbilities[o.OrganizationId].Enabled && orgAbilities[o.OrganizationId].UsePolicies) &&
+            (!orgAbilities.ContainsKey(o.OrganizationId) || orgAbilities[o.OrganizationId].UsePolicies) &&
             (policyType == null || o.PolicyType == policyType) &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
