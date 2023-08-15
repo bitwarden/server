@@ -3,6 +3,7 @@ using Bit.Api.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -19,6 +20,7 @@ public class CollectionsController : Controller
     private readonly ICollectionService _collectionService;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
+    private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
 
     public CollectionsController(
@@ -26,12 +28,14 @@ public class CollectionsController : Controller
         ICollectionService collectionService,
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
+        IAuthorizationService authorizationService,
         ICurrentContext currentContext)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
         _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
+        _authorizationService = authorizationService;
         _currentContext = currentContext;
     }
 
@@ -183,6 +187,30 @@ public class CollectionsController : Controller
 
         var collection = await GetCollectionAsync(id, orgId);
         await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
+    }
+
+    [HttpPost("bulk-access")]
+    public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
+    {
+        // Check if user can manage each of the collections in the request
+        var collectionUsers = model.ToAllCollectionUsers().ToList();
+
+        var result = await _authorizationService.AuthorizeAsync(User, collectionUsers, CollectionUserOperation.Create);
+
+        if (!result.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var collectionGroups = model.ToAllCollectionGroups().ToList();
+        result = await _authorizationService.AuthorizeAsync(User, collectionGroups, CollectionGroupOperation.Create);
+
+        if (!result.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        // TODO: Perform operation
     }
 
     [HttpDelete("{id}")]
