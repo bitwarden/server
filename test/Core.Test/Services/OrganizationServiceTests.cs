@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using AutoFixture;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
@@ -1835,20 +1834,20 @@ public class OrganizationServiceTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser, User user)
+    [EphemeralDataProtectionAutoData]
+    public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
+        User user, SutProvider<OrganizationService> sutProvider)
     {
-        var fixture = new Fixture();
-        var sutProvider = new SutProvider<OrganizationService>(fixture)
-            .SetDependency<IDataProtectionProvider>(fixture.Create<EphemeralDataProtectionProvider>())
-            .Create();
-
         user.Email = organizationUser.Email;
 
         var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
             .CreateProtector("OrganizationServiceDataProtector");
-        var token = dataProtector.Protect($"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow.AddMinutes(1))}");
+        // Token matching the format used in OrganizationService.InviteUserAsync
+        var token = dataProtector.Protect(
+            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
         var userService = Substitute.For<IUserService>();
+
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
             .Returns(organizationUser);
