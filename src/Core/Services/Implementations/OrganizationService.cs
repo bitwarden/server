@@ -1945,7 +1945,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
+    public async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
     {
         if (await _currentContext.OrganizationOwner(organizationId))
         {
@@ -1978,7 +1978,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
+    public async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
     {
         if (newType != OrganizationUserType.Custom)
         {

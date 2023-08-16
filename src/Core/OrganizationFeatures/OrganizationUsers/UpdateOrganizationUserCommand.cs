@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -11,27 +10,27 @@ using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
-public class UpdateOrganizationUserCommand : OrganizationUserCommand, IUpdateOrganizationUserCommand
+public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 {
     private readonly IEventService _eventService;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
+    private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
     public UpdateOrganizationUserCommand(
-        ICurrentContext currentContext,
         IEventService eventService,
+        IOrganizationService organizationService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IOrganizationService organizationService,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
-        : base(currentContext, organizationRepository)
     {
         _eventService = eventService;
-        _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
+        _organizationRepository = organizationRepository;
+        _organizationUserRepository = organizationUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
@@ -53,10 +52,10 @@ public class UpdateOrganizationUserCommand : OrganizationUserCommand, IUpdateOrg
 
         if (savingUserId.HasValue)
         {
-            await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
+            await _organizationService.ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
         }
 
-        await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
+        await _organizationService.ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
 
         if (user.Type != OrganizationUserType.Owner &&
             !await _organizationService.HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))

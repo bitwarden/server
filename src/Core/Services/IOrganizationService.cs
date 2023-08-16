@@ -79,4 +79,7 @@ public interface IOrganizationService
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
+    Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
+        OrganizationUserType? oldType, Permissions permissions);
+    Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType);
 }
