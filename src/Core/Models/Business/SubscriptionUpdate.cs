@@ -35,22 +35,24 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
     private readonly int _previousSeats;
     private readonly StaticStore.Plan _plan;
     private readonly long? _additionalSeats;
-    protected override List<string> PlanIds => new() { _plan.StripeSeatPlanId };
+    protected override List<string> PlanIds => new();
 
 
     public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
     {
         _plan = plan;
         _additionalSeats = additionalSeats;
-        switch (plan.BitwardenProduct)
+        if (organization.UseSecretsManager && plan.SecretsManager != null)
         {
-            case BitwardenProductType.PasswordManager:
-                _previousSeats = organization.Seats.GetValueOrDefault();
-                break;
-            case BitwardenProductType.SecretsManager:
-                _previousSeats = organization.SmSeats.GetValueOrDefault();
-                break;
+            _previousSeats = organization.SmSeats.GetValueOrDefault();
+            PlanIds.Add(_plan.SecretsManager.StripeSeatPlanId);
         }
+        else
+        {
+            _previousSeats = organization.Seats.GetValueOrDefault();
+            PlanIds.Add(_plan.PasswordManager.StripeSeatPlanId);
+        }
+
     }
 
     public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)

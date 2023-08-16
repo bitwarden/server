@@ -21,8 +21,7 @@ public class StaticStoreTests
     [InlineData(PlanType.EnterpriseAnnually)]
     public void StaticStore_GetPasswordManagerPlanByPlanType_Success(PlanType planType)
     {
-        var plan = StaticStore.GetPasswordManagerPlan(planType);
-
+        var plan = StaticStore.GetPlan(planType);
         Assert.NotNull(plan);
         Assert.Equal(planType, plan.Type);
     }
@@ -31,7 +30,7 @@ public class StaticStoreTests
     [InlineData(PlanType.EnterpriseAnnually)]
     public void StaticStore_GetSecretsManagerPlanByPlanType_Success(PlanType planType)
     {
-        var plan = StaticStore.GetSecretsManagerPlan(planType);
+        var plan = StaticStore.GetPlan(planType);
 
         Assert.NotNull(plan);
         Assert.Equal(planType, plan.Type);
@@ -41,30 +40,17 @@ public class StaticStoreTests
     [InlineData(PlanType.EnterpriseAnnually)]
     public void StaticStore_GetPasswordManagerPlan_ReturnsPasswordManagerPlans(PlanType planType)
     {
-        var plan = StaticStore.GetPasswordManagerPlan(planType);
+        var plan = StaticStore.GetPlan(planType);
         Assert.NotNull(plan);
-        Assert.Equal(BitwardenProductType.PasswordManager, plan.BitwardenProduct);
+        Assert.NotNull(plan.PasswordManager);
     }
 
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually)]
     public void StaticStore_GetSecretsManagerPlan_ReturnsSecretManagerPlans(PlanType planType)
     {
-        var plan = StaticStore.GetSecretsManagerPlan(planType);
+        var plan = StaticStore.GetPlan(planType);
         Assert.NotNull(plan);
-        Assert.Equal(BitwardenProductType.SecretsManager, plan.BitwardenProduct);
-    }
-
-    [Theory]
-    [InlineData(PlanType.EnterpriseAnnually, BitwardenProductType.PasswordManager)]
-    public void StaticStore_AddDuplicatePlans_SingleOrDefaultThrowsException(PlanType planType, BitwardenProductType bitwardenProductType)
-    {
-        var plansStore = new List<Plan>
-        {
-            new Plan { Type = PlanType.EnterpriseAnnually, BitwardenProduct = BitwardenProductType.PasswordManager },
-            new Plan { Type = PlanType.EnterpriseAnnually, BitwardenProduct = BitwardenProductType.PasswordManager }
-        };
-
-        Assert.Throws<InvalidOperationException>(() => plansStore.SingleOrDefault(p => p.Type == planType && p.BitwardenProduct == bitwardenProductType));
+        Assert.NotNull(plan.SecretsManager);
     }
 }

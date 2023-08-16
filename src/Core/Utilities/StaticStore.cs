@@ -126,8 +126,6 @@ public class StaticStore
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
     public static IEnumerable<Models.StaticStore.Plan> Plans { get; }
-    //public static IEnumerable<Plan> SecretManagerPlans { get; set; }
-    //public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {
             new SponsoredPlan

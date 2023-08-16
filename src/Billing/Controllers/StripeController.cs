@@ -426,7 +426,7 @@ public class StripeController : Controller
                     // org
                     if (ids.Item1.HasValue)
                     {
-                        if (subscription.Items.Any(i => StaticStore.PasswordManagerPlans.Any(p => p.StripePlanId == i.Plan.Id)))
+                        if (subscription.Items.Any(i => StaticStore.Plans.Any(p => p.PasswordManager.StripePlanId == i.Plan.Id)))
                         {
                             await _organizationService.EnableAsync(ids.Item1.Value, subscription.CurrentPeriodEnd);
 
