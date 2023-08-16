@@ -274,7 +274,7 @@ public class OrganizationUserRepositoryTests
             }
 
             // Act
-            var result = await orgUserRepos[i].GetByUserIdWithPolicyDetailsAsync(savedUser.Id);
+            var result = await orgUserRepos[i].GetByUserIdWithPolicyDetailsAsync(savedUser.Id, policy.Type);
             results.Add(result.FirstOrDefault());
         }
 
