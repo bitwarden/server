@@ -24,7 +24,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
     {
         ValidateOrganization(organization);
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = StaticStore.Plans.FirstOrDefault(p=>p.Type == organization.PlanType && p.SupportsSecretsManager);
         var signup = SetOrganizationUpgrade(organization, additionalSmSeats, additionalServiceAccounts);
         _organizationService.ValidateSecretsManagerPlan(plan, signup);
 
@@ -62,7 +62,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
             throw new NotFoundException();
         }
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
+        var plan = StaticStore.Plans.FirstOrDefault(p=>p.Type == organization.PlanType && p.SupportsSecretsManager);
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && plan.Product != ProductType.Free)
         {
             throw new BadRequestException("No payment method found.");

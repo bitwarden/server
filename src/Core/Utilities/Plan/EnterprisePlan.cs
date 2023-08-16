@@ -30,6 +30,7 @@ public record EnterprisePlan : Models.StaticStore.Plan
         HasCustomPermissions = true;
         UpgradeSortOrder = 3;
         DisplaySortOrder = 3;
+        SupportsSecretsManager = true;
         PasswordManager = new EnterprisePasswordManagerFeatures(isAnnual);
         SecretsManager = new EnterpriseSecretsManagerFeatures(isAnnual);
     }

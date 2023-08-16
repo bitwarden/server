@@ -21,15 +21,6 @@ public class PlanResponseModel : ResponseModel
         NameLocalizationKey = plan.NameLocalizationKey;
         DescriptionLocalizationKey = plan.DescriptionLocalizationKey;
         CanBeUsedByBusiness = plan.CanBeUsedByBusiness;
-        BaseSeats = plan.BaseSeats;
-        BaseStorageGb = plan.BaseStorageGb;
-        MaxCollections = plan.MaxCollections;
-        MaxUsers = plan.MaxUsers;
-        HasAdditionalSeatsOption = plan.HasAdditionalSeatsOption;
-        HasAdditionalStorageOption = plan.HasAdditionalStorageOption;
-        MaxAdditionalSeats = plan.MaxAdditionalSeats;
-        MaxAdditionalStorage = plan.MaxAdditionalStorage;
-        HasPremiumAccessOption = plan.HasPremiumAccessOption;
         TrialPeriodDays = plan.TrialPeriodDays;
         HasSelfHost = plan.HasSelfHost;
         HasPolicies = plan.HasPolicies;
@@ -45,22 +36,9 @@ public class PlanResponseModel : ResponseModel
         DisplaySortOrder = plan.DisplaySortOrder;
         LegacyYear = plan.LegacyYear;
         Disabled = plan.Disabled;
-        StripePlanId = plan.StripePlanId;
-        StripeSeatPlanId = plan.StripeSeatPlanId;
-        StripeStoragePlanId = plan.StripeStoragePlanId;
-        BasePrice = plan.BasePrice;
-        SeatPrice = plan.SeatPrice;
-        AdditionalStoragePricePerGb = plan.AdditionalStoragePricePerGb;
-        PremiumAccessOptionPrice = plan.PremiumAccessOptionPrice;
-
-        AdditionalPricePerServiceAccount = plan.AdditionalPricePerServiceAccount;
-        BaseServiceAccount = plan.BaseServiceAccount;
-        MaxServiceAccounts = plan.MaxServiceAccounts;
-        MaxAdditionalServiceAccounts = plan.MaxAdditionalServiceAccount;
-        HasAdditionalServiceAccountOption = plan.HasAdditionalServiceAccountOption;
-        MaxProjects = plan.MaxProjects;
-        BitwardenProduct = plan.BitwardenProduct;
-        StripeServiceAccountPlanId = plan.StripeServiceAccountPlanId;
+        SupportsSecretsManager = plan.SupportsSecretsManager;
+        SecretsManager = plan.SecretsManager;
+        PasswordManager = plan.PasswordManager;
     }
 
     public PlanType Type { get; set; }
@@ -70,16 +48,6 @@ public class PlanResponseModel : ResponseModel
     public string NameLocalizationKey { get; set; }
     public string DescriptionLocalizationKey { get; set; }
     public bool CanBeUsedByBusiness { get; set; }
-    public int BaseSeats { get; set; }
-    public short? BaseStorageGb { get; set; }
-    public short? MaxCollections { get; set; }
-    public short? MaxUsers { get; set; }
-
-    public bool HasAdditionalSeatsOption { get; set; }
-    public int? MaxAdditionalSeats { get; set; }
-    public bool HasAdditionalStorageOption { get; set; }
-    public short? MaxAdditionalStorage { get; set; }
-    public bool HasPremiumAccessOption { get; set; }
     public int? TrialPeriodDays { get; set; }
 
     public bool HasSelfHost { get; set; }
@@ -98,21 +66,7 @@ public class PlanResponseModel : ResponseModel
     public int DisplaySortOrder { get; set; }
     public int? LegacyYear { get; set; }
     public bool Disabled { get; set; }
-
-    public string StripePlanId { get; set; }
-    public string StripeSeatPlanId { get; set; }
-    public string StripeStoragePlanId { get; set; }
-    public string StripePremiumAccessPlanId { get; set; }
-    public decimal BasePrice { get; set; }
-    public decimal SeatPrice { get; set; }
-    public decimal AdditionalStoragePricePerGb { get; set; }
-    public decimal PremiumAccessOptionPrice { get; set; }
-    public string StripeServiceAccountPlanId { get; set; }
-    public decimal? AdditionalPricePerServiceAccount { get; set; }
-    public short? BaseServiceAccount { get; set; }
-    public short? MaxServiceAccounts { get; set; }
-    public short? MaxAdditionalServiceAccounts { get; set; }
-    public bool HasAdditionalServiceAccountOption { get; set; }
-    public short? MaxProjects { get; set; }
-    public BitwardenProductType BitwardenProduct { get; set; }
+    public bool SupportsSecretsManager { get; set; }
+    public Plan.PasswordManagerPlanFeatures PasswordManager { get; protected init;}
+    public Plan.SecretsManagerPlanFeatures SecretsManager { get; protected init;}
 }

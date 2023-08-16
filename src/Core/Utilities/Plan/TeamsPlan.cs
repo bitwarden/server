@@ -23,6 +23,7 @@ public record TeamsPlan : Models.StaticStore.Plan
         UsersGetPremium = true;
         UpgradeSortOrder = 2;
         DisplaySortOrder = 2;
+        SupportsSecretsManager = true;
         PasswordManager = new TeamsPasswordManagerFeatures(isAnnual);
         SecretsManager = new TeamsSecretsManagerFeatures(isAnnual);
     }

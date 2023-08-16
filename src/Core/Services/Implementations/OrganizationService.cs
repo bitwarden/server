@@ -233,7 +233,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException($"Cannot set max seat autoscaling below current seat count.");
         }
 
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         if (plan == null)
         {
             throw new BadRequestException("Existing plan not found.");
@@ -244,10 +244,10 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Your plan does not allow seat autoscaling.");
         }
 
-        if (plan.MaxUsers.HasValue && maxAutoscaleSeats.HasValue &&
-            maxAutoscaleSeats > plan.MaxUsers)
+        if (plan.PasswordManager.MaxSeats.HasValue && maxAutoscaleSeats.HasValue &&
+            maxAutoscaleSeats > plan.PasswordManager.MaxSeats)
         {
-            throw new BadRequestException(string.Concat($"Your plan has a seat limit of {plan.MaxUsers}, ",
+            throw new BadRequestException(string.Concat($"Your plan has a seat limit of {plan.PasswordManager.MaxSeats}, ",
                 $"but you have specified a max autoscale count of {maxAutoscaleSeats}.",
                 "Reduce your max autoscale seat count."));
         }
@@ -407,7 +407,7 @@ public class OrganizationService : IOrganizationService
 
         ValidatePasswordManagerPlan(plan, signup);
 
-        if (signup.UseSecretsManager)
+        if (signup.UseSecretsManager && plan.SupportsSecretsManager)
         {
             ValidateSecretsManagerPlan(plan, signup);
         }
@@ -456,7 +456,7 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = signup.UseSecretsManager,
         };
 
-        if (signup.UseSecretsManager)
+        if (signup.UseSecretsManager && plan.SupportsSecretsManager)
         {
             organization.SmSeats = plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
             organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount.GetValueOrDefault() +
@@ -1983,6 +1983,11 @@ public class OrganizationService : IOrganizationService
 
     public void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
+        if (plan == null)
+        {
+            throw new BadRequestException("plan not found.");
+        }
+
         ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");
 
         if (plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats <= 0)

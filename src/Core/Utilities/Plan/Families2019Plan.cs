@@ -18,6 +18,7 @@ public record Families2019Plan : Models.StaticStore.Plan
         UpgradeSortOrder = 1;
         DisplaySortOrder = 1;
         LegacyYear = 2020;
+        SupportsSecretsManager = false;
         PasswordManager = new Teams2019PasswordManagerFeatures();
     }
 
@@ -27,7 +28,7 @@ public record Families2019Plan : Models.StaticStore.Plan
         {
             BaseSeats = 5;
             BaseStorageGb = 1;
-            MaxUsers = 5;
+            MaxSeats = 5;
             AllowSeatAutoscale = false;
             HasAdditionalStorageOption = true;
             HasPremiumAccessOption = true;

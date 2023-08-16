@@ -29,7 +29,7 @@ public class AddSecretsManagerSubscriptionCommandTests
     {
         organization.PlanType = planType;
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == organization.PlanType);
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
 
         await sutProvider.Sut.SignUpAsync(organization, additionalSmSeats, additionalServiceAccounts);
 
@@ -46,8 +46,8 @@ public class AddSecretsManagerSubscriptionCommandTests
         // TODO: call ReferenceEventService - see AC-1481
 
         sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(c =>
-            c.SmSeats == plan.BaseSeats + additionalSmSeats &&
-            c.SmServiceAccounts == plan.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts &&
+            c.SmSeats == plan.SecretsManager.BaseSeats + additionalSmSeats &&
+            c.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount.GetValueOrDefault() + additionalServiceAccounts &&
             c.UseSecretsManager == true));
     }
 

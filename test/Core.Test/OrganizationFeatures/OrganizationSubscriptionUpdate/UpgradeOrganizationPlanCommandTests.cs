@@ -108,8 +108,7 @@ public class UpgradeOrganizationPlanCommandTests
     {
         upgrade.Plan = planType;
 
-        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(upgrade.Plan);
-        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(upgrade.Plan);
+        var plan = StaticStore.GetPlan(upgrade.Plan);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
@@ -121,9 +120,9 @@ public class UpgradeOrganizationPlanCommandTests
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
             Arg.Is<Organization>(o =>
-                o.Seats == passwordManagerPlan.BaseSeats + upgrade.AdditionalSeats
-                && o.SmSeats == secretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats
-                && o.SmServiceAccounts == secretsManagerPlan.BaseServiceAccount + upgrade.AdditionalServiceAccounts));
+                o.Seats == plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats
+                && o.SmSeats == plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats
+                && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + upgrade.AdditionalServiceAccounts));
 
         Assert.True(result.Item1);
         Assert.NotNull(result.Item2);

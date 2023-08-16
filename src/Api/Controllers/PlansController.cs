@@ -20,7 +20,7 @@ public class PlansController : Controller
     [AllowAnonymous]
     public ListResponseModel<PlanResponseModel> Get()
     {
-        var data = StaticStore.PasswordManagerPlans;
+        var data = StaticStore.Plans;
         var responses = data.Select(plan => new PlanResponseModel(plan));
         return new ListResponseModel<PlanResponseModel>(responses);
     }
@@ -30,15 +30,6 @@ public class PlansController : Controller
     public ListResponseModel<PlanResponseModel> GetAllPlans()
     {
         var data = StaticStore.Plans;
-        var responses = data.Select(plan => new PlanResponseModel(plan));
-        return new ListResponseModel<PlanResponseModel>(responses);
-    }
-
-    [HttpGet("sm-plans")]
-    [AllowAnonymous]
-    public ListResponseModel<PlanResponseModel> GetSecretsManagerPlans()
-    {
-        var data = StaticStore.SecretManagerPlans;
         var responses = data.Select(plan => new PlanResponseModel(plan));
         return new ListResponseModel<PlanResponseModel>(responses);
     }

@@ -154,7 +154,7 @@ public class OrganizationServiceTests
     {
         signup.Plan = planType;
 
-        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(signup.Plan);
+        var plan = StaticStore.GetPlan(signup.Plan);
 
         signup.AdditionalSeats = 0;
         signup.PaymentMethodType = PaymentMethodType.Card;
@@ -167,7 +167,7 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
             Arg.Is<Organization>(o =>
-                o.Seats == passwordManagerPlan.BaseSeats + signup.AdditionalSeats
+                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats
                 && o.SmSeats == null
                 && o.SmServiceAccounts == null));
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
@@ -176,8 +176,8 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IReferenceEventService>().Received(1)
             .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
                 referenceEvent.Type == ReferenceEventType.Signup &&
-                referenceEvent.PlanName == passwordManagerPlan.Name &&
-                referenceEvent.PlanType == passwordManagerPlan.Type &&
+                referenceEvent.PlanName == plan.Name &&
+                referenceEvent.PlanType == plan.Type &&
                 referenceEvent.Seats == result.Item1.Seats &&
                 referenceEvent.Storage == result.Item1.MaxStorageGb));
         // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
@@ -191,7 +191,7 @@ public class OrganizationServiceTests
             Arg.Any<Organization>(),
             signup.PaymentMethodType.Value,
             signup.PaymentToken,
-            Arg.Is<List<Plan>>(plan => plan.Single() == passwordManagerPlan),
+            plan,
             signup.AdditionalStorageGb,
             signup.AdditionalSeats,
             signup.PremiumAccessAddon,
@@ -211,8 +211,7 @@ public class OrganizationServiceTests
     {
         signup.Plan = planType;
 
-        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(signup.Plan);
-        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(signup.Plan);
+        var plan = StaticStore.GetPlan(signup.Plan);
 
         signup.UseSecretsManager = true;
         signup.AdditionalSeats = 15;
@@ -227,9 +226,9 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
             Arg.Is<Organization>(o =>
-                o.Seats == passwordManagerPlan.BaseSeats + signup.AdditionalSeats
-                && o.SmSeats == secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats
-                && o.SmServiceAccounts == secretsManagerPlan.BaseServiceAccount + signup.AdditionalServiceAccounts));
+                o.Seats == plan.PasswordManager.BaseSeats + signup.AdditionalSeats
+                && o.SmSeats == plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats
+                && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + signup.AdditionalServiceAccounts));
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
             Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
 
@@ -251,7 +250,7 @@ public class OrganizationServiceTests
             Arg.Any<Organization>(),
             signup.PaymentMethodType.Value,
             signup.PaymentToken,
-            Arg.Is<List<Plan>>(plan => plan.All(p => purchaseOrganizationPlan.Contains(p))),
+            Arg.Is<Plan>(plan),
             signup.AdditionalStorageGb,
             signup.AdditionalSeats,
             signup.PremiumAccessAddon,
@@ -1707,7 +1706,7 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenNoSecretsManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -1724,7 +1723,7 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.Free)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -1741,7 +1740,7 @@ public class OrganizationServiceTests
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -1760,7 +1759,7 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenMoreSeatsThanPasswordManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -1781,7 +1780,7 @@ public class OrganizationServiceTests
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -1799,7 +1798,7 @@ public class OrganizationServiceTests
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,
@@ -1820,7 +1819,7 @@ public class OrganizationServiceTests
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
         var signup = new OrganizationUpgrade
         {
             UseSecretsManager = true,

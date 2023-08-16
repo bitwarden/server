@@ -26,12 +26,7 @@ public class OrganizationResponseModel : ResponseModel
         BusinessCountry = organization.BusinessCountry;
         BusinessTaxNumber = organization.BusinessTaxNumber;
         BillingEmail = organization.BillingEmail;
-        Plan = new PlanResponseModel(StaticStore.PasswordManagerPlans.FirstOrDefault(plan => plan.Type == organization.PlanType));
-        var matchingPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
-        if (matchingPlan != null)
-        {
-            SecretsManagerPlan = new PlanResponseModel(matchingPlan);
-        }
+        Plan = new PlanResponseModel(StaticStore.GetPlan(organization.PlanType));
         PlanType = organization.PlanType;
         Seats = organization.Seats;
         MaxAutoscaleSeats = organization.MaxAutoscaleSeats;

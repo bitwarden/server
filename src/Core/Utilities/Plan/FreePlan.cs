@@ -13,6 +13,7 @@ public record FreePlan: Models.StaticStore.Plan
         DescriptionLocalizationKey = "planDescFree";
         UpgradeSortOrder = -1; // Always the lowest plan, cannot be upgraded to
         DisplaySortOrder = -1;
+        SupportsSecretsManager = true;
         PasswordManager = new FreePasswordManagerFeatures();
         SecretsManager = new FreeSecretsManagerFeatures();
     }
@@ -24,7 +25,7 @@ public record FreePlan: Models.StaticStore.Plan
             BaseSeats = 2;
             BaseServiceAccount = 2;
             MaxProjects = 3;
-            MaxUsers = 2;
+            MaxSeats = 2;
             MaxServiceAccounts = 3;
         }
     }
@@ -35,7 +36,7 @@ public record FreePlan: Models.StaticStore.Plan
         {
             BaseSeats = 2;
             MaxCollections = 2;
-            MaxUsers = 2;
+            MaxSeats = 2;
         }
     }
 }

@@ -229,7 +229,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private Plan GetPlanForOrganization(Organization organization)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType);
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType && p.SupportsSecretsManager);
         if (plan == null)
         {
             throw new BadRequestException("Existing plan not found.");
@@ -360,10 +360,10 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
 
-        if (plan.MaxUsers.HasValue && maxAutoscaleSeats.Value > plan.MaxUsers)
+        if (plan.SecretsManager.MaxSeats.HasValue && maxAutoscaleSeats.Value > plan.SecretsManager.MaxSeats)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a Secrets Manager seat limit of {plan.MaxUsers}, ",
+                $"Your plan has a Secrets Manager seat limit of {plan.SecretsManager.MaxSeats}, ",
                 $"but you have specified a max autoscale count of {maxAutoscaleSeats}.",
                 "Reduce your max autoscale count."));
         }

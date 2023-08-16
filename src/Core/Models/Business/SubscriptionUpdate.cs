@@ -35,23 +35,22 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
     private readonly int _previousSeats;
     private readonly StaticStore.Plan _plan;
     private readonly long? _additionalSeats;
-    protected override List<string> PlanIds => new();
+
+    protected override List<string> PlanIds => new()
+    {
+        _plan.SupportsSecretsManager
+            ? _plan.SecretsManager.StripeSeatPlanId
+            : _plan.PasswordManager.StripeSeatPlanId
+    };
 
 
     public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
     {
         _plan = plan;
         _additionalSeats = additionalSeats;
-        if (organization.UseSecretsManager && plan.SecretsManager != null)
-        {
-            _previousSeats = organization.SmSeats.GetValueOrDefault();
-            PlanIds.Add(_plan.SecretsManager.StripeSeatPlanId);
-        }
-        else
-        {
-            _previousSeats = organization.Seats.GetValueOrDefault();
-            PlanIds.Add(_plan.PasswordManager.StripeSeatPlanId);
-        }
+        _previousSeats = plan.SupportsSecretsManager
+            ? organization.SmSeats.GetValueOrDefault()
+            : organization.Seats.GetValueOrDefault();
 
     }
 

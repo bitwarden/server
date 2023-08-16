@@ -237,6 +237,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewayCustomerId = "1",
             GatewaySubscriptionId = "2"
         };
+        var plan = StaticStore.GetPlan(planType);
         var organizationUpdate = new SecretsManagerSubscriptionUpdate(
             organization, seatAdjustment: 1, maxAutoscaleSeats: null, serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: null);
 
@@ -301,7 +302,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewaySubscriptionId = "2"
         };
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         var organizationUpdate = new SecretsManagerSubscriptionUpdate(
             organization,
             seatAdjustment: seatAdjustment, maxAutoscaleSeats: maxAutoscaleSeats,
@@ -356,7 +357,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             GatewaySubscriptionId = "2"
         };
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         var organizationUpdate = new SecretsManagerSubscriptionUpdate(
             organization,
             seatAdjustment: seatAdjustment, maxAutoscaleSeats: maxAutoscaleSeats,
@@ -585,11 +586,11 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     public async Task AdjustServiceAccountsAsync_WithEnterpriseOrTeamsPlans_Success(PlanType planType, Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == planType);
 
-        var organizationSeats = plan.BaseSeats + 10;
+        var organizationSeats = plan.SecretsManager.BaseSeats + 10;
         var organizationMaxAutoscaleSeats = 20;
-        var organizationServiceAccounts = plan.BaseServiceAccount.GetValueOrDefault() + 10;
+        var organizationServiceAccounts = plan.SecretsManager.BaseServiceAccount.GetValueOrDefault() + 10;
         var organizationMaxAutoscaleServiceAccounts = 300;
 
         var organization = new Organization
@@ -607,7 +608,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var smServiceAccountsAdjustment = 10;
         var expectedSmServiceAccounts = organizationServiceAccounts + smServiceAccountsAdjustment;
-        var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault();
+        var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.SecretsManager.BaseServiceAccount.GetValueOrDefault();
 
         await sutProvider.Sut.AdjustServiceAccountsAsync(organization, smServiceAccountsAdjustment);
 
