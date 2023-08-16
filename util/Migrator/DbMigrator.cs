@@ -98,7 +98,7 @@ public class DbMigrator
         cancellationToken.ThrowIfCancellationRequested();
         var builder = DeployChanges.To
             .SqlDatabase(_connectionString)
-            .JournalToSqlTable("dbo", "Migration")
+            .JournalRerunableToSqlTable("dbo", "Migration")
             .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                 s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
             .WithTransaction()
