@@ -1,13 +1,15 @@
-﻿using System.Text.Json;
-using Bit.Core.Context;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -39,8 +41,26 @@ public class UpdateOrganizationUserCommandTests
         Assert.Contains("make changes before saving", exception.Message.ToLowerInvariant());
     }
 
-    [Theory, BitAutoData]
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_WithoutConfirmedOwners_Throws(
+        OrganizationUser oldUserData,
+        OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<UpdateOrganizationUserCommand> sutProvider)
+    {
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateUserAsync(newUserData, null, collections, groups));
+        Assert.Contains("Organization must have at least one confirmed owner.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
     public async Task UpdateUserAsync_Passes(
+        bool accessSecretsManager,
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
@@ -52,8 +72,8 @@ public class UpdateOrganizationUserCommandTests
     {
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var countNewSmSeatsRequiredQuery = sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
@@ -61,240 +81,39 @@ public class UpdateOrganizationUserCommandTests
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
         newUserData.AccessAll = false;
-        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
+        newUserData.AccessSecretsManager = accessSecretsManager;
+        newUserData.Permissions = CoreHelpers.ClassToJsonData(permissions);
+
+        oldUserData.AccessSecretsManager = false;
+
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
-        currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
-        organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
+        organizationService.HasConfirmedOwnersExceptAsync(
+            organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
+        countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(newUserData.OrganizationId, 1).Returns(1);
 
         await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+        await organizationService.Received(1)
+            .ValidateOrganizationUserUpdatePermissions(
+                newUserData.OrganizationId, newUserData.Type, oldUserData.Type,
+                Arg.Is<Permissions>(p => p.ClaimsMap.All(c => permissions.ClaimsMap.Any(pcm => pcm.Permission == c.Permission && pcm.ClaimName == c.ClaimName))));
+        if (accessSecretsManager)
+        {
+            await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+                .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
+        }
+        else
+        {
+            await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+                .UpdateSubscriptionAsync(default);
+        }
+        await organizationUserRepository.Received(1)
             .ReplaceAsync(newUserData, collections);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+        await organizationUserRepository.Received(1)
             .UpdateGroupsAsync(newUserData.Id, groups);
         await sutProvider.GetDependency<IEventService>().Received(1)
             .LogOrganizationUserEventAsync(newUserData, EventType.OrganizationUser_Updated);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithCustomType_WhenUseCustomPermissionsIsFalse_Throws(
-        Organization organization,
-        OrganizationUser oldUserData,
-        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups,
-        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<UpdateOrganizationUserCommand> sutProvider)
-    {
-        organization.UseCustomPermissions = false;
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        newUserData.Id = oldUserData.Id;
-        newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
-        newUserData.Permissions = null;
-        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
-        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new List<OrganizationUser> { savingUser });
-        currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups));
-        Assert.Contains("to enable custom permissions", exception.Message.ToLowerInvariant());
-    }
-
-    [Theory]
-    [BitAutoData(OrganizationUserType.Admin)]
-    [BitAutoData(OrganizationUserType.Manager)]
-    [BitAutoData(OrganizationUserType.Owner)]
-    [BitAutoData(OrganizationUserType.User)]
-    public async Task UpdateUserAsync_WithNonCustomType_WhenUseCustomPermissionsIsFalse_Passes(
-        OrganizationUserType newUserType,
-        Organization organization,
-        OrganizationUser oldUserData,
-        OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups,
-        Permissions permissions,
-        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<UpdateOrganizationUserCommand> sutProvider)
-    {
-        organization.UseCustomPermissions = false;
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        newUserData.Id = oldUserData.Id;
-        newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
-        newUserData.Type = newUserType;
-        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
-        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new List<OrganizationUser> { savingUser });
-        currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
-        organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
-
-        await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(
-        Organization organization,
-        OrganizationUser oldUserData,
-        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups,
-        Permissions permissions,
-        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<UpdateOrganizationUserCommand> sutProvider)
-    {
-        organization.UseCustomPermissions = true;
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        newUserData.Id = oldUserData.Id;
-        newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
-        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
-        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new List<OrganizationUser> { savingUser });
-        currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
-        organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
-
-        await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithCustomPermission_WhenSavingUserHasCustomPermission_Passes(
-        Organization organization,
-        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
-        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups,
-        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
-        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationOwner,
-        SutProvider<UpdateOrganizationUserCommand> sutProvider)
-    {
-        organization.UseCustomPermissions = true;
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        newUserData.Id = oldUserData.Id;
-        newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organizationOwner.OrganizationId = organization.Id;
-        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
-        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new List<OrganizationUser> { organizationOwner });
-        currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
-        currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
-        currentContext.AccessReports(savingUser.OrganizationId).Returns(true);
-        organizationService.HasConfirmedOwnersExceptAsync(organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
-
-        await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithCustomPermission_WhenSavingUserDoesNotHaveCustomPermission_Throws(
-        Organization organization,
-        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
-        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups,
-        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
-        SutProvider<UpdateOrganizationUserCommand> sutProvider)
-    {
-        organization.UseCustomPermissions = true;
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        newUserData.Id = oldUserData.Id;
-        newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
-        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
-        currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
-        currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
-        currentContext.AccessReports(savingUser.OrganizationId).Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups));
-        Assert.Contains("custom users can only grant the same custom permissions that they have", exception.Message.ToLowerInvariant());
-    }
-
-    [Theory, BitAutoData]
-    public async Task UpdateUserAsync_WithCustomPermission_WhenUpgradingToAdmin_Throws(
-        Organization organization,
-        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser oldUserData,
-        [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser newUserData,
-        IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups,
-        SutProvider<UpdateOrganizationUserCommand> sutProvider)
-    {
-        organization.UseCustomPermissions = true;
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        newUserData.Id = oldUserData.Id;
-        newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = oldUserData.OrganizationId = organization.Id;
-        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
-        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
-        currentContext.OrganizationCustom(oldUserData.OrganizationId).Returns(true);
-        currentContext.ManageUsers(oldUserData.OrganizationId).Returns(true);
-        currentContext.AccessReports(oldUserData.OrganizationId).Returns(false);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateUserAsync(newUserData, oldUserData.UserId, collections, groups));
-        Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
     }
 }

@@ -1637,4 +1637,48 @@ public class OrganizationServiceTests
 
         Assert.Contains("custom users can only grant the same custom permissions that they have.", exception.Message.ToLowerInvariant());
     }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task ValidateOrganizationCustomPermissionsEnabledAsync_WithCustomType_WhenUseCustomPermissionsIsTrue_Passes(
+        OrganizationUserType organizationUserType,
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.ValidateOrganizationCustomPermissionsEnabledAsync(organization.Id, organizationUserType);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task ValidateOrganizationCustomPermissionsEnabledAsync_WithCustomType_WhenUseCustomPermissionsIsFalse_ThrowsBadRequest(
+        OrganizationUserType organizationUserType,
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = false;
+
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.ValidateOrganizationCustomPermissionsEnabledAsync(organization.Id, organizationUserType));
+
+        Assert.Contains("To enable custom permissions the organization must be on an Enterprise plan.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Manager)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    [BitAutoData(OrganizationUserType.User)]
+    public async Task ValidateOrganizationCustomPermissionsEnabledAsync_WithNonCustomType_Passes(
+        OrganizationUserType organizationUserType,
+        Guid organizationId,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        await sutProvider.Sut.ValidateOrganizationCustomPermissionsEnabledAsync(organizationId, organizationUserType);
+    }
 }
