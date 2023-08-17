@@ -13,7 +13,9 @@ public record TeamsPlan : Models.StaticStore.Plan
         NameLocalizationKey = "planNameTeams";
         DescriptionLocalizationKey = "planDescTeams";
         CanBeUsedByBusiness = true;
+
         TrialPeriodDays = 7;
+
         HasGroups = true;
         HasDirectory = true;
         HasEvents = true;
@@ -21,9 +23,12 @@ public record TeamsPlan : Models.StaticStore.Plan
         Has2fa = true;
         HasApi = true;
         UsersGetPremium = true;
+
         UpgradeSortOrder = 2;
         DisplaySortOrder = 2;
+
         SupportsSecretsManager = true;
+
         PasswordManager = new TeamsPasswordManagerFeatures(isAnnual);
         SecretsManager = new TeamsSecretsManagerFeatures(isAnnual);
     }
@@ -35,8 +40,10 @@ public record TeamsPlan : Models.StaticStore.Plan
             BaseSeats = 0;
             BasePrice = 0;
             BaseServiceAccount = 50;
+
             HasAdditionalSeatsOption = true;
             HasAdditionalServiceAccountOption = true;
+
             AllowSeatAutoscale = true;
             AllowServiceAccountsAutoscale = true;
 
@@ -63,17 +70,19 @@ public record TeamsPlan : Models.StaticStore.Plan
         {
             BaseSeats = 0;
             BaseStorageGb = 1;
+            BasePrice = 0;
+
             HasAdditionalStorageOption = true;
             HasAdditionalSeatsOption = true;
-            BasePrice = 0;
+
             AllowSeatAutoscale = true;
 
             if (isAnnual)
             {
-                AdditionalStoragePricePerGb = 4;
                 StripeStoragePlanId = "storage-gb-annually";
                 StripeSeatPlanId = "2020-teams-org-seat-annually";
                 SeatPrice = 36;
+                AdditionalStoragePricePerGb = 4;
             }
             else
             {

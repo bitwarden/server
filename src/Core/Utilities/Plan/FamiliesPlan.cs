@@ -12,13 +12,18 @@ public record FamiliesPlan : Models.StaticStore.Plan
         IsAnnual = true;
         NameLocalizationKey = "planNameFamilies";
         DescriptionLocalizationKey = "planDescFamilies";
+
         TrialPeriodDays = 7;
+
         HasSelfHost = true;
         HasTotp = true;
         UsersGetPremium = true;
+
         UpgradeSortOrder = 1;
         DisplaySortOrder = 1;
+
         SupportsSecretsManager = false;
+
         PasswordManager = new TeamsPasswordManagerFeatures();
     }
 
@@ -29,11 +34,14 @@ public record FamiliesPlan : Models.StaticStore.Plan
             BaseSeats = 6;
             BaseStorageGb = 1;
             MaxSeats = 6;
+
             HasAdditionalStorageOption = true;
+
             StripePlanId = "2020-families-org-annually";
             StripeStoragePlanId = "storage-gb-annually";
             BasePrice = 40;
             AdditionalStoragePricePerGb = 4;
+
             AllowSeatAutoscale = false;
         }
     }

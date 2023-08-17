@@ -13,7 +13,9 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
         NameLocalizationKey = "planNameEnterprise";
         DescriptionLocalizationKey = "planDescEnterprise";
         CanBeUsedByBusiness = true;
+
         TrialPeriodDays = 7;
+
         HasPolicies = true;
         HasSelfHost = true;
         HasGroups = true;
@@ -24,10 +26,13 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
         HasApi = true;
         UsersGetPremium = true;
         HasCustomPermissions = true;
+
         UpgradeSortOrder = 3;
         DisplaySortOrder = 3;
         LegacyYear = 2020;
+
         SupportsSecretsManager = false;
+
         PasswordManager = new Enterprise2019PasswordManagerFeatures(isAnnual);
     }
 
@@ -37,17 +42,18 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
         {
             BaseSeats = 0;
             BaseStorageGb = 1;
+
             HasAdditionalStorageOption = true;
             HasAdditionalSeatsOption = true;
-            BasePrice = 0;
+
             AllowSeatAutoscale = true;
 
             if (isAnnual)
             {
-                AdditionalStoragePricePerGb = 4;
                 StripeStoragePlanId = "storage-gb-annually";
                 StripeSeatPlanId = "enterprise-org-seat-annually";
                 SeatPrice = 36;
+                AdditionalStoragePricePerGb = 4;
             }
             else
             {

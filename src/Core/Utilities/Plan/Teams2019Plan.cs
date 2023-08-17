@@ -13,12 +13,17 @@ public record Teams2019Plan : Models.StaticStore.Plan
         NameLocalizationKey = "planNameTeams";
         DescriptionLocalizationKey = "planDescTeams";
         CanBeUsedByBusiness = true;
+
         TrialPeriodDays = 7;
+
         HasTotp = true;
+
         UpgradeSortOrder = 2;
         DisplaySortOrder = 2;
         LegacyYear = 2020;
+
         SupportsSecretsManager = false;
+
         PasswordManager = new Teams2019PasswordManagerFeatures(isAnnual);
     }
 
@@ -28,8 +33,10 @@ public record Teams2019Plan : Models.StaticStore.Plan
         {
             BaseSeats = 5;
             BaseStorageGb = 1;
+
             HasAdditionalStorageOption = true;
             HasAdditionalSeatsOption = true;
+
             AllowSeatAutoscale = true;
 
             if (isAnnual)
