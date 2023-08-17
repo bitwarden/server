@@ -202,7 +202,7 @@ public class OrganizationsController : Controller
 
         if (organization.UseSecretsManager &&
             !organization.SecretsManagerBeta
-            && StaticStore.GetSecretsManagerPlan(organization.PlanType) == null
+            && StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType && p.SupportsSecretsManager) == null
             )
         {
             throw new BadRequestException("Plan does not support Secrets Manager");
