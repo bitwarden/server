@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Utilities.Plan;
 
-public record FreePlan: Models.StaticStore.Plan
+public record FreePlan : Models.StaticStore.Plan
 {
     public FreePlan()
     {

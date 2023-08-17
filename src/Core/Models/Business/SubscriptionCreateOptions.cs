@@ -39,7 +39,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         if (additionalSmSeats > 0 && plan.SecretsManager.StripeSeatPlanId != null)
         {
             Items.Add(new SubscriptionItemOptions
-                { Plan = plan.SecretsManager.StripeSeatPlanId, Quantity = additionalSmSeats });
+            { Plan = plan.SecretsManager.StripeSeatPlanId, Quantity = additionalSmSeats });
         }
     }
 
@@ -48,7 +48,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         if (additionalSeats > 0 && plan.PasswordManager.StripeSeatPlanId != null)
         {
             Items.Add(new SubscriptionItemOptions
-                { Plan = plan.PasswordManager.StripeSeatPlanId, Quantity = additionalSeats });
+            { Plan = plan.PasswordManager.StripeSeatPlanId, Quantity = additionalSeats });
         }
     }
 

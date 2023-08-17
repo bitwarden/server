@@ -32,31 +32,31 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
     }
 
     private record Enterprise2019PasswordManagerFeatures : PasswordManagerPlanFeatures
-     {
-         public Enterprise2019PasswordManagerFeatures(bool isAnnual)
-         {
-             BaseSeats = 0;
-             BaseStorageGb = 1;
-             HasAdditionalStorageOption = true;
-             HasAdditionalSeatsOption = true;
-             BasePrice = 0;
-             AllowSeatAutoscale = true;
+    {
+        public Enterprise2019PasswordManagerFeatures(bool isAnnual)
+        {
+            BaseSeats = 0;
+            BaseStorageGb = 1;
+            HasAdditionalStorageOption = true;
+            HasAdditionalSeatsOption = true;
+            BasePrice = 0;
+            AllowSeatAutoscale = true;
 
-             if (isAnnual)
-             {
-                 HasPremiumAccessOption = true;
-                 AdditionalStoragePricePerGb = 4;
-                 StripeStoragePlanId = "storage-gb-annually";
-                 StripeSeatPlanId = "enterprise-org-seat-annually";
-                 SeatPrice = 36;
-             }
-             else
-             {
-                 StripeSeatPlanId = "enterprise-org-seat-monthly";
-                 StripeStoragePlanId = "storage-gb-monthly";
-                 SeatPrice = 4M;
-                 AdditionalStoragePricePerGb = 0.5M;
-             }
-         }
-     }
+            if (isAnnual)
+            {
+                HasPremiumAccessOption = true;
+                AdditionalStoragePricePerGb = 4;
+                StripeStoragePlanId = "storage-gb-annually";
+                StripeSeatPlanId = "enterprise-org-seat-annually";
+                SeatPrice = 36;
+            }
+            else
+            {
+                StripeSeatPlanId = "enterprise-org-seat-monthly";
+                StripeStoragePlanId = "storage-gb-monthly";
+                SeatPrice = 4M;
+                AdditionalStoragePricePerGb = 0.5M;
+            }
+        }
+    }
 }

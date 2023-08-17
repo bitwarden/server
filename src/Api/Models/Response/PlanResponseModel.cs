@@ -67,6 +67,6 @@ public class PlanResponseModel : ResponseModel
     public int? LegacyYear { get; set; }
     public bool Disabled { get; set; }
     public bool SupportsSecretsManager { get; set; }
-    public Plan.PasswordManagerPlanFeatures PasswordManager { get; protected init;}
-    public Plan.SecretsManagerPlanFeatures SecretsManager { get; protected init;}
+    public Plan.PasswordManagerPlanFeatures PasswordManager { get; protected init; }
+    public Plan.SecretsManagerPlanFeatures SecretsManager { get; protected init; }
 }

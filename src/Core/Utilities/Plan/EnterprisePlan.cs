@@ -64,32 +64,32 @@ public record EnterprisePlan : Models.StaticStore.Plan
         }
     }
 
-     private record EnterprisePasswordManagerFeatures : PasswordManagerPlanFeatures
-     {
-         public EnterprisePasswordManagerFeatures(bool isAnnual)
-         {
-             BaseSeats = 0;
-             BaseStorageGb = 1;
-             HasAdditionalStorageOption = true;
-             HasAdditionalSeatsOption = true;
-             BasePrice = 0;
-             AllowSeatAutoscale = true;
+    private record EnterprisePasswordManagerFeatures : PasswordManagerPlanFeatures
+    {
+        public EnterprisePasswordManagerFeatures(bool isAnnual)
+        {
+            BaseSeats = 0;
+            BaseStorageGb = 1;
+            HasAdditionalStorageOption = true;
+            HasAdditionalSeatsOption = true;
+            BasePrice = 0;
+            AllowSeatAutoscale = true;
 
-             if (isAnnual)
-             {
-                 HasPremiumAccessOption = true;
-                 AdditionalStoragePricePerGb = 4;
-                 StripeStoragePlanId = "storage-gb-annually";
-                 StripeSeatPlanId = "2020-enterprise-org-seat-annually";
-                 SeatPrice = 60;
-             }
-             else
-             {
-                 StripeSeatPlanId = "2020-enterprise-seat-monthly";
-                 StripeStoragePlanId = "storage-gb-monthly";
-                 SeatPrice = 6;
-                 AdditionalStoragePricePerGb = 0.5M;
-             }
-         }
-     }
+            if (isAnnual)
+            {
+                HasPremiumAccessOption = true;
+                AdditionalStoragePricePerGb = 4;
+                StripeStoragePlanId = "storage-gb-annually";
+                StripeSeatPlanId = "2020-enterprise-org-seat-annually";
+                SeatPrice = 60;
+            }
+            else
+            {
+                StripeSeatPlanId = "2020-enterprise-seat-monthly";
+                StripeStoragePlanId = "storage-gb-monthly";
+                SeatPrice = 6;
+                AdditionalStoragePricePerGb = 0.5M;
+            }
+        }
+    }
 }

@@ -57,31 +57,31 @@ public record TeamsPlan : Models.StaticStore.Plan
         }
     }
 
-     private record TeamsPasswordManagerFeatures : PasswordManagerPlanFeatures
-     {
-         public TeamsPasswordManagerFeatures(bool isAnnual)
-         {
-             BaseSeats = 0;
-             BaseStorageGb = 1;
-             HasAdditionalStorageOption = true;
-             HasAdditionalSeatsOption = true;
-             BasePrice = 0;
-             AllowSeatAutoscale = true;
+    private record TeamsPasswordManagerFeatures : PasswordManagerPlanFeatures
+    {
+        public TeamsPasswordManagerFeatures(bool isAnnual)
+        {
+            BaseSeats = 0;
+            BaseStorageGb = 1;
+            HasAdditionalStorageOption = true;
+            HasAdditionalSeatsOption = true;
+            BasePrice = 0;
+            AllowSeatAutoscale = true;
 
-             if (isAnnual)
-             {
-                 AdditionalStoragePricePerGb = 4;
-                 StripeStoragePlanId = "storage-gb-annually";
-                 StripeSeatPlanId = "2020-teams-org-seat-annually";
-                 SeatPrice = 36;
-             }
-             else
-             {
-                 StripeSeatPlanId = "2020-teams-org-seat-monthly";
-                 StripeStoragePlanId = "storage-gb-monthly";
-                 SeatPrice = 4;
-                 AdditionalStoragePricePerGb = 0.5M;
-             }
-         }
-     }
+            if (isAnnual)
+            {
+                AdditionalStoragePricePerGb = 4;
+                StripeStoragePlanId = "storage-gb-annually";
+                StripeSeatPlanId = "2020-teams-org-seat-annually";
+                SeatPrice = 36;
+            }
+            else
+            {
+                StripeSeatPlanId = "2020-teams-org-seat-monthly";
+                StripeStoragePlanId = "storage-gb-monthly";
+                SeatPrice = 4;
+                AdditionalStoragePricePerGb = 0.5M;
+            }
+        }
+    }
 }

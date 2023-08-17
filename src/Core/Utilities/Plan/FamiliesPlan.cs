@@ -24,16 +24,16 @@ public record FamiliesPlan : Models.StaticStore.Plan
 
     private record TeamsPasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-         public TeamsPasswordManagerFeatures()
-         {
-             BaseSeats = 6;
-             BaseStorageGb = 1;
-             MaxSeats = 6;
-             HasAdditionalStorageOption = true;
-             StripePlanId = "2020-families-org-annually";
-             StripeStoragePlanId = "storage-gb-annually";
-             BasePrice = 40;
-             AdditionalStoragePricePerGb = 4;
-         }
-     }
+        public TeamsPasswordManagerFeatures()
+        {
+            BaseSeats = 6;
+            BaseStorageGb = 1;
+            MaxSeats = 6;
+            HasAdditionalStorageOption = true;
+            StripePlanId = "2020-families-org-annually";
+            StripeStoragePlanId = "storage-gb-annually";
+            BasePrice = 40;
+            AdditionalStoragePricePerGb = 4;
+        }
+    }
 }

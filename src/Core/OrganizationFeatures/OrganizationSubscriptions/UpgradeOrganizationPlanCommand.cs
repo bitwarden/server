@@ -104,7 +104,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (upgrade.UseSecretsManager)
         {
-           _organizationService.ValidateSecretsManagerPlan(newPlan, upgrade);
+            _organizationService.ValidateSecretsManagerPlan(newPlan, upgrade);
         }
 
         var newPasswordManagerPlanSeats = (short)(newPlan.PasswordManager.BaseSeats +
