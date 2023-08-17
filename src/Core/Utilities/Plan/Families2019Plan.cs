@@ -19,12 +19,12 @@ public record Families2019Plan : Models.StaticStore.Plan
         DisplaySortOrder = 1;
         LegacyYear = 2020;
         SupportsSecretsManager = false;
-        PasswordManager = new Teams2019PasswordManagerFeatures();
+        PasswordManager = new Families2019PasswordManagerFeatures();
     }
 
-    private record Teams2019PasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record Families2019PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public Teams2019PasswordManagerFeatures()
+        public Families2019PasswordManagerFeatures()
         {
             BaseSeats = 5;
             BaseStorageGb = 1;
