@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using System.Collections.Immutable;
+using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Utilities.Plan;
@@ -120,7 +121,7 @@ public class StaticStore
             new Teams2019Plan(true),
             new Teams2019Plan(false),
             new FreePlan()
-        };
+        }.ToImmutableList();
 
         #endregion
     }

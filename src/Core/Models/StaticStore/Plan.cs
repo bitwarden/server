@@ -46,13 +46,13 @@ public abstract record Plan
         public bool HasAdditionalServiceAccountOption { get; init; }
         // Seats
         public string StripeSeatPlanId { get; init; }
+        public bool HasAdditionalSeatsOption { get; init; }
         public decimal BasePrice { get; init; }
         public decimal SeatPrice { get; init; }
-        public bool AllowSeatAutoscale { get; init; }
-        public bool HasAdditionalSeatsOption { get; init; }
-        public int? MaxAdditionalSeats { get; init; }
         public int BaseSeats { get; init; }
         public short? MaxSeats { get; init; }
+        public int? MaxAdditionalSeats { get; init; }
+        public bool AllowSeatAutoscale { get; init; }
 
         // Features
         public int MaxProjects { get; init; }
@@ -81,6 +81,5 @@ public abstract record Plan
         public short? MaxAdditionalStorage { get; init; }
         // Feature
         public short? MaxCollections { get; init; }
-        public int? LegacyYear { get; }
     }
 }
