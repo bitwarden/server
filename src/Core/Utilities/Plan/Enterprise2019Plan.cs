@@ -44,7 +44,6 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
 
             if (isAnnual)
             {
-                HasPremiumAccessOption = true;
                 AdditionalStoragePricePerGb = 4;
                 StripeStoragePlanId = "storage-gb-annually";
                 StripeSeatPlanId = "enterprise-org-seat-annually";

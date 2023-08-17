@@ -34,6 +34,7 @@ public record FamiliesPlan : Models.StaticStore.Plan
             StripeStoragePlanId = "storage-gb-annually";
             BasePrice = 40;
             AdditionalStoragePricePerGb = 4;
+            AllowSeatAutoscale = false;
         }
     }
 }

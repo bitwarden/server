@@ -23,10 +23,11 @@ public record FreePlan : Models.StaticStore.Plan
         public FreeSecretsManagerFeatures()
         {
             BaseSeats = 2;
-            BaseServiceAccount = 2;
+            BaseServiceAccount = 3;
             MaxProjects = 3;
             MaxSeats = 2;
             MaxServiceAccounts = 3;
+            AllowSeatAutoscale = false;
         }
     }
 
@@ -37,6 +38,7 @@ public record FreePlan : Models.StaticStore.Plan
             BaseSeats = 2;
             MaxCollections = 2;
             MaxSeats = 2;
+            AllowSeatAutoscale = false;
         }
     }
 }
