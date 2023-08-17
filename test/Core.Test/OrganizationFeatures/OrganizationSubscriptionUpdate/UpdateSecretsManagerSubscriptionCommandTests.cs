@@ -268,7 +268,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             organization, seatAdjustment: 0, maxAutoscaleSeats: null, serviceAccountAdjustment: 1, maxAutoscaleServiceAccounts: null);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("You have reached the maximum number of service accounts (3) for this plan",
+        Assert.Contains("You have reached the maximum number of service accounts (2) for this plan",
             exception.Message, StringComparison.InvariantCultureIgnoreCase);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }

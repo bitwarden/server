@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Stripe;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Models.Business;
 
@@ -17,27 +18,37 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
 
         AddPlanIdToSubscription(plan);
 
-        if (org.UseSecretsManager)
+        if (org.UseSecretsManager && plan.SupportsSecretsManager)
         {
-            if (additionalSeats > 0 && plan.SecretsManager.StripeSeatPlanId != null)
-            {
-                Items.Add(new SubscriptionItemOptions { Plan = plan.SecretsManager.StripeSeatPlanId, Quantity = additionalSeats });
-            }
-
+            AddSecretsManagerSeat(plan, additionalSmSeats);
             AddServiceAccount(additionalServiceAccounts, plan);
         }
 
         AddPremiumAccessAddon(premiumAccessAddon, plan);
-
-        if (additionalSeats > 0 && plan.PasswordManager.StripeSeatPlanId != null)
-        {
-            Items.Add(new SubscriptionItemOptions { Plan = plan.PasswordManager.StripeSeatPlanId, Quantity = additionalSeats });
-        }
+        AddPasswordManagerSeat(plan, additionalSeats);
         AddAdditionalStorage(additionalStorageGb, plan);
 
         if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
         {
             DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
+        }
+    }
+
+    private void AddSecretsManagerSeat(Plan plan, int additionalSmSeats)
+    {
+        if (additionalSmSeats > 0 && plan.SecretsManager.StripeSeatPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions
+                { Plan = plan.SecretsManager.StripeSeatPlanId, Quantity = additionalSmSeats });
+        }
+    }
+
+    private void AddPasswordManagerSeat(Plan plan, int additionalSeats)
+    {
+        if (additionalSeats > 0 && plan.PasswordManager.StripeSeatPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions
+                { Plan = plan.PasswordManager.StripeSeatPlanId, Quantity = additionalSeats });
         }
     }
 

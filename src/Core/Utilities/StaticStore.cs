@@ -119,6 +119,7 @@ public class StaticStore
             new Enterprise2019Plan(false),
             new Teams2019Plan(true),
             new Teams2019Plan(false),
+            new FreePlan()
         };
 
         #endregion
@@ -139,13 +140,8 @@ public class StaticStore
             }
         };
 
-    // public static Models.StaticStore.Plan GetPasswordManagerPlan(PlanType planType) =>
-    //     PasswordManagerPlans.SingleOrDefault(p => p.Type == planType);
     public static Models.StaticStore.Plan GetPlan(PlanType planType) =>
         Plans.SingleOrDefault(p => p.Type == planType);
-
-   // public static Plan GetSecretsManagerPlan(PlanType planType) =>
-    //    SecretManagerPlans.SingleOrDefault(p => p.Type == planType);
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);

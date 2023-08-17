@@ -96,7 +96,7 @@ public class StripePaymentServiceTests
         string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == PlanType.EnterpriseAnnually);
-
+        organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -167,7 +167,7 @@ public class StripePaymentServiceTests
             .BaseServiceUri.CloudRegion
             .Returns("US");
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 1, 2
             , false, taxInfo, false, 8, 10);
 
         Assert.Null(result);
@@ -518,7 +518,7 @@ public class StripePaymentServiceTests
     public async void PurchaseOrganizationAsync_SM_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
+        organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {

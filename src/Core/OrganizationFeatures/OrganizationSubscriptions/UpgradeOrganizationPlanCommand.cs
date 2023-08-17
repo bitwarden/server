@@ -207,7 +207,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             }
         }
 
-        if (upgrade.UseSecretsManager)
+        if (upgrade.UseSecretsManager && newPlan.SupportsSecretsManager)
         {
             await ValidateSecretsManagerSeatsAndServiceAccountAsync(upgrade, organization, newPlan);
         }
@@ -267,7 +267,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UsePasswordManager = true;
         organization.UseSecretsManager = upgrade.UseSecretsManager;
 
-        if (upgrade.UseSecretsManager)
+        if (upgrade.UseSecretsManager && newPlan.SupportsSecretsManager)
         {
             organization.SmSeats = newPlan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault();
             organization.SmServiceAccounts = newPlan.SecretsManager.BaseServiceAccount.GetValueOrDefault() +
