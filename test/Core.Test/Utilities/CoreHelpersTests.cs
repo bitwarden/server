@@ -416,4 +416,25 @@ public class CoreHelpersTests
     {
         Assert.Equal(expected, CoreHelpers.ObfuscateEmail(input));
     }
+
+    [Theory]
+    [InlineData("user@example.com")]
+    [InlineData("user@example.com ")]
+    [InlineData("user.name@example.com")]
+    public void GetEmailDomain_Success(string email)
+    {
+        Assert.Equal("example.com", CoreHelpers.GetEmailDomain(email));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("userexample.com")]
+    [InlineData("user@")]
+    [InlineData("@example.com")]
+    [InlineData("user@ex@ample.com")]
+    public void GetEmailDomain_ReturnsNull(string wrongEmail)
+    {
+        Assert.Null(CoreHelpers.GetEmailDomain(wrongEmail));
+    }
 }
