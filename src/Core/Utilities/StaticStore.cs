@@ -120,7 +120,8 @@ public class StaticStore
             new Enterprise2019Plan(false),
             new Teams2019Plan(true),
             new Teams2019Plan(false),
-            new FreePlan()
+            new FreePlan(),
+            new CustomPlan()
         }.ToImmutableList();
 
         #endregion
@@ -143,6 +144,7 @@ public class StaticStore
 
     public static Models.StaticStore.Plan GetPlan(PlanType planType) =>
         Plans.SingleOrDefault(p => p.Type == planType);
+
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
