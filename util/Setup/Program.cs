@@ -189,8 +189,8 @@ public class Program
     {
         var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
             "globalSettings__sqlServer__connectionString");
-        var migrator = new DbMigrator(vaultConnectionString, null);
-        migrator.MigrateMsSqlDatabaseWithRetries(false);
+        var migrator = new DbMigrator(vaultConnectionString);
+        migrator.MigrateMsSqlDatabaseWithRetries(true);
     }
 
     private static bool ValidateInstallation()
