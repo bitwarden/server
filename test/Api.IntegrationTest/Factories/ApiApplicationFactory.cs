@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.IntegrationTestCommon.Factories;
-using IdentityServer4.AccessTokenValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 
@@ -27,12 +27,12 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
         builder.ConfigureTestServices(services =>
         {
             // Remove scheduled background jobs to prevent errors in parallel test execution
-            var jobService = services.First(sd => sd.ServiceType == typeof(Microsoft.Extensions.Hosting.IHostedService) && sd.ImplementationType == typeof(Bit.Api.Jobs.JobsHostedService));
+            var jobService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Jobs.JobsHostedService));
             services.Remove(jobService);
 
-            services.PostConfigure<IdentityServerAuthenticationOptions>(IdentityServerAuthenticationDefaults.AuthenticationScheme, options =>
+            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                options.JwtBackChannelHandler = _identityApplicationFactory.Server.CreateHandler();
+                options.BackchannelHttpHandler = _identityApplicationFactory.Server.CreateHandler();
             });
         });
     }

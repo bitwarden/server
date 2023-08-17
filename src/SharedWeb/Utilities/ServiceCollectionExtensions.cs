@@ -34,8 +34,8 @@ using Bit.Infrastructure.EntityFramework;
 using DnsClient;
 using Duende.IdentityServer.Configuration;
 using IdentityModel;
-using IdentityServer4.AccessTokenValidation;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -424,16 +424,23 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment,
         Action<AuthorizationOptions> addAuthorization)
     {
-        services
-            .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
-            .AddIdentityServerAuthentication(options =>
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
             {
                 options.Authority = globalSettings.BaseServiceUri.InternalIdentity;
                 options.RequireHttpsMetadata = !environment.IsDevelopment() &&
                     globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
-                options.TokenRetriever = TokenRetrieval.FromAuthorizationHeaderOrQueryString();
-                options.NameClaimType = ClaimTypes.Email;
-                options.SupportedTokens = SupportedTokens.Jwt;
+                options.TokenValidationParameters.ValidateAudience = false;
+                options.TokenValidationParameters.ValidTypes = new[] { "at+jwt" };
+                options.TokenValidationParameters.NameClaimType = ClaimTypes.Email;
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = (context) =>
+                    {
+                        context.Token = TokenRetrieval.FromAuthorizationHeaderOrQueryString()(context.Request);
+                        return Task.CompletedTask;
+                    }
+                };
             });
 
         if (addAuthorization != null)
