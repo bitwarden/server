@@ -84,7 +84,7 @@ public class SsoConfigService : ISsoConfigService
                               new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.RequireSso, };
 
             ssoRequiredPolicy.Enabled = true;
-            await _policyService.SaveAsync(resetPolicy, _userService, _organizationService, null);
+            await _policyService.SaveAsync(ssoRequiredPolicy, _userService, _organizationService, null);
         }
 
         await LogEventsAsync(config, oldConfig);
