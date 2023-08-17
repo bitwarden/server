@@ -1,6 +1,5 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Utilities;
-using Stripe;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 

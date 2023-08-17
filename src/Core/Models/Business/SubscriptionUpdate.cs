@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Stripe;
 
 namespace Bit.Core.Models.Business;

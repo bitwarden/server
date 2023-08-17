@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Enums;
-using Bit.Core.Models.StaticStore;
 using Bit.Core.Utilities;
 using Xunit;
 

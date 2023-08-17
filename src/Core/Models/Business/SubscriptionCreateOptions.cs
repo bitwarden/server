@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Stripe;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 
