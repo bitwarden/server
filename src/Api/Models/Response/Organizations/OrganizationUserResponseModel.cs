@@ -18,8 +18,8 @@ public class OrganizationUserResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(organizationUser));
         }
 
-        Id = organizationUser.Id.ToString();
-        UserId = organizationUser.UserId?.ToString();
+        Id = organizationUser.Id;
+        UserId = organizationUser.UserId;
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
@@ -37,8 +37,8 @@ public class OrganizationUserResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(organizationUser));
         }
 
-        Id = organizationUser.Id.ToString();
-        UserId = organizationUser.UserId?.ToString();
+        Id = organizationUser.Id;
+        UserId = organizationUser.UserId;
         Type = organizationUser.Type;
         Status = organizationUser.Status;
         AccessAll = organizationUser.AccessAll;
@@ -47,10 +47,11 @@ public class OrganizationUserResponseModel : ResponseModel
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organizationUser.Permissions);
         ResetPasswordEnrolled = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
         UsesKeyConnector = organizationUser.UsesKeyConnector;
+        HasMasterPassword = organizationUser.HasMasterPassword;
     }
 
-    public string Id { get; set; }
-    public string UserId { get; set; }
+    public Guid Id { get; set; }
+    public Guid? UserId { get; set; }
     public OrganizationUserType Type { get; set; }
     public OrganizationUserStatusType Status { get; set; }
     public bool AccessAll { get; set; }
@@ -59,11 +60,19 @@ public class OrganizationUserResponseModel : ResponseModel
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
     public bool UsesKeyConnector { get; set; }
+    public bool HasMasterPassword { get; set; }
 }
 
 public class OrganizationUserDetailsResponseModel : OrganizationUserResponseModel
 {
     public OrganizationUserDetailsResponseModel(OrganizationUser organizationUser,
+        IEnumerable<CollectionAccessSelection> collections)
+        : base(organizationUser, "organizationUserDetails")
+    {
+        Collections = collections.Select(c => new SelectionReadOnlyResponseModel(c));
+    }
+
+    public OrganizationUserDetailsResponseModel(OrganizationUserUserDetails organizationUser,
         IEnumerable<CollectionAccessSelection> collections)
         : base(organizationUser, "organizationUserDetails")
     {

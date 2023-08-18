@@ -1,13 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-      <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="11.0.0" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.12" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.12" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.12" />
-      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.8" />
-      <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
-      <PackageReference Include="linq2db.EntityFrameworkCore" Version="6.11.0" />
+      <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="12.0.1" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.5" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="7.0.5" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.5" />
+      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.4" />
+      <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
+      <PackageReference Include="linq2db.EntityFrameworkCore" Version="7.5.0" />
     </ItemGroup>
 
     <ItemGroup>

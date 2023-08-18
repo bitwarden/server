@@ -40,7 +40,7 @@ public class OrganizationExportController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
 
-        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollections(organizationId);
+        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollectionsAsync(organizationId);
         (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
 
         if (_currentContext.ClientVersion == null || _currentContext.ClientVersion >= new Version("2023.1.0"))

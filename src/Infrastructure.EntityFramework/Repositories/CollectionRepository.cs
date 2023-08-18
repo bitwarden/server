@@ -304,8 +304,45 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            return await (from c in new UserCollectionDetailsQuery(userId).Run(dbContext)
-                          group c by new { c.Id, c.OrganizationId, c.Name, c.CreationDate, c.RevisionDate, c.ExternalId } into collectionGroup
+
+            var baseCollectionQuery = new UserCollectionDetailsQuery(userId).Run(dbContext);
+
+            if (dbContext.Database.IsSqlite())
+            {
+                return (await baseCollectionQuery.ToListAsync())
+                    .GroupBy(c => new
+                    {
+                        c.Id,
+                        c.OrganizationId,
+                        c.Name,
+                        c.CreationDate,
+                        c.RevisionDate,
+                        c.ExternalId
+                    })
+                    .Select(collectionGroup => new CollectionDetails
+                    {
+                        Id = collectionGroup.Key.Id,
+                        OrganizationId = collectionGroup.Key.OrganizationId,
+                        Name = collectionGroup.Key.Name,
+                        CreationDate = collectionGroup.Key.CreationDate,
+                        RevisionDate = collectionGroup.Key.RevisionDate,
+                        ExternalId = collectionGroup.Key.ExternalId,
+                        ReadOnly = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.ReadOnly))),
+                        HidePasswords = Convert.ToBoolean(collectionGroup.Min(c => Convert.ToInt32(c.HidePasswords))),
+                    })
+                    .ToList();
+            }
+
+            return await (from c in baseCollectionQuery
+                          group c by new
+                          {
+                              c.Id,
+                              c.OrganizationId,
+                              c.Name,
+                              c.CreationDate,
+                              c.RevisionDate,
+                              c.ExternalId
+                          } into collectionGroup
                           select new CollectionDetails
                           {
                               Id = collectionGroup.Key.Id,
@@ -391,6 +428,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
             // Remove all existing ones that are no longer requested
             var requestedUserIds = requestedUsers.Select(u => u.Id);
             dbContext.CollectionUsers.RemoveRange(existingCollectionUsers.Where(cu => !requestedUserIds.Contains(cu.OrganizationUserId)));
+            // Need to save the new collection users before running the bump revision code
+            await dbContext.SaveChangesAsync();
             await dbContext.UserBumpAccountRevisionDateByCollectionIdAsync(id, organizationId);
             await dbContext.SaveChangesAsync();
         }

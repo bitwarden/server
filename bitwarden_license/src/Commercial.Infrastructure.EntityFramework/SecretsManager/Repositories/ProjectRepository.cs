@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
@@ -27,22 +28,26 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         }
     }
 
-    public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
+    public async Task<IEnumerable<ProjectPermissionDetails>> GetManyByOrganizationIdAsync(Guid organizationId, Guid userId, AccessClientType accessType)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null);
 
-        query = accessType switch
+        var query = dbContext.Project.Where(p => p.OrganizationId == organizationId && p.DeletedDate == null).OrderBy(p => p.RevisionDate);
+
+        var projects = ProjectToPermissionDetails(query, userId, accessType);
+
+        return await projects.ToListAsync();
+    }
+
+    public async Task<int> GetProjectCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
         {
-            AccessClientType.NoAccessCheck => query,
-            AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)),
-            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToProject(userId)),
-            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
-        };
-
-        var projects = await query.OrderBy(p => p.RevisionDate).ToListAsync();
-        return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.Project
+                .CountAsync(ou => ou.OrganizationId == organizationId);
+        }
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyByOrganizationIdWriteAccessAsync(
@@ -63,32 +68,25 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
     }
 
-    private static Expression<Func<Project, bool>> UserHasReadAccessToProject(Guid userId) => p =>
-        p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
-        p.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read));
-
-    private static Expression<Func<Project, bool>> UserHasWriteAccessToProject(Guid userId) => p =>
-        p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
-        p.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write));
-
-    private static Expression<Func<Project, bool>> ServiceAccountHasReadAccessToProject(Guid serviceAccountId) => p =>
-        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read);
-
-    private static Expression<Func<Project, bool>> ServiceAccountHasWriteAccessToProject(Guid serviceAccountId) => p =>
-        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Write);
-
     public async Task DeleteManyByIdAsync(IEnumerable<Guid> ids)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        using var scope = ServiceScopeFactory.CreateScope();
+        var utcNow = DateTime.UtcNow;
+        var dbContext = GetDatabaseContext(scope);
+        var projects = dbContext.Project
+            .Where(c => ids.Contains(c.Id))
+            .Include(p => p.Secrets);
+        await projects.ForEachAsync(project =>
         {
-            var dbContext = GetDatabaseContext(scope);
-            var projects = dbContext.Project.Where(c => ids.Contains(c.Id));
-            await projects.ForEachAsync(project =>
+            foreach (var projectSecret in project.Secrets)
             {
-                dbContext.Remove(project);
-            });
-            await dbContext.SaveChangesAsync();
-        }
+                projectSecret.RevisionDate = utcNow;
+            }
+
+            dbContext.Remove(project);
+        });
+
+        await dbContext.SaveChangesAsync();
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> GetManyWithSecretsByIds(IEnumerable<Guid> ids)
@@ -97,55 +95,11 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
         {
             var dbContext = GetDatabaseContext(scope);
             var projects = await dbContext.Project
-                                    .Include(p => p.Secrets)
-                                    .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
-                                    .ToListAsync();
+                .Include(p => p.Secrets)
+                .Where(c => ids.Contains(c.Id) && c.DeletedDate == null)
+                .ToListAsync();
             return Mapper.Map<List<Core.SecretsManager.Entities.Project>>(projects);
         }
-    }
-
-    public async Task<bool> ServiceAccountHasReadAccessToProject(Guid id, Guid userId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Project
-            .Where(p => p.Id == id)
-            .Where(ServiceAccountHasReadAccessToProject(userId));
-
-        return await query.AnyAsync();
-    }
-
-    public async Task<bool> ServiceAccountHasWriteAccessToProject(Guid id, Guid userId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Project
-            .Where(p => p.Id == id)
-            .Where(ServiceAccountHasWriteAccessToProject(userId));
-
-        return await query.AnyAsync();
-    }
-
-    public async Task<bool> UserHasReadAccessToProject(Guid id, Guid userId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Project
-            .Where(p => p.Id == id)
-            .Where(UserHasReadAccessToProject(userId));
-
-        return await query.AnyAsync();
-    }
-
-    public async Task<bool> UserHasWriteAccessToProject(Guid id, Guid userId)
-    {
-        using var scope = ServiceScopeFactory.CreateScope();
-        var dbContext = GetDatabaseContext(scope);
-        var query = dbContext.Project
-            .Where(p => p.Id == id)
-            .Where(UserHasWriteAccessToProject(userId));
-
-        return await query.AnyAsync();
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.Project>> ImportAsync(IEnumerable<Core.SecretsManager.Entities.Project> projects)
@@ -188,7 +142,7 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
         var policy = await query.FirstOrDefaultAsync();
 
-        return (policy.Read, policy.Write);
+        return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
     public async Task<bool> ProjectsAreInOrganization(List<Guid> projectIds, Guid organizationId)
@@ -199,4 +153,54 @@ public class ProjectRepository : Repository<Core.SecretsManager.Entities.Project
 
         return projectIds.Count == results.Count;
     }
+
+    private IQueryable<ProjectPermissionDetails> ProjectToPermissionDetails(IQueryable<Project> query, Guid userId, AccessClientType accessType)
+    {
+        var projects = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query.Select(p => new ProjectPermissionDetails
+            {
+                Project = Mapper.Map<Bit.Core.SecretsManager.Entities.Project>(p),
+                Read = true,
+                Write = true,
+            }),
+            AccessClientType.User => query.Where(UserHasReadAccessToProject(userId)).Select(ProjectToPermissionsUser(userId, true)),
+            AccessClientType.ServiceAccount => query.Where(ServiceAccountHasReadAccessToProject(userId)).Select(ProjectToPermissionsServiceAccount(userId, true)),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+        return projects;
+    }
+
+    private Expression<Func<Project, ProjectPermissionDetails>> ProjectToPermissionsUser(Guid userId, bool read) =>
+        p => new ProjectPermissionDetails
+        {
+            Project = Mapper.Map<Bit.Core.SecretsManager.Entities.Project>(p),
+            Read = read,
+            Write = p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+                    p.GroupAccessPolicies.Any(ap =>
+                        ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write)),
+        };
+
+    private Expression<Func<Project, ProjectPermissionDetails>> ProjectToPermissionsServiceAccount(Guid userId, bool read) =>
+        p => new ProjectPermissionDetails
+        {
+            Project = Mapper.Map<Bit.Core.SecretsManager.Entities.Project>(p),
+            Read = read,
+            Write = p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == userId && ap.Write),
+        };
+
+    private static Expression<Func<Project, bool>> UserHasReadAccessToProject(Guid userId) => p =>
+        p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+        p.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read));
+
+    private static Expression<Func<Project, bool>> UserHasWriteAccessToProject(Guid userId) => p =>
+        p.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Write) ||
+        p.GroupAccessPolicies.Any(ap => ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Write));
+
+    private static Expression<Func<Project, bool>> ServiceAccountHasReadAccessToProject(Guid serviceAccountId) => p =>
+        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Read);
+
+    private static Expression<Func<Project, bool>> ServiceAccountHasWriteAccessToProject(Guid serviceAccountId) => p =>
+        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccount.Id == serviceAccountId && ap.Write);
+
 }

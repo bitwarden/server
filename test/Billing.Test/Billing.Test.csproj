@@ -16,7 +16,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="AutoFixture.Xunit2" Version="$(AutoFixtureXUnit2Version)" />
-    <PackageReference Include="NSubstitute" Version="$(NSubstitueVersion)" />
+    <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
   </ItemGroup>
 
   <ItemGroup>

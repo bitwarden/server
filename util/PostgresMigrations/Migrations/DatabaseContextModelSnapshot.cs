@@ -18,12 +18,12 @@ namespace Bit.PostgresMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
-                .HasAnnotation("ProductVersion", "6.0.12")
+                .HasAnnotation("ProductVersion", "7.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AuthRequest", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -46,6 +46,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("MasterPasswordHash")
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("PublicKey")
                         .HasColumnType("text");
@@ -75,11 +78,165 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OrganizationId");
+
                     b.HasIndex("ResponseDeviceId");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("AuthRequest", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.EmergencyAccess", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<Guid?>("GranteeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("GrantorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("KeyEncrypted")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("LastNotificationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RecoveryInitiatedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("smallint");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("smallint");
+
+                    b.Property<int>("WaitTimeDays")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GranteeId");
+
+                    b.HasIndex("GrantorId");
+
+                    b.ToTable("EmergencyAccess", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.Grant", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("ConsumedDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("SubjectId")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Type")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("Grant", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.SsoConfig", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Data")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("RevisionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.ToTable("SsoConfig", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.SsoUser", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .UseCollation("postgresIndetermanisticCollation");
+
+                    b.Property<Guid?>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SsoUser", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Collection", b =>
@@ -176,6 +333,15 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("EncryptedPrivateKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedPublicKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("EncryptedUserKey")
+                        .HasColumnType("text");
+
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
@@ -202,54 +368,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Device", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.EmergencyAccess", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("character varying(256)");
-
-                    b.Property<Guid?>("GranteeId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("GrantorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("KeyEncrypted")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("LastNotificationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("RecoveryInitiatedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<byte>("Status")
-                        .HasColumnType("smallint");
-
-                    b.Property<byte>("Type")
-                        .HasColumnType("smallint");
-
-                    b.Property<int>("WaitTimeDays")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("GranteeId");
-
-                    b.HasIndex("GrantorId");
-
-                    b.ToTable("EmergencyAccess", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Event", b =>
@@ -321,49 +439,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Event", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Grant", b =>
-                {
-                    b.Property<string>("Key")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("ClientId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("ConsumedDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Data")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<DateTime?>("ExpirationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("SessionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("SubjectId")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<string>("Type")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.HasKey("Key");
-
-                    b.ToTable("Grant", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>
@@ -502,6 +577,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("MaxAutoscaleSmSeats")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxAutoscaleSmServiceAccounts")
+                        .HasColumnType("integer");
+
                     b.Property<short?>("MaxCollections")
                         .HasColumnType("smallint");
 
@@ -537,8 +618,17 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<int?>("Seats")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("SecretsManagerBeta")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("SelfHost")
                         .HasColumnType("boolean");
+
+                    b.Property<int?>("SmSeats")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SmServiceAccounts")
+                        .HasColumnType("integer");
 
                     b.Property<byte>("Status")
                         .HasColumnType("smallint");
@@ -568,6 +658,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UseKeyConnector")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("UsePasswordManager")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("UsePolicies")
@@ -995,67 +1088,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("Send", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoConfig", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Data")
-                        .HasColumnType("text");
-
-                    b.Property<bool>("Enabled")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("RevisionDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.ToTable("SsoConfig", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoUser", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<DateTime>("CreationDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("ExternalId")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .UseCollation("postgresIndetermanisticCollation");
-
-                    b.Property<Guid?>("OrganizationId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrganizationId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("SsoUser", (string)null);
-                });
-
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.TaxRate", b =>
                 {
                     b.Property<string>("Id")
@@ -1310,6 +1342,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>
@@ -1317,9 +1351,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ClientSecret")
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
+                    b.Property<string>("ClientSecretHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTime>("CreationDate")
                         .HasColumnType("timestamp with time zone");
@@ -1643,8 +1677,12 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasDiscriminator().HasValue("user_service_account");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.AuthRequest", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany()
+                        .HasForeignKey("OrganizationId");
+
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Device", "ResponseDevice")
                         .WithMany()
                         .HasForeignKey("ResponseDeviceId");
@@ -1655,7 +1693,54 @@ namespace Bit.PostgresMigrations.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Organization");
+
                     b.Navigation("ResponseDevice");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.EmergencyAccess", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "Grantee")
+                        .WithMany()
+                        .HasForeignKey("GranteeId");
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "Grantor")
+                        .WithMany()
+                        .HasForeignKey("GrantorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Grantee");
+
+                    b.Navigation("Grantor");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.SsoConfig", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("SsoConfigs")
+                        .HasForeignKey("OrganizationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.SsoUser", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
+                        .WithMany("SsoUsers")
+                        .HasForeignKey("OrganizationId");
+
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
+                        .WithMany("SsoUsers")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Organization");
 
                     b.Navigation("User");
                 });
@@ -1737,23 +1822,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.EmergencyAccess", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "Grantee")
-                        .WithMany()
-                        .HasForeignKey("GranteeId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "Grantor")
-                        .WithMany()
-                        .HasForeignKey("GrantorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Grantee");
-
-                    b.Navigation("Grantor");
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.Group", b =>
@@ -1907,34 +1975,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId");
-
-                    b.Navigation("Organization");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoConfig", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
-                        .WithMany("SsoConfigs")
-                        .HasForeignKey("OrganizationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Organization");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Models.SsoUser", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.Organization", "Organization")
-                        .WithMany("SsoUsers")
-                        .HasForeignKey("OrganizationId");
-
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
-                        .WithMany("SsoUsers")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
                     b.Navigation("Organization");
 

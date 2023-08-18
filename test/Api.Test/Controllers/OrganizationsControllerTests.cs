@@ -2,6 +2,7 @@
 using AutoFixture.Xunit2;
 using Bit.Api.Controllers;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
@@ -10,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -37,7 +39,11 @@ public class OrganizationsControllerTests : IDisposable
     private readonly ICloudGetOrganizationLicenseQuery _cloudGetOrganizationLicenseQuery;
     private readonly ICreateOrganizationApiKeyCommand _createOrganizationApiKeyCommand;
     private readonly IUpdateOrganizationLicenseCommand _updateOrganizationLicenseCommand;
-    private readonly IOrganizationDomainRepository _organizationDomainRepository;
+    private readonly IFeatureService _featureService;
+    private readonly ILicensingService _licensingService;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IUpgradeOrganizationPlanCommand _upgradeOrganizationPlanCommand;
+    private readonly IAddSecretsManagerSubscriptionCommand _addSecretsManagerSubscriptionCommand;
 
     private readonly OrganizationsController _sut;
 
@@ -60,12 +66,18 @@ public class OrganizationsControllerTests : IDisposable
         _cloudGetOrganizationLicenseQuery = Substitute.For<ICloudGetOrganizationLicenseQuery>();
         _createOrganizationApiKeyCommand = Substitute.For<ICreateOrganizationApiKeyCommand>();
         _updateOrganizationLicenseCommand = Substitute.For<IUpdateOrganizationLicenseCommand>();
+        _featureService = Substitute.For<IFeatureService>();
+        _licensingService = Substitute.For<ILicensingService>();
+        _updateSecretsManagerSubscriptionCommand = Substitute.For<IUpdateSecretsManagerSubscriptionCommand>();
+        _upgradeOrganizationPlanCommand = Substitute.For<IUpgradeOrganizationPlanCommand>();
+        _addSecretsManagerSubscriptionCommand = Substitute.For<IAddSecretsManagerSubscriptionCommand>();
 
         _sut = new OrganizationsController(_organizationRepository, _organizationUserRepository,
             _policyRepository, _providerRepository, _organizationService, _userService, _paymentService, _currentContext,
             _ssoConfigRepository, _ssoConfigService, _getOrganizationApiKeyQuery, _rotateOrganizationApiKeyCommand,
             _createOrganizationApiKeyCommand, _organizationApiKeyRepository, _updateOrganizationLicenseCommand,
-            _cloudGetOrganizationLicenseQuery, _globalSettings);
+            _cloudGetOrganizationLicenseQuery, _featureService, _globalSettings, _licensingService,
+            _updateSecretsManagerSubscriptionCommand, _upgradeOrganizationPlanCommand, _addSecretsManagerSubscriptionCommand);
     }
 
     public void Dispose()
@@ -82,7 +94,7 @@ public class OrganizationsControllerTests : IDisposable
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector
             }.Serialize(),
             Enabled = true,
             OrganizationId = orgId,
@@ -115,7 +127,9 @@ public class OrganizationsControllerTests : IDisposable
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = keyConnectorEnabled,
+                MemberDecryptionType = keyConnectorEnabled
+                    ? MemberDecryptionType.KeyConnector
+                    : MemberDecryptionType.MasterPassword
             }.Serialize(),
             Enabled = true,
             OrganizationId = orgId,

@@ -451,7 +451,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("restore")]
-    public async Task<ListResponseModel<CipherResponseModel>> PutRestoreMany([FromBody] CipherBulkRestoreRequestModel model)
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutRestoreMany([FromBody] CipherBulkRestoreRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
         {
@@ -461,12 +461,30 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
-        var restoringCiphers = ciphers.Where(c => cipherIdsToRestore.Contains(c.Id) && c.Edit);
+        var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId);
+        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
+    }
 
-        await _cipherService.RestoreManyAsync(restoringCiphers, userId);
-        var responses = restoringCiphers.Select(c => new CipherResponseModel(c, _globalSettings));
-        return new ListResponseModel<CipherResponseModel>(responses);
+    [HttpPut("restore-admin")]
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutRestoreManyAdmin([FromBody] CipherBulkRestoreRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only restore up to 500 items at a time.");
+        }
+
+        if (model == null || model.OrganizationId == default || !await _currentContext.EditAnyCollection(model.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+
+        var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId, model.OrganizationId, true);
+        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
     }
 
     [HttpPut("move")]
@@ -696,7 +714,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
-            await _cipherService.CreateAttachmentShareAsync(cipher, stream,
+            await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName, key,
                 Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
         });
     }

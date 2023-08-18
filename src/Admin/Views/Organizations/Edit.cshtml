@@ -1,73 +1,56 @@
-﻿@model OrganizationEditModel
+﻿@using Bit.Admin.Enums;
+@inject Bit.Admin.Services.IAccessControlService AccessControlService
+@model OrganizationEditModel
 @{
     ViewData["Title"] = (Model.Provider != null ? "Client " : string.Empty) + "Organization: " + Model.Organization.Name;
+
+    var canViewOrganizationInformation = AccessControlService.UserHasPermission(Permission.Org_OrgInformation_View);
+    var canViewBillingInformation = AccessControlService.UserHasPermission(Permission.Org_BillingInformation_View);
+    var canInitiateTrial = AccessControlService.UserHasPermission(Permission.Org_InitiateTrial);
+    var canDelete = AccessControlService.UserHasPermission(Permission.Org_Delete);
 }
 
 @section Scripts {
     @await Html.PartialAsync("_OrganizationFormScripts")
-    
+
     <script>
         (() => {
             document.getElementById('teams-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
                     alert('Organization is not on a free plan.');
                     return;
                 }
-                // Plan
-                document.getElementById('@(nameof(Model.PlanType))').value = '@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)';
+                setTrialDefaults('@((byte)PlanType.TeamsAnnually)');
+                togglePlanFeatures('@((byte)PlanType.TeamsAnnually)');
                 document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
-                document.getElementById('@(nameof(Model.Seats))').value = '10';
-                document.getElementById('@(nameof(Model.MaxCollections))').value = '';
-                document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
-                // Features
-                document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
-                document.getElementById('@(nameof(Model.UseSso))').checked = false;
-                document.getElementById('@(nameof(Model.UseGroups))').checked = true;
-                document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
-                document.getElementById('@(nameof(Model.UseEvents))').checked = true;
-                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
-                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = false;                
-                document.getElementById('@(nameof(Model.UseTotp))').checked = true;
-                document.getElementById('@(nameof(Model.Use2fa))').checked = true;
-                document.getElementById('@(nameof(Model.UseApi))').checked = true;
-                document.getElementById('@(nameof(Model.SelfHost))').checked = false;
-                document.getElementById('@(nameof(Model.UseResetPassword))').checked = false;
-                document.getElementById('@(nameof(Model.UseScim))').checked = false;
-                // Licensing
-                document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
-                document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
-                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
             });
             document.getElementById('enterprise-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
                     alert('Organization is not on a free plan.');
                     return;
                 }
-                // Plan
-                document.getElementById('@(nameof(Model.PlanType))').value = '@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)';
+                setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
+                togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
                 document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
+            });
+
+            function setTrialDefaults(planType) {
+                // Plan
+                document.getElementById('@(nameof(Model.PlanType))').value = planType;
+                // Password Manager
                 document.getElementById('@(nameof(Model.Seats))').value = '10';
                 document.getElementById('@(nameof(Model.MaxCollections))').value = '';
                 document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
-                // Features
-                document.getElementById('@(nameof(Model.UsePolicies))').checked = true;
-                document.getElementById('@(nameof(Model.UseSso))').checked = true;
-                document.getElementById('@(nameof(Model.UseGroups))').checked = true;
-                document.getElementById('@(nameof(Model.UseDirectory))').checked = true;
-                document.getElementById('@(nameof(Model.UseEvents))').checked = true;
-                document.getElementById('@(nameof(Model.UsersGetPremium))').checked = true;
-                document.getElementById('@(nameof(Model.UseCustomPermissions))').checked = true;
-                document.getElementById('@(nameof(Model.UseTotp))').checked = true;
-                document.getElementById('@(nameof(Model.Use2fa))').checked = true;
-                document.getElementById('@(nameof(Model.UseApi))').checked = true;
-                document.getElementById('@(nameof(Model.SelfHost))').checked = true;
-                document.getElementById('@(nameof(Model.UseResetPassword))').checked = true;
-                document.getElementById('@(nameof(Model.UseScim))').checked = true;
+                // Secret Manager
+                if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
+                    document.getElementById('@(nameof(Model.SmSeats))').value = '10';
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = getPlan(planType)?.baseServiceAccount;
+                }
                 // Licensing
                 document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
                 document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
                 document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
-            });
+            }
         })();
     </script>
 }
@@ -79,24 +62,41 @@
     <h2>Provider Relationship</h2>
     @await Html.PartialAsync("_ProviderInformation", Model.Provider)
 }
-<h2>Organization Information</h2>
-@await Html.PartialAsync("_ViewInformation", Model)
-<h2>Billing Information</h2>
-@await Html.PartialAsync("_BillingInformation",
-    new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id })
+
+@if (canViewOrganizationInformation)
+{
+    <h2>Organization Information</h2>
+    @await Html.PartialAsync("_ViewInformation", Model)
+}
+
+@if (canViewBillingInformation)
+{
+    <h2>Billing Information</h2>
+    @await Html.PartialAsync("_BillingInformation",
+        new BillingInformationModel { BillingInfo = Model.BillingInfo, OrganizationId = Model.Organization.Id, Entity = "Organization" })
+}
+
 @await Html.PartialAsync("_OrganizationForm", Model)
+
 <div class="d-flex mt-4">
     <button type="submit" class="btn btn-primary" form="edit-form">Save</button>
     <div class="ml-auto d-flex">
-        <button class="btn btn-secondary mr-2" type="button" id="teams-trial">
-            Teams Trial
-        </button>
-        <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
-            Enterprise Trial
-        </button>
-        <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
-              onsubmit="return confirm('Are you sure you want to delete this organization?')">
-            <button class="btn btn-danger" type="submit">Delete</button>
-        </form>
+        @if (canInitiateTrial)
+        {
+            <button class="btn btn-secondary mr-2" type="button" id="teams-trial">
+                Teams Trial
+            </button>
+            <button class="btn btn-secondary mr-2" type="button" id="enterprise-trial">
+                Enterprise Trial
+            </button>
+        }
+        @if (canDelete)
+        {
+            <form asp-action="Delete" asp-route-id="@Model.Organization.Id"
+                onsubmit="return confirm('Are you sure you want to delete this organization?')">
+                <button class="btn btn-danger" type="submit">Delete</button>
+            </form>
+        }
     </div>
 </div>
+

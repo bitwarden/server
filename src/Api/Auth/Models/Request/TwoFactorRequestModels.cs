@@ -17,9 +17,9 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
     [StringLength(50)]
     public string Key { get; set; }
 
-    public User ToUser(User extistingUser)
+    public User ToUser(User existingUser)
     {
-        var providers = extistingUser.GetTwoFactorProviders();
+        var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -34,8 +34,8 @@ public class UpdateTwoFactorAuthenticatorRequestModel : SecretVerificationReques
             MetaData = new Dictionary<string, object> { ["Key"] = Key },
             Enabled = true
         });
-        extistingUser.SetTwoFactorProviders(providers);
-        return extistingUser;
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
     }
 }
 
@@ -51,9 +51,9 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
     [StringLength(50)]
     public string Host { get; set; }
 
-    public User ToUser(User extistingUser)
+    public User ToUser(User existingUser)
     {
-        var providers = extistingUser.GetTwoFactorProviders();
+        var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -73,13 +73,13 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
             },
             Enabled = true
         });
-        extistingUser.SetTwoFactorProviders(providers);
-        return extistingUser;
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
     }
 
-    public Organization ToOrganization(Organization extistingOrg)
+    public Organization ToOrganization(Organization existingOrg)
     {
-        var providers = extistingOrg.GetTwoFactorProviders();
+        var providers = existingOrg.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -99,8 +99,8 @@ public class UpdateTwoFactorDuoRequestModel : SecretVerificationRequestModel, IV
             },
             Enabled = true
         });
-        extistingOrg.SetTwoFactorProviders(providers);
-        return extistingOrg;
+        existingOrg.SetTwoFactorProviders(providers);
+        return existingOrg;
     }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
@@ -122,9 +122,9 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
     [Required]
     public bool? Nfc { get; set; }
 
-    public User ToUser(User extistingUser)
+    public User ToUser(User existingUser)
     {
-        var providers = extistingUser.GetTwoFactorProviders();
+        var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -147,8 +147,8 @@ public class UpdateTwoFactorYubicoOtpRequestModel : SecretVerificationRequestMod
             },
             Enabled = true
         });
-        extistingUser.SetTwoFactorProviders(providers);
-        return extistingUser;
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
     }
 
     private string FormatKey(string keyValue)
@@ -202,12 +202,12 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
     [EmailAddress]
     [StringLength(256)]
     public string Email { get; set; }
-
     public string AuthRequestId { get; set; }
-
-    public User ToUser(User extistingUser)
+    // An auth session token used for obtaining email and as an authN factor for the sending of emailed 2FA OTPs.  
+    public string SsoEmail2FaSessionToken { get; set; }
+    public User ToUser(User existingUser)
     {
-        var providers = extistingUser.GetTwoFactorProviders();
+        var providers = existingUser.GetTwoFactorProviders();
         if (providers == null)
         {
             providers = new Dictionary<TwoFactorProviderType, TwoFactorProvider>();
@@ -222,8 +222,16 @@ public class TwoFactorEmailRequestModel : SecretVerificationRequestModel
             MetaData = new Dictionary<string, object> { ["Email"] = Email.ToLowerInvariant() },
             Enabled = true
         });
-        extistingUser.SetTwoFactorProviders(providers);
-        return extistingUser;
+        existingUser.SetTwoFactorProviders(providers);
+        return existingUser;
+    }
+
+    public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (string.IsNullOrEmpty(Secret) && string.IsNullOrEmpty(AuthRequestAccessCode) && string.IsNullOrEmpty((SsoEmail2FaSessionToken)))
+        {
+            yield return new ValidationResult("MasterPasswordHash, OTP, AccessCode, or SsoEmail2faSessionToken must be supplied.");
+        }
     }
 }
 

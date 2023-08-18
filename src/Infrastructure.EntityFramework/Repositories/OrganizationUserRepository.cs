@@ -22,11 +22,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var availibleCollections = await (
+            var availableCollections = await (
                 from c in dbContext.Collections
                 where c.OrganizationId == organizationUser.OrganizationId
                 select c).ToListAsync();
-            var filteredCollections = collections.Where(c => availibleCollections.Any(a => c.Id == a.Id));
+            var filteredCollections = collections.Where(c => availableCollections.Any(a => c.Id == a.Id));
             var collectionUsers = filteredCollections.Select(y => new CollectionUser
             {
                 CollectionId = y.Id,
@@ -587,4 +587,45 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var providerOrganizations = from pu in dbContext.ProviderUsers
+                                        where pu.UserId == userId
+                                        join po in dbContext.ProviderOrganizations
+                                            on pu.ProviderId equals po.ProviderId
+                                        select po;
+
+            var query = from p in dbContext.Policies
+                        join ou in dbContext.OrganizationUsers
+                            on p.OrganizationId equals ou.OrganizationId
+                        let email = dbContext.Users.Find(userId).Email  // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
+                        where p.Type == policyType &&
+                            (ou.UserId == userId || ou.Email == email)
+                        select new OrganizationUserPolicyDetails
+                        {
+                            OrganizationUserId = ou.Id,
+                            OrganizationId = p.OrganizationId,
+                            PolicyType = p.Type,
+                            PolicyEnabled = p.Enabled,
+                            PolicyData = p.Data,
+                            OrganizationUserType = ou.Type,
+                            OrganizationUserStatus = ou.Status,
+                            OrganizationUserPermissionsData = ou.Permissions,
+                            IsProvider = providerOrganizations.Any(po => po.OrganizationId == p.OrganizationId)
+                        };
+            return await query.ToListAsync();
+        }
+    }
+
+    public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        var query = new OrganizationUserReadOccupiedSmSeatCountByOrganizationIdQuery(organizationId);
+        return await GetCountFromQuery(query);
+    }
+
 }

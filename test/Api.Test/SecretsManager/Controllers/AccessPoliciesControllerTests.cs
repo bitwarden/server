@@ -1,4 +1,5 @@
-﻿using Bit.Api.SecretsManager.Controllers;
+﻿using System.Security.Claims;
+using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.Test.SecretsManager.Enums;
 using Bit.Core.Context;
@@ -14,6 +15,7 @@ using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
+using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
@@ -102,11 +104,13 @@ public class AccessPoliciesControllerTests
         {
             case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data.OrganizationId);
+                sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.NoAccessCheck)
+                    .Returns((true, true));
                 break;
             case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data.OrganizationId);
-                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(default, default)
-                    .ReturnsForAnyArgs(true);
+                sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.User)
+                    .Returns((true, true));
                 break;
         }
 
@@ -129,8 +133,8 @@ public class AccessPoliciesControllerTests
     {
         SetupUserWithoutPermission(sutProvider, data.OrganizationId);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(default, default)
-            .ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+            .Returns((false, false));
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectAccessPoliciesAsync(id));
 
@@ -153,11 +157,13 @@ public class AccessPoliciesControllerTests
         {
             case PermissionType.RunAsAdmin:
                 SetupAdmin(sutProvider, data.OrganizationId);
+                sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.NoAccessCheck)
+                    .Returns((true, true));
                 break;
             case PermissionType.RunAsUserWithPermission:
                 SetupUserWithPermission(sutProvider, data.OrganizationId);
-                sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(default, default)
-                    .ReturnsForAnyArgs(true);
+                sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), AccessClientType.User)
+                    .Returns((true, true));
                 break;
         }
 
@@ -184,8 +190,8 @@ public class AccessPoliciesControllerTests
     {
         SetupUserWithoutPermission(sutProvider, data.OrganizationId);
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(data);
-        sutProvider.GetDependency<IProjectRepository>().UserHasWriteAccessToProject(default, default)
-            .ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
+            .Returns((false, false));
 
         sutProvider.GetDependency<IAccessPolicyRepository>().GetManyByGrantedProjectIdAsync(default, default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
@@ -379,9 +385,7 @@ public class AccessPoliciesControllerTests
         AccessPoliciesCreateRequest request)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(mockProject);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<ICreateAccessPoliciesCommand>().CreateManyAsync(default, default, default)
+        sutProvider.GetDependency<ICreateAccessPoliciesCommand>().CreateManyAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
 
         request = AddRequestsOverMax(request);
@@ -390,7 +394,72 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.CreateProjectAccessPoliciesAsync(id, request));
 
         await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
-            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateProjectAccessPolicies_ProjectDoesNotExist_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        AccessPoliciesCreateRequest request)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateProjectAccessPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateProjectAccessPolicies_DuplicatePolicy_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        Project mockProject,
+        UserProjectAccessPolicy data,
+        AccessPoliciesCreateRequest request)
+    {
+        var dup = new AccessPolicyRequest() { GranteeId = Guid.NewGuid(), Read = true, Write = true };
+        request.UserAccessPolicyRequests = new[] { dup, dup };
+        mockProject.Id = id;
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(mockProject);
+        sutProvider.GetDependency<ICreateAccessPoliciesCommand>().CreateManyAsync(default)
+        .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateProjectAccessPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateProjectAccessPolicies_NoAccess_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        Project mockProject,
+        UserProjectAccessPolicy data,
+        AccessPoliciesCreateRequest request)
+    {
+        mockProject.Id = id;
+        sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(mockProject);
+        var policies = request.ToBaseAccessPoliciesForProject(id, mockProject.OrganizationId);
+        foreach (var policy in policies)
+        {
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), policy,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+        }
+        sutProvider.GetDependency<ICreateAccessPoliciesCommand>().CreateManyAsync(default)
+            .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateProjectAccessPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
     }
 
     [Theory]
@@ -402,16 +471,22 @@ public class AccessPoliciesControllerTests
         UserProjectAccessPolicy data,
         AccessPoliciesCreateRequest request)
     {
+        mockProject.Id = id;
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(mockProject);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<ICreateAccessPoliciesCommand>().CreateManyAsync(default, default, default)
+        var policies = request.ToBaseAccessPoliciesForProject(id, mockProject.OrganizationId);
+        foreach (var policy in policies)
+        {
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), policy,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
+        sutProvider.GetDependency<ICreateAccessPoliciesCommand>().CreateManyAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
 
         await sutProvider.Sut.CreateProjectAccessPoliciesAsync(id, request);
 
         await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().Received(1)
-            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
     }
 
     [Theory]
@@ -424,10 +499,8 @@ public class AccessPoliciesControllerTests
         AccessPoliciesCreateRequest request)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(serviceAccount);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<ICreateAccessPoliciesCommand>()
-            .CreateManyAsync(default, default, default)
+            .CreateManyAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
 
         request = AddRequestsOverMax(request);
@@ -436,7 +509,74 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.CreateServiceAccountAccessPoliciesAsync(id, request));
 
         await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
-            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccountAccessPolicies_ServiceAccountDoesNotExist_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        AccessPoliciesCreateRequest request)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateServiceAccountAccessPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccountAccessPolicies_DuplicatePolicy_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        ServiceAccount serviceAccount,
+        UserServiceAccountAccessPolicy data,
+        AccessPoliciesCreateRequest request)
+    {
+        var dup = new AccessPolicyRequest() { GranteeId = Guid.NewGuid(), Read = true, Write = true };
+        request.UserAccessPolicyRequests = new[] { dup, dup };
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(serviceAccount);
+
+        sutProvider.GetDependency<ICreateAccessPoliciesCommand>()
+            .CreateManyAsync(default)
+            .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateServiceAccountAccessPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccountAccessPolicies_NoAccess_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        ServiceAccount serviceAccount,
+        UserServiceAccountAccessPolicy data,
+        AccessPoliciesCreateRequest request)
+    {
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(serviceAccount);
+        var policies = request.ToBaseAccessPoliciesForServiceAccount(id, serviceAccount.OrganizationId);
+        foreach (var policy in policies)
+        {
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), policy,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+        }
+
+        sutProvider.GetDependency<ICreateAccessPoliciesCommand>()
+            .CreateManyAsync(default)
+            .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateServiceAccountAccessPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
     }
 
     [Theory]
@@ -449,16 +589,22 @@ public class AccessPoliciesControllerTests
         AccessPoliciesCreateRequest request)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(serviceAccount);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var policies = request.ToBaseAccessPoliciesForServiceAccount(id, serviceAccount.OrganizationId);
+        foreach (var policy in policies)
+        {
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), policy,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
+
         sutProvider.GetDependency<ICreateAccessPoliciesCommand>()
-            .CreateManyAsync(default, default, default)
+            .CreateManyAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
 
         await sutProvider.Sut.CreateServiceAccountAccessPoliciesAsync(id, request);
 
         await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().Received(1)
-            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
     }
 
     [Theory]
@@ -471,10 +617,8 @@ public class AccessPoliciesControllerTests
         List<GrantedAccessPolicyRequest> request)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(serviceAccount);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<ICreateAccessPoliciesCommand>()
-            .CreateManyAsync(default, default, default)
+            .CreateManyAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
 
         request = AddRequestsOverMax(request);
@@ -483,7 +627,73 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.CreateServiceAccountGrantedPoliciesAsync(id, request));
 
         await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
-            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccountGrantedPolicies_ServiceAccountDoesNotExist_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        List<GrantedAccessPolicyRequest> request)
+    {
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateServiceAccountGrantedPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccountGrantedPolicies_DuplicatePolicy_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        ServiceAccount serviceAccount,
+        ServiceAccountProjectAccessPolicy data,
+        List<GrantedAccessPolicyRequest> request)
+    {
+        var dup = new GrantedAccessPolicyRequest() { GrantedId = Guid.NewGuid(), Read = true, Write = true };
+        request.Add(dup);
+        request.Add(dup);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(serviceAccount);
+
+        sutProvider.GetDependency<ICreateAccessPoliciesCommand>()
+            .CreateManyAsync(default)
+            .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.CreateServiceAccountGrantedPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void CreateServiceAccountGrantedPolicies_NoAccess_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        ServiceAccount serviceAccount,
+        ServiceAccountProjectAccessPolicy data,
+        List<GrantedAccessPolicyRequest> request)
+    {
+        sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(serviceAccount);
+        sutProvider.GetDependency<ICreateAccessPoliciesCommand>()
+            .CreateManyAsync(default)
+            .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
+        foreach (var policy in request)
+        {
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), policy,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+        }
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.CreateServiceAccountGrantedPoliciesAsync(id, request));
+
+        await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().DidNotReceiveWithAnyArgs()
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
     }
 
     [Theory]
@@ -496,16 +706,42 @@ public class AccessPoliciesControllerTests
         List<GrantedAccessPolicyRequest> request)
     {
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(default).ReturnsForAnyArgs(serviceAccount);
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<ICreateAccessPoliciesCommand>()
-            .CreateManyAsync(default, default, default)
+            .CreateManyAsync(default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { data });
+        foreach (var policy in request)
+        {
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), policy,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
 
         await sutProvider.Sut.CreateServiceAccountGrantedPoliciesAsync(id, request);
 
         await sutProvider.GetDependency<ICreateAccessPoliciesCommand>().Received(1)
-            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void UpdateAccessPolicies_NoAccess_Throws(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        UserProjectAccessPolicy data,
+        AccessPolicyUpdateRequest request)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(id).Returns(data);
+        sutProvider.GetDependency<IUpdateAccessPolicyCommand>().UpdateAsync(default, default, default)
+            .ReturnsForAnyArgs(data);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.UpdateAccessPolicyAsync(id, request));
+
+        await sutProvider.GetDependency<IUpdateAccessPolicyCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateAsync(Arg.Any<Guid>(), Arg.Is(request.Read), Arg.Is(request.Write));
     }
 
     [Theory]
@@ -516,27 +752,48 @@ public class AccessPoliciesControllerTests
         UserProjectAccessPolicy data,
         AccessPolicyUpdateRequest request)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<IUpdateAccessPolicyCommand>().UpdateAsync(default, default, default, default)
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data,
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetByIdAsync(id).Returns(data);
+        sutProvider.GetDependency<IUpdateAccessPolicyCommand>().UpdateAsync(default, default, default)
             .ReturnsForAnyArgs(data);
 
         await sutProvider.Sut.UpdateAccessPolicyAsync(id, request);
 
         await sutProvider.GetDependency<IUpdateAccessPolicyCommand>().Received(1)
-            .UpdateAsync(Arg.Any<Guid>(), Arg.Is(request.Read), Arg.Is(request.Write), Arg.Any<Guid>());
+            .UpdateAsync(Arg.Any<Guid>(), Arg.Is(request.Read), Arg.Is(request.Write));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void DeleteAccessPolicies_NoAccess_Throws(SutProvider<AccessPoliciesController> sutProvider, Guid id)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), new UserProjectAccessPolicy(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+        sutProvider.GetDependency<IDeleteAccessPolicyCommand>().DeleteAsync(default).ReturnsNull();
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.DeleteAccessPolicyAsync(id));
+
+        await sutProvider.GetDependency<IDeleteAccessPolicyCommand>().DidNotReceiveWithAnyArgs()
+            .DeleteAsync(Arg.Any<Guid>());
     }
 
     [Theory]
     [BitAutoData]
     public async void DeleteAccessPolicies_Success(SutProvider<AccessPoliciesController> sutProvider, Guid id)
     {
-        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<IDeleteAccessPolicyCommand>().DeleteAsync(default, default).ReturnsNull();
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), new UserProjectAccessPolicy(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IDeleteAccessPolicyCommand>().DeleteAsync(default).ReturnsNull();
 
         await sutProvider.Sut.DeleteAccessPolicyAsync(id);
 
         await sutProvider.GetDependency<IDeleteAccessPolicyCommand>().Received(1)
-            .DeleteAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
+            .DeleteAsync(Arg.Any<Guid>());
     }
 
     [Theory]

@@ -17,7 +17,8 @@ SELECT
     SU.[ExternalId] SsoExternalId,
     OU.[Permissions],
     OU.[ResetPasswordKey],
-    U.[UsesKeyConnector]
+    U.[UsesKeyConnector],
+    CASE WHEN U.[MasterPassword] IS NOT NULL THEN 1 ELSE 0 END AS HasMasterPassword
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

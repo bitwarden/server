@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -7,18 +9,20 @@ using Bit.Core.IdentityServer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
+
+#nullable enable
 
 namespace Bit.Identity.IdentityServer;
 
 public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenRequestValidationContext>,
     ICustomTokenRequestValidator
 {
-    private UserManager<User> _userManager;
-    private readonly ISsoConfigRepository _ssoConfigRepository;
+    private readonly UserManager<User> _userManager;
 
     public CustomTokenRequestValidator(
         UserManager<User> userManager,
@@ -34,17 +38,17 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
         ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
-        IPolicyService policyService)
+        IPolicyService policyService,
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
+        IFeatureService featureService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
-              organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, policyService)
+            organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+            applicationCacheService, mailService, logger, currentContext, globalSettings,
+            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository)
     {
         _userManager = userManager;
-        _ssoConfigRepository = ssoConfigRepository;
     }
 
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
@@ -73,15 +77,17 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         CustomValidatorRequestContext validatorContext)
     {
         var email = context.Result.ValidatedRequest.Subject?.GetDisplayName()
-            ?? context.Result.ValidatedRequest.ClientClaims?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
+                    ?? context.Result.ValidatedRequest.ClientClaims
+                        ?.FirstOrDefault(claim => claim.Type == JwtClaimTypes.Email)?.Value;
         if (!string.IsNullOrWhiteSpace(email))
         {
             validatorContext.User = await _userManager.FindByEmailAsync(email);
         }
+
         return validatorContext.User != null;
     }
 
-    protected override async Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
+    protected override Task SetSuccessResult(CustomTokenRequestValidationContext context, User user,
         List<Claim> claims, Dictionary<string, object> customResponse)
     {
         context.Result.CustomResponse = customResponse;
@@ -97,7 +103,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         // KeyConnector responses below
@@ -111,25 +117,31 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
                 context.Result.CustomResponse["ApiUseKeyConnector"] = true;
                 context.Result.CustomResponse["ResetMasterPassword"] = false;
             }
-            return;
+
+            return Task.CompletedTask;
         }
 
-        // SSO login
-        var organizationClaim = context.Result.ValidatedRequest.Subject?.FindFirst(c => c.Type == "organizationId");
-        if (organizationClaim?.Value != null)
+        // Key connector data should have already been set in the decryption options
+        // for backwards compatibility we set them this way too. We can eventually get rid of this
+        // when all clients don't read them from the existing locations.
+        if (!context.Result.CustomResponse.TryGetValue("UserDecryptionOptions", out var userDecryptionOptionsObj) ||
+            userDecryptionOptionsObj is not UserDecryptionOptions userDecryptionOptions)
         {
-            var organizationId = new Guid(organizationClaim.Value);
-
-            var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(organizationId);
-            var ssoConfigData = ssoConfig.GetData();
-
-            if (ssoConfigData is { KeyConnectorEnabled: true } && !string.IsNullOrEmpty(ssoConfigData.KeyConnectorUrl))
-            {
-                context.Result.CustomResponse["KeyConnectorUrl"] = ssoConfigData.KeyConnectorUrl;
-                // Prevent clients redirecting to set-password
-                context.Result.CustomResponse["ResetMasterPassword"] = false;
-            }
+            return Task.CompletedTask;
         }
+
+        if (userDecryptionOptions is { KeyConnectorOption: { } })
+        {
+            context.Result.CustomResponse["KeyConnectorUrl"] = userDecryptionOptions.KeyConnectorOption.KeyConnectorUrl;
+            context.Result.CustomResponse["ResetMasterPassword"] = false;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected override ClaimsPrincipal GetSubject(CustomTokenRequestValidationContext context)
+    {
+        return context.Result.ValidatedRequest.Subject;
     }
 
     protected override void SetTwoFactorResult(CustomTokenRequestValidationContext context,

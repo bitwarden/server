@@ -46,6 +46,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IApplicationCacheService _applicationCacheService;
     private readonly IPaymentService _paymentService;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyService _policyService;
     private readonly IDataProtector _organizationServiceDataProtector;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IFido2 _fido2;
@@ -77,6 +78,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IDataProtectionProvider dataProtectionProvider,
         IPaymentService paymentService,
         IPolicyRepository policyRepository,
+        IPolicyService policyService,
         IReferenceEventService referenceEventService,
         IFido2 fido2,
         ICurrentContext currentContext,
@@ -110,6 +112,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _applicationCacheService = applicationCacheService;
         _paymentService = paymentService;
         _policyRepository = policyRepository;
+        _policyService = policyService;
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
         _referenceEventService = referenceEventService;
@@ -250,7 +253,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         await _userRepository.DeleteAsync(user);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.DeleteAccount, user));
+            new ReferenceEvent(ReferenceEventType.DeleteAccount, user, _currentContext));
         await _pushService.PushLogOutAsync(user.Id);
         return IdentityResult.Success;
     }
@@ -321,7 +324,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -333,7 +336,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result == IdentityResult.Success)
         {
             await _mailService.SendWelcomeEmailAsync(user);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user));
+            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.Signup, user, _currentContext));
         }
 
         return result;
@@ -889,7 +892,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 await _userRepository.ReplaceAsync(user);
             }
 
-            await _pushService.PushLogOutAsync(user.Id);
+            await _pushService.PushLogOutAsync(user.Id, excludeCurrentContextFromPush: true);
             return IdentityResult.Success;
         }
 
@@ -1046,7 +1049,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             await SaveUserAsync(user);
             await _pushService.PushSyncVaultAsync(user.Id);
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.UpgradePlan, user)
+                new ReferenceEvent(ReferenceEventType.UpgradePlan, user, _currentContext)
                 {
                     Storage = user.MaxStorageGb,
                     PlanName = PremiumPlanId,
@@ -1135,7 +1138,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var secret = await BillingHelpers.AdjustStorageAsync(_paymentService, user, storageAdjustmentGb,
             StoragePlanId);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.AdjustStorage, user)
+            new ReferenceEvent(ReferenceEventType.AdjustStorage, user, _currentContext)
             {
                 Storage = storageAdjustmentGb,
                 PlanName = StoragePlanId,
@@ -1168,7 +1171,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         }
         await _paymentService.CancelSubscriptionAsync(user, eop, accountDelete);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.CancelSubscription, user)
+            new ReferenceEvent(ReferenceEventType.CancelSubscription, user, _currentContext)
             {
                 EndOfPeriod = eop,
             });
@@ -1178,7 +1181,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     {
         await _paymentService.ReinstateSubscriptionAsync(user);
         await _referenceEventService.RaiseEventAsync(
-            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user));
+            new ReferenceEvent(ReferenceEventType.ReinstateSubscription, user, _currentContext));
     }
 
     public async Task EnablePremiumAsync(Guid userId, DateTime? expirationDate)
@@ -1414,8 +1417,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user, IOrganizationService organizationService)
     {
-        var twoFactorPolicies = await _policyRepository.GetManyByTypeApplicableToUserIdAsync(user.Id,
-            PolicyType.TwoFactorAuthentication);
+        var twoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication);
 
         var removeOrgUserTasks = twoFactorPolicies.Select(async p =>
         {
@@ -1434,7 +1436,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         if (result.Succeeded)
         {
             await _referenceEventService.RaiseEventAsync(
-                new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user));
+                new ReferenceEvent(ReferenceEventType.ConfirmEmailAddress, user, _currentContext));
         }
         return result;
     }
@@ -1453,26 +1455,35 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("No user email.");
         }
 
-        if (!user.UsesKeyConnector)
-        {
-            throw new BadRequestException("Not using Key Connector.");
-        }
-
         var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
             "otp:" + user.Email);
         await _mailService.SendOTPEmailAsync(user.Email, token);
     }
 
-    public Task<bool> VerifyOTPAsync(User user, string token)
+    public async Task<bool> VerifyOTPAsync(User user, string token)
     {
-        return base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+        return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
             "otp:" + user.Email, token);
     }
 
     public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        return user.UsesKeyConnector
-            ? await VerifyOTPAsync(user, secret)
-            : await CheckPasswordAsync(user, secret);
+        bool isVerified;
+        if (user.HasMasterPassword())
+        {
+            // If the user has a master password the secret is most likely going to be a hash
+            // of their password, but in certain scenarios, like when the user has logged into their
+            // device without a password (trusted device encryption) but the account
+            // does still have a password we will allow the use of OTP.
+            isVerified = await CheckPasswordAsync(user, secret) ||
+                await VerifyOTPAsync(user, secret);
+        }
+        else
+        {
+            // If they don't have a password at all they can only do OTP
+            isVerified = await VerifyOTPAsync(user, secret);
+        }
+
+        return isVerified;
     }
 }

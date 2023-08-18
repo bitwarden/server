@@ -5,8 +5,9 @@
     <MvcRazorCompileOnPublish>false</MvcRazorCompileOnPublish>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Icons' " />
   <ItemGroup>
-    <PackageReference Include="AngleSharp" Version="0.16.1" />
+    <PackageReference Include="AngleSharp" Version="1.0.4" />
   </ItemGroup>
 
   <ItemGroup>
