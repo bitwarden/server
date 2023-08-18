@@ -5,7 +5,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
@@ -107,7 +106,7 @@ public class ServiceAccountsControllerTests
             .CreateAsync(Arg.Is<ServiceAccount>(sa => sa.Name == data.Name), Arg.Any<Guid>());
 
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
-            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
+            .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<int>());
     }
 
     [Theory]
@@ -125,12 +124,7 @@ public class ServiceAccountsControllerTests
             .CreateAsync(Arg.Is<ServiceAccount>(sa => sa.Name == data.Name), Arg.Any<Guid>());
 
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
-            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
-                update.Autoscaling == true &&
-                update.SmServiceAccounts == organization.SmServiceAccounts + newSlotsRequired &&
-                !update.SmSeatsChanged &&
-                !update.MaxAutoscaleSmSeatsChanged &&
-                !update.MaxAutoscaleSmServiceAccountsChanged));
+            .AdjustServiceAccountsAsync(Arg.Is(organization), Arg.Is(newSlotsRequired));
     }
 
     [Theory]
