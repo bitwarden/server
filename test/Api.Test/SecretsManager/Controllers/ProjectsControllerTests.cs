@@ -125,7 +125,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Create_OverProjectLimit_Throws(SutProvider<ProjectsController> sutProvider,
+    public async void Create_AtMaxProjects_Throws(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
         sutProvider.GetDependency<IAuthorizationService>()

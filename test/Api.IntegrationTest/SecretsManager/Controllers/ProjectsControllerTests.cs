@@ -119,7 +119,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Theory]
     [InlineData(PermissionType.RunAsAdmin)]
     [InlineData(PermissionType.RunAsUserWithPermission)]
-    public async Task Create_OverFreeLimit_Throws(PermissionType permissionType)
+    public async Task Create_AtMaxProjects_BadRequest(PermissionType permissionType)
     {
         var (_, organization) = await SetupProjectsWithAccessAsync(permissionType, 3);
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
