@@ -252,7 +252,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.SmSeats = 9;
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
             SmSeats = 10,
@@ -397,7 +396,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.SmServiceAccounts = 250;
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
             SmServiceAccounts = 300,

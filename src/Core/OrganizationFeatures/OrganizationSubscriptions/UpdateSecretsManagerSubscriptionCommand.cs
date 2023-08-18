@@ -312,7 +312,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             return;
         }
 
-        if (organization.SmSeats.HasValue && update.MaxAutoscaleSmSeats.Value < organization.SmSeats.Value)
+        if (update.SmSeats.HasValue && update.MaxAutoscaleSmSeats.Value < update.SmSeats.Value)
         {
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
@@ -342,7 +342,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             return;
         }
 
-        if (organization.SmServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value < organization.SmServiceAccounts.Value)
+        if (update.SmServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value < update.SmServiceAccounts.Value)
         {
             throw new BadRequestException(
                 $"Cannot set max Service Accounts autoscaling below current Service Accounts count.");
