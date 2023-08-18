@@ -22,9 +22,9 @@ public static class Saml2OptionsExtensions
             return false;
         }
 
-        if (context.Request.Query["scheme"].FirstOrDefault() == scheme)
+        if (context.Request.Query["scheme"].FirstOrDefault() != scheme)
         {
-            return true;
+            return false;
         }
 
         // We need to pull out and parse the response or request SAML envelope
