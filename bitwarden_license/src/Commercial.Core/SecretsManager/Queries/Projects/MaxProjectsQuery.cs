@@ -7,12 +7,12 @@ using Bit.Core.Utilities;
 
 namespace Bit.Commercial.Core.SecretsManager.Queries.Projects;
 
-public class ProjectLimitQuery : IProjectLimitQuery
+public class MaxProjectsQuery : IMaxProjectsQuery
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProjectRepository _projectRepository;
 
-    public ProjectLimitQuery(
+    public MaxProjectsQuery(
         IOrganizationRepository organizationRepository,
         IProjectRepository projectRepository)
     {
@@ -20,7 +20,7 @@ public class ProjectLimitQuery : IProjectLimitQuery
         _projectRepository = projectRepository;
     }
 
-    public async Task<(short? limit, bool? overLimit)> GetByOrgIdAsync(Guid organizationId)
+    public async Task<(short? max, bool? atMax)> GetByOrgIdAsync(Guid organizationId)
     {
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)

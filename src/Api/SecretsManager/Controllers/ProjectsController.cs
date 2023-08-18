@@ -23,7 +23,7 @@ public class ProjectsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IProjectRepository _projectRepository;
-    private readonly IProjectLimitQuery _projectLimitQuery;
+    private readonly IMaxProjectsQuery _maxProjectsQuery;
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
@@ -33,7 +33,7 @@ public class ProjectsController : Controller
         ICurrentContext currentContext,
         IUserService userService,
         IProjectRepository projectRepository,
-        IProjectLimitQuery projectLimitQuery,
+        IMaxProjectsQuery maxProjectsQuery,
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
         IDeleteProjectCommand deleteProjectCommand,
@@ -42,7 +42,7 @@ public class ProjectsController : Controller
         _currentContext = currentContext;
         _userService = userService;
         _projectRepository = projectRepository;
-        _projectLimitQuery = projectLimitQuery;
+        _maxProjectsQuery = maxProjectsQuery;
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
         _deleteProjectCommand = deleteProjectCommand;
@@ -79,10 +79,10 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        var (limit, overLimit) = await _projectLimitQuery.GetByOrgIdAsync(organizationId);
-        if (overLimit != null && overLimit.Value)
+        var (max, atMax) = await _maxProjectsQuery.GetByOrgIdAsync(organizationId);
+        if (atMax != null && atMax.Value)
         {
-            throw new BadRequestException($"You have reached the maximum number of projects ({limit}) for this plan.");
+            throw new BadRequestException($"You have reached the maximum number of projects ({max}) for this plan.");
         }
 
         var userId = _userService.GetProperUserId(User).Value;

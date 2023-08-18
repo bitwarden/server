@@ -13,11 +13,11 @@ using Xunit;
 namespace Bit.Commercial.Core.Test.SecretsManager.Queries.Projects;
 
 [SutProviderCustomize]
-public class ProjectLimitQueryTests
+public class MaxProjectsQueryTests
 {
     [Theory]
     [BitAutoData]
-    public async Task GetByOrgIdAsync_OrganizationIsNull_ThrowsNotFound(SutProvider<ProjectLimitQuery> sutProvider,
+    public async Task GetByOrgIdAsync_OrganizationIsNull_ThrowsNotFound(SutProvider<MaxProjectsQuery> sutProvider,
         Guid organizationId)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(default).ReturnsNull();
@@ -37,7 +37,7 @@ public class ProjectLimitQueryTests
     [BitAutoData(PlanType.Custom)]
     [BitAutoData(PlanType.FamiliesAnnually)]
     public async Task GetByOrgIdAsync_SmPlanIsNull_ThrowsBadRequest(PlanType planType,
-        SutProvider<ProjectLimitQuery> sutProvider, Organization organization)
+        SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
         organization.PlanType = planType;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -55,7 +55,7 @@ public class ProjectLimitQueryTests
     [BitAutoData(PlanType.EnterpriseMonthly)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     public async Task GetByOrgIdAsync_SmNoneFreePlans_ReturnsNull(PlanType planType,
-        SutProvider<ProjectLimitQuery> sutProvider, Organization organization)
+        SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
         organization.PlanType = planType;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -76,20 +76,20 @@ public class ProjectLimitQueryTests
     [BitAutoData(PlanType.Free, 3, true)]
     [BitAutoData(PlanType.Free, 4, true)]
     [BitAutoData(PlanType.Free, 40, true)]
-    public async Task GetByOrgIdAsync_SmFreePlan_Success(PlanType planType, int projects, bool shouldBeOverLimit,
-        SutProvider<ProjectLimitQuery> sutProvider, Organization organization)
+    public async Task GetByOrgIdAsync_SmFreePlan_Success(PlanType planType, int projects, bool shouldBeAtMax,
+        SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
         organization.PlanType = planType;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<IProjectRepository>().GetProjectCountByOrganizationIdAsync(organization.Id)
             .Returns(projects);
 
-        var (limit, overLimit) = await sutProvider.Sut.GetByOrgIdAsync(organization.Id);
+        var (max, atMax) = await sutProvider.Sut.GetByOrgIdAsync(organization.Id);
 
-        Assert.NotNull(limit);
-        Assert.NotNull(overLimit);
-        Assert.Equal(3, limit.Value);
-        Assert.Equal(shouldBeOverLimit, overLimit);
+        Assert.NotNull(max);
+        Assert.NotNull(atMax);
+        Assert.Equal(3, max.Value);
+        Assert.Equal(shouldBeAtMax, atMax);
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
             .GetProjectCountByOrganizationIdAsync(organization.Id);

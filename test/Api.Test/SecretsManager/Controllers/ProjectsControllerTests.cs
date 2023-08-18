@@ -132,7 +132,7 @@ public class ProjectsControllerTests
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToProject(orgId),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<IProjectLimitQuery>().GetByOrgIdAsync(orgId).Returns(((short)3, true));
+        sutProvider.GetDependency<IMaxProjectsQuery>().GetByOrgIdAsync(orgId).Returns(((short)3, true));
 
 
         await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(orgId, data));
