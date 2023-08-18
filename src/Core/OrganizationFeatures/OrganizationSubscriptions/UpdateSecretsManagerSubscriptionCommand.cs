@@ -50,7 +50,9 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     {
         await ValidateUpdate(update);
 
-        await FinalizeSubscriptionAdjustmentAsync(update.Organization, update.Plan, update);
+        await FinalizeSubscriptionAdjustmentAsync(update);
+
+
 
         if (update.SmSeatAutoscaleLimitReached)
         {
@@ -63,24 +65,24 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
     }
 
-    private async Task FinalizeSubscriptionAdjustmentAsync(Organization organization,
-        Plan plan, SecretsManagerSubscriptionUpdate update)
+    private async Task FinalizeSubscriptionAdjustmentAsync(SecretsManagerSubscriptionUpdate update)
     {
         if (update.SmSeatsChanged)
         {
-            await _paymentService.AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase, update.ProrationDate);
+            await _paymentService.AdjustSeatsAsync(update.Organization, update.Plan, update.SmSeatsExcludingBase, update.ProrationDate);
 
             // TODO: call ReferenceEventService - see AC-1481
         }
 
         if (update.SmServiceAccountsChanged)
         {
-            await _paymentService.AdjustServiceAccountsAsync(organization, plan,
+            await _paymentService.AdjustServiceAccountsAsync(update.Organization, update.Plan,
                 update.SmServiceAccountsExcludingBase, update.ProrationDate);
 
             // TODO: call ReferenceEventService - see AC-1481
         }
 
+        var organization = update.Organization;
         organization.SmSeats = update.SmSeats;
         organization.SmServiceAccounts = update.SmServiceAccounts;
         organization.MaxAutoscaleSmSeats = update.MaxAutoscaleSmSeats;
