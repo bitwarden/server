@@ -130,8 +130,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         organization.PlanType = PlanType.EnterpriseAnnually;
         organization.UseSecretsManager = true;
 
-        var update = new SecretsManagerSubscriptionUpdate(organization, autoscaling);
-        update.AdjustSeats(2);
+        var update = new SecretsManagerSubscriptionUpdate(organization, autoscaling).AdjustSeats(2);
 
         sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
 
@@ -168,8 +167,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     {
         organization.PlanType = planType;
         organization.GatewayCustomerId = null;
-        var update = new SecretsManagerSubscriptionUpdate(organization, false);
-        update.AdjustSeats(1);
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustSeats(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("No payment method found.", exception.Message);
@@ -188,8 +186,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     {
         organization.PlanType = planType;
         organization.GatewaySubscriptionId = null;
-        var update = new SecretsManagerSubscriptionUpdate(organization, false);
-        update.AdjustSeats(1);
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustSeats(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("No subscription found.", exception.Message);
@@ -228,8 +225,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var expectedSmServiceAccounts = organizationServiceAccounts + smServiceAccountsAdjustment;
         var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault();
 
-        var update = new SecretsManagerSubscriptionUpdate(organization, false);
-        update.AdjustServiceAccounts(10);
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(10);
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
@@ -276,8 +272,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.SmSeats = null;
-        var update = new SecretsManagerSubscriptionUpdate(organization, false);
-        update.AdjustSeats(1);
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustSeats(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.UpdateSubscriptionAsync(update));
@@ -296,8 +291,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         organization.PlanType = planType;
         organization.UseSecretsManager = true;
 
-        var update = new SecretsManagerSubscriptionUpdate(organization, true);
-        update.AdjustSeats(-2);
+        var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustSeats(-2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("Cannot use autoscaling to subtract seats.", exception.Message);
@@ -312,8 +306,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.PlanType = planType;
-        var update = new SecretsManagerSubscriptionUpdate(organization, false);
-        update.AdjustSeats(1);
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustSeats(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("You have reached the maximum number of Secrets Manager seats (2) for this plan",
@@ -333,8 +326,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         organization.SmSeats = 9;
         organization.MaxAutoscaleSmSeats = 10;
 
-        var update = new SecretsManagerSubscriptionUpdate(organization, true);
-        update.AdjustSeats(2);
+        var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustSeats(2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("Secrets Manager seat limit has been reached.", exception.Message);
@@ -425,8 +417,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.SmServiceAccounts = null;
-        var update = new SecretsManagerSubscriptionUpdate(organization, false);
-        update.AdjustServiceAccounts(1);
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("Organization has no Service Accounts limit, no need to adjust Service Accounts", exception.Message);
@@ -443,8 +434,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         organization.PlanType = planType;
         organization.UseSecretsManager = true;
 
-        var update = new SecretsManagerSubscriptionUpdate(organization, true);
-        update.AdjustServiceAccounts(-2);
+        var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustServiceAccounts(-2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("Cannot use autoscaling to subtract service accounts.", exception.Message);
@@ -459,8 +449,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.PlanType = planType;
-        var update = new SecretsManagerSubscriptionUpdate(organization, false);
-        update.AdjustServiceAccounts(1);
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("You have reached the maximum number of service accounts (3) for this plan",
@@ -480,8 +469,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         organization.SmServiceAccounts = 9;
         organization.MaxAutoscaleSmServiceAccounts = 10;
 
-        var update = new SecretsManagerSubscriptionUpdate(organization, true);
-        update.AdjustServiceAccounts(2);
+        var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustServiceAccounts(2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("Secrets Manager service account limit has been reached.", exception.Message);
