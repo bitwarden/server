@@ -118,10 +118,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(default, default, default);
     }
 
-    #endregion
-
-    #region General validation
-
     [Theory]
     [BitAutoData(false, "Cannot update subscription on a self-hosted instance.")]
     [BitAutoData(true, "Cannot autoscale on a self-hosted instance.")]
