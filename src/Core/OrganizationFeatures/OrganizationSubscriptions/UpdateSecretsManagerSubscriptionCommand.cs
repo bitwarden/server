@@ -104,7 +104,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Error encountered notifying organization owners of Seats limit reached.");
+            _logger.LogError(e, $"Error encountered notifying organization owners of seats limit reached.");
         }
     }
 
@@ -121,7 +121,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
         catch (Exception e)
         {
-            _logger.LogError(e, $"Error encountered notifying organization owners of Service Accounts limit reached.");
+            _logger.LogError(e, $"Error encountered notifying organization owners of service accounts limit reached.");
         }
 
     }
@@ -233,11 +233,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check minimum seats currently in use by the organization
         if (organization.SmSeats.Value > update.SmSeats.Value)
         {
-            var currentSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
-            if (currentSeats > update.SmSeats.Value)
+            var occupiedSeats = await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id);
+            if (occupiedSeats > update.SmSeats.Value)
             {
-                throw new BadRequestException($"Your organization currently has {currentSeats} Secrets Manager seats. " +
-                                              $"Your plan only allows {update.SmSeats} Secrets Manager seats. Remove some Secrets Manager users.");
+                throw new BadRequestException($"{occupiedSeats} users are currently occupying Secrets Manager seats. " +
+                                              "You cannot decrease your subscription below your current occupied seat count.");
             }
         }
     }
@@ -250,7 +250,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check if the organization has unlimited service accounts
         if (organization.SmServiceAccounts == null)
         {
-            throw new BadRequestException("Organization has no Service Accounts limit, no need to adjust Service Accounts");
+            throw new BadRequestException("Organization has no service accounts limit, no need to adjust service accounts");
         }
 
         if (update.Autoscaling && update.SmServiceAccounts.Value < organization.SmServiceAccounts.Value)
@@ -280,13 +280,13 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check minimum service accounts included with plan
         if (plan.BaseServiceAccount.HasValue && plan.BaseServiceAccount.Value > update.SmServiceAccounts.Value)
         {
-            throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} Service Accounts.");
+            throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} service accounts.");
         }
 
         // Check minimum service accounts required by business logic
         if (update.SmServiceAccounts.Value <= 0)
         {
-            throw new BadRequestException("You must have at least 1 Service Account.");
+            throw new BadRequestException("You must have at least 1 service account.");
         }
 
         // Check minimum service accounts currently in use by the organization
@@ -295,8 +295,8 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             var currentServiceAccounts = await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(organization.Id);
             if (currentServiceAccounts > update.SmServiceAccounts)
             {
-                throw new BadRequestException($"Your organization currently has {currentServiceAccounts} Service Accounts. " +
-                                              $"Your plan only allows {update.SmServiceAccounts} Service Accounts. Remove some Service Accounts.");
+                throw new BadRequestException($"Your organization currently has {currentServiceAccounts} service accounts. " +
+                                              $"You cannot decrease your subscription below your current service account usage.");
             }
         }
     }
@@ -345,18 +345,18 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (update.SmServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value < update.SmServiceAccounts.Value)
         {
             throw new BadRequestException(
-                $"Cannot set max Service Accounts autoscaling below current Service Accounts count.");
+                $"Cannot set max service accounts autoscaling below current service accounts count.");
         }
 
         if (!plan.AllowServiceAccountsAutoscale)
         {
-            throw new BadRequestException("Your plan does not allow Service Accounts autoscaling.");
+            throw new BadRequestException("Your plan does not allow service accounts autoscaling.");
         }
 
         if (plan.MaxServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value > plan.MaxServiceAccounts)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a Service Accounts limit of {plan.MaxServiceAccounts}, ",
+                $"Your plan has a service account limit of {plan.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {update.MaxAutoscaleSmServiceAccounts}.",
                 "Reduce your max autoscale count."));
         }
