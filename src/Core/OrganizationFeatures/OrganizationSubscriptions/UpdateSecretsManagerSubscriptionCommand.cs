@@ -306,7 +306,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private void ValidateMaxAutoscaleSmSeatsUpdateAsync(SecretsManagerSubscriptionUpdate update)
     {
-        var organization = update.Organization;
         var plan = update.Plan;
 
         if (!update.MaxAutoscaleSmSeats.HasValue)
@@ -336,7 +335,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
     private void ValidateMaxAutoscaleSmServiceAccountUpdate(SecretsManagerSubscriptionUpdate update)
     {
-        var organization = update.Organization;
         var plan = update.Plan;
 
         if (!update.MaxAutoscaleSmServiceAccounts.HasValue)
