@@ -16,8 +16,7 @@ public class CipherRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_UpdatesUserRevisionDate(
         IUserRepository userRepository,
-        ICipherRepository cipherRepository,
-        ITestDatabaseHelper helper)
+        ICipherRepository cipherRepository)
     {
         var user = await userRepository.CreateAsync(new User
         {
@@ -33,8 +32,6 @@ public class CipherRepositoryTests
             UserId = user.Id,
             Data = "", // TODO: EF does not enforce this as NOT NULL
         });
-
-        helper.ClearTracker();
 
         await cipherRepository.DeleteAsync(cipher);
 
@@ -52,8 +49,7 @@ public class CipherRepositoryTests
         IOrganizationUserRepository organizationUserRepository,
         ICollectionRepository collectionRepository,
         ICipherRepository cipherRepository,
-        ICollectionCipherRepository collectionCipherRepository,
-        ITestDatabaseHelper helper)
+        ICollectionCipherRepository collectionCipherRepository)
     {
         var user = await userRepository.CreateAsync(new User
         {
@@ -62,8 +58,6 @@ public class CipherRepositoryTests
             ApiKey = "TEST",
             SecurityStamp = "stamp",
         });
-
-        helper.ClearTracker();
 
         user = await userRepository.GetByIdAsync(user.Id);
 
@@ -100,8 +94,6 @@ public class CipherRepositoryTests
             },
         });
 
-        helper.ClearTracker();
-
         await Task.Delay(100);
 
         await cipherRepository.CreateAsync(new CipherDetails
@@ -128,8 +120,7 @@ public class CipherRepositoryTests
         ICipherRepository cipherRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IFolderRepository folderRepository,
-        ITestDatabaseHelper helper)
+        IFolderRepository folderRepository)
     {
         // This tests what happens when a cipher is moved into an organizations
         var user = await userRepository.CreateAsync(new User
@@ -170,8 +161,6 @@ public class CipherRepositoryTests
             Name = "FolderName",
             UserId = user.Id,
         });
-
-        helper.ClearTracker();
 
         // Move cipher to organization vault
         await cipherRepository.ReplaceAsync(new CipherDetails
