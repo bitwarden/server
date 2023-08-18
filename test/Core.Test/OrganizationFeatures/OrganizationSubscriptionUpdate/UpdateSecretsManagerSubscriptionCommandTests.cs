@@ -156,6 +156,23 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_OrganizationEnrolledInSmBeta_ThrowsException(
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization)
+    {
+        organization.UseSecretsManager = true;
+        organization.SecretsManagerBeta = true;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+             () => sutProvider.Sut.UpdateSubscriptionAsync(update));
+
+        Assert.Contains("Organization is enrolled in Secrets Manager Beta", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     [BitAutoData(PlanType.TeamsMonthly)]

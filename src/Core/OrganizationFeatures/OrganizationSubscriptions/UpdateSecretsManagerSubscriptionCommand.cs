@@ -52,8 +52,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
 
         await FinalizeSubscriptionAdjustmentAsync(update);
 
-
-
         if (update.SmSeatAutoscaleLimitReached)
         {
             await SendSeatLimitEmailAsync(update.Organization);
@@ -166,6 +164,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (!organization.UseSecretsManager)
         {
             throw new BadRequestException("Organization has no access to Secrets Manager.");
+        }
+
+        if (organization.SecretsManagerBeta)
+        {
+            throw new BadRequestException("Organization is enrolled in Secrets Manager Beta. " +
+                                          "Please contact Customer Success to add Secrets Manager to your subscription.");
         }
 
         if (update.Plan.Product == ProductType.Free)
