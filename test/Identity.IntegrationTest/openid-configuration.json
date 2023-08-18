@@ -4,6 +4,7 @@
   "authorization_endpoint": "http://localhost:33656/connect/authorize",
   "token_endpoint": "http://localhost:33656/connect/token",
   "device_authorization_endpoint": "http://localhost:33656/connect/deviceauthorization",
+  "backchannel_authentication_endpoint": "http://localhost:33656/connect/ciba",
   "scopes_supported": [
     "api",
     "api.push",
@@ -68,5 +69,24 @@
     "plain",
     "S256"
   ],
-  "request_parameter_supported": true
+  "request_parameter_supported": true,
+  "request_object_signing_alg_values_supported": [
+    "RS256",
+    "RS384",
+    "RS512",
+    "PS256",
+    "PS384",
+    "PS512",
+    "ES256",
+    "ES384",
+    "ES512",
+    "HS256",
+    "HS384",
+    "HS512"
+  ],
+  "authorization_response_iss_parameter_supported": true,
+  "backchannel_token_delivery_modes_supported": [
+    "poll"
+  ],
+  "backchannel_user_code_parameter_supported": true
 }
