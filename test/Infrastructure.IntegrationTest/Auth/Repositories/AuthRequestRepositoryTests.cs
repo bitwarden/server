@@ -15,8 +15,7 @@ public class AuthRequestRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task DeleteExpiredAsync_Works(
         IAuthRequestRepository authRequestRepository,
-        IUserRepository userRepository,
-        ITestDatabaseHelper helper)
+        IUserRepository userRepository)
     {
         var user = await userRepository.CreateAsync(new User
         {
@@ -53,8 +52,6 @@ public class AuthRequestRepositoryTests
         // An AdminApproval AuthRequest that was created a week ago but just approved 11 hours ago.
         var notExpiredApprovedAdminApprovalRequest = await authRequestRepository.CreateAsync(
             CreateAuthRequest(user.Id, AuthRequestType.AdminApproval, DateTime.UtcNow.AddDays(7), true, DateTime.UtcNow.AddHours(11)));
-
-        helper.ClearTracker();
 
         var numberOfDeleted = await authRequestRepository.DeleteExpiredAsync(_userRequestExpiration, _adminRequestExpiration, _afterAdminApprovalExpiration);
 
