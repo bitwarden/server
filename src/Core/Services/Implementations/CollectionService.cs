@@ -96,9 +96,9 @@ public class CollectionService : ICollectionService
         await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_Updated);
     }
 
-    public async Task<IEnumerable<Collection>> GetOrganizationCollections(Guid organizationId)
+    public async Task<IEnumerable<Collection>> GetOrganizationCollectionsAsync(Guid organizationId)
     {
-        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.ManageUsers(organizationId) && !await _currentContext.ManageGroups(organizationId) && !await _currentContext.AccessImportExport(organizationId))
+        if (!await _currentContext.ViewAssignedCollections(organizationId) && !await _currentContext.ManageUsers(organizationId) && !await _currentContext.ManageGroups(organizationId) && !await _currentContext.AccessImportExport(organizationId))
         {
             throw new NotFoundException();
         }
