@@ -15,10 +15,12 @@ public class CurrentContentOrganization
         Type = orgUser.Type;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
         AccessSecretsManager = orgUser.AccessSecretsManager && orgUser.UseSecretsManager;
+        LimitCollectionCdOwnerAdmin = orgUser.LimitCollectionCdOwnerAdmin;
     }
 
     public Guid Id { get; set; }
     public OrganizationUserType Type { get; set; }
     public Permissions Permissions { get; set; }
     public bool AccessSecretsManager { get; set; }
+    public bool LimitCollectionCdOwnerAdmin { get; set; }
 }
