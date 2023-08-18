@@ -189,7 +189,7 @@ public class Program
     {
         var vaultConnectionString = Helpers.GetValueFromEnvFile("global",
             "globalSettings__sqlServer__connectionString");
-        var migrator = new DbMigrator(vaultConnectionString);
+        var migrator = new DbMigrator(vaultConnectionString, null);
         migrator.MigrateMsSqlDatabaseWithRetries(true);
     }
 
