@@ -7,6 +7,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -22,6 +23,7 @@ public class ProjectsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IProjectRepository _projectRepository;
+    private readonly IProjectLimitQuery _projectLimitQuery;
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
@@ -31,6 +33,7 @@ public class ProjectsController : Controller
         ICurrentContext currentContext,
         IUserService userService,
         IProjectRepository projectRepository,
+        IProjectLimitQuery projectLimitQuery,
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
         IDeleteProjectCommand deleteProjectCommand,
@@ -39,6 +42,7 @@ public class ProjectsController : Controller
         _currentContext = currentContext;
         _userService = userService;
         _projectRepository = projectRepository;
+        _projectLimitQuery = projectLimitQuery;
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
         _deleteProjectCommand = deleteProjectCommand;
@@ -74,6 +78,13 @@ public class ProjectsController : Controller
         {
             throw new NotFoundException();
         }
+
+        var (limit, overLimit) = await _projectLimitQuery.GetByOrgIdAsync(organizationId);
+        if (overLimit != null && overLimit.Value)
+        {
+            throw new BadRequestException($"You have reached the maximum number of projects ({limit}) for this plan.");
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createProjectCommand.CreateAsync(project, userId, _currentContext.ClientType);
 
