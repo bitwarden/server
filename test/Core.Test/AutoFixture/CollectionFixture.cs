@@ -1,4 +1,5 @@
 ﻿using AutoFixture;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -13,18 +14,21 @@ public class CollectionCustomization : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        var orgId = Guid.NewGuid();
+        var orgIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+
+        fixture.Customize<CurrentContentOrganization>(composer => composer
+            .WithValueFromList(o => o.Id, orgIds));
 
         fixture.Customize<OrganizationUser>(composer => composer
-            .With(o => o.OrganizationId, orgId)
+            .WithValueFromList(o => o.OrganizationId, orgIds)
             .WithGuidFromSeed(o => o.Id, _userIdSeed));
 
         fixture.Customize<Collection>(composer => composer
-            .With(c => c.OrganizationId, orgId)
+            .WithValueFromList(o => o.OrganizationId, orgIds)
             .WithGuidFromSeed(c => c.Id, _collectionIdSeed));
 
         fixture.Customize<CollectionDetails>(composer => composer
-            .With(cd => cd.OrganizationId, orgId)
+            .WithValueFromList(o => o.OrganizationId, orgIds)
             .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed));
 
         fixture.Customize<CollectionUser>(c => c
@@ -32,7 +36,7 @@ public class CollectionCustomization : ICustomization
             .WithGuidFromSeed(cu => cu.CollectionId, _collectionIdSeed));
 
         fixture.Customize<Group>(composer => composer
-            .With(o => o.OrganizationId, orgId)
+            .WithValueFromList(o => o.OrganizationId, orgIds)
             .WithGuidFromSeed(o => o.Id, _groupIdSeed));
 
         fixture.Customize<CollectionGroup>(c => c

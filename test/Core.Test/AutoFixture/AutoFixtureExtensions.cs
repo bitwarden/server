@@ -27,4 +27,28 @@ public static class AutoFixtureExtensions
             return new Guid(bytes);
         });
     }
+
+    /// <summary>
+    /// Registers that a writable property should be assigned a value from the given list.
+    /// </summary>
+    /// <remarks>
+    /// The value will be assigned in the order that the list is enumerated. Values will wrap around to the beginning
+    /// should the end of the list be reached.
+    /// </remarks>
+    /// <param name="composer"></param>
+    /// <param name="propertyPicker"></param>
+    /// <param name="values"></param>
+    public static IPostprocessComposer<T> WithValueFromList<T, TValue>(
+        this IPostprocessComposer<T> composer,
+        Expression<Func<T, TValue>> propertyPicker,
+        ICollection<TValue> values)
+    {
+        var index = 0;
+        return composer.With(propertyPicker, () =>
+        {
+            var value = values.ElementAt(index);
+            index = (index + 1) % values.Count;
+            return value;
+        });
+    }
 }
