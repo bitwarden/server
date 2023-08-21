@@ -1856,6 +1856,34 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+    }
+
+    [Theory]
+    [EphemeralDataProtectionAutoData]
+    public async Task AcceptUserAsync_WithVerifyEmailTrue_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
+        User user, SutProvider<OrganizationService> sutProvider)
+    {
+        user.Email = organizationUser.Email;
+
+        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("OrganizationServiceDataProtector");
+        // Token matching the format used in OrganizationService.InviteUserAsync
+        var token = dataProtector.Protect(
+            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+        var userService = Substitute.For<IUserService>();
+
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService, verifyEmail: true);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
     }

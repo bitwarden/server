@@ -216,7 +216,7 @@ public class OrganizationUsersController : Controller
             throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
         }
 
-        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService, verifyEmail: true);
 
         if (useMasterPasswordPolicy)
         {
