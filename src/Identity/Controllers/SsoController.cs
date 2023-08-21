@@ -14,7 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
 
-// TODO: 2022-01-12, Remove account alias
+// TODO: 2023-10-16, Remove account alias (https://bitwarden.atlassian.net/browse/PM-1247)
 [Route("account/[action]")]
 [Route("sso/[action]")]
 public class SsoController : Controller
