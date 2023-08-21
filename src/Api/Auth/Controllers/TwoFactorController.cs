@@ -236,7 +236,7 @@ public class TwoFactorController : Controller
     [HttpPost("get-webauthn")]
     public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, false);
         var response = new TwoFactorWebAuthnResponseModel(user);
         return response;
     }
