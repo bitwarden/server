@@ -125,9 +125,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.UseSecretsManager = true;
-
         var update = new SecretsManagerSubscriptionUpdate(organization, autoscaling);
         update.AdjustSeats(2);
 
@@ -281,15 +278,12 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData]
     public async Task UpdateSubscriptionAsync_SmSeatAutoscaling_Subtracting_ThrowsBadRequestException(
         PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.PlanType = planType;
-        organization.UseSecretsManager = true;
-
         var update = new SecretsManagerSubscriptionUpdate(organization, true);
         update.AdjustSeats(-2);
 
@@ -316,14 +310,12 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData]
     public async Task SmSeatAutoscaling_MaxLimitReached_ThrowsBadRequestException(
         PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.PlanType = planType;
-        organization.UseSecretsManager = true;
         organization.SmSeats = 9;
         organization.MaxAutoscaleSmSeats = 10;
 
@@ -424,15 +416,12 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData]
     public async Task UpdateSubscriptionAsync_ServiceAccountAutoscaling_Subtracting_ThrowsBadRequestException(
         PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.PlanType = planType;
-        organization.UseSecretsManager = true;
-
         var update = new SecretsManagerSubscriptionUpdate(organization, true);
         update.AdjustServiceAccounts(-2);
 
@@ -459,14 +448,12 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData]
     public async Task ServiceAccountAutoscaling_MaxLimitReached_ThrowsBadRequestException(
         PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.PlanType = planType;
-        organization.UseSecretsManager = true;
         organization.SmServiceAccounts = 9;
         organization.MaxAutoscaleSmServiceAccounts = 10;
 
