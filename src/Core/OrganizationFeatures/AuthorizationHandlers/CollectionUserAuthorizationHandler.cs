@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 
@@ -30,98 +31,31 @@ public class CollectionUserAuthorizationHandler : BulkAuthorizationHandler<Colle
             case not null when requirement == CollectionUserOperation.Delete:
                 await CanDeleteAsync(context, requirement, resources);
                 break;
-            case not null when requirement.Name == nameof(CollectionUserOperation.CreateForNewCollection):
-                await CanCreateForNewCollectionAsync(context, requirement, resources);
-                break;
         }
     }
 
     /// <summary>
     /// Ensure the acting user can create the requested <see cref="CollectionUser"/> resource(s).
     /// </summary>
-    /// <remarks>
-    /// Checks that the following are all true:
-    /// - The target collection(s) exists 
-    /// - The acting user is an owner/admin AND the collection management setting is enabled
-    ///   OR
-    ///   The target collection(s) is manageable by the acting user. 
-    /// - The target user(s) exists and belongs to the same organization as the target collection
-    /// </remarks>
     private async Task CanCreateAsync(AuthorizationHandlerContext context,
         CollectionUserOperationRequirement requirement, ICollection<CollectionUser> resource)
     {
-        if (!_currentContext.UserId.HasValue)
-        {
-            context.Fail();
-            return;
-        }
-
-        var distinctTargetCollectionIds = resource.Select(c => c.CollectionId).Distinct().ToList();
-
-        // List of collections the user is performing the operation on
-        var targetCollections = await _collectionRepository.GetManyByManyIdsAsync(distinctTargetCollectionIds);
-
-        // A target collection does not exist, fail the requirement
-        if (targetCollections.Count != distinctTargetCollectionIds.Count)
-        {
-            context.Fail();
-            return;
-        }
-
-        // TODO: Add check for future organization Collection Management setting here and skip the next check if it's enabled
-
-        // List of collections the user is allowed to manage
-        var manageableCollections = (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value)).Where(c => c.Manage).ToList();
-
-        // Any target collection is not in the list of manageable collections, fail the requirement
-        if (targetCollections.Any(tc => !manageableCollections.Exists(c => c.Id == tc.Id)))
-        {
-            context.Fail();
-            return;
-        }
-
-        var distinctTargetUserIds = resource.Select(c => c.OrganizationUserId).Distinct().ToList();
-
-        // List of users the user is performing the operation on
-        var targetUsers = await _organizationUserRepository.GetManyAsync(distinctTargetUserIds);
-
-        // A target user does not exist, fail the requirement
-        if (targetUsers.Count != distinctTargetUserIds.Count)
-        {
-            context.Fail();
-            return;
-        }
-
-        foreach (var targetUser in targetUsers)
-        {
-            var targetCollectionsForUser = from c in targetCollections
-                                           join cu in resource on c.Id equals cu.CollectionId
-                                           where cu.OrganizationUserId == targetUser.Id
-                                           select c;
-
-            // Target user is not in the same org as a collection they're being assigned to, fail the requirement
-            if (targetCollectionsForUser.Any(tc => tc.OrganizationId != targetUser.OrganizationId))
-            {
-                context.Fail();
-                return;
-            }
-        }
-
-        context.Succeed(requirement);
+        await CanManageCollectionAccessAsync(context, requirement, resource);
     }
 
     /// <summary>
     /// Ensure the acting user can delete the requested <see cref="CollectionUser"/> resource(s).
     /// </summary>
-    /// <remarks>
-    /// Checks that the following are all true:
-    /// - The target collection(s) exists 
-    /// - The acting user is an owner/admin AND the collection management setting is enabled
-    ///   OR
-    ///   The target collection(s) is manageable by the acting user. 
-    /// </remarks>
     private async Task CanDeleteAsync(AuthorizationHandlerContext context,
         CollectionUserOperationRequirement requirement, ICollection<CollectionUser> resource)
+    {
+        await CanManageCollectionAccessAsync(context, requirement, resource);
+    }
+
+    /// <summary>
+    /// Ensures the acting user is allowed to manage access permissions for the target collections.
+    /// </summary>
+    private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context, CollectionUserOperationRequirement requirement, ICollection<CollectionUser> resource)
     {
         if (!_currentContext.UserId.HasValue)
         {
@@ -141,65 +75,56 @@ public class CollectionUserAuthorizationHandler : BulkAuthorizationHandler<Colle
             return;
         }
 
-        // TODO: Add check for future organization Collection Management setting here and skip the next check if it's enabled
+        var userOgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, _currentContext.UserId.Value);
+        var distinctTargetOrganizationIds = targetCollections.Select(tc => tc.OrganizationId).Distinct().ToList();
+        var restrictedOrganizations = new List<CurrentContentOrganization>();
 
-        // List of collections the user is allowed to manage
-        var manageableCollections = (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value)).Where(c => c.Manage).ToList();
-
-        // Any target collection is not in the list of manageable collections, fail the requirement
-        if (targetCollections.Any(tc => !manageableCollections.Exists(c => c.Id == tc.Id)))
+        foreach (var orgId in distinctTargetOrganizationIds)
         {
-            context.Fail();
+            var org = userOgs.FirstOrDefault(o => orgId == o.Id);
+
+            // Acting user is not a member of the target organization, fail
+            if (org == null)
+            {
+                context.Fail();
+                return;
+            }
+
+            // Owner/Admins or users with EditAnyCollection permission can always manage collection access
+            if (
+                org.Permissions.EditAnyCollection ||
+                org.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+            {
+                continue;
+            }
+
+            restrictedOrganizations.Add(org);
+        }
+
+        // All target collections belong to organizations the acting user is allowed to manage collection access, succeed
+        if (restrictedOrganizations.Count == 0)
+        {
+            context.Succeed(requirement);
             return;
         }
 
-        context.Succeed(requirement);
-    }
+        // List of collections the acting user is allowed to manage
+        var manageableCollections =
+            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value))
+            .Where(c => c.Manage).ToList();
 
-    /// <summary>
-    /// Ensure the acting user can created the requested <see cref="CollectionUser"/> resource(s) for the
-    /// specified collection (that has not be created in the database yet).
-    /// </summary>
-    /// <remarks>
-    /// Checks that the following are all true:
-    /// - The target collection is provided in the requirement
-    /// - All collection users are assigned to the target collection in the requirement
-    /// - The target users exist and belong to the same organization as the target collection
-    /// </remarks>
-    private async Task CanCreateForNewCollectionAsync(AuthorizationHandlerContext context,
-        CollectionUserOperationRequirement requirement, ICollection<CollectionUser> resource)
-    {
-        // Without the target collection, we can't check anything else
-        if (requirement.Collection == null)
+        foreach (var org in restrictedOrganizations)
         {
-            context.Fail();
-            return;
-        }
-
-        // All collection users must be assigned to the target collection in the requirement, otherwise fail
-        if (resource.Any(cu => cu.CollectionId != requirement.Collection.Id))
-        {
-            context.Fail();
-            return;
-        }
-
-        var distinctTargetUserIds = resource.Select(c => c.OrganizationUserId).Distinct().ToList();
-
-        // List of users the user is performing the operation on
-        var targetUsers = await _organizationUserRepository.GetManyAsync(distinctTargetUserIds);
-
-        // A target user does not exist, fail the requirement
-        if (targetUsers.Count != distinctTargetUserIds.Count)
-        {
-            context.Fail();
-            return;
-        }
-
-        // If any target users belong to a different organization than the target collection, fail the requirement
-        if (targetUsers.Any(tu => tu.OrganizationId != requirement.Collection.OrganizationId))
-        {
-            context.Fail();
-            return;
+            // User must have explicit "Manage" permission on the target collections for this organization
+            foreach (var targetCollection in targetCollections.Where(tc => tc.OrganizationId == org.Id))
+            {
+                // Target collection is not in the list of manageable collections, fail
+                if (!manageableCollections.Exists(c => c.Id == targetCollection.Id))
+                {
+                    context.Fail();
+                    return;
+                }
+            }
         }
 
         context.Succeed(requirement);
