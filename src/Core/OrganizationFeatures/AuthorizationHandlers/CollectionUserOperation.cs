@@ -1,5 +1,4 @@
-﻿using Bit.Core.Entities;
-using Microsoft.AspNetCore.Authorization.Infrastructure;
+﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 
 namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
