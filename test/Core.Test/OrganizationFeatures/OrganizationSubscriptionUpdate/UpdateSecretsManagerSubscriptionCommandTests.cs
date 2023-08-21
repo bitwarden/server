@@ -21,8 +21,6 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 [SecretsManagerOrganizationCustomize]
 public class UpdateSecretsManagerSubscriptionCommandTests
 {
-    #region General
-
     [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
@@ -246,10 +244,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
                 && o.MaxAutoscaleSmServiceAccounts == organizationMaxAutoscaleServiceAccounts), sutProvider);
     }
 
-    #endregion
-
-    #region SmSeat update
-
     [Theory]
     [BitAutoData]
     public async Task UpdateSubscriptionAsync_UpdateSeatsToAutoscaleLimit_EmailsOwners(
@@ -288,7 +282,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task SmSeatAutoscaling_Subtracting_ThrowsBadRequestException(
+    public async Task UpdateSubscriptionAsync_SmSeatAutoscaling_Subtracting_ThrowsBadRequestException(
         PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
@@ -395,10 +389,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
-    #endregion
-
-    #region SmServiceAccount update
-
     [Theory]
     [BitAutoData]
     public async Task UpdateSubscriptionAsync_UpdateServiceAccountsToAutoscaleLimit_EmailsOwners(
@@ -435,7 +425,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
     [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task ServiceAccountAutoscaling_Subtracting_ThrowsBadRequestException(
+    public async Task UpdateSubscriptionAsync_ServiceAccountAutoscaling_Subtracting_ThrowsBadRequestException(
         PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
@@ -547,10 +537,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
-    #endregion
-
-    #region MaxAutoscaleSmSeat update
-
     [Theory]
     [BitAutoData]
     public async Task UpdateSubscriptionAsync_ThrowsBadRequestException_WhenMaxAutoscaleSeatsBelowSeatCount(
@@ -606,10 +592,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
-    #endregion
-
-    #region MaxAutoscaleSmServiceAccount update
-
     [Theory]
     [BitAutoData(PlanType.Free)]
     public async Task UpdateMaxAutoscaleSmServiceAccounts_ThrowsBadRequestException_WhenPlanDoesNotAllowAutoscale(
@@ -626,8 +608,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Assert.Contains("Your plan does not allow Service Accounts autoscaling.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
-
-    #endregion
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
