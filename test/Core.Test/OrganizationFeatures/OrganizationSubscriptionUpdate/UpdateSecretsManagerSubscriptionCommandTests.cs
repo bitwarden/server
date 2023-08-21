@@ -280,7 +280,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [Theory]
     [BitAutoData]
     public async Task UpdateSubscriptionAsync_SmSeatAutoscaling_Subtracting_ThrowsBadRequestException(
-        PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
@@ -312,7 +311,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [Theory]
     [BitAutoData]
     public async Task SmSeatAutoscaling_MaxLimitReached_ThrowsBadRequestException(
-        PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
@@ -418,7 +416,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [Theory]
     [BitAutoData]
     public async Task UpdateSubscriptionAsync_ServiceAccountAutoscaling_Subtracting_ThrowsBadRequestException(
-        PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
@@ -450,7 +447,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [Theory]
     [BitAutoData]
     public async Task ServiceAccountAutoscaling_MaxLimitReached_ThrowsBadRequestException(
-        PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
