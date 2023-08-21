@@ -77,7 +77,9 @@ public class FreshdeskController : Controller
 
                 foreach (var org in orgs)
                 {
-                    var orgNote = $"{org.Name} ({org.Seats.GetValueOrDefault()}): " +
+                    // Prevent org names from injecting any additional HTML
+                    var orgName = org.Name.Replace("<", string.Empty).Replace(">", string.Empty);
+                    var orgNote = $"{orgName} ({org.Seats.GetValueOrDefault()}): " +
                         $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
                     note += $"<li>Org, {orgNote}</li>";
                     if (!customFields.Any(kvp => kvp.Key == _billingSettings.FreshDesk.OrgFieldName))
