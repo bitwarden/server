@@ -1838,19 +1838,8 @@ public class OrganizationServiceTests
     public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
         User user, SutProvider<OrganizationService> sutProvider)
     {
-        user.Email = organizationUser.Email;
-
-        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
-            .CreateProtector("OrganizationServiceDataProtector");
-        // Token matching the format used in OrganizationService.InviteUserAsync
-        var token = dataProtector.Protect(
-            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+        var token = SetupAcceptUserAsyncTest(sutProvider, user, organizationUser);
         var userService = Substitute.For<IUserService>();
-
-        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
-            .Returns(organizationUser);
 
         await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService);
 
@@ -1864,19 +1853,8 @@ public class OrganizationServiceTests
     public async Task AcceptUserAsync_WithVerifyEmailTrue_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
         User user, SutProvider<OrganizationService> sutProvider)
     {
-        user.Email = organizationUser.Email;
-
-        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
-            .CreateProtector("OrganizationServiceDataProtector");
-        // Token matching the format used in OrganizationService.InviteUserAsync
-        var token = dataProtector.Protect(
-            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+        var token = SetupAcceptUserAsyncTest(sutProvider, user, organizationUser);
         var userService = Substitute.For<IUserService>();
-
-        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
-
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
-            .Returns(organizationUser);
 
         await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService, verifyEmail: true);
 
@@ -1886,5 +1864,23 @@ public class OrganizationServiceTests
             Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
+    }
+
+    private string SetupAcceptUserAsyncTest(SutProvider<OrganizationService> sutProvider, User user, OrganizationUser organizationUser)
+    {
+        user.Email = organizationUser.Email;
+
+        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("OrganizationServiceDataProtector");
+        // Token matching the format used in OrganizationService.InviteUserAsync
+        var token = dataProtector.Protect(
+            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        return token;
     }
 }
