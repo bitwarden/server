@@ -406,7 +406,7 @@ public class PolicyServiceTests
     [BitAutoData(true, false)]
     [BitAutoData(false, true)]
     [BitAutoData(false, false)]
-    public async Task SaveAsync_PolicyRequiredByTrustedDeviceEncryption_DisablePolicyOrDisableAutomaticEnrollment_ThrowsBadRequest(
+    public async Task SaveAsync_ResetPasswordPolicyRequiredByTrustedDeviceEncryption_DisablePolicyOrDisableAutomaticEnrollment_ThrowsBadRequest(
         bool policyEnabled,
         bool autoEnrollEnabled,
         [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy,
@@ -417,6 +417,43 @@ public class PolicyServiceTests
         {
             AutoEnrollEnabled = autoEnrollEnabled
         });
+
+        SetupOrg(sutProvider, policy.OrganizationId, new Organization
+        {
+            Id = policy.OrganizationId,
+            UsePolicies = true,
+        });
+
+        var ssoConfig = new SsoConfig { Enabled = true };
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption });
+
+        sutProvider.GetDependency<ISsoConfigRepository>()
+            .GetByOrganizationIdAsync(policy.OrganizationId)
+            .Returns(ssoConfig);
+
+        var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveAsync(policy,
+                Substitute.For<IUserService>(),
+                Substitute.For<IOrganizationService>(),
+                Guid.NewGuid()));
+
+        Assert.Contains("Trusted device encryption is on and requires this policy.", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
+
+        await sutProvider.GetDependency<IPolicyRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .UpsertAsync(default);
+
+        await sutProvider.GetDependency<IEventService>()
+            .DidNotReceiveWithAnyArgs()
+            .LogPolicyEventAsync(default, default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_RequireSsoPolicyRequiredByTrustedDeviceEncryption_DisablePolicy_ThrowsBadRequest(
+        [PolicyFixtures.Policy(PolicyType.RequireSso)] Policy policy,
+        SutProvider<PolicyService> sutProvider)
+    {
+        policy.Enabled = false;
 
         SetupOrg(sutProvider, policy.OrganizationId, new Organization
         {
@@ -624,12 +661,18 @@ public class PolicyServiceTests
     private static void SetupUserPolicies(Guid userId, SutProvider<PolicyService> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByUserIdWithPolicyDetailsAsync(userId)
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.RequireSso)
             .Returns(new List<OrganizationUserPolicyDetails>
             {
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = false, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false},
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = false },
-                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = true },
+                new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.RequireSso, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.Owner, OrganizationUserStatus = OrganizationUserStatusType.Confirmed, IsProvider = true }
+            });
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByUserIdWithPolicyDetailsAsync(userId, PolicyType.DisableSend)
+            .Returns(new List<OrganizationUserPolicyDetails>
+            {
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = false },
                 new() { OrganizationId = Guid.NewGuid(), PolicyType = PolicyType.DisableSend, PolicyEnabled = true, OrganizationUserType = OrganizationUserType.User, OrganizationUserStatus = OrganizationUserStatusType.Invited, IsProvider = true }
             });
