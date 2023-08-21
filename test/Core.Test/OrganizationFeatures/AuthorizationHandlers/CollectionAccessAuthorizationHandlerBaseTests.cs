@@ -15,7 +15,7 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.AuthorizationHandlers;
 
 [SutProviderCustomize]
-public class CollectionUserAuthorizationHandlerTests
+public class CollectionAccessAuthorizationHandlerBaseTests
 {
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.User, false, true)]
@@ -176,5 +176,53 @@ public class CollectionUserAuthorizationHandlerTests
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs().GetManyByManyIdsAsync(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
             .GetManyByUserIdAsync(default);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CollectionUserAuthorizationHandler_CollectionIdMap_Success(
+        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        ICollection<CollectionUser> collectionUsers)
+    {
+        var actingUserId = Guid.NewGuid();
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionUserOperation.Create, CollectionUserOperation.Delete },
+            new ClaimsPrincipal(),
+            collectionUsers
+        );
+        var expectedCollectionIds = collectionUsers.Select(cu => cu.CollectionId);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(2) // Called twice, once for each operation requirement
+            .GetManyByManyIdsAsync(
+                Arg.Is<IEnumerable<Guid>>(
+                    arg => arg.SequenceEqual(expectedCollectionIds)));
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CollectionGroupAuthorizationHandler_CollectionIdMap_Success(
+        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
+        ICollection<CollectionGroup> collectionGroups)
+    {
+        var actingUserId = Guid.NewGuid();
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionGroupOperation.Create, CollectionGroupOperation.Delete },
+            new ClaimsPrincipal(),
+            collectionGroups
+        );
+        var expectedCollectionIds = collectionGroups.Select(cu => cu.CollectionId);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        await sutProvider.GetDependency<ICollectionRepository>()
+            .Received(2) // Called twice, once for each operation requirement
+            .GetManyByManyIdsAsync(
+                Arg.Is<IEnumerable<Guid>>(
+                    arg => arg.SequenceEqual(expectedCollectionIds)));
     }
 }
