@@ -2,7 +2,7 @@
 
 namespace Bit.Migrator;
 
-public static class RerunableSqlTableJournalExtensions
+public static class SqlTableJournalExtensions
 {
     public static UpgradeEngineBuilder JournalRerunableToSqlTable(this UpgradeEngineBuilder builder, string schema, string table)
     {
