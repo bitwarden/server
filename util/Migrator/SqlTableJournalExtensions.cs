@@ -1,4 +1,10 @@
-﻿using DbUp.Builder;
+﻿using System.Data;
+using DbUp.Builder;
+using DbUp.Engine;
+using DbUp.Engine.Output;
+using DbUp.Engine.Transactions;
+using DbUp.SqlServer;
+using DbUp.Support;
 
 namespace Bit.Migrator;
 
