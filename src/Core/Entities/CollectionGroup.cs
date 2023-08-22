@@ -1,6 +1,6 @@
 ﻿namespace Bit.Core.Entities;
 
-public class CollectionGroup
+public class CollectionGroup : ICollectionAccess
 {
     public Guid CollectionId { get; set; }
     public Guid GroupId { get; set; }
