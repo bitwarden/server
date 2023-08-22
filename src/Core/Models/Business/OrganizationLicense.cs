@@ -47,6 +47,10 @@ public class OrganizationLicense : ILicense
         UsersGetPremium = org.UsersGetPremium;
         UseCustomPermissions = org.UseCustomPermissions;
         Issued = DateTime.UtcNow;
+        UsePasswordManager = org.UsePasswordManager;
+        UseSecretsManager = org.UseSecretsManager;
+        SmSeats = org.SmSeats;
+        SmServiceAccounts = org.SmServiceAccounts;
 
         if (subscriptionInfo?.Subscription == null)
         {
@@ -125,6 +129,10 @@ public class OrganizationLicense : ILicense
     public DateTime? Refresh { get; set; }
     public DateTime? Expires { get; set; }
     public DateTime? ExpirationWithoutGracePeriod { get; set; }
+    public bool UsePasswordManager { get; set; }
+    public bool UseSecretsManager { get; set; }
+    public int? SmSeats { get; set; }
+    public int? SmServiceAccounts { get; set; }
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
@@ -137,10 +145,10 @@ public class OrganizationLicense : ILicense
     /// </summary>
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors</remarks>
-    private const int CURRENT_LICENSE_FILE_VERSION = 11;
+    private const int CURRENT_LICENSE_FILE_VERSION = 12;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 12;
+        get => Version is >= 1 and <= 13;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -176,6 +184,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
                     // ExpirationWithoutGracePeriod was added in Version 12
                     (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod))) &&
+                    // UseSecretsManager was added in Version 13
+                    (Version >= 13 || !p.Name.Equals(nameof(UseSecretsManager))) &&
                     (
                         !forHash ||
                         (
@@ -313,6 +323,14 @@ public class OrganizationLicense : ILicense
             if (valid && Version >= 11)
             {
                 valid = organization.UseCustomPermissions == UseCustomPermissions;
+            }
+
+            if (valid && Version >= 13)
+            {
+                valid = organization.UseSecretsManager == UseSecretsManager &&
+                organization.UsePasswordManager == UsePasswordManager &&
+                organization.SmSeats == SmSeats &&
+                organization.SmServiceAccounts == SmServiceAccounts;
             }
 
             return valid;
