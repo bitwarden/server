@@ -145,7 +145,9 @@ public abstract class BaseRequestValidator<T> where T : class
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
 
-            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, user.Email, _);
+            var cacheKey = "TOTP_" + user.Email;
+
+            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, cacheKey, out string _);
             if (isOtpCached)
             {
                 await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
@@ -165,7 +167,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
                 return;
             }
-            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, "TOTP_" + user.Email, twoFactorToken, _cacheEntryOptions);
+            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
         }
         else
         {
