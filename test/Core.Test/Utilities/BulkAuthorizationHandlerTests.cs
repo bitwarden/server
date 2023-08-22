@@ -1,10 +1,10 @@
 ﻿using System.Security.Claims;
-using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authorization.Infrastructure;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.AuthorizationHandlers;
+namespace Bit.Core.Test.Utilities;
 
 public class BulkAuthorizationHandlerTests
 {

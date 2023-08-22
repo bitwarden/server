@@ -2,9 +2,10 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
+namespace Bit.Core.Vault.AuthorizationHandlers;
 
 public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<CollectionAccessOperationRequirement, ICollectionAccess>
 {

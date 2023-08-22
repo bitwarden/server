@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
+namespace Bit.Core.Utilities;
 
 /// <summary>
 /// Allows a single authorization handler implementation to handle requirements for

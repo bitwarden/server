@@ -3,16 +3,16 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture;
+using Bit.Core.Vault.AuthorizationHandlers;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.AuthorizationHandlers;
+namespace Bit.Core.Test.Vault.AuthorizationHandlers;
 
 [SutProviderCustomize]
 public class CollectionAccessAuthorizationHandlerTests
