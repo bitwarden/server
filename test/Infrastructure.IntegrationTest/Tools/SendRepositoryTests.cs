@@ -1,4 +1,4 @@
-using Bit.Core.Tools.Entities;
+﻿using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Repositories;
 using Bit.Infrastructure.IntegrationTest.Comparers;
@@ -32,7 +32,7 @@ public class SendRepositoryTests
         Assert.Equal(0, sendFromDatabase.AccessCount);
         Assert.Equal("2.t|t|t", sendFromDatabase.Key);
         Assert.Equal(expirationDate.AddDays(7), sendFromDatabase.DeletionDate, LaxDateTimeComparer.Default);
-        Assert.Equal( "{\"Text\": \"2.t|t|t\"}", sendFromDatabase.Data);
+        Assert.Equal("{\"Text\": \"2.t|t|t\"}", sendFromDatabase.Data);
     }
 
     [DatabaseTheory, DatabaseData]
