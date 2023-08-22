@@ -42,13 +42,13 @@ public abstract class CollectionAccessAuthorizationHandlerBase<TRequirement, TRe
             return;
         }
 
-        var userOgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, _currentContext.UserId.Value);
-        var distinctTargetOrganizationIds = targetCollections.Select(tc => tc.OrganizationId).Distinct().ToList();
+        var userOrgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, _currentContext.UserId.Value);
+        var distinctTargetOrganizationIds = targetCollections.Select(tc => tc.OrganizationId).Distinct();
         var restrictedOrganizations = new List<CurrentContentOrganization>();
 
         foreach (var orgId in distinctTargetOrganizationIds)
         {
-            var org = userOgs.FirstOrDefault(o => orgId == o.Id);
+            var org = userOrgs.FirstOrDefault(o => orgId == o.Id);
 
             // Acting user is not a member of the target organization, fail
             if (org == null)
