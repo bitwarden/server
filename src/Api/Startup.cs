@@ -136,6 +136,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
+        services.AddCoreAuthorizationHandlers();
 
         //health check
         if (!globalSettings.SelfHosted)
