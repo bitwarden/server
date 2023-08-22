@@ -9,14 +9,12 @@ using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [Authorize("secrets")]
-[SelfHosted(NotSelfHostedOnly = true)]
 public class ProjectsController : Controller
 {
     private readonly ICurrentContext _currentContext;
