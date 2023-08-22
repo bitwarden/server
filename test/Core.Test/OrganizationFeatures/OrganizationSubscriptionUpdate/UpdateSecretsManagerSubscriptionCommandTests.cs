@@ -297,7 +297,8 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustSeats(-2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Cannot use autoscaling to subtract seats.", exception.Message);
+        Assert.Contains("You have reached the maximum number of service accounts (3) for this plan",
+            exception.Message, StringComparison.InvariantCultureIgnoreCase);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
