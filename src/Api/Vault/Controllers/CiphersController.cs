@@ -36,6 +36,7 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
+    private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -177,6 +178,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        ValidateItemLevelEncryptionIsAvailable(cipher);
+
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
             (Guid?)null : new Guid(model.OrganizationId);
@@ -198,6 +201,9 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
+
+        ValidateItemLevelEncryptionIsAvailable(cipher);
+
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
         {
@@ -576,6 +582,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        ValidateItemLevelEncryptionIsAvailable(cipher);
+
         if (request.FileSize > CipherService.MAX_FILE_SIZE)
         {
             throw new BadRequestException($"Max file size is {CipherService.MAX_FILE_SIZE_READABLE}.");
@@ -793,6 +801,14 @@ public class CiphersController : Controller
         if (!Request?.ContentType.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
+        }
+    }
+
+    private void ValidateItemLevelEncryptionIsAvailable(Cipher cipher)
+    {
+        if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
+        {
+            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
         }
     }
 }

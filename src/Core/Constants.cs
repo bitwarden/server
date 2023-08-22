@@ -19,6 +19,8 @@ public static class Constants
     /// their subscription has expired.
     /// </summary>
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
+
+    public const string CipherKeyEncryptionMinimumVersion = "2023.7.0";
 }
 
 public static class TokenPurposes
