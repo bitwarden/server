@@ -94,6 +94,9 @@ public abstract class BaseRequestValidator<T> where T : class
         _distributedCache = distributedCache;
         _cacheEntryOptions = new DistributedCacheEntryOptions
         {
+            // This sets the time an item is cached to 15 minutes. This value is hard coded 
+            // to 15 because to it covers all time-out windows for both Authenticators and
+            // Email TOTP.
             AbsoluteExpirationRelativeToNow = new TimeSpan(0, 15, 0)
         };
     }
@@ -142,12 +145,10 @@ public abstract class BaseRequestValidator<T> where T : class
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
 
-            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, user.Email, out string cachedToken);
+            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, user.Email, _);
             if (isOtpCached)
             {
-                // Delay for brute force.
-                await Task.Delay(2000);
-                await BuildErrorResultAsync("Two-step token has already been used.", true, context, user);
+                await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 return;
             }
 
@@ -164,7 +165,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
                 return;
             }
-            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, user.Email, twoFactorToken, _cacheEntryOptions);
+            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, "TOTP_" + user.Email, twoFactorToken, _cacheEntryOptions);
         }
         else
         {
