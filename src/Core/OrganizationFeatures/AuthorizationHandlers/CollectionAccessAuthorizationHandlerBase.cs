@@ -76,23 +76,23 @@ public abstract class CollectionAccessAuthorizationHandlerBase<TRequirement, TRe
             return;
         }
 
-        // List of collections the acting user is allowed to manage
-        var manageableCollections =
+        // List of collection Ids the acting user is allowed to manage
+        var manageableCollectionIds =
             (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value))
-            .Where(c => c.Manage).ToList();
+            .Where(c => c.Manage)
+            .Select(c => c.Id);
 
-        foreach (var org in restrictedOrganizations)
+        // Target collections that require explicit "Manage" permission, but the user does not have it
+        var collectionWithoutPermission = from tc in targetCollections
+                                          join o in restrictedOrganizations on tc.OrganizationId equals o.Id
+                                          where !manageableCollectionIds.Contains(tc.Id)
+                                          select tc;
+
+        // The acting user does not have permission to manage all target collections, fail
+        if (collectionWithoutPermission.Any())
         {
-            // User must have explicit "Manage" permission on the target collections for this organization
-            foreach (var targetCollection in targetCollections.Where(tc => tc.OrganizationId == org.Id))
-            {
-                // Target collection is not in the list of manageable collections, fail
-                if (!manageableCollections.Exists(c => c.Id == targetCollection.Id))
-                {
-                    context.Fail();
-                    return;
-                }
-            }
+            context.Fail();
+            return;
         }
 
         context.Succeed(requirement);
