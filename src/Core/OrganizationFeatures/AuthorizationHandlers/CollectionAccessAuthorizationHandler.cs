@@ -1,28 +1,39 @@
 ﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 
-public abstract class CollectionAccessAuthorizationHandlerBase<TRequirement, TResource> : BulkAuthorizationHandler<TRequirement, TResource>
-    where TRequirement : IAuthorizationRequirement
+public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<CollectionAccessOperationRequirement, ICollectionAccess>
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    protected CollectionAccessAuthorizationHandlerBase(ICurrentContext currentContext, ICollectionRepository collectionRepository, IOrganizationUserRepository organizationUserRepository)
+    public CollectionAccessAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository, IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _organizationUserRepository = organizationUserRepository;
     }
 
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, CollectionAccessOperationRequirement requirement,
+        ICollection<ICollectionAccess> resources)
+    {
+        switch (requirement)
+        {
+            case not null when requirement == CollectionAccessOperation.CreateDelete:
+                await CanManageCollectionAccessAsync(context, requirement, resources.Select(c => c.CollectionId));
+                break;
+        }
+    }
+
     /// <summary>
     /// Ensures the acting user is allowed to manage access permissions for the target collections.
     /// </summary>
-    protected async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement, IEnumerable<Guid> collectionIds)
+    private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement, IEnumerable<Guid> collectionIds)
     {
         if (!_currentContext.UserId.HasValue)
         {

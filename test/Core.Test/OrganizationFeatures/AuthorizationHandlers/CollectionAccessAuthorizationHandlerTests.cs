@@ -15,7 +15,7 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.AuthorizationHandlers;
 
 [SutProviderCustomize]
-public class CollectionAccessAuthorizationHandlerBaseTests
+public class CollectionAccessAuthorizationHandlerTests
 {
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.User, false, true)]
@@ -25,7 +25,7 @@ public class CollectionAccessAuthorizationHandlerBaseTests
     [BitAutoData(OrganizationUserType.Owner, true, true)]
     public async Task CanManageCollectionAccessAsync_Success(
         OrganizationUserType userType, bool editAnyCollection, bool manageCollections,
-        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        SutProvider<CollectionAccessAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         ICollection<CollectionUser> collectionUsers,
         ICollection<CollectionDetails> collectionDetails,
@@ -44,7 +44,7 @@ public class CollectionAccessAuthorizationHandlerBaseTests
         }
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionUserOperation.Create },
+            new[] { CollectionAccessOperation.CreateDelete },
             new ClaimsPrincipal(),
             collectionUsers
             );
@@ -62,11 +62,11 @@ public class CollectionAccessAuthorizationHandlerBaseTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task CanManageCollectionAccessAsync_MissingUserId_Failure(
-        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        SutProvider<CollectionAccessAuthorizationHandler> sutProvider,
         ICollection<CollectionUser> collectionUsers)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionUserOperation.Create },
+            new[] { CollectionAccessOperation.CreateDelete },
             new ClaimsPrincipal(),
             collectionUsers
         );
@@ -81,7 +81,7 @@ public class CollectionAccessAuthorizationHandlerBaseTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task CanManageCollectionAccessAsync_MissingTargetCollection_Failure(
-        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        SutProvider<CollectionAccessAuthorizationHandler> sutProvider,
         IList<Collection> collections,
         ICollection<CollectionUser> collectionUsers)
     {
@@ -91,7 +91,7 @@ public class CollectionAccessAuthorizationHandlerBaseTests
         collections.RemoveAt(0);
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionUserOperation.Create },
+            new[] { CollectionAccessOperation.CreateDelete },
             new ClaimsPrincipal(),
             collectionUsers
         );
@@ -108,7 +108,7 @@ public class CollectionAccessAuthorizationHandlerBaseTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task CanManageCollectionAccessAsync_MissingOrgMembership_Failure(
-        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        SutProvider<CollectionAccessAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         ICollection<CollectionUser> collectionUsers,
         ICollection<CurrentContentOrganization> organizations)
@@ -116,7 +116,7 @@ public class CollectionAccessAuthorizationHandlerBaseTests
         var actingUserId = Guid.NewGuid();
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionUserOperation.Create },
+            new[] { CollectionAccessOperation.CreateDelete },
             new ClaimsPrincipal(),
             collectionUsers
         );
@@ -138,7 +138,7 @@ public class CollectionAccessAuthorizationHandlerBaseTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task CanManageCollectionAccessAsync_MissingManageCollectionPermission_Failure(
-        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
+        SutProvider<CollectionAccessAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         ICollection<CollectionUser> collectionUsers,
         ICollection<CollectionDetails> collectionDetails,
@@ -160,7 +160,7 @@ public class CollectionAccessAuthorizationHandlerBaseTests
         }
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionUserOperation.Create },
+            new[] { CollectionAccessOperation.CreateDelete },
             new ClaimsPrincipal(),
             collectionUsers
         );
@@ -176,53 +176,5 @@ public class CollectionAccessAuthorizationHandlerBaseTests
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs().GetManyByManyIdsAsync(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
             .GetManyByUserIdAsync(default);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task CollectionUserAuthorizationHandler_CollectionIdMap_Success(
-        SutProvider<CollectionUserAuthorizationHandler> sutProvider,
-        ICollection<CollectionUser> collectionUsers)
-    {
-        var actingUserId = Guid.NewGuid();
-        var context = new AuthorizationHandlerContext(
-            new[] { CollectionUserOperation.Create, CollectionUserOperation.Delete },
-            new ClaimsPrincipal(),
-            collectionUsers
-        );
-        var expectedCollectionIds = collectionUsers.Select(cu => cu.CollectionId);
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .Received(2) // Called twice, once for each operation requirement
-            .GetManyByManyIdsAsync(
-                Arg.Is<IEnumerable<Guid>>(
-                    arg => arg.SequenceEqual(expectedCollectionIds)));
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task CollectionGroupAuthorizationHandler_CollectionIdMap_Success(
-        SutProvider<CollectionGroupAuthorizationHandler> sutProvider,
-        ICollection<CollectionGroup> collectionGroups)
-    {
-        var actingUserId = Guid.NewGuid();
-        var context = new AuthorizationHandlerContext(
-            new[] { CollectionGroupOperation.Create, CollectionGroupOperation.Delete },
-            new ClaimsPrincipal(),
-            collectionGroups
-        );
-        var expectedCollectionIds = collectionGroups.Select(cu => cu.CollectionId);
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-
-        await sutProvider.Sut.HandleAsync(context);
-
-        await sutProvider.GetDependency<ICollectionRepository>()
-            .Received(2) // Called twice, once for each operation requirement
-            .GetManyByManyIdsAsync(
-                Arg.Is<IEnumerable<Guid>>(
-                    arg => arg.SequenceEqual(expectedCollectionIds)));
     }
 }
