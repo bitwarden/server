@@ -60,7 +60,8 @@ public abstract class CollectionAccessAuthorizationHandlerBase<TRequirement, TRe
             // Owner/Admins or users with EditAnyCollection permission can always manage collection access
             if (
                 org.Permissions.EditAnyCollection ||
-                org.Type is OrganizationUserType.Admin or OrganizationUserType.Owner)
+                org.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
+                await _currentContext.ProviderUserForOrgAsync(org.Id))
             {
                 continue;
             }
