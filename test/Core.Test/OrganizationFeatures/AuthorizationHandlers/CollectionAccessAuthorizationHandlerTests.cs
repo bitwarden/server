@@ -146,11 +146,12 @@ public class CollectionAccessAuthorizationHandlerTests
     {
         var actingUserId = Guid.NewGuid();
 
-        // Simulate not having manage collection permission
         foreach (var collectionDetail in collectionDetails)
         {
-            collectionDetail.Manage = false;
+            collectionDetail.Manage = true;
         }
+        // Simulate one collection missing the manage permission
+        collectionDetails.First().Manage = false;
 
         // Ensure the user is not an owner/admin and does not have edit any collection permission
         foreach (var org in organizations)
