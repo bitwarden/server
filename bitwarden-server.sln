@@ -1,4 +1,4 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29102.190
@@ -115,6 +115,12 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SqliteMigrations", "util\SqliteMigrations\SqliteMigrations.csproj", "{07143DFA-F242-47A4-A15E-39C9314D4140}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MsSqlMigratorUtility", "util\MsSqlMigratorUtility\MsSqlMigratorUtility.csproj", "{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{83B1134D-E786-4453-A1BC-3A94F859BDAE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions.Hosting", "src\Extensions.Hosting\Extensions.Hosting.csproj", "{6A0CE712-62B1-4929-9D17-570298AAFC38}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Extensions.WebHosting", "src\Extensions.WebHosting\Extensions.WebHosting.csproj", "{1879B737-BDDD-4881-B32B-046DA41CACE0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -284,6 +290,14 @@ Global
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A0CE712-62B1-4929-9D17-570298AAFC38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A0CE712-62B1-4929-9D17-570298AAFC38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A0CE712-62B1-4929-9D17-570298AAFC38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A0CE712-62B1-4929-9D17-570298AAFC38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1879B737-BDDD-4881-B32B-046DA41CACE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1879B737-BDDD-4881-B32B-046DA41CACE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1879B737-BDDD-4881-B32B-046DA41CACE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1879B737-BDDD-4881-B32B-046DA41CACE0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -329,6 +343,8 @@ Global
 		{7E9A7DD5-EB78-4AC5-BFD5-64573FD2533B} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84F}
 		{07143DFA-F242-47A4-A15E-39C9314D4140} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
 		{D9A2CCBB-FB0A-4BBA-A9ED-BA9FF277C880} = {DD5BD056-4AAE-43EF-BBD2-0B569B8DA84E}
+		{6A0CE712-62B1-4929-9D17-570298AAFC38} = {83B1134D-E786-4453-A1BC-3A94F859BDAE}
+		{1879B737-BDDD-4881-B32B-046DA41CACE0} = {83B1134D-E786-4453-A1BC-3A94F859BDAE}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E01CBF68-2E20-425F-9EDB-E0A6510CA92F}
