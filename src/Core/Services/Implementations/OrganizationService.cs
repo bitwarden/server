@@ -1063,7 +1063,7 @@ public class OrganizationService : IOrganizationService
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
-        IUserService userService, bool verifyEmail = false)
+        IUserService userService)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null)
@@ -1093,7 +1093,12 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("User email does not match invite.");
         }
 
-        return await AcceptUserAsync(orgUser, user, userService, verifyEmail);
+        var organizationUser = await AcceptUserAsync(orgUser, user, userService);
+
+        user.EmailVerified = true;
+        await _userRepository.ReplaceAsync(user);
+
+        return organizationUser;
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)
@@ -1133,7 +1138,7 @@ public class OrganizationService : IOrganizationService
     }
 
     private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user,
-        IUserService userService, bool verifyEmail = false)
+        IUserService userService)
     {
         if (orgUser.Status == OrganizationUserStatusType.Revoked)
         {
@@ -1197,12 +1202,6 @@ public class OrganizationService : IOrganizationService
         orgUser.Email = null;
 
         await _organizationUserRepository.ReplaceAsync(orgUser);
-
-        if (verifyEmail)
-        {
-            user.EmailVerified = true;
-            await _userRepository.ReplaceAsync(user);
-        }
 
         var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin);
         var adminEmails = admins.Select(a => a.Email).Distinct().ToList();

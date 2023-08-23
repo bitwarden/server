@@ -39,7 +39,17 @@ public interface IOrganizationService
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
-    Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token, IUserService userService, bool verifyEmail = false);
+    /// <summary>
+    /// Accepts a user into an organization based on the provided invitation token and user information.
+    /// Validates the invitation token, checks for existing memberships, and ensures email correspondence before acceptance.
+    /// Marks the user's email as verified upon successful acceptance.
+    /// </summary>
+    /// <param name="organizationUserId">The unique identifier of the organization user.</param>
+    /// <param name="user">Information about the user accepting the invitation.</param>
+    /// <param name="token">Token associated with the invitation.</param>
+    /// <param name="userService">Service for user-related operations.</param>
+    /// <returns>The accepted OrganizationUser.</returns>
+    Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token, IUserService userService);
     Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService);
     Task<OrganizationUser> AcceptUserAsync(Guid organizationId, User user, IUserService userService);
     Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,

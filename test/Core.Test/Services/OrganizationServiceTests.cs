@@ -1845,23 +1845,6 @@ public class OrganizationServiceTests
 
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
-        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-    }
-
-    [Theory]
-    [EphemeralDataProtectionAutoData]
-    public async Task AcceptUserAsync_WithVerifyEmailTrue_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
-        User user, SutProvider<OrganizationService> sutProvider)
-    {
-        var token = SetupAcceptUserAsyncTest(sutProvider, user, organizationUser);
-        var userService = Substitute.For<IUserService>();
-
-        await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService, verifyEmail: true);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
-            Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
-        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
-            Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
         await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
             Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
     }
