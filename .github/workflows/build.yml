@@ -10,6 +10,9 @@ on:
       - ".github/workflows/**"
   workflow_dispatch:
 
+env:
+  _AZ_REGISTRY: "bitwardenprod.azurecr.io"
+
 jobs:
   cloc:
     name: CLOC
@@ -33,6 +36,9 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+
       - name: Verify Format
         run: dotnet format --verify-no-changes
 
@@ -42,10 +48,11 @@ jobs:
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: "6.0.x"
 
       - name: Print environment
         run: |
@@ -53,9 +60,6 @@ jobs:
           nuget help | grep Version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-
-      - name: Checkout repo
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Restore
         run: dotnet restore --locked-mode
@@ -114,8 +118,14 @@ jobs:
             base_path: ./src
           - project_name: Identity
             base_path: ./src
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            dotnet: true
           - project_name: Notifications
             base_path: ./src
+          - project_name: Scim
+            base_path: ./bitwarden_license/src
+            dotnet: true
           - project_name: Server
             base_path: ./util
           - project_name: Setup
@@ -123,15 +133,12 @@ jobs:
           - project_name: Sso
             base_path: ./bitwarden_license/src
             node: true
-          - project_name: Scim
-            base_path: ./bitwarden_license/src
-            dotnet: true
-          - project_name: MsSqlMigratorUtility
-            base_path: ./util
-            dotnet: true
     steps:
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
       - name: Set up Node
         uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
@@ -194,64 +201,48 @@ jobs:
         include:
           - project_name: Admin
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
           - project_name: Api
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
           - project_name: Attachments
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+          - project_name: Billing
+            base_path: ./src
+            dotnet: true
           - project_name: Events
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
           - project_name: EventsProcessor
             base_path: ./src
-            docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
           - project_name: Icons
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
           - project_name: Identity
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
           - project_name: MsSql
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+            dotnet: true
           - project_name: Nginx
             base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
           - project_name: Notifications
             base_path: ./src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
-            dotnet: true
-          - project_name: Server
-            base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
-            dotnet: true
-          - project_name: Setup
-            base_path: ./util
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
-            dotnet: true
-          - project_name: Sso
-            base_path: ./bitwarden_license/src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
           - project_name: Scim
             base_path: ./bitwarden_license/src
-            docker_repos: [bitwarden, bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
             dotnet: true
-          - project_name: Billing
-            base_path: ./src
-            docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
-            dotnet: true
-          - project_name: MsSqlMigratorUtility
+          - project_name: Server
             base_path: ./util
-            docker_repos: [bitwardenprod.azurecr.io, bitwardenqa.azurecr.io]
+            dotnet: true
+          - project_name: Setup
+            base_path: ./util
+            dotnet: true
+          - project_name: Sso
+            base_path: ./bitwarden_license/src
             dotnet: true
     steps:
       - name: Checkout repo
@@ -271,14 +262,6 @@ jobs:
           fi
 
       ########## ACRs ##########
-      - name: Login to Azure - QA Subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_QA_KV_CREDENTIALS }}
-
-      - name: Login to QA ACR
-        run: az acr login -n bitwardenqa
-
       - name: Login to Azure - PROD Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
@@ -299,31 +282,6 @@ jobs:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
-      - name: Retrieve secrets
-        if: ${{ env.is_publish_branch == 'true' }}
-        id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@f096207b7a2f31723165aee6ad03e91716686e78
-        with:
-          keyvault: "bitwarden-ci"
-          secrets: "docker-password,
-            docker-username,
-            dct-delegate-2-repo-passphrase,
-            dct-delegate-2-key"
-
-      - name: Log into Docker
-        if: ${{ env.is_publish_branch == 'true' }}
-        env:
-          DOCKER_USERNAME: ${{ steps.retrieve-secrets.outputs.docker-username }}
-          DOCKER_PASSWORD: ${{ steps.retrieve-secrets.outputs.docker-password }}
-        run: echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-
-      - name: Setup Docker Content Trust (DCT)
-        if: ${{ env.is_publish_branch == 'true' }}
-        uses: bitwarden/gh-actions/setup-docker-trust@f096207b7a2f31723165aee6ad03e91716686e78
-        with:
-          azure-creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-          azure-keyvault-name: "bitwarden-ci"
-
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
         id: tag
@@ -342,12 +300,12 @@ jobs:
           echo "PROJECT_NAME: $PROJECT_NAME"
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
 
-      - name: Generate tag list
-        id: tag-list
+      - name: Generate image full name
+        id: image-name
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: echo "tags=bitwardenqa.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG},bitwardenprod.azurecr.io/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+        run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
@@ -369,36 +327,28 @@ jobs:
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: linux/amd64
           push: true
-          tags: ${{ steps.tag-list.outputs.tags }}
+          tags: ${{ steps.image-name.outputs.name }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
-
-      - name: Push to DockerHub
-        if: contains(matrix.docker_repos, 'bitwarden') && env.is_publish_branch == 'true'
-        env:
-          IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
-          PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: |
-          docker tag bitwardenprod.azurecr.io/$PROJECT_NAME:$IMAGE_TAG bitwarden/$PROJECT_NAME:$IMAGE_TAG
-          docker push bitwarden/$PROJECT_NAME:$IMAGE_TAG
-
-      - name: Log out of Docker
-        run: |
-          docker logout
-          echo "DOCKER_CONTENT_TRUST=0" >> $GITHUB_ENV
 
   upload:
     name: Upload
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
-      - name: Set up dotnet
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: "6.0.x"
-
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+
+      - name: Login to Azure - PROD Subscription
+        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
+        with:
+          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+
+      - name: Login to PROD ACR
+        run: az acr login -n $_AZ_REGISTRY --only-show-errors
 
       - name: Restore
         run: dotnet tool restore
@@ -408,14 +358,18 @@ jobs:
           github.ref == 'refs/heads/rc' ||
           github.ref == 'refs/heads/hotfix-rc'
         run: |
-          # Set proper image based on branch
-          if [[ "${{ github.ref }}" == "rc" ]]; then
-            SETUP_IMAGE="bitwarden/setup:rc"
-          elif [[ "${{ github.ref }}" == "hotfix-rc" ]]; then
-            SETUP_IMAGE="bitwarden/setup:hotfix-rc"
-          else
-            SETUP_IMAGE="bitwarden/setup:dev"
-          fi
+          # Set proper setup image based on branch
+          case "${{ github.ref }}" in
+            "refs/heads/master")
+                SETUP_IMAGE="$_AZ_REGISTRY/setup:dev"
+                ;;
+            "refs/heads/rc")
+                SETUP_IMAGE="$_AZ_REGISTRY/setup:rc"
+                ;;
+            "refs/heads/hotfix-rc")
+                SETUP_IMAGE="$_AZ_REGISTRY/setup:hotfix-rc"
+                ;;
+          esac
 
           STUB_OUTPUT=$(pwd)/docker-stub
 
@@ -508,8 +462,7 @@ jobs:
   build-mssqlmigratorutility:
     name: Build MsSqlMigratorUtility
     runs-on: ubuntu-22.04
-    needs:
-      - lint
+    needs: lint
     defaults:
       run:
         shell: bash
@@ -521,10 +474,12 @@ jobs:
           - osx-x64
           - linux-x64
           - win-x64
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
       - name: Print environment
         run: |
@@ -539,7 +494,9 @@ jobs:
           dotnet restore
 
       - name: Publish project
-        run: dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
+        run: |
+          dotnet publish -c "Release" -o obj/build-output/publish -r ${{ matrix.target }} -p:PublishSingleFile=true \
+          -p:IncludeNativeLibrariesForSelfExtract=true --self-contained true
 
       - name: Upload project artifact Windows
         if: ${{ contains(matrix.target, 'win') == true }}
