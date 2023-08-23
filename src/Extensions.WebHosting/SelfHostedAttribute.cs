@@ -1,4 +1,4 @@
-namespace Bit.Extensions.WebHosting;
+﻿namespace Bit.Extensions.WebHosting;
 
 public class SelfHostedAttribute : Attribute
 {
