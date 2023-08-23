@@ -12,18 +12,15 @@ public class UpdateOrganizationUserCommand : IUpdateOrganizationUserCommand
 {
     private readonly IEventService _eventService;
     private readonly IOrganizationService _organizationService;
-    private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public UpdateOrganizationUserCommand(
         IEventService eventService,
         IOrganizationService organizationService,
-        IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository)
     {
         _eventService = eventService;
         _organizationService = organizationService;
-        _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
     }
 

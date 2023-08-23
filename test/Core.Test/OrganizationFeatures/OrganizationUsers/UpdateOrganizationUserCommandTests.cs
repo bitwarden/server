@@ -65,11 +65,8 @@ public class UpdateOrganizationUserCommandTests
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<UpdateOrganizationUserCommand> sutProvider)
     {
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
