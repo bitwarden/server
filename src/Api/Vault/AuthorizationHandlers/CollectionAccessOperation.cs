@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization.Infrastructure;
 
-namespace Bit.Core.Vault.AuthorizationHandlers;
+namespace Bit.Api.Vault.AuthorizationHandlers;
 
 public class CollectionAccessOperationRequirement : OperationAuthorizationRequirement { }
 

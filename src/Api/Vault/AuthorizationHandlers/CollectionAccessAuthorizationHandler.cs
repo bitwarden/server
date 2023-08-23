@@ -5,7 +5,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Core.Vault.AuthorizationHandlers;
+namespace Bit.Api.Vault.AuthorizationHandlers;
 
 public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<CollectionAccessOperationRequirement, ICollectionAccess>
 {
