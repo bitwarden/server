@@ -5,7 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
-using Bit.Core.Test.AutoFixture;
+using Bit.Core.Test.Vault.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;

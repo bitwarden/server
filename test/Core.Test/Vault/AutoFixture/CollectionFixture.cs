@@ -2,9 +2,10 @@
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
+using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 
-namespace Bit.Core.Test.AutoFixture;
+namespace Bit.Core.Test.Vault.AutoFixture;
 
 public class CollectionCustomization : ICustomization
 {
