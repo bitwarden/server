@@ -17,6 +17,11 @@ public class BulkCollectionAccessRequestModel
     /// </summary>
     public IEnumerable<CollectionUser> ToAllCollectionUsers()
     {
+        if (Users == null)
+        {
+            return new List<CollectionUser>();
+        }
+
         return CollectionIds.SelectMany(collectionId => Users.Select(u => new CollectionUser
         {
             CollectionId = collectionId,
@@ -33,6 +38,11 @@ public class BulkCollectionAccessRequestModel
     /// </summary>
     public IEnumerable<CollectionGroup> ToAllCollectionGroups()
     {
+        if (Groups == null)
+        {
+            return new List<CollectionGroup>();
+        }
+
         return CollectionIds.SelectMany(collectionId => Groups.Select(u => new CollectionGroup
         {
             CollectionId = collectionId,
