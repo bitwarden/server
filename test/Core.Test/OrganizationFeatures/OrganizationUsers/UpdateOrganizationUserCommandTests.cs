@@ -1,11 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
@@ -57,10 +54,8 @@ public class UpdateOrganizationUserCommandTests
     }
 
     [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
+    [BitAutoData]
     public async Task UpdateUserAsync_Passes(
-        bool accessSecretsManager,
         Organization organization,
         OrganizationUser oldUserData,
         OrganizationUser newUserData,
@@ -73,7 +68,6 @@ public class UpdateOrganizationUserCommandTests
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
         var organizationService = sutProvider.GetDependency<IOrganizationService>();
-        var countNewSmSeatsRequiredQuery = sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>();
 
         organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
 
@@ -81,7 +75,6 @@ public class UpdateOrganizationUserCommandTests
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
         newUserData.AccessAll = false;
-        newUserData.AccessSecretsManager = accessSecretsManager;
         newUserData.Permissions = CoreHelpers.ClassToJsonData(permissions);
 
         oldUserData.AccessSecretsManager = false;
@@ -91,7 +84,6 @@ public class UpdateOrganizationUserCommandTests
             .Returns(new List<OrganizationUser> { savingUser });
         organizationService.HasConfirmedOwnersExceptAsync(
             organization.Id, Arg.Is<IEnumerable<Guid>>(ids => ids.Contains(newUserData.Id))).Returns(true);
-        countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(newUserData.OrganizationId, 1).Returns(1);
 
         await sutProvider.Sut.UpdateUserAsync(newUserData, savingUser.UserId, collections, groups);
 
@@ -99,16 +91,6 @@ public class UpdateOrganizationUserCommandTests
             .ValidateOrganizationUserUpdatePermissions(
                 newUserData.OrganizationId, newUserData.Type, oldUserData.Type,
                 Arg.Is<Permissions>(p => p.ClaimsMap.All(c => permissions.ClaimsMap.Any(pcm => pcm.Permission == c.Permission && pcm.ClaimName == c.ClaimName))));
-        if (accessSecretsManager)
-        {
-            await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
-                .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>());
-        }
-        else
-        {
-            await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
-                .UpdateSubscriptionAsync(default);
-        }
         await organizationUserRepository.Received(1)
             .ReplaceAsync(newUserData, collections);
         await organizationUserRepository.Received(1)

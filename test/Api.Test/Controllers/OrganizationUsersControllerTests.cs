@@ -4,8 +4,10 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -98,9 +100,11 @@ public class OrganizationUsersControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Put_Success(Guid orgId, OrganizationUser orgUser, OrganizationUserUpdateRequestModel model, Guid? savingUserId, SutProvider<OrganizationUsersController> sutProvider)
+    public async Task Put_WithAccessSecretsManagerFalse_Success(Guid orgId, OrganizationUser orgUser, OrganizationUserUpdateRequestModel model, Guid? savingUserId, SutProvider<OrganizationUsersController> sutProvider)
     {
         orgUser.OrganizationId = orgId;
+        orgUser.AccessSecretsManager = false;
+        model.AccessSecretsManager = false;
 
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUser.Id).Returns(orgUser);
@@ -108,13 +112,68 @@ public class OrganizationUsersControllerTests
 
         await sutProvider.Sut.Put(orgId, orgUser.Id, model);
 
-        await sutProvider.GetDependency<ICurrentContext>().Received(1).ManageUsers(orgId);
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).GetByIdAsync(orgUser.Id);
-        sutProvider.GetDependency<IUserService>().Received(1).GetProperUserId(Arg.Any<ClaimsPrincipal>());
+        await sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>().DidNotReceiveWithAnyArgs()
+            .CountNewSmSeatsRequiredAsync(default, default);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(default);
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
             Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.OrganizationId == orgId),
             savingUserId,
             Arg.Any<IEnumerable<CollectionAccessSelection>>(),
             model.Groups);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithAccessSecretsManagerTrue_RequireNewSeat_Success(Organization org, OrganizationUser orgUser, OrganizationUserUpdateRequestModel model, Guid? savingUserId, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        orgUser.OrganizationId = org.Id;
+        orgUser.AccessSecretsManager = false;
+        model.AccessSecretsManager = true;
+
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUser.Id).Returns(orgUser);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>().CountNewSmSeatsRequiredAsync(org.Id, 1).Returns(1);
+
+        await sutProvider.Sut.Put(org.Id, orgUser.Id, model);
+
+        await sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>().Received(1).CountNewSmSeatsRequiredAsync(orgUser.OrganizationId, 1);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+            .ValidateUpdate(Arg.Is<SecretsManagerSubscriptionUpdate>(s => s.Organization == org && s.SmSeats == (org.SmSeats + 1)));
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.OrganizationId == org.Id),
+            savingUserId,
+            Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+            model.Groups);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(s => s.Organization == org && s.SmSeats == (org.SmSeats + 1)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithAccessSecretsManagerTrue_NoNewSeat_Success(Organization org, OrganizationUser orgUser, OrganizationUserUpdateRequestModel model, Guid? savingUserId, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        orgUser.OrganizationId = org.Id;
+        orgUser.AccessSecretsManager = false;
+        model.AccessSecretsManager = true;
+
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUser.Id).Returns(orgUser);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>().CountNewSmSeatsRequiredAsync(org.Id, 1).Returns(0);
+
+        await sutProvider.Sut.Put(org.Id, orgUser.Id, model);
+
+        await sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>().Received(1).CountNewSmSeatsRequiredAsync(orgUser.OrganizationId, 1);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs().ValidateUpdate(default);
+        await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.OrganizationId == org.Id),
+            savingUserId,
+            Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+            model.Groups);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(default);
     }
 }

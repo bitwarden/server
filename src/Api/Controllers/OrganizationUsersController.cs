@@ -292,9 +292,19 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        await _updateOrganizationUserCommand.UpdateUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+        var updateSecretsManagerAccess = !organizationUser.AccessSecretsManager && model.AccessSecretsManager;
+        var updatedOrganizationUser = model.ToOrganizationUser(organizationUser);
+        var savingUserId = _userService.GetProperUserId(User);
+
+        if (updateSecretsManagerAccess)
+        {
+            await HandleUpdateWithSecretsManagerAccessAsync(updatedOrganizationUser, savingUserId.Value, model);
+        }
+        else
+        {
+            await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId.Value,
+                model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+        }
     }
 
     [HttpPut("{id}/groups")]
@@ -502,5 +512,27 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    private async Task HandleUpdateWithSecretsManagerAccessAsync(OrganizationUser updatedOrganizationUser, Guid savingUserId, OrganizationUserUpdateRequestModel model)
+    {
+        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(updatedOrganizationUser.OrganizationId, 1);
+        if (additionalSmSeatsRequired > 0)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(updatedOrganizationUser.OrganizationId);
+            var update = new SecretsManagerSubscriptionUpdate(organization, true);
+            update.AdjustSeats(additionalSmSeatsRequired);
+            await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(update);
+            await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
+                model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+            // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
+            // updating Stripe
+            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+        }
+        else
+        {
+            await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
+                model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+        }
     }
 }
