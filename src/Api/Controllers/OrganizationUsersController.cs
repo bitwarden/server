@@ -277,18 +277,17 @@ public class OrganizationUsersController : Controller
         return new ListResponseModel<OrganizationUserPublicKeyResponseModel>(responses);
     }
 
-    [HttpPut("{id}")]
-    [HttpPost("{id}")]
-    public async Task Put(string orgId, string id, [FromBody] OrganizationUserUpdateRequestModel model)
+    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
+    public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || organizationUser.OrganizationId != orgGuidId)
+        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
