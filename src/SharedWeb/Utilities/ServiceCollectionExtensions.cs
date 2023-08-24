@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Net;
+using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
@@ -17,6 +18,8 @@ using Bit.Core.IdentityServer;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
+using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -177,7 +180,7 @@ public static class ServiceCollectionExtensions
                 WebAuthnCredentialAssertionOptionsTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<WebAuthnCredentialAssertionOptionsTokenable>>>()));
-      services.AddSingleton<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>(serviceProvider =>
+        services.AddSingleton<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<SsoEmail2faSessionTokenable>(
                 SsoEmail2faSessionTokenable.ClearTextPrefix,
                 SsoEmail2faSessionTokenable.DataProtectorPurpose,
@@ -346,6 +349,9 @@ public static class ServiceCollectionExtensions
     public static void AddOosServices(this IServiceCollection services)
     {
         services.AddScoped<IProviderService, NoopProviderService>();
+        services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
+        services.AddScoped<ISecretRepository, NoopSecretRepository>();
+        services.AddScoped<IProjectRepository, NoopProjectRepository>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)
@@ -547,18 +553,36 @@ public static class ServiceCollectionExtensions
         });
     }
 
-    public static void UseForwardedHeaders(this IApplicationBuilder app, GlobalSettings globalSettings)
+    public static void UseForwardedHeaders(this IApplicationBuilder app, IGlobalSettings globalSettings)
     {
         var options = new ForwardedHeadersOptions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
+
+        if (!globalSettings.UnifiedDeployment)
+        {
+            // Trust the X-Forwarded-Host header of the nginx docker container
+            try
+            {
+                var nginxIp = Dns.GetHostEntry("nginx")?.AddressList.FirstOrDefault();
+                if (nginxIp != null)
+                {
+                    options.KnownProxies.Add(nginxIp);
+                }
+            }
+            catch
+            {
+                // Ignore DNS errors
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(globalSettings.KnownProxies))
         {
             var proxies = globalSettings.KnownProxies.Split(',');
             foreach (var proxy in proxies)
             {
-                if (System.Net.IPAddress.TryParse(proxy.Trim(), out var ip))
+                if (IPAddress.TryParse(proxy.Trim(), out var ip))
                 {
                     options.KnownProxies.Add(ip);
                 }

@@ -1,6 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -96,10 +94,7 @@ public class OrganizationUserUpdateRequestModel
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
         existingUser.Type = Type.Value;
-        existingUser.Permissions = JsonSerializer.Serialize(Permissions, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        });
+        existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
         existingUser.AccessAll = AccessAll;
         existingUser.AccessSecretsManager = AccessSecretsManager;
         return existingUser;
@@ -112,7 +107,7 @@ public class OrganizationUserUpdateGroupsRequestModel
     public IEnumerable<string> GroupIds { get; set; }
 }
 
-public class OrganizationUserResetPasswordEnrollmentRequestModel : SecretVerificationRequestModel
+public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
     public string ResetPasswordKey { get; set; }
 }

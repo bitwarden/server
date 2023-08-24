@@ -100,7 +100,7 @@
             "cwd": "${workspaceFolder}/src/Identity",
             "stopAtEntry": false,
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -122,7 +122,7 @@
             "cwd": "${workspaceFolder}/src/Api",
             "stopAtEntry": false,
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -144,7 +144,7 @@
             "cwd": "${workspaceFolder}/src/Billing",
             "stopAtEntry": false,
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -168,7 +168,7 @@
             "stopAtEntry": false,
             "OS-COMMENT5": "Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser",
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -190,7 +190,7 @@
             "cwd": "${workspaceFolder}/bitwarden_license/src/Sso",
             "stopAtEntry": false,
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -212,7 +212,7 @@
             "cwd": "${workspaceFolder}/src/EventsProcessor",
             "stopAtEntry": false,
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -234,7 +234,7 @@
             "cwd": "${workspaceFolder}/src/Icons",
             "stopAtEntry": false,
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -256,7 +256,7 @@
             "cwd": "${workspaceFolder}/src/Notifications",
             "stopAtEntry": false,
             "env": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -280,7 +280,7 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:33657",
-                "developSelfHosted": "true"
+                "developSelfHosted": "true",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -304,7 +304,7 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:4001",
-                "developSelfHosted": "true"
+                "developSelfHosted": "true",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -330,7 +330,7 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:62912",
-                "developSelfHosted": "true"
+                "developSelfHosted": "true",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -354,7 +354,7 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:51822",
-                "developSelfHosted": "true"
+                "developSelfHosted": "true",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -378,7 +378,7 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:61841",
-                "developSelfHosted": "true"
+                "developSelfHosted": "true",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -402,7 +402,7 @@
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
                 "ASPNETCORE_URLS": "http://localhost:46274",
-                "developSelfHosted": "true"
+                "developSelfHosted": "true",
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"

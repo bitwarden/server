@@ -6,15 +6,17 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
+using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
-[SecretsManager]
 [Authorize("secrets")]
+[SelfHosted(NotSelfHostedOnly = true)]
 public class ProjectsController : Controller
 {
     private readonly ICurrentContext _currentContext;
@@ -72,9 +74,8 @@ public class ProjectsController : Controller
         {
             throw new NotFoundException();
         }
-
         var userId = _userService.GetProperUserId(User).Value;
-        var result = await _createProjectCommand.CreateAsync(project, userId);
+        var result = await _createProjectCommand.CreateAsync(project, userId, _currentContext.ClientType);
 
         // Creating a project means you have read & write permission.
         return new ProjectResponseModel(result, true, true);
@@ -127,11 +128,44 @@ public class ProjectsController : Controller
     }
 
     [HttpPost("projects/delete")]
-    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync(
+        [FromBody] List<Guid> ids)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var results = await _deleteProjectCommand.DeleteProjects(ids, userId);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
+        var projects = (await _projectRepository.GetManyWithSecretsByIds(ids)).ToList();
+        if (!projects.Any() || projects.Count != ids.Count)
+        {
+            throw new NotFoundException();
+        }
+
+        // Ensure all projects belongs to the same organization
+        var organizationId = projects.First().OrganizationId;
+        if (projects.Any(p => p.OrganizationId != organizationId) ||
+            !_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var projectsToDelete = new List<Project>();
+        var results = new List<(Project Project, string Error)>();
+
+        foreach (var project in projects)
+        {
+            var authorizationResult =
+                await _authorizationService.AuthorizeAsync(User, project, ProjectOperations.Delete);
+            if (authorizationResult.Succeeded)
+            {
+                projectsToDelete.Add(project);
+                results.Add((project, ""));
+            }
+            else
+            {
+                results.Add((project, "access denied"));
+            }
+        }
+
+        await _deleteProjectCommand.DeleteProjects(projectsToDelete);
+
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Project.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 }

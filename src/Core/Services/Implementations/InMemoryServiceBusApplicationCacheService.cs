@@ -1,15 +1,16 @@
-﻿using Bit.Core.Entities;
+﻿using Azure.Messaging.ServiceBus;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
-using Microsoft.Azure.ServiceBus;
 
 namespace Bit.Core.Services;
 
 public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCacheService, IApplicationCacheService
 {
-    private readonly TopicClient _topicClient;
+    private readonly ServiceBusClient _serviceBusClient;
+    private readonly ServiceBusSender _topicMessageSender;
     private readonly string _subName;
 
     public InMemoryServiceBusApplicationCacheService(
@@ -18,39 +19,39 @@ public class InMemoryServiceBusApplicationCacheService : InMemoryApplicationCach
         GlobalSettings globalSettings)
         : base(organizationRepository, providerRepository)
     {
-        _subName = CoreHelpers.GetApplicationCacheServiceBusSubcriptionName(globalSettings);
-        _topicClient = new TopicClient(globalSettings.ServiceBus.ConnectionString,
-            globalSettings.ServiceBus.ApplicationCacheTopicName);
+        _subName = CoreHelpers.GetApplicationCacheServiceBusSubscriptionName(globalSettings);
+        _serviceBusClient = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString);
+        _topicMessageSender = new ServiceBusClient(globalSettings.ServiceBus.ConnectionString).CreateSender(globalSettings.ServiceBus.ApplicationCacheTopicName);
     }
 
     public override async Task UpsertOrganizationAbilityAsync(Organization organization)
     {
         await base.UpsertOrganizationAbilityAsync(organization);
-        var message = new Message
+        var message = new ServiceBusMessage
         {
-            Label = _subName,
-            UserProperties =
+            Subject = _subName,
+            ApplicationProperties =
             {
                 { "type", (byte)ApplicationCacheMessageType.UpsertOrganizationAbility },
                 { "id", organization.Id },
             }
         };
-        var task = _topicClient.SendAsync(message);
+        var task = _topicMessageSender.SendMessageAsync(message);
     }
 
     public override async Task DeleteOrganizationAbilityAsync(Guid organizationId)
     {
         await base.DeleteOrganizationAbilityAsync(organizationId);
-        var message = new Message
+        var message = new ServiceBusMessage
         {
-            Label = _subName,
-            UserProperties =
+            Subject = _subName,
+            ApplicationProperties =
             {
                 { "type", (byte)ApplicationCacheMessageType.DeleteOrganizationAbility },
                 { "id", organizationId },
             }
         };
-        var task = _topicClient.SendAsync(message);
+        var task = _topicMessageSender.SendMessageAsync(message);
     }
 
     public async Task BaseUpsertOrganizationAbilityAsync(Organization organization)

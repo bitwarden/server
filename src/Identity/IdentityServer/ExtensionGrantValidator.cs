@@ -34,16 +34,17 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
+        ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
         IWebAuthnCredentialRepository webAuthnCredentialRepository,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
-        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
+        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer,
+        IFeatureService featureService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
-              organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, policyService, tokenDataFactory)
+            organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+            applicationCacheService, mailService, logger, currentContext, globalSettings,
+            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository)
     {
         _userManager = userManager;
         _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
@@ -107,6 +108,11 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
             claims: claims.Count > 0 ? claims : null,
             customResponse: extendedCustomResponse);
         return Task.CompletedTask;
+    }
+
+    protected override ClaimsPrincipal GetSubject(ExtensionGrantValidationContext context)
+    {
+        return context.Result.Subject;
     }
 
     protected override void SetTwoFactorResult(ExtensionGrantValidationContext context,

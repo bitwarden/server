@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
@@ -12,21 +14,30 @@ public class SsoConfigService : ISsoConfigService
 {
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IPolicyRepository _policyRepository;
+    private readonly IPolicyService _policyService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IUserService _userService;
+    private readonly IOrganizationService _organizationService;
     private readonly IEventService _eventService;
 
     public SsoConfigService(
         ISsoConfigRepository ssoConfigRepository,
         IPolicyRepository policyRepository,
+        IPolicyService policyService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
+        IUserService userService,
+        IOrganizationService organizationService,
         IEventService eventService)
     {
         _ssoConfigRepository = ssoConfigRepository;
         _policyRepository = policyRepository;
+        _policyService = policyService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
+        _userService = userService;
+        _organizationService = organizationService;
         _eventService = eventService;
     }
 
@@ -39,17 +50,41 @@ public class SsoConfigService : ISsoConfigService
             config.CreationDate = now;
         }
 
-        var useKeyConnector = config.GetData().KeyConnectorEnabled;
+        var useKeyConnector = config.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector;
         if (useKeyConnector)
         {
             await VerifyDependenciesAsync(config, organization);
         }
 
         var oldConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(config.OrganizationId);
-        var disabledKeyConnector = oldConfig?.GetData()?.KeyConnectorEnabled == true && !useKeyConnector;
+        var disabledKeyConnector = oldConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector && !useKeyConnector;
         if (disabledKeyConnector && await AnyOrgUserHasKeyConnectorEnabledAsync(config.OrganizationId))
         {
             throw new BadRequestException("Key Connector cannot be disabled at this moment.");
+        }
+
+        // Automatically enable account recovery, SSO required, and single org policies if trusted device encryption is selected
+        if (config.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
+        {
+            var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg) ??
+                                  new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.SingleOrg };
+
+            singleOrgPolicy.Enabled = true;
+
+            await _policyService.SaveAsync(singleOrgPolicy, _userService, _organizationService, null);
+
+            var resetPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.ResetPassword) ??
+                              new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.ResetPassword, };
+
+            resetPolicy.Enabled = true;
+            resetPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
+            await _policyService.SaveAsync(resetPolicy, _userService, _organizationService, null);
+
+            var ssoRequiredPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso) ??
+                              new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.RequireSso, };
+
+            ssoRequiredPolicy.Enabled = true;
+            await _policyService.SaveAsync(ssoRequiredPolicy, _userService, _organizationService, null);
         }
 
         await LogEventsAsync(config, oldConfig);
@@ -97,8 +132,9 @@ public class SsoConfigService : ISsoConfigService
             await _eventService.LogOrganizationEventAsync(organization, e);
         }
 
-        var keyConnectorEnabled = config.GetData().KeyConnectorEnabled;
-        if (oldConfig?.GetData()?.KeyConnectorEnabled != keyConnectorEnabled)
+        var keyConnectorEnabled = config.GetData().MemberDecryptionType == MemberDecryptionType.KeyConnector;
+        var oldKeyConnectorEnabled = oldConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector;
+        if (oldKeyConnectorEnabled != keyConnectorEnabled)
         {
             var e = keyConnectorEnabled
                 ? EventType.Organization_EnabledKeyConnector

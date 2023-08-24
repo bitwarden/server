@@ -1,15 +1,21 @@
 ﻿using System.Text.Json;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.StaticStore;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -19,9 +25,11 @@ using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
+using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 using Organization = Bit.Core.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
@@ -32,7 +40,6 @@ namespace Bit.Core.Test.Services;
 [SutProviderCustomize]
 public class OrganizationServiceTests
 {
-    // [Fact]
     [Theory, PaidOrganizationCustomize, BitAutoData]
     public async Task OrgImportCreateNewUsers(SutProvider<OrganizationService> sutProvider, Guid userId,
         Organization org, List<OrganizationUserUserDetails> existingUsers, List<ImportedOrganizationUser> newUsers)
@@ -141,55 +148,170 @@ public class OrganizationServiceTests
             referenceEvent.Users == expectedNewUsersCount));
     }
 
-    [Theory, BitAutoData]
-    public async Task UpgradePlan_OrganizationIsNull_Throws(Guid organizationId, OrganizationUpgrade upgrade,
-            SutProvider<OrganizationService> sutProvider)
+    [Theory]
+    [BitAutoData(PlanType.FamiliesAnnually)]
+    public async Task SignUp_PM_Family_Passes(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationId).Returns(Task.FromResult<Organization>(null));
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organizationId, upgrade));
-    }
+        signup.Plan = planType;
 
-    [Theory, BitAutoData]
-    public async Task UpgradePlan_GatewayCustomIdIsNull_Throws(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<OrganizationService> sutProvider)
-    {
-        organization.GatewayCustomerId = string.Empty;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
-        Assert.Contains("no payment method", exception.Message);
-    }
+        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(signup.Plan);
 
-    [Theory, BitAutoData]
-    public async Task UpgradePlan_AlreadyInPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<OrganizationService> sutProvider)
-    {
-        upgrade.Plan = organization.PlanType;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
-        Assert.Contains("already on this plan", exception.Message);
-    }
+        signup.AdditionalSeats = 0;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.UseSecretsManager = false;
 
-    [Theory, PaidOrganizationCustomize(CheckedPlanType = PlanType.Free), BitAutoData]
-    public async Task UpgradePlan_UpgradeFromPaidPlan_Throws(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<OrganizationService> sutProvider)
-    {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade));
-        Assert.Contains("can only upgrade", exception.Message);
+        var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan).ToList();
+
+        var result = await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o =>
+                o.Seats == passwordManagerPlan.BaseSeats + signup.AdditionalSeats
+                && o.SmSeats == null
+                && o.SmServiceAccounts == null));
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
+            Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
+
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
+                referenceEvent.Type == ReferenceEventType.Signup &&
+                referenceEvent.PlanName == passwordManagerPlan.Name &&
+                referenceEvent.PlanType == passwordManagerPlan.Type &&
+                referenceEvent.Seats == result.Item1.Seats &&
+                referenceEvent.Storage == result.Item1.MaxStorageGb));
+        // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Item1);
+        Assert.NotNull(result.Item2);
+        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
+
+        await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
+            Arg.Any<Organization>(),
+            signup.PaymentMethodType.Value,
+            signup.PaymentToken,
+            Arg.Is<List<Plan>>(plan => plan.Single() == passwordManagerPlan),
+            signup.AdditionalStorageGb,
+            signup.AdditionalSeats,
+            signup.PremiumAccessAddon,
+            signup.TaxInfo,
+            false,
+            signup.AdditionalSmSeats.GetValueOrDefault(),
+            signup.AdditionalServiceAccounts.GetValueOrDefault()
+        );
     }
 
     [Theory]
-    [FreeOrganizationUpgradeCustomize, BitAutoData]
-    public async Task UpgradePlan_Passes(Organization organization, OrganizationUpgrade upgrade,
-            SutProvider<OrganizationService> sutProvider)
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    public async Task SignUp_SM_Passes(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
-        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organization);
+        signup.Plan = planType;
+
+        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(signup.Plan);
+        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(signup.Plan);
+
+        signup.UseSecretsManager = true;
+        signup.AdditionalSeats = 15;
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalServiceAccounts = 20;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+
+        var purchaseOrganizationPlan = StaticStore.Plans.Where(x => x.Type == signup.Plan).ToList();
+
+        var result = await sutProvider.Sut.SignUpAsync(signup);
+
+        await sutProvider.GetDependency<IOrganizationRepository>().Received(1).CreateAsync(
+            Arg.Is<Organization>(o =>
+                o.Seats == passwordManagerPlan.BaseSeats + signup.AdditionalSeats
+                && o.SmSeats == secretsManagerPlan.BaseSeats + signup.AdditionalSmSeats
+                && o.SmServiceAccounts == secretsManagerPlan.BaseServiceAccount + signup.AdditionalServiceAccounts));
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).CreateAsync(
+            Arg.Is<OrganizationUser>(o => o.AccessSecretsManager == signup.UseSecretsManager));
+
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1)
+            .RaiseEventAsync(Arg.Is<ReferenceEvent>(referenceEvent =>
+                referenceEvent.Type == ReferenceEventType.Signup &&
+                referenceEvent.PlanName == purchaseOrganizationPlan[0].Name &&
+                referenceEvent.PlanType == purchaseOrganizationPlan[0].Type &&
+                referenceEvent.Seats == result.Item1.Seats &&
+                referenceEvent.Storage == result.Item1.MaxStorageGb));
+        // TODO: add reference events for SmSeats and Service Accounts - see AC-1481
+
+        Assert.NotNull(result);
+        Assert.NotNull(result.Item1);
+        Assert.NotNull(result.Item2);
+        Assert.IsType<Tuple<Organization, OrganizationUser>>(result);
+
+        await sutProvider.GetDependency<IPaymentService>().Received(1).PurchaseOrganizationAsync(
+            Arg.Any<Organization>(),
+            signup.PaymentMethodType.Value,
+            signup.PaymentToken,
+            Arg.Is<List<Plan>>(plan => plan.All(p => purchaseOrganizationPlan.Contains(p))),
+            signup.AdditionalStorageGb,
+            signup.AdditionalSeats,
+            signup.PremiumAccessAddon,
+            signup.TaxInfo,
+            false,
+            signup.AdditionalSmSeats.GetValueOrDefault(),
+            signup.AdditionalServiceAccounts.GetValueOrDefault()
+        );
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_SecretManager_AdditionalServiceAccounts_NotAllowedByPlan_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.AdditionalSmSeats = 0;
+        signup.AdditionalSeats = 0;
+        signup.Plan = PlanType.Free;
+        signup.UseSecretsManager = true;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.AdditionalServiceAccounts = 10;
+        signup.AdditionalStorageGb = 0;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpAsync(signup));
+        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_SMSeatsGreatThanPMSeat_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.AdditionalSmSeats = 100;
+        signup.AdditionalSeats = 10;
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.UseSecretsManager = true;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.AdditionalServiceAccounts = 10;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+           () => sutProvider.Sut.SignUpAsync(signup));
+        Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_InvalidateServiceAccount_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalSeats = 10;
+        signup.Plan = PlanType.EnterpriseAnnually;
+        signup.UseSecretsManager = true;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+        signup.AdditionalServiceAccounts = -10;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpAsync(signup));
+        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
     }
 
     [Theory]
@@ -199,6 +321,7 @@ public class OrganizationServiceTests
         OrganizationUserInvite invite, SutProvider<OrganizationService> sutProvider)
     {
         invite.Emails = null;
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         await Assert.ThrowsAsync<NotFoundException>(
@@ -280,7 +403,7 @@ public class OrganizationServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
-        Assert.Contains("only owners and admins", exception.Message.ToLowerInvariant());
+        Assert.Contains("your account does not have permission to manage users", exception.Message.ToLowerInvariant());
     }
 
     [Theory]
@@ -462,6 +585,19 @@ public class OrganizationServiceTests
         organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
             .Returns(new[] { owner });
         currentContext.ManageUsers(organization.Id).Returns(true);
+        currentContext.AccessReports(organization.Id).Returns(true);
+        currentContext.ManageGroups(organization.Id).Returns(true);
+        currentContext.ManagePolicies(organization.Id).Returns(true);
+        currentContext.ManageScim(organization.Id).Returns(true);
+        currentContext.ManageSso(organization.Id).Returns(true);
+        currentContext.AccessEventLogs(organization.Id).Returns(true);
+        currentContext.AccessImportExport(organization.Id).Returns(true);
+        currentContext.CreateNewCollections(organization.Id).Returns(true);
+        currentContext.DeleteAnyCollection(organization.Id).Returns(true);
+        currentContext.DeleteAssignedCollections(organization.Id).Returns(true);
+        currentContext.EditAnyCollection(organization.Id).Returns(true);
+        currentContext.EditAssignedCollections(organization.Id).Returns(true);
+        currentContext.ManageResetPassword(organization.Id).Returns(true);
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
 
@@ -507,6 +643,97 @@ public class OrganizationServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task InviteUser_WithSecretsManager_Passes(Organization organization,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
+
+        // Set up some invites to grant access to SM
+        invites.First().invite.AccessSecretsManager = true;
+        var invitedSmUsers = invites.First().invite.Emails.Count();
+
+        // Assume we need to add seats for all invited SM users
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, invitedSmUsers).Returns(invitedSmUsers);
+
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites);
+
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
+                update.SmSeats == organization.SmSeats + invitedSmUsers &&
+                !update.SmServiceAccountsChanged &&
+                !update.MaxAutoscaleSmSeatsChanged &&
+                !update.MaxAutoscaleSmSeatsChanged));
+    }
+
+    [Theory, BitAutoData]
+    public async Task InviteUser_WithSecretsManager_WhenErrorIsThrown_RevertsAutoscaling(Organization organization,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
+        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var initialSmSeats = organization.SmSeats;
+        InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
+
+        // Set up some invites to grant access to SM
+        invites.First().invite.AccessSecretsManager = true;
+        var invitedSmUsers = invites.First().invite.Emails.Count();
+
+        // Assume we need to add seats for all invited SM users
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, invitedSmUsers).Returns(invitedSmUsers);
+
+        // Mock SecretsManagerSubscriptionUpdateCommand to actually change the organization's subscription in memory
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .UpdateSubscriptionAsync(Arg.Any<SecretsManagerSubscriptionUpdate>())
+            .ReturnsForAnyArgs(Task.FromResult(0)).AndDoes(x => organization.SmSeats += invitedSmUsers);
+
+        // Throw error at the end of the try block
+        sutProvider.GetDependency<IReferenceEventService>().RaiseEventAsync(default).ThrowsForAnyArgs<BadRequestException>();
+
+        await Assert.ThrowsAsync<AggregateException>(async () => await sutProvider.Sut.InviteUsersAsync(organization.Id, savingUser.Id, invites));
+
+        // OrgUser is reverted
+        // Note: we don't know what their guids are so comparing length is the best we can do
+        var invitedEmails = invites.SelectMany(i => i.invite.Emails);
+        sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).DeleteManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.Count() == invitedEmails.Count()));
+
+        Received.InOrder(() =>
+        {
+            // Initial autoscaling
+            sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+                .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
+                    update.SmSeats == initialSmSeats + invitedSmUsers &&
+                    !update.SmServiceAccountsChanged &&
+                    !update.MaxAutoscaleSmSeatsChanged &&
+                    !update.MaxAutoscaleSmSeatsChanged));
+
+            // Revert autoscaling
+            sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+                .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(update =>
+                    update.SmSeats == initialSmSeats &&
+                    !update.SmServiceAccountsChanged &&
+                    !update.MaxAutoscaleSmSeatsChanged &&
+                    !update.MaxAutoscaleSmSeatsChanged));
+        });
+    }
+
+    private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
+    SutProvider<OrganizationService> sutProvider)
+    {
+        savingUser.OrganizationId = organization.Id;
+        organization.UseCustomPermissions = true;
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { savingUser });
+    }
+
+    [Theory, BitAutoData]
     public async Task SaveUser_NoUserId_Throws(OrganizationUser user, Guid? savingUserId,
         IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups, SutProvider<OrganizationService> sutProvider)
     {
@@ -534,6 +761,7 @@ public class OrganizationServiceTests
         OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -546,6 +774,10 @@ public class OrganizationServiceTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
@@ -575,6 +807,7 @@ public class OrganizationServiceTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = null;
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
@@ -597,6 +830,7 @@ public class OrganizationServiceTests
         OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -612,6 +846,10 @@ public class OrganizationServiceTests
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
         newUserData.Type = newUserType;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
@@ -627,6 +865,7 @@ public class OrganizationServiceTests
         [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
         IEnumerable<CollectionAccessSelection> collections,
         IEnumerable<Guid> groups,
+        Permissions permissions,
         [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
@@ -641,12 +880,121 @@ public class OrganizationServiceTests
         newUserData.Id = oldUserData.Id;
         newUserData.UserId = oldUserData.UserId;
         newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(permissions, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
         organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
         organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
             .Returns(new List<OrganizationUser> { savingUser });
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithCustomPermission_WhenSavingUserHasCustomPermission_Passes(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
+        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser organizationOwner,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organizationOwner.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { organizationOwner });
+        currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
+        currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
+        currentContext.AccessReports(savingUser.OrganizationId).Returns(true);
+
+        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithCustomPermission_WhenSavingUserDoesNotHaveCustomPermission_Throws(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser savingUser,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
+        currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
+        currentContext.AccessReports(savingUser.OrganizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups));
+        Assert.Contains("custom users can only grant the same custom permissions that they have", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithCustomPermission_WhenUpgradingToAdmin_Throws(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.Custom)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Admin)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        organization.UseCustomPermissions = true;
+
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = JsonSerializer.Serialize(new Permissions { AccessReports = true }, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        });
+        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
+        currentContext.OrganizationCustom(oldUserData.OrganizationId).Returns(true);
+        currentContext.ManageUsers(oldUserData.OrganizationId).Returns(true);
+        currentContext.AccessReports(oldUserData.OrganizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveUserAsync(newUserData, oldUserData.UserId, collections, groups));
+        Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
@@ -1192,7 +1540,7 @@ public class OrganizationServiceTests
         SsoConfig ssoConfig)
     {
         ssoConfig.Enabled = true;
-        ssoConfig.SetData(new SsoConfigurationData { KeyConnectorEnabled = true });
+        ssoConfig.SetData(new SsoConfigurationData { MemberDecryptionType = MemberDecryptionType.KeyConnector });
         var ssoConfigRepository = sutProvider.GetDependency<ISsoConfigRepository>();
         var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
         var applicationCacheService = sutProvider.GetDependency<IApplicationCacheService>();
@@ -1279,5 +1627,208 @@ public class OrganizationServiceTests
         await organizationUserRepository.Received().RestoreAsync(organizationUser.Id, OrganizationUserStatusType.Invited);
         await eventService.Received()
             .LogOrganizationUserEventAsync(organizationUser, EventType.OrganizationUser_Restored, eventSystemUser);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_WithConfirmedOwner_ReturnsTrue(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), true);
+
+        Assert.True(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_ExcludingConfirmedOwner_ReturnsFalse(Organization organization, [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid> { owner.Id }, true);
+
+        Assert.False(result);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HasConfirmedOwnersExcept_WithInvitedOwner_ReturnsFalse(Organization organization, [OrganizationUser(OrganizationUserStatusType.Invited, OrganizationUserType.Owner)] OrganizationUser owner, SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
+            .Returns(new List<OrganizationUser> { owner });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), true);
+
+        Assert.False(result);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task HasConfirmedOwnersExcept_WithConfirmedProviderUser_IncludeProviderTrue_ReturnsTrue(bool includeProvider, Organization organization, ProviderUser providerUser, SutProvider<OrganizationService> sutProvider)
+    {
+        providerUser.Status = ProviderUserStatusType.Confirmed;
+
+        sutProvider.GetDependency<IProviderUserRepository>()
+            .GetManyByOrganizationAsync(organization.Id, ProviderUserStatusType.Confirmed)
+            .Returns(new List<ProviderUser> { providerUser });
+
+        var result = await sutProvider.Sut.HasConfirmedOwnersExceptAsync(organization.Id, new List<Guid>(), includeProvider);
+
+        Assert.Equal(includeProvider, result);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenInvalidPlanSelected(
+        PlanType planType, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == planType);
+
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 1,
+            AdditionalServiceAccounts = 10,
+            AdditionalSeats = 1
+        };
+
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("Invalid Secrets Manager plan selected.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenNoSecretsManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 0,
+            AdditionalServiceAccounts = 5,
+            AdditionalSeats = 2
+        };
+
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("You do not have any Secrets Manager seats!", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = -1,
+            AdditionalServiceAccounts = 5
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("You can't subtract Secrets Manager seats!", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenPlanDoesNotAllowAdditionalServiceAccounts(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 2,
+            AdditionalServiceAccounts = 5,
+            AdditionalSeats = 3
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("Plan does not allow additional Service Accounts.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenMoreSeatsThanPasswordManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 4,
+            AdditionalServiceAccounts = 5,
+            AdditionalSeats = 3
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("You cannot have more Secrets Manager seats than Password Manager seats.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingServiceAccounts(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 4,
+            AdditionalServiceAccounts = -5,
+            AdditionalSeats = 5
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("You can't subtract Service Accounts!", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public void ValidateSecretsManagerPlan_ThrowsException_WhenPlanDoesNotAllowAdditionalUsers(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 2,
+            AdditionalServiceAccounts = 0,
+            AdditionalSeats = 5
+        };
+        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+        Assert.Contains("Plan does not allow additional users.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    public void ValidateSecretsManagerPlan_ValidPlan_NoExceptionThrown(
+        PlanType planType,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
+        var signup = new OrganizationUpgrade
+        {
+            UseSecretsManager = true,
+            AdditionalSmSeats = 2,
+            AdditionalServiceAccounts = 0,
+            AdditionalSeats = 4
+        };
+
+        sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup);
     }
 }

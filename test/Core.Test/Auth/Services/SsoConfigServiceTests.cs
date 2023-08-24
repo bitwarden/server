@@ -1,11 +1,14 @@
 ﻿using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -83,7 +86,7 @@ public class SsoConfigServiceTests
             Id = 1,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -127,7 +130,7 @@ public class SsoConfigServiceTests
             Id = 1,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -165,7 +168,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -193,7 +196,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -227,7 +230,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = false,
             OrganizationId = organization.Id,
@@ -262,7 +265,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -297,7 +300,7 @@ public class SsoConfigServiceTests
             Id = default,
             Data = new SsoConfigurationData
             {
-                KeyConnectorEnabled = true,
+                MemberDecryptionType = MemberDecryptionType.KeyConnector,
             }.Serialize(),
             Enabled = true,
             OrganizationId = organization.Id,
@@ -312,6 +315,42 @@ public class SsoConfigServiceTests
             });
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
+
+        await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()
+            .UpsertAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_Tde_Enable_Required_Policies(SutProvider<SsoConfigService> sutProvider, Organization organization)
+    {
+        var ssoConfig = new SsoConfig
+        {
+            Id = default,
+            Data = new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            }.Serialize(),
+            Enabled = true,
+            OrganizationId = organization.Id,
+        };
+
+        await sutProvider.Sut.SaveAsync(ssoConfig, organization);
+
+        await sutProvider.GetDependency<IPolicyService>().Received(1)
+            .SaveAsync(
+                Arg.Is<Policy>(t => t.Type == Enums.PolicyType.SingleOrg),
+                Arg.Any<IUserService>(),
+                Arg.Any<IOrganizationService>(),
+                null
+            );
+
+        await sutProvider.GetDependency<IPolicyService>().Received(1)
+            .SaveAsync(
+                Arg.Is<Policy>(t => t.Type == Enums.PolicyType.ResetPassword && t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled),
+                Arg.Any<IUserService>(),
+                Arg.Any<IOrganizationService>(),
+                null
+            );
 
         await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()
             .UpsertAsync(default);

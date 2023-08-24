@@ -3,6 +3,7 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
+using Constants = Bit.Core.Constants;
 
 namespace Bit.Api.Models.Response.Organizations;
 
@@ -16,7 +17,7 @@ public class OrganizationResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(organization));
         }
 
-        Id = organization.Id.ToString();
+        Id = organization.Id;
         Name = organization.Name;
         BusinessName = organization.BusinessName;
         BusinessAddress1 = organization.BusinessAddress1;
@@ -25,7 +26,12 @@ public class OrganizationResponseModel : ResponseModel
         BusinessCountry = organization.BusinessCountry;
         BusinessTaxNumber = organization.BusinessTaxNumber;
         BillingEmail = organization.BillingEmail;
-        Plan = new PlanResponseModel(StaticStore.Plans.FirstOrDefault(plan => plan.Type == organization.PlanType));
+        Plan = new PlanResponseModel(StaticStore.PasswordManagerPlans.FirstOrDefault(plan => plan.Type == organization.PlanType));
+        var matchingPlan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
+        if (matchingPlan != null)
+        {
+            SecretsManagerPlan = new PlanResponseModel(matchingPlan);
+        }
         PlanType = organization.PlanType;
         Seats = organization.Seats;
         MaxAutoscaleSeats = organization.MaxAutoscaleSeats;
@@ -47,9 +53,14 @@ public class OrganizationResponseModel : ResponseModel
         UseCustomPermissions = organization.UseCustomPermissions;
         SelfHost = organization.SelfHost;
         HasPublicAndPrivateKeys = organization.PublicKey != null && organization.PrivateKey != null;
+        UsePasswordManager = organization.UsePasswordManager;
+        SmSeats = organization.SmSeats;
+        SmServiceAccounts = organization.SmServiceAccounts;
+        MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
+        MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
     public string BusinessName { get; set; }
     public string BusinessAddress1 { get; set; }
@@ -59,6 +70,7 @@ public class OrganizationResponseModel : ResponseModel
     public string BusinessTaxNumber { get; set; }
     public string BillingEmail { get; set; }
     public PlanResponseModel Plan { get; set; }
+    public PlanResponseModel SecretsManagerPlan { get; set; }
     public PlanType PlanType { get; set; }
     public int? Seats { get; set; }
     public int? MaxAutoscaleSeats { get; set; } = null;
@@ -80,6 +92,11 @@ public class OrganizationResponseModel : ResponseModel
     public bool UseCustomPermissions { get; set; }
     public bool SelfHost { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
+    public bool UsePasswordManager { get; set; }
+    public int? SmSeats { get; set; }
+    public int? SmServiceAccounts { get; set; }
+    public int? MaxAutoscaleSmSeats { get; set; }
+    public int? MaxAutoscaleSmServiceAccounts { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
@@ -91,6 +108,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
@@ -106,11 +124,40 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             Subscription.Items = null;
             UpcomingInvoice.Amount = null;
         }
+
+        SecretsManagerBeta = organization.SecretsManagerBeta;
+    }
+
+    public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
+        this(organization)
+    {
+        if (license != null)
+        {
+            // License expiration should always include grace period - See OrganizationLicense.cs
+            Expiration = license.Expires;
+            // Use license.ExpirationWithoutGracePeriod if available, otherwise assume license expiration minus grace period
+            ExpirationWithoutGracePeriod = license.ExpirationWithoutGracePeriod ??
+                                             license.Expires?.AddDays(-Constants
+                                                 .OrganizationSelfHostSubscriptionGracePeriodDays);
+        }
+
+        SecretsManagerBeta = organization.SecretsManagerBeta;
     }
 
     public string StorageName { get; set; }
     public double? StorageGb { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
+
+    /// <summary>
+    /// Date when a self-hosted organization's subscription expires, without any grace period.
+    /// </summary>
+    public DateTime? ExpirationWithoutGracePeriod { get; set; }
+
+    /// <summary>
+    /// Date when a self-hosted organization expires (includes grace period).
+    /// </summary>
     public DateTime? Expiration { get; set; }
+
+    public bool SecretsManagerBeta { get; set; }
 }

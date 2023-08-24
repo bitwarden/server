@@ -13,6 +13,7 @@ public interface ISubscriber
     string SubscriberName();
     string BraintreeCustomerIdPrefix();
     string BraintreeIdField();
+    string BraintreeCloudRegionField();
     string GatewayIdField();
     bool IsUser();
     string SubscriberType();
