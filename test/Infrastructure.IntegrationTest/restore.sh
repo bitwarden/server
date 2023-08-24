@@ -10,7 +10,7 @@ get_connection_string() {
 
 get_db() {
   # Takes
-  DB_NAME=$(echo "$1" | grep -oP "$2=\w+" | sed "s/$2=//g")
+  DB_NAME=$(echo "$1" | perl -nle"print $& while m{$2=\w+}g" | sed "s/$2=//g")
   TEST_DB_NAME="${DB_NAME}_int_test"
   echo "$1" | sed "s/$DB_NAME/$TEST_DB_NAME/"
 }
@@ -31,7 +31,7 @@ drop_and_migrate_ef() {
   # TODO: Filter out info messages and only show warning/error
   dotnet ef database drop --project ../../util/$2/ --startup-project ../../util/$2/ --force --prefix-output -- --GlobalSettings:$3:ConnectionString="$1" > /dev/null
   # TODO: Filter out info messages and only show warning/error
-  dotnet ef database update --project ../../util/$2/ --startup-project ../../util/$2/ --connection "$1" --prefix-output -- --GlobalSettings:$3:ConnectionString="$1" > /dev/null
+  dotnet ef database update --project ../../util/$2/ --startup-project ../../util/$2/ --connection "$1" --prefix-output -- --GlobalSettings:$3:ConnectionString="$1"
 
   dotnet user-secrets set "Databases:$4:Type" "$ENUM"
   dotnet user-secrets set "Databases:$4:ConnectionString" "$1" > /dev/null
