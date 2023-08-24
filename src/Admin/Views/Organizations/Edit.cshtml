@@ -12,25 +12,45 @@
 
 @section Scripts {
     @await Html.PartialAsync("_OrganizationFormScripts")
-    
+
     <script>
         (() => {
             document.getElementById('teams-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
                     alert('Organization is not on a free plan.');
                     return;
                 }
-                togglePlanSettings('@((byte)Bit.Core.Enums.PlanType.TeamsAnnually)');
+                setTrialDefaults('@((byte)PlanType.TeamsAnnually)');
+                togglePlanFeatures('@((byte)PlanType.TeamsAnnually)');
                 document.getElementById('@(nameof(Model.Plan))').value = 'Teams (Trial)';
             });
             document.getElementById('enterprise-trial').addEventListener('click', () => {
-                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)Bit.Core.Enums.PlanType.Free)') {
+                if (document.getElementById('@(nameof(Model.PlanType))').value !== '@((byte)PlanType.Free)') {
                     alert('Organization is not on a free plan.');
                     return;
                 }
-                togglePlanSettings('@((byte)Bit.Core.Enums.PlanType.EnterpriseAnnually)');
+                setTrialDefaults('@((byte)PlanType.EnterpriseAnnually)');
+                togglePlanFeatures('@((byte)PlanType.EnterpriseAnnually)');
                 document.getElementById('@(nameof(Model.Plan))').value = 'Enterprise (Trial)';
             });
+
+            function setTrialDefaults(planType) {
+                // Plan
+                document.getElementById('@(nameof(Model.PlanType))').value = planType;
+                // Password Manager
+                document.getElementById('@(nameof(Model.Seats))').value = '10';
+                document.getElementById('@(nameof(Model.MaxCollections))').value = '';
+                document.getElementById('@(nameof(Model.MaxStorageGb))').value = '1';
+                // Secret Manager
+                if (document.getElementById('@(nameof(Model.UseSecretsManager))').checked) {
+                    document.getElementById('@(nameof(Model.SmSeats))').value = '10';
+                    document.getElementById('@(nameof(Model.SmServiceAccounts))').value = getPlan(planType)?.baseServiceAccount;
+                }
+                // Licensing
+                document.getElementById('@(nameof(Model.LicenseKey))').value = '@Model.RandomLicenseKey';
+                document.getElementById('@(nameof(Model.ExpirationDate))').value = '@Model.FourteenDayExpirationDate';
+                document.getElementById('@(nameof(Model.SalesAssistedTrialStarted))').value = true;
+            }
         })();
     </script>
 }
