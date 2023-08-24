@@ -143,27 +143,42 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             var dbContext = GetDatabaseContext(scope);
             await dbContext.UserBumpAccountRevisionDateByOrganizationIdAsync(organization.Id);
             var deleteCiphersTransaction = await dbContext.Database.BeginTransactionAsync();
-            dbContext.Ciphers.RemoveRange(
-                dbContext.Ciphers.Where(c => c.UserId == null && c.OrganizationId == organization.Id));
+            await dbContext.Ciphers.Where(c => c.UserId == null && c.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             await deleteCiphersTransaction.CommitAsync();
+
             var organizationDeleteTransaction = await dbContext.Database.BeginTransactionAsync();
-            dbContext.SsoUsers.RemoveRange(dbContext.SsoUsers.Where(su => su.OrganizationId == organization.Id));
-            dbContext.SsoConfigs.RemoveRange(dbContext.SsoConfigs.Where(sc => sc.OrganizationId == organization.Id));
-            var collectionUsers = from cu in dbContext.CollectionUsers
-                                  join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
-                                  where ou.OrganizationId == organization.Id
-                                  select cu;
-            dbContext.CollectionUsers.RemoveRange(collectionUsers);
-            dbContext.OrganizationUsers.RemoveRange(
-                dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organization.Id));
-            dbContext.ProviderOrganizations.RemoveRange(
-                dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id));
+            await dbContext.SsoUsers.Where(su => su.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.SsoConfigs.Where(sc => sc.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.CollectionUsers.Where(cu => cu.OrganizationUser.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUser.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUser.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.OrganizationUsers.Where(ou => ou.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.ProviderOrganizations.Where(po => po.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+
+            await dbContext.GroupServiceAccountAccessPolicy.Where(ap => ap.GrantedServiceAccount.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.Project.Where(p => p.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.Secret.Where(s => s.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.ApiKeys.Where(ak => ak.ServiceAccount.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.ServiceAccount.Where(sa => sa.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
 
             // The below section are 3 SPROCS in SQL Server but are only called by here
-            dbContext.OrganizationApiKeys.RemoveRange(
-                dbContext.OrganizationApiKeys.Where(oa => oa.OrganizationId == organization.Id));
-            dbContext.OrganizationConnections.RemoveRange(
-                dbContext.OrganizationConnections.Where(oc => oc.OrganizationId == organization.Id));
+            await dbContext.OrganizationApiKeys.Where(oa => oa.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
+            await dbContext.OrganizationConnections.Where(oc => oc.OrganizationId == organization.Id)
+                .ExecuteDeleteAsync();
             var sponsoringOrgs = await dbContext.OrganizationSponsorships
                 .Where(os => os.SponsoringOrganizationId == organization.Id)
                 .ToListAsync();
