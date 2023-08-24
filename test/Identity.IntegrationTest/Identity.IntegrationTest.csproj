@@ -4,6 +4,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(RunConfiguration)' == 'Identity.IntegrationTest' " />
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="$(CoverletCollectorVersion)">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

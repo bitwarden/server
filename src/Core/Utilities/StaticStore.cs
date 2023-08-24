@@ -106,388 +106,19 @@ public class StaticStore
 
         #region Plans
 
-        Plans = new List<Plan>
-        {
-            new Plan
-            {
-                Type = PlanType.Free,
-                Product = ProductType.Free,
-                Name = "Free",
-                NameLocalizationKey = "planNameFree",
-                DescriptionLocalizationKey = "planDescFree",
-                BaseSeats = 2,
-                MaxCollections = 2,
-                MaxUsers = 2,
+        PasswordManagerPlans = PasswordManagerPlanStore.CreatePlan();
+        SecretManagerPlans = SecretsManagerPlanStore.CreatePlan();
 
-                UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
-                DisplaySortOrder = -1,
+        Plans = PasswordManagerPlans.Concat(SecretManagerPlans);
 
-                AllowSeatAutoscale = false,
-            },
-            new Plan
-            {
-                Type = PlanType.FamiliesAnnually2019,
-                Product = ProductType.Families,
-                Name = "Families 2019",
-                IsAnnual = true,
-                NameLocalizationKey = "planNameFamilies",
-                DescriptionLocalizationKey = "planDescFamilies",
-                BaseSeats = 5,
-                BaseStorageGb = 1,
-                MaxUsers = 5,
-
-                HasAdditionalStorageOption = true,
-                HasPremiumAccessOption = true,
-                TrialPeriodDays = 7,
-
-                HasSelfHost = true,
-                HasTotp = true,
-
-                UpgradeSortOrder = 1,
-                DisplaySortOrder = 1,
-                LegacyYear = 2020,
-
-                StripePlanId = "personal-org-annually",
-                StripeStoragePlanId = "storage-gb-annually",
-                StripePremiumAccessPlanId = "personal-org-premium-access-annually",
-                BasePrice = 12,
-                AdditionalStoragePricePerGb = 4,
-                PremiumAccessOptionPrice = 40,
-
-                AllowSeatAutoscale = false,
-            },
-            new Plan
-            {
-                Type = PlanType.TeamsAnnually2019,
-                Product = ProductType.Teams,
-                Name = "Teams (Annually) 2019",
-                IsAnnual = true,
-                NameLocalizationKey = "planNameTeams",
-                DescriptionLocalizationKey = "planDescTeams",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 5,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasTotp = true,
-
-                UpgradeSortOrder = 2,
-                DisplaySortOrder = 2,
-                LegacyYear = 2020,
-
-                StripePlanId = "teams-org-annually",
-                StripeSeatPlanId = "teams-org-seat-annually",
-                StripeStoragePlanId = "storage-gb-annually",
-                BasePrice = 60,
-                SeatPrice = 24,
-                AdditionalStoragePricePerGb = 4,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.TeamsMonthly2019,
-                Product = ProductType.Teams,
-                Name = "Teams (Monthly) 2019",
-                NameLocalizationKey = "planNameTeams",
-                DescriptionLocalizationKey = "planDescTeams",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 5,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasTotp = true,
-
-                UpgradeSortOrder = 2,
-                DisplaySortOrder = 2,
-                LegacyYear = 2020,
-
-                StripePlanId = "teams-org-monthly",
-                StripeSeatPlanId = "teams-org-seat-monthly",
-                StripeStoragePlanId = "storage-gb-monthly",
-                BasePrice = 8,
-                SeatPrice = 2.5M,
-                AdditionalStoragePricePerGb = 0.5M,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.EnterpriseAnnually2019,
-                Name = "Enterprise (Annually) 2019",
-                IsAnnual = true,
-                Product = ProductType.Enterprise,
-                NameLocalizationKey = "planNameEnterprise",
-                DescriptionLocalizationKey = "planDescEnterprise",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 0,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasPolicies = true,
-                HasSelfHost = true,
-                HasGroups = true,
-                HasDirectory = true,
-                HasEvents = true,
-                HasTotp = true,
-                Has2fa = true,
-                HasApi = true,
-                UsersGetPremium = true,
-                HasCustomPermissions = true,
-
-                UpgradeSortOrder = 3,
-                DisplaySortOrder = 3,
-                LegacyYear = 2020,
-
-                StripePlanId = null,
-                StripeSeatPlanId = "enterprise-org-seat-annually",
-                StripeStoragePlanId = "storage-gb-annually",
-                BasePrice = 0,
-                SeatPrice = 36,
-                AdditionalStoragePricePerGb = 4,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.EnterpriseMonthly2019,
-                Product = ProductType.Enterprise,
-                Name = "Enterprise (Monthly) 2019",
-                NameLocalizationKey = "planNameEnterprise",
-                DescriptionLocalizationKey = "planDescEnterprise",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 0,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasPolicies = true,
-                HasGroups = true,
-                HasDirectory = true,
-                HasEvents = true,
-                HasTotp = true,
-                Has2fa = true,
-                HasApi = true,
-                HasSelfHost = true,
-                UsersGetPremium = true,
-                HasCustomPermissions = true,
-
-                UpgradeSortOrder = 3,
-                DisplaySortOrder = 3,
-                LegacyYear = 2020,
-
-                StripePlanId = null,
-                StripeSeatPlanId = "enterprise-org-seat-monthly",
-                StripeStoragePlanId = "storage-gb-monthly",
-                BasePrice = 0,
-                SeatPrice = 4M,
-                AdditionalStoragePricePerGb = 0.5M,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.FamiliesAnnually,
-                Product = ProductType.Families,
-                Name = "Families",
-                IsAnnual = true,
-                NameLocalizationKey = "planNameFamilies",
-                DescriptionLocalizationKey = "planDescFamilies",
-                BaseSeats = 6,
-                BaseStorageGb = 1,
-                MaxUsers = 6,
-
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasSelfHost = true,
-                HasTotp = true,
-                UsersGetPremium = true,
-
-                UpgradeSortOrder = 1,
-                DisplaySortOrder = 1,
-
-                StripePlanId = "2020-families-org-annually",
-                StripeStoragePlanId = "storage-gb-annually",
-                BasePrice = 40,
-                AdditionalStoragePricePerGb = 4,
-
-                AllowSeatAutoscale = false,
-            },
-            new Plan
-            {
-                Type = PlanType.TeamsAnnually,
-                Product = ProductType.Teams,
-                Name = "Teams (Annually)",
-                IsAnnual = true,
-                NameLocalizationKey = "planNameTeams",
-                DescriptionLocalizationKey = "planDescTeams",
-                CanBeUsedByBusiness = true,
-                BaseStorageGb = 1,
-                BaseSeats = 0,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                Has2fa = true,
-                HasApi = true,
-                HasDirectory = true,
-                HasEvents = true,
-                HasGroups = true,
-                HasTotp = true,
-                UsersGetPremium = true,
-
-                UpgradeSortOrder = 2,
-                DisplaySortOrder = 2,
-
-                StripeSeatPlanId = "2020-teams-org-seat-annually",
-                StripeStoragePlanId = "storage-gb-annually",
-                SeatPrice = 36,
-                AdditionalStoragePricePerGb = 4,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.TeamsMonthly,
-                Product = ProductType.Teams,
-                Name = "Teams (Monthly)",
-                NameLocalizationKey = "planNameTeams",
-                DescriptionLocalizationKey = "planDescTeams",
-                CanBeUsedByBusiness = true,
-                BaseStorageGb = 1,
-                BaseSeats = 0,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                Has2fa = true,
-                HasApi = true,
-                HasDirectory = true,
-                HasEvents = true,
-                HasGroups = true,
-                HasTotp = true,
-                UsersGetPremium = true,
-
-                UpgradeSortOrder = 2,
-                DisplaySortOrder = 2,
-
-                StripeSeatPlanId = "2020-teams-org-seat-monthly",
-                StripeStoragePlanId = "storage-gb-monthly",
-                SeatPrice = 4,
-                AdditionalStoragePricePerGb = 0.5M,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.EnterpriseAnnually,
-                Name = "Enterprise (Annually)",
-                Product = ProductType.Enterprise,
-                IsAnnual = true,
-                NameLocalizationKey = "planNameEnterprise",
-                DescriptionLocalizationKey = "planDescEnterprise",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 0,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasPolicies = true,
-                HasSelfHost = true,
-                HasGroups = true,
-                HasDirectory = true,
-                HasEvents = true,
-                HasTotp = true,
-                Has2fa = true,
-                HasApi = true,
-                HasSso = true,
-                HasKeyConnector = true,
-                HasScim = true,
-                HasResetPassword = true,
-                UsersGetPremium = true,
-                HasCustomPermissions = true,
-
-                UpgradeSortOrder = 3,
-                DisplaySortOrder = 3,
-
-                StripeSeatPlanId = "2020-enterprise-org-seat-annually",
-                StripeStoragePlanId = "storage-gb-annually",
-                BasePrice = 0,
-                SeatPrice = 60,
-                AdditionalStoragePricePerGb = 4,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.EnterpriseMonthly,
-                Product = ProductType.Enterprise,
-                Name = "Enterprise (Monthly)",
-                NameLocalizationKey = "planNameEnterprise",
-                DescriptionLocalizationKey = "planDescEnterprise",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 0,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasPolicies = true,
-                HasGroups = true,
-                HasDirectory = true,
-                HasEvents = true,
-                HasTotp = true,
-                Has2fa = true,
-                HasApi = true,
-                HasSelfHost = true,
-                HasSso = true,
-                HasKeyConnector = true,
-                HasScim = true,
-                HasResetPassword = true,
-                UsersGetPremium = true,
-                HasCustomPermissions = true,
-
-                UpgradeSortOrder = 3,
-                DisplaySortOrder = 3,
-
-                StripeSeatPlanId = "2020-enterprise-seat-monthly",
-                StripeStoragePlanId = "storage-gb-monthly",
-                BasePrice = 0,
-                SeatPrice = 6,
-                AdditionalStoragePricePerGb = 0.5M,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.Custom,
-
-                AllowSeatAutoscale = true,
-            },
-        };
 
         #endregion
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
     public static IEnumerable<Plan> Plans { get; set; }
+    public static IEnumerable<Plan> SecretManagerPlans { get; set; }
+    public static IEnumerable<Plan> PasswordManagerPlans { get; set; }
     public static IEnumerable<SponsoredPlan> SponsoredPlans { get; set; } = new[]
         {
             new SponsoredPlan
@@ -497,11 +128,64 @@ public class StaticStore
                 SponsoringProductType = ProductType.Enterprise,
                 StripePlanId = "2021-family-for-enterprise-annually",
                 UsersCanSponsor = (OrganizationUserOrganizationDetails org) =>
-                    GetPlan(org.PlanType).Product == ProductType.Enterprise,
+                    GetPasswordManagerPlan(org.PlanType).Product == ProductType.Enterprise,
             }
         };
-    public static Plan GetPlan(PlanType planType) =>
-        Plans.FirstOrDefault(p => p.Type == planType);
+    public static Plan GetPasswordManagerPlan(PlanType planType) =>
+        PasswordManagerPlans.SingleOrDefault(p => p.Type == planType);
+
+    public static Plan GetSecretsManagerPlan(PlanType planType) =>
+        SecretManagerPlans.SingleOrDefault(p => p.Type == planType);
+
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
         SponsoredPlans.FirstOrDefault(p => p.PlanSponsorshipType == planSponsorshipType);
+
+    /// <summary>
+    /// Determines if the stripe plan id is an addon item by checking if the provided stripe plan id
+    /// matches either the <see cref="Plan.StripeStoragePlanId"/> or <see cref="Plan.StripeServiceAccountPlanId"/>
+    /// in any <see cref="Plans"/>.
+    /// </summary>
+    /// <param name="stripePlanId"></param>
+    /// <returns>
+    /// True if the stripePlanId is a addon product, false otherwise
+    /// </returns>
+    public static bool IsAddonSubscriptionItem(string stripePlanId)
+    {
+        if (PasswordManagerPlans.Select(p => p.StripeStoragePlanId).Contains(stripePlanId))
+        {
+            return true;
+        }
+
+        if (SecretManagerPlans.Select(p => p.StripeServiceAccountPlanId).Contains(stripePlanId))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Get a <see cref="Plan"/> by comparing the provided stripeId to the various
+    /// Stripe plan ids within a <see cref="Plan"/>.
+    /// The following <see cref="Plan"/> properties are checked:
+    /// <list type="bullet">
+    ///     <item><see cref="Plan.StripePlanId"/></item>
+    ///     <item><see cref="Plan.StripeSeatPlanId"/></item>
+    ///     <item><see cref="Plan.StripeStoragePlanId"/></item>
+    ///     <item><see cref="Plan.StripeServiceAccountPlanId"/></item>
+    ///     <item><see cref="Plan.StripePremiumAccessPlanId"/></item>
+    /// </list>
+    /// </summary>
+    /// <param name="stripeId"></param>
+    /// <returns>The plan if a matching stripeId was found, null otherwise</returns>
+    public static Plan GetPlanByStripeId(string stripeId)
+    {
+        return Plans.FirstOrDefault(p =>
+            p.StripePlanId == stripeId ||
+            p.StripeSeatPlanId == stripeId ||
+            p.StripeStoragePlanId == stripeId ||
+            p.StripeServiceAccountPlanId == stripeId ||
+            p.StripePremiumAccessPlanId == stripeId
+        );
+    }
 }

@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -32,15 +33,16 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         ILogger<CustomTokenRequestValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
+        ISsoConfigRepository ssoConfigRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
-        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
+        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer,
+        IFeatureService featureService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
-              organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, policyService, tokenDataFactory)
+            organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
+            applicationCacheService, mailService, logger, currentContext, globalSettings,
+            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository)
     {
         _userManager = userManager;
         _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
@@ -91,6 +93,11 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
             claims: claims.Count > 0 ? claims : null,
             customResponse: customResponse);
         return Task.CompletedTask;
+    }
+
+    protected override ClaimsPrincipal GetSubject(ExtensionGrantValidationContext context)
+    {
+        return context.Result.Subject;
     }
 
     protected override void SetTwoFactorResult(ExtensionGrantValidationContext context,

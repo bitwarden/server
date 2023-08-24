@@ -8,6 +8,7 @@ public class ServiceAccountCreateRequestModel
 {
     [Required]
     [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string Name { get; set; }
 
     public ServiceAccount ToServiceAccount(Guid organizationId)

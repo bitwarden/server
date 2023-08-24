@@ -32,6 +32,18 @@
     <dt class="col-sm-4 col-lg-3">Collections</dt>
     <dd class="col-sm-8 col-lg-9">@Model.CollectionCount</dd>
 
+    <dt class="col-sm-4 col-lg-3">Secrets</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.SecretsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Projects</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ProjectsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Service Accounts</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.ServiceAccountsCount: "N/A")</dd>
+
+    <dt class="col-sm-4 col-lg-3">Secrets Manager Seats</dt>
+    <dd class="col-sm-8 col-lg-9">@(Model.UseSecretsManager ? Model.OccupiedSmSeatsCount: "N/A" )</dd>
+
     <dt class="col-sm-4 col-lg-3">Groups</dt>
     <dd class="col-sm-8 col-lg-9">@Model.GroupCount</dd>
 

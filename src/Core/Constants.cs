@@ -38,6 +38,7 @@ public static class FeatureFlagKeys
     public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
     public const string PasswordlessLogin = "passwordless-login";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
+    public const string SecretsManagerBilling = "sm-ga-billing";
 
     public static List<string> GetAllKeys()
     {

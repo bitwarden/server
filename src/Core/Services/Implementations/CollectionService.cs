@@ -96,17 +96,17 @@ public class CollectionService : ICollectionService
         await _eventService.LogOrganizationUserEventAsync(orgUser, Enums.EventType.OrganizationUser_Updated);
     }
 
-    public async Task<IEnumerable<Collection>> GetOrganizationCollections(Guid organizationId)
+    public async Task<IEnumerable<Collection>> GetOrganizationCollectionsAsync(Guid organizationId)
     {
-        if (!await _currentContext.ViewAllCollections(organizationId) && !await _currentContext.ManageUsers(organizationId) && !await _currentContext.ManageGroups(organizationId))
+        if (!await _currentContext.ViewAssignedCollections(organizationId) && !await _currentContext.ManageUsers(organizationId) && !await _currentContext.ManageGroups(organizationId) && !await _currentContext.AccessImportExport(organizationId))
         {
             throw new NotFoundException();
         }
 
         IEnumerable<Collection> orgCollections;
-        if (await _currentContext.OrganizationAdmin(organizationId) || await _currentContext.ViewAllCollections(organizationId))
+        if (await _currentContext.ViewAllCollections(organizationId) || await _currentContext.AccessImportExport(organizationId))
         {
-            // Admins, Owners, Providers and Custom (with collection management permissions) can access all items even if not assigned to them
+            // Admins, Owners, Providers and Custom (with collection management or import/export permissions) can access all items even if not assigned to them
             orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(organizationId);
         }
         else
