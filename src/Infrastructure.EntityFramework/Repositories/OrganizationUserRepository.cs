@@ -93,6 +93,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .Where(gu => gu.OrganizationUserId == organizationUserId);
             dbContext.GroupUsers.RemoveRange(groupUsers);
 
+            dbContext.UserProjectAccessPolicy.RemoveRange(
+                dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
+            dbContext.UserServiceAccountAccessPolicy.RemoveRange(
+                dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
+
             var orgSponsorships = await dbContext.OrganizationSponsorships
                 .Where(os => os.SponsoringOrganizationUserId == organizationUserId)
                 .ToListAsync();
@@ -325,7 +330,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var userIds = users.Select(u => u.Id);
             var userIdEntities = dbContext.OrganizationUsers.Where(x => userIds.Contains(x.Id));
 
-            // Query groups/collections separately to avoid cartesian explosion 
+            // Query groups/collections separately to avoid cartesian explosion
             if (includeGroups)
             {
                 groups = (await (from gu in dbContext.GroupUsers
