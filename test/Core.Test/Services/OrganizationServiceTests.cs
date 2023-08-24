@@ -1852,6 +1852,7 @@ public class OrganizationServiceTests
     private string SetupAcceptUserAsyncTest(SutProvider<OrganizationService> sutProvider, User user, OrganizationUser organizationUser)
     {
         user.Email = organizationUser.Email;
+        user.EmailVerified = false;
 
         var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
             .CreateProtector("OrganizationServiceDataProtector");
