@@ -1,9 +1,9 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Api.Vault.AuthorizationHandlers;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -22,6 +22,7 @@ public class CollectionsController : Controller
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
+    private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -29,7 +30,7 @@ public class CollectionsController : Controller
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
         IAuthorizationService authorizationService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext, IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
@@ -37,6 +38,7 @@ public class CollectionsController : Controller
         _userService = userService;
         _authorizationService = authorizationService;
         _currentContext = currentContext;
+        _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
     }
 
     [HttpGet("{id}")]
@@ -194,23 +196,19 @@ public class CollectionsController : Controller
     {
         // Check if user can manage each of the collections in the request
         var collectionUsers = model.ToAllCollectionUsers().ToList();
-
-        var result = await _authorizationService.AuthorizeAsync(User, collectionUsers, CollectionUserOperation.Create);
-
-        if (!result.Succeeded)
-        {
-            throw new NotFoundException();
-        }
-
         var collectionGroups = model.ToAllCollectionGroups().ToList();
-        result = await _authorizationService.AuthorizeAsync(User, collectionGroups, CollectionGroupOperation.Create);
+
+        var result = await _authorizationService.AuthorizeAsync(User, collectionUsers.Concat<ICollectionAccess>(collectionGroups), CollectionAccessOperation.CreateUpdateDelete);
 
         if (!result.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        // TODO: Perform operation
+        await _bulkAddCollectionAccessCommand.AddAccessAsync(orgId,
+            model.CollectionIds.ToList(),
+            model.Users.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Groups.Select(g => g.ToSelectionReadOnly()).ToList());
     }
 
     [HttpDelete("{id}")]
