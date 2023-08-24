@@ -1095,8 +1095,11 @@ public class OrganizationService : IOrganizationService
 
         var organizationUser = await AcceptUserAsync(orgUser, user, userService);
 
-        user.EmailVerified = true;
-        await _userRepository.ReplaceAsync(user);
+        if (user.EmailVerified == false)
+        {
+            user.EmailVerified = true;
+            await _userRepository.ReplaceAsync(user);
+        }
 
         return organizationUser;
     }
