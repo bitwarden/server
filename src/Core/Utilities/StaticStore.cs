@@ -165,7 +165,7 @@ public class StaticStore
             return true;
         }
 
-        if (Plans.Select(p => p.SecretsManager.StripeServiceAccountPlanId).Contains(stripePlanId))
+        if (Plans.Select(p => p.SecretsManager?.StripeServiceAccountPlanId).Contains(stripePlanId))
         {
             return true;
         }
