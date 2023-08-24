@@ -15,7 +15,7 @@ public class AuthRequestResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(authRequest));
         }
 
-        Id = authRequest.Id.ToString();
+        Id = authRequest.Id;
         PublicKey = authRequest.PublicKey;
         RequestDeviceType = authRequest.RequestDeviceType.GetType().GetMember(authRequest.RequestDeviceType.ToString())
             .FirstOrDefault()?.GetCustomAttribute<DisplayAttribute>()?.GetName();
@@ -28,7 +28,7 @@ public class AuthRequestResponseModel : ResponseModel
         ResponseDate = authRequest.ResponseDate;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string PublicKey { get; set; }
     public string RequestDeviceType { get; set; }
     public string RequestIpAddress { get; set; }

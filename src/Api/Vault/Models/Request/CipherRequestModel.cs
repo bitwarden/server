@@ -318,6 +318,7 @@ public class CipherBulkRestoreRequestModel
 {
     [Required]
     public IEnumerable<string> Ids { get; set; }
+    public Guid OrganizationId { get; set; }
 }
 
 public class CipherBulkMoveRequestModel

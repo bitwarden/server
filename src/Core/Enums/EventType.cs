@@ -13,6 +13,7 @@ public enum EventType : int
     User_ClientExportedVault = 1007,
     User_UpdatedTempPassword = 1008,
     User_MigratedKeyToKeyConnector = 1009,
+    User_RequestedDeviceApproval = 1010,
 
     Cipher_Created = 1100,
     Cipher_Updated = 1101,
@@ -54,6 +55,8 @@ public enum EventType : int
     OrganizationUser_FirstSsoLogin = 1510,
     OrganizationUser_Revoked = 1511,
     OrganizationUser_Restored = 1512,
+    OrganizationUser_ApprovedAuthRequest = 1513,
+    OrganizationUser_RejectedAuthRequest = 1514,
 
     Organization_Updated = 1600,
     Organization_PurgedVault = 1601,

@@ -14,8 +14,8 @@ public interface ICipherService
         string key, string fileName, long fileSize, bool adminRequest, Guid savingUserId);
     Task CreateAttachmentAsync(Cipher cipher, Stream stream, string fileName, string key,
         long requestLength, Guid savingUserId, bool orgAdmin = false);
-    Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, long requestLength, string attachmentId,
-        Guid organizationShareId);
+    Task CreateAttachmentShareAsync(Cipher cipher, Stream stream, string fileName, string key, long requestLength,
+        string attachmentId, Guid organizationShareId);
     Task DeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
     Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task DeleteAttachmentAsync(Cipher cipher, string attachmentId, Guid deletingUserId, bool orgAdmin = false);
@@ -35,7 +35,7 @@ public interface ICipherService
     Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
     Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false);
-    Task RestoreManyAsync(IEnumerable<CipherDetails> ciphers, Guid restoringUserId);
+    Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentId);
     Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
     Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);

@@ -2,12 +2,16 @@
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -33,9 +37,9 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         var result = await sutProvider.Sut.ListByOrganizationAsync(id);
 
-        await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>(),
-                Arg.Any<AccessClientType>());
+        await sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().Received(1)
+            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)),
+                Arg.Any<Guid>(), Arg.Any<AccessClientType>(), Arg.Any<bool>());
 
         Assert.Empty(result.Data);
     }
@@ -43,18 +47,18 @@ public class ServiceAccountsControllerTests
     [Theory]
     [BitAutoData]
     public async void GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider,
-        ServiceAccount resultServiceAccount)
+        ServiceAccountSecretsDetails resultServiceAccount)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
-        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByOrganizationIdAsync(default, default, default)
-            .ReturnsForAnyArgs(new List<ServiceAccount> { resultServiceAccount });
+        sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().GetManyByOrganizationIdAsync(default, default, default, default)
+            .ReturnsForAnyArgs(new List<ServiceAccountSecretsDetails> { resultServiceAccount });
 
-        var result = await sutProvider.Sut.ListByOrganizationAsync(resultServiceAccount.OrganizationId);
+        var result = await sutProvider.Sut.ListByOrganizationAsync(resultServiceAccount.ServiceAccount.OrganizationId);
 
-        await sutProvider.GetDependency<IServiceAccountRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.OrganizationId)),
-                Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+        await sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().Received(1)
+            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(resultServiceAccount.ServiceAccount.OrganizationId)),
+                Arg.Any<Guid>(), Arg.Any<AccessClientType>(), Arg.Any<bool>());
         Assert.NotEmpty(result.Data);
         Assert.Single(result.Data);
     }
@@ -89,13 +93,50 @@ public class ServiceAccountsControllerTests
     }
 
     [Theory]
+    [BitAutoData(0)]
+    public async void CreateServiceAccount_WhenAutoscalingNotRequired_DoesNotCallUpdateSubscription(
+        int newSlotsRequired, SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccountCreateRequestModel data, Organization organization)
+    {
+        ArrangeCreateServiceAccountAutoScalingTest(newSlotsRequired, sutProvider, data, organization);
+
+        await sutProvider.Sut.CreateAsync(organization.Id, data);
+
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
+            .CreateAsync(Arg.Is<ServiceAccount>(sa => sa.Name == data.Name), Arg.Any<Guid>());
+
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
+            .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<int>());
+    }
+
+    [Theory]
+    [BitAutoData(1)]
+    [BitAutoData(2)]
+    public async void CreateServiceAccount_WhenAutoscalingRequired_CallsUpdateSubscription(int newSlotsRequired,
+        SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccountCreateRequestModel data, Organization organization)
+    {
+        ArrangeCreateServiceAccountAutoScalingTest(newSlotsRequired, sutProvider, data, organization);
+
+        await sutProvider.Sut.CreateAsync(organization.Id, data);
+
+        await sutProvider.GetDependency<ICreateServiceAccountCommand>().Received(1)
+            .CreateAsync(Arg.Is<ServiceAccount>(sa => sa.Name == data.Name), Arg.Any<Guid>());
+
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+            .AdjustServiceAccountsAsync(Arg.Is(organization), Arg.Is(newSlotsRequired));
+    }
+
+    [Theory]
     [BitAutoData]
     public async void CreateServiceAccount_Success(SutProvider<ServiceAccountsController> sutProvider,
-        ServiceAccountCreateRequestModel data, Guid organizationId)
+        ServiceAccountCreateRequestModel data, Guid organizationId, Organization mockOrg)
     {
+        mockOrg.Id = organizationId;
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organizationId),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Is(organizationId)).Returns(mockOrg);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         var resultServiceAccount = data.ToServiceAccount(organizationId);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
@@ -259,5 +300,125 @@ public class ServiceAccountsControllerTests
         await sutProvider.Sut.RevokeAccessTokensAsync(serviceAccount.Id, data);
         await sutProvider.GetDependency<IRevokeAccessTokensCommand>().Received(1)
             .RevokeAsync(Arg.Any<ServiceAccount>(), Arg.Any<Guid[]>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_NoServiceAccountsFound_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<ServiceAccount>());
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_ServiceAccountsFoundMisMatch_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data, ServiceAccount mockSa)
+    {
+        data.Add(mockSa);
+        var ids = data.Select(sa => sa.Id).ToList();
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<ServiceAccount> { mockSa });
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_OrganizationMistMatch_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_NoAccessToSecretsManager_ThrowsNotFound(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var sa in data)
+        {
+            sa.OrganizationId = organizationId;
+        }
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_ReturnsAccessDeniedForProjectsWithoutAccess_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var sa in data)
+        {
+            sa.OrganizationId = organizationId;
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), sa,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
+
+        Assert.Equal(data.Count, results.Data.Count());
+        Assert.Equal("access denied", results.Data.First().Error);
+
+        data.Remove(data.First());
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().Received(1)
+            .DeleteServiceAccounts(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void BulkDelete_Success(SutProvider<ServiceAccountsController> sutProvider, List<ServiceAccount> data)
+    {
+        var ids = data.Select(sa => sa.Id).ToList();
+        var organizationId = data.First().OrganizationId;
+        foreach (var sa in data)
+        {
+            sa.OrganizationId = organizationId;
+            sutProvider.GetDependency<IAuthorizationService>()
+                .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), sa,
+                    Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        }
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+
+        var results = await sutProvider.Sut.BulkDeleteAsync(ids);
+
+        await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().Received(1)
+            .DeleteServiceAccounts(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+        Assert.Equal(data.Count, results.Data.Count());
+        foreach (var result in results.Data)
+        {
+            Assert.Null(result.Error);
+        }
+    }
+
+    private static void ArrangeCreateServiceAccountAutoScalingTest(int newSlotsRequired, SutProvider<ServiceAccountsController> sutProvider,
+        ServiceAccountCreateRequestModel data, Organization organization)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToServiceAccount(organization.Id),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(Arg.Is(organization.Id)).Returns(organization);
+        sutProvider.GetDependency<ICountNewServiceAccountSlotsRequiredQuery>()
+            .CountNewServiceAccountSlotsRequiredAsync(organization.Id, 1)
+            .ReturnsForAnyArgs(newSlotsRequired);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        var resultServiceAccount = data.ToServiceAccount(organization.Id);
+        sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
+            .ReturnsForAnyArgs(resultServiceAccount);
     }
 }

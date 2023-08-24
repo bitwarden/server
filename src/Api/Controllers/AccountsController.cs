@@ -879,10 +879,6 @@ public class AccountsController : Controller
     public async Task PostRequestOTP()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user is not { UsesKeyConnector: true })
-        {
-            throw new UnauthorizedAccessException();
-        }
 
         await _userService.SendOTPAsync(user);
     }
@@ -891,10 +887,6 @@ public class AccountsController : Controller
     public async Task VerifyOTP([FromBody] VerifyOTPRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user is not { UsesKeyConnector: true })
-        {
-            throw new UnauthorizedAccessException();
-        }
 
         if (!await _userService.VerifyOTPAsync(user, model.OTP))
         {
