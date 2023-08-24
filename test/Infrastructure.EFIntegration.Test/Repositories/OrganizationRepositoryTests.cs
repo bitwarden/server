@@ -1,6 +1,4 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations;
+﻿using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;

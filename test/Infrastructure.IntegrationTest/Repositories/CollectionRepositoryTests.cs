@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Xunit;
@@ -22,7 +22,7 @@ public class CollectionRepositoryTests
             ExternalId = externalId,
         },
         groups: Array.Empty<CollectionAccessSelection>(),
-        users: new[] { new CollectionAccessSelection { Id = organizationUser.Id, HidePasswords = true, ReadOnly = false }});
+        users: new[] { new CollectionAccessSelection { Id = organizationUser.Id, HidePasswords = true, ReadOnly = false } });
 
         await collectionRepository.CreateAsync(new Collection
         {
@@ -58,8 +58,8 @@ public class CollectionRepositoryTests
             OrganizationId = organizationUser.OrganizationId,
         });
 
-        await groupRepository.UpdateUsersAsync(group1.Id, new [] { organizationUser.Id });
-        await groupRepository.UpdateUsersAsync(group2.Id, new [] { organizationUser.Id });
+        await groupRepository.UpdateUsersAsync(group1.Id, new[] { organizationUser.Id });
+        await groupRepository.UpdateUsersAsync(group2.Id, new[] { organizationUser.Id });
 
         await collectionRepository.CreateAsync(new Collection
         {
@@ -69,7 +69,7 @@ public class CollectionRepositoryTests
         },
         // The user will be apart of two groups, one that gives them little access to the collection
         // and one that gives them fully access, via our rules, they should be given the full rights.
-        groups: new []
+        groups: new[]
         {
             new CollectionAccessSelection
             {
