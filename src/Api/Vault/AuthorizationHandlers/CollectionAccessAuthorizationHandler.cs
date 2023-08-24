@@ -54,35 +54,30 @@ public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<Col
             return;
         }
 
-        var userOrgs = await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, _currentContext.UserId.Value);
-        var distinctTargetOrganizationIds = targetCollections.Select(tc => tc.OrganizationId).Distinct();
-        var restrictedOrganizations = new List<CurrentContentOrganization>();
+        var targetOrganizationId = targetCollections.First().OrganizationId;
 
-        foreach (var orgId in distinctTargetOrganizationIds)
+        // Ensure all target collections belong to the same organization
+        if (targetCollections.Any(tc => tc.OrganizationId != targetOrganizationId))
         {
-            var org = userOrgs.FirstOrDefault(o => orgId == o.Id);
-
-            // Acting user is not a member of the target organization, fail
-            if (org == null)
-            {
-                context.Fail();
-                return;
-            }
-
-            // Owner/Admins or users with EditAnyCollection permission can always manage collection access
-            if (
-                org.Permissions.EditAnyCollection ||
-                org.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
-                await _currentContext.ProviderUserForOrgAsync(org.Id))
-            {
-                continue;
-            }
-
-            restrictedOrganizations.Add(org);
+            context.Fail();
+            return;
         }
 
-        // All target collections belong to organizations the acting user is allowed to manage collection access, succeed
-        if (restrictedOrganizations.Count == 0)
+        var org = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, _currentContext.UserId.Value))
+            .FirstOrDefault(o => targetOrganizationId == o.Id);
+
+        // Acting user is not a member of the target organization, fail
+        if (org == null)
+        {
+            context.Fail();
+            return;
+        }
+
+        // Owners, Admins, Providers, and users with EditAnyCollection permission can always manage collection access
+        if (
+            org.Permissions.EditAnyCollection ||
+            org.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
+            await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
             context.Succeed(requirement);
             return;
@@ -92,16 +87,11 @@ public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<Col
         var manageableCollectionIds =
             (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value))
             .Where(c => c.Manage)
-            .Select(c => c.Id);
-
-        // Target collections that require explicit "Manage" permission, but the user does not have it
-        var collectionWithoutPermission = from tc in targetCollections
-                                          join o in restrictedOrganizations on tc.OrganizationId equals o.Id
-                                          where !manageableCollectionIds.Contains(tc.Id)
-                                          select tc;
+            .Select(c => c.Id)
+            .ToHashSet();
 
         // The acting user does not have permission to manage all target collections, fail
-        if (collectionWithoutPermission.Any())
+        if (targetCollections.Any(tc => !manageableCollectionIds.Contains(tc.Id)))
         {
             context.Fail();
             return;

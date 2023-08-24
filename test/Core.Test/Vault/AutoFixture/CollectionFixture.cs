@@ -15,21 +15,21 @@ public class CollectionCustomization : ICustomization
 
     public void Customize(IFixture fixture)
     {
-        var orgIds = new[] { Guid.NewGuid(), Guid.NewGuid() };
+        var orgId = Guid.NewGuid();
 
         fixture.Customize<CurrentContentOrganization>(composer => composer
-            .WithValueFromList(o => o.Id, orgIds));
+            .With(o => o.Id, orgId));
 
         fixture.Customize<OrganizationUser>(composer => composer
-            .WithValueFromList(o => o.OrganizationId, orgIds)
+            .With(o => o.OrganizationId, orgId)
             .WithGuidFromSeed(o => o.Id, _userIdSeed));
 
         fixture.Customize<Collection>(composer => composer
-            .WithValueFromList(o => o.OrganizationId, orgIds)
+            .With(o => o.OrganizationId, orgId)
             .WithGuidFromSeed(c => c.Id, _collectionIdSeed));
 
         fixture.Customize<CollectionDetails>(composer => composer
-            .WithValueFromList(o => o.OrganizationId, orgIds)
+            .With(o => o.OrganizationId, orgId)
             .WithGuidFromSeed(cd => cd.Id, _collectionIdSeed));
 
         fixture.Customize<CollectionUser>(c => c
@@ -37,7 +37,7 @@ public class CollectionCustomization : ICustomization
             .WithGuidFromSeed(cu => cu.CollectionId, _collectionIdSeed));
 
         fixture.Customize<Group>(composer => composer
-            .WithValueFromList(o => o.OrganizationId, orgIds)
+            .With(o => o.OrganizationId, orgId)
             .WithGuidFromSeed(o => o.Id, _groupIdSeed));
 
         fixture.Customize<CollectionGroup>(c => c
