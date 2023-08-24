@@ -25,7 +25,7 @@ public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<Col
     {
         switch (requirement)
         {
-            case not null when requirement == CollectionAccessOperation.CreateDelete:
+            case not null when requirement == CollectionAccessOperation.CreateUpdateDelete:
                 await CanManageCollectionAccessAsync(context, requirement, resources.Select(c => c.CollectionId));
                 break;
         }

@@ -44,7 +44,7 @@ public class CollectionAccessAuthorizationHandlerTests
         }
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionAccessOperation.CreateDelete },
+            new[] { CollectionAccessOperation.CreateUpdateDelete },
             new ClaimsPrincipal(),
             collectionUsers
             );
@@ -66,7 +66,7 @@ public class CollectionAccessAuthorizationHandlerTests
         ICollection<CollectionUser> collectionUsers)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionAccessOperation.CreateDelete },
+            new[] { CollectionAccessOperation.CreateUpdateDelete },
             new ClaimsPrincipal(),
             collectionUsers
         );
@@ -91,7 +91,7 @@ public class CollectionAccessAuthorizationHandlerTests
         collections.RemoveAt(0);
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionAccessOperation.CreateDelete },
+            new[] { CollectionAccessOperation.CreateUpdateDelete },
             new ClaimsPrincipal(),
             collectionUsers
         );
@@ -116,7 +116,7 @@ public class CollectionAccessAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionAccessOperation.CreateDelete },
+            new[] { CollectionAccessOperation.CreateUpdateDelete },
             new ClaimsPrincipal(),
             collectionUsers
         );
@@ -161,7 +161,7 @@ public class CollectionAccessAuthorizationHandlerTests
         }
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionAccessOperation.CreateDelete },
+            new[] { CollectionAccessOperation.CreateUpdateDelete },
             new ClaimsPrincipal(),
             collectionUsers
         );
