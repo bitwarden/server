@@ -11,7 +11,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.SharedWeb.Utilities;
-using Fido2NetLib;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;

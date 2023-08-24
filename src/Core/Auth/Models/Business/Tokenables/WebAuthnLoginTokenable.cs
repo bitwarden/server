@@ -1,7 +1,7 @@
 ﻿using System.Text.Json.Serialization;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Tokens;
-using Bit.Core.Auth.Entities;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
