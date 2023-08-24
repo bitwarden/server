@@ -178,9 +178,13 @@ public class ServiceAccountAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false)]
-    public async Task CanUpdateServiceAccount_ShouldNotSucceed(PermissionType permissionType, bool read, bool write,
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanUpdateServiceAccount_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal,
         Guid userId)
@@ -195,30 +199,7 @@ public class ServiceAccountAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
-        Assert.False(authzContext.HasSucceeded);
-    }
-
-    [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin, true, true)]
-    [BitAutoData(PermissionType.RunAsAdmin, false, true)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
-    public async Task CanUpdateServiceAccount_Success(PermissionType permissionType, bool read, bool write,
-        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
-        ClaimsPrincipal claimsPrincipal,
-        Guid userId)
-    {
-        var requirement = ServiceAccountOperations.Update;
-        SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
-        sutProvider.GetDependency<IServiceAccountRepository>()
-            .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, serviceAccount);
-
-        await sutProvider.Sut.HandleAsync(authzContext);
-
-        Assert.True(authzContext.HasSucceeded);
+        Assert.Equal(expected, authzContext.HasSucceeded);
     }
 
 
@@ -257,9 +238,13 @@ public class ServiceAccountAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
-    public async Task CanReadServiceAccount_ShouldNotSucceed(PermissionType permissionType, bool read, bool write,
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanReadServiceAccount_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal,
         Guid userId)
@@ -269,6 +254,23 @@ public class ServiceAccountAuthorizationHandlerTests
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
             .Returns((read, write));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanCreateAccessToken_AccessToSecretsManagerFalse_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = ServiceAccountOperations.CreateAccessToken;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+            .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, serviceAccount);
 
@@ -278,16 +280,35 @@ public class ServiceAccountAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin, true, true)]
-    [BitAutoData(PermissionType.RunAsAdmin, true, false)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false)]
-    public async Task CanReadServiceAccount_Success(PermissionType permissionType, bool read, bool write,
+    [BitAutoData]
+    public async Task CanCreateAccessToken_NullResource_DoesNotSucceed(
         SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
         ClaimsPrincipal claimsPrincipal,
         Guid userId)
     {
-        var requirement = ServiceAccountOperations.Read;
+        var requirement = ServiceAccountOperations.CreateAccessToken;
+        SetupPermission(sutProvider, PermissionType.RunAsAdmin, serviceAccount.OrganizationId, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, null);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanCreateAccessToken_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.CreateAccessToken;
         SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
         sutProvider.GetDependency<IServiceAccountRepository>()
             .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
@@ -297,6 +318,183 @@ public class ServiceAccountAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
-        Assert.True(authzContext.HasSucceeded);
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanReadAccessTokens_AccessToSecretsManagerFalse_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = ServiceAccountOperations.ReadAccessTokens;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+            .Returns(false);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanReadAccessTokens_NullResource_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.ReadAccessTokens;
+        SetupPermission(sutProvider, PermissionType.RunAsAdmin, serviceAccount.OrganizationId, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, null);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanReadAccessTokens_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.ReadAccessTokens;
+        SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
+            .Returns((read, write));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanRevokeAccessTokens_AccessToSecretsManagerFalse_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = ServiceAccountOperations.RevokeAccessTokens;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+            .Returns(false);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanRevokeAccessTokens_NullResource_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.RevokeAccessTokens;
+        SetupPermission(sutProvider, PermissionType.RunAsAdmin, serviceAccount.OrganizationId, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, null);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanRevokeAccessTokens_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.RevokeAccessTokens;
+        SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
+            .Returns((read, write));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteServiceAccount_AccessToSecretsManagerFalse_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = ServiceAccountOperations.Delete;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+            .Returns(false);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteServiceAccount_NullResource_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.Delete;
+        SetupPermission(sutProvider, PermissionType.RunAsAdmin, serviceAccount.OrganizationId, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, null);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.Delete;
+        SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
+            .Returns((read, write));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
     }
 }

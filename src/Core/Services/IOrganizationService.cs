@@ -13,7 +13,6 @@ public interface IOrganizationService
         TaxInfo taxInfo);
     Task CancelSubscriptionAsync(Guid organizationId, bool? endOfPeriod = null);
     Task ReinstateSubscriptionAsync(Guid organizationId);
-    Task<Tuple<bool, string>> UpgradePlanAsync(Guid organizationId, OrganizationUpgrade upgrade);
     Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb);
     Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats);
     Task AutoAddSeatsAsync(Organization organization, int seatsToAdd, DateTime? prorationDate = null);
@@ -42,6 +41,7 @@ public interface IOrganizationService
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
     Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token, IUserService userService);
     Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService);
+    Task<OrganizationUser> AcceptUserAsync(Guid organizationId, User user, IUserService userService);
     Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
@@ -79,4 +79,7 @@ public interface IOrganizationService
     /// </remarks>
     Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
+
+    void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
+    void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
 }

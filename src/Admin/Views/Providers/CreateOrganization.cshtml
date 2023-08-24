@@ -5,6 +5,12 @@
 
 @section Scripts {
     @await Html.PartialAsync("_OrganizationFormScripts")
+
+    <script>
+        (() => {
+            togglePlanFeatures('@((byte)Model.PlanType)');
+        })();
+    </script>
 }
 
 <h1>New Client Organization</h1>
