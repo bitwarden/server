@@ -458,6 +458,11 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public async Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups)
+    {
+    }
+
     private async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
         var groupsInOrg = dbContext.Groups.Where(g => g.OrganizationId == collection.OrganizationId);
