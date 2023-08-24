@@ -22,6 +22,7 @@ public class CollectionsController : Controller
     private readonly IUserService _userService;
     private readonly IAuthorizationService _authorizationService;
     private readonly ICurrentContext _currentContext;
+    private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -29,7 +30,7 @@ public class CollectionsController : Controller
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
         IAuthorizationService authorizationService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext, IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
@@ -37,6 +38,7 @@ public class CollectionsController : Controller
         _userService = userService;
         _authorizationService = authorizationService;
         _currentContext = currentContext;
+        _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
     }
 
     [HttpGet("{id}")]
@@ -207,7 +209,10 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
-        // TODO: Perform operation
+        await _bulkAddCollectionAccessCommand.AddAccessAsync(orgId,
+            collections,
+            model.Users.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Groups.Select(g => g.ToSelectionReadOnly()).ToList());
     }
 
     [HttpDelete("{id}")]

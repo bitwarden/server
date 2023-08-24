@@ -28,7 +28,9 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
     {
         await ValidateRequestAsync(organizationId, collections, users, groups);
 
-        // TODO: Add repository call and Event logs
+        await _collectionRepository.CreateOrUpdateAccessForManyAsync(organizationId, collections.Select(c => c.Id), users, groups);
+
+        // TODO: Add Event logs
     }
 
     private async Task ValidateRequestAsync(Guid orgId, ICollection<Collection> collections, ICollection<CollectionAccessSelection> usersAccess, ICollection<CollectionAccessSelection> groupsAccess)
