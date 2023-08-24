@@ -40,26 +40,26 @@ public class RerunableSqlTableJournal : SqlTableJournal
         appliedParam.Value = DateTime.Now;
         command.Parameters.Add(appliedParam);
 
-        var rerunableParam = command.CreateParameter();
-        rerunableParam.ParameterName = "rerunable";
-        rerunableParam.Value = Rerunable;
-        command.Parameters.Add(rerunableParam);
+        // var rerunableParam = command.CreateParameter();
+        // rerunableParam.ParameterName = "rerunable";
+        // rerunableParam.Value = Rerunable;
+        // command.Parameters.Add(rerunableParam);
 
         command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied");
-        command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied", "@rerrunable");
+        // command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied", "@rerrunable");
         command.CommandType = CommandType.Text;
         return command;
     }
 
-    protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerrunable)
-    {
-        return $"insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerrunable})";
-    }
+    // protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerrunable)
+    // {
+    //     return $"insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerrunable})";
+    // }
 
-    protected override string GetJournalEntriesSql()
-    {
-        return $"select [ScriptName] from {FqSchemaTableName} where [Rerunable] = 0 order by [ScriptName]";
-    }
+    // protected override string GetJournalEntriesSql()
+    // {
+    //     return $"select [ScriptName] from {FqSchemaTableName} where [Rerunable] = 0 order by [ScriptName]";
+    // }
 
     protected override string CreateSchemaTableSql(string quotedPrimaryKeyName)
     {
