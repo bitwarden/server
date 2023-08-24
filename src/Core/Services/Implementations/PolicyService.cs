@@ -73,6 +73,7 @@ public class PolicyService : IPolicyService
                 else
                 {
                     await RequiredByKeyConnectorAsync(org);
+                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
                 }
                 break;
 
