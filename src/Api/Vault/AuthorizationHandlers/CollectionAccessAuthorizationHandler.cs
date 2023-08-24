@@ -75,7 +75,7 @@ public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<Col
 
         // Owners, Admins, Providers, and users with EditAnyCollection permission can always manage collection access
         if (
-            org.Permissions.EditAnyCollection ||
+            org.Permissions is { EditAnyCollection: true } ||
             org.Type is OrganizationUserType.Admin or OrganizationUserType.Owner ||
             await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
