@@ -50,7 +50,7 @@ public class RerunableSqlTableJournal : SqlTableJournal
         return command;
     }
 
-    protected override string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerrunable)
+    protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerrunable)
     {
         return $"insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerrunable})";
     }
