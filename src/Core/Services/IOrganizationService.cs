@@ -40,14 +40,10 @@ public interface IOrganizationService
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
     /// <summary>
-    /// Accepts a user into an organization based on the provided invitation token and user information.
-    /// Validates the invitation token, checks for existing memberships, and ensures email correspondence before acceptance.
-    /// Marks the user's email as verified upon successful acceptance.
+    /// Moves an OrganizationUser into the Accepted status and marks their email as verified.
+    /// This method is used where the user has clicked the invitation link sent by email.
     /// </summary>
-    /// <param name="organizationUserId">The unique identifier of the organization user.</param>
-    /// <param name="user">Information about the user accepting the invitation.</param>
-    /// <param name="token">Token associated with the invitation.</param>
-    /// <param name="userService">Service for user-related operations.</param>
+    /// <param name="token">The token embedded in the email invitation link</param>
     /// <returns>The accepted OrganizationUser.</returns>
     Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token, IUserService userService);
     Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService);
