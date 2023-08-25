@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.Vault.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -15,7 +17,7 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationCollections;
 public class BulkAddCollectionAccessCommandTests
 {
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task ValidateRequestAsync_Success(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
+    public async Task AddAccessAsync_Success(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
         Organization org,
         ICollection<Collection> collections,
         ICollection<OrganizationUser> users,
@@ -35,14 +37,33 @@ public class BulkAddCollectionAccessCommandTests
             .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
             .Returns(groups);
 
+        var userAccessSelections = ToAccessSelection(collectionUsers);
+        var groupAccessSelections = ToAccessSelection(collectionGroups);
+
         await sutProvider.Sut.AddAccessAsync(org.Id, collections.Select(c => c.Id).ToList(),
-            ToAccessSelection(collectionUsers),
-            ToAccessSelection(collectionGroups)
+            userAccessSelections,
+            groupAccessSelections
         );
 
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs().GetManyByManyIdsAsync(default);
         await sutProvider.GetDependency<IOrganizationUserRepository>().ReceivedWithAnyArgs().GetManyAsync(default);
         await sutProvider.GetDependency<IGroupRepository>().ReceivedWithAnyArgs().GetManyByManyIds(default);
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received().CreateOrUpdateAccessForManyAsync(
+            org.Id,
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collections.Select(c => c.Id))),
+            userAccessSelections,
+            groupAccessSelections);
+
+        await sutProvider.GetDependency<IEventService>().Received().LogCollectionEventsAsync(
+            Arg.Is<IEnumerable<(Collection, EventType, DateTime?)>>(
+                events => events.All(e =>
+                    collections.Contains(e.Item1) &&
+                    e.Item2 == EventType.Collection_Updated &&
+                    e.Item3.HasValue
+                )
+            )
+        );
     }
 
 

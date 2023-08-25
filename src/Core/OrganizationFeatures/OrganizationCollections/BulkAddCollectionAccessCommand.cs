@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationCollections;
 
@@ -11,29 +13,33 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
     private readonly ICollectionRepository _collectionRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupRepository _groupRepository;
+    private readonly IEventService _eventService;
 
     public BulkAddCollectionAccessCommand(
         ICollectionRepository collectionRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository)
+        IGroupRepository groupRepository,
+        IEventService eventService)
     {
         _collectionRepository = collectionRepository;
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
+        _eventService = eventService;
     }
 
     public async Task AddAccessAsync(Guid organizationId, ICollection<Guid> collectionIds,
         ICollection<CollectionAccessSelection> users,
         ICollection<CollectionAccessSelection> groups)
     {
-        await ValidateRequestAsync(organizationId, collectionIds, users, groups);
+        var collections = await ValidateRequestAsync(organizationId, collectionIds, users, groups);
 
         await _collectionRepository.CreateOrUpdateAccessForManyAsync(organizationId, collectionIds, users, groups);
 
-        // TODO: Add Event logs
+        await _eventService.LogCollectionEventsAsync(collections.Select(c =>
+            (c, EventType.Collection_Updated, (DateTime?)DateTime.UtcNow)));
     }
 
-    private async Task ValidateRequestAsync(Guid orgId, ICollection<Guid> collectionIds, ICollection<CollectionAccessSelection> usersAccess, ICollection<CollectionAccessSelection> groupsAccess)
+    private async Task<ICollection<Collection>> ValidateRequestAsync(Guid orgId, ICollection<Guid> collectionIds, ICollection<CollectionAccessSelection> usersAccess, ICollection<CollectionAccessSelection> groupsAccess)
     {
         if (collectionIds.Count == 0)
         {
@@ -85,5 +91,7 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
                 throw new BadRequestException("One or more groups do not belong to the same organization as the collection being assigned.");
             }
         }
+
+        return collections;
     }
 }
