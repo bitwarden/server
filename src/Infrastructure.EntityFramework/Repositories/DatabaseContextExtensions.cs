@@ -74,6 +74,39 @@ public static class DatabaseContextExtensions
         UpdateUserRevisionDate(users);
     }
 
+    public static async Task UserBumpAccountRevisionDateByCollectionIdsAsync(this DatabaseContext context, IEnumerable<Guid> collectionIds, Guid organizationId)
+    {
+        var query = from u in context.Users
+                    from c in context.Collections
+                    join ou in context.OrganizationUsers
+                        on u.Id equals ou.UserId
+                    join cu in context.CollectionUsers
+                        on new { ou.AccessAll, OrganizationUserId = ou.Id, CollectionId = c.Id } equals
+                        new { AccessAll = false, cu.OrganizationUserId, cu.CollectionId } into cu_g
+                    from cu in cu_g.DefaultIfEmpty()
+                    join gu in context.GroupUsers
+                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
+                        new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
+                    from gu in gu_g.DefaultIfEmpty()
+                    join g in context.Groups
+                        on gu.GroupId equals g.Id into g_g
+                    from g in g_g.DefaultIfEmpty()
+                    join cg in context.CollectionGroups
+                        on new { g.AccessAll, gu.GroupId, CollectionId = c.Id } equals
+                        new { AccessAll = false, cg.GroupId, cg.CollectionId } into cg_g
+                    from cg in cg_g.DefaultIfEmpty()
+                    where ou.OrganizationId == organizationId && collectionIds.Contains(c.Id) &&
+                      ou.Status == OrganizationUserStatusType.Confirmed &&
+                        (cu.CollectionId != null ||
+                        cg.CollectionId != null ||
+                        ou.AccessAll == true ||
+                        g.AccessAll == true)
+                    select u;
+
+        var users = await query.ToListAsync();
+        UpdateUserRevisionDate(users);
+    }
+
     public static async Task UserBumpAccountRevisionDateByOrganizationUserIdAsync(this DatabaseContext context, Guid organizationUserId)
     {
         var query = from u in context.Users
