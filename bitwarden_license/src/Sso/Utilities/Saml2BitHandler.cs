@@ -8,6 +8,9 @@ using Sustainsys.Saml2.WebSso;
 
 namespace Bit.Sso.Utilities;
 
+// Temporary handler for validating Saml2 requests
+// Most of this is taken from Sustainsys.Saml2.AspNetCore2.Saml2Handler
+// TODO: PM-3641 - Remove this handler once there is a proper solution
 public class Saml2BitHandler : IAuthenticationRequestHandler
 {
     private readonly Saml2Handler _saml2Handler;
