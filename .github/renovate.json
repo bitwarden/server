@@ -43,10 +43,11 @@
       "groupName": "nuget minor",
       "matchManagers": ["nuget"],
       "matchUpdateTypes": ["minor", "patch"]
-    },
-    {
-      "matchPackageNames": ["Moq"],
-      "allowedVersions": "<=4.18.4"
     }
-  ]
+  ],
+  "force": {
+    "constraints": {
+      "dotnet": "6.0.413"
+    }
+  }
 }
