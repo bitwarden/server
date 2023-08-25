@@ -320,7 +320,7 @@ public class CurrentContext : ICurrentContext
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.AccessReports ?? false)) ?? false);
     }
-
+    [Obsolete("CreateNewCollections is deprecated, use the CollectionAuthorizationHandler for controller level permission checks or GetOrganization if permission checks are needed outside of that scope.")]
     public async Task<bool> CreateNewCollections(Guid orgId)
     {
         return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
@@ -505,6 +505,11 @@ public class CurrentContext : ICurrentContext
                 .Select(ou => new CurrentContentProvider(ou)).ToList();
         }
         return Providers;
+    }
+    
+    public CurrentContentOrganization GetOrganization(Guid orgId)
+    {
+        return Organizations.Find(o => o.Id == orgId);
     }
 
     private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)

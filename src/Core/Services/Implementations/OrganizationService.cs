@@ -2131,7 +2131,8 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.CreateNewCollections && !await _currentContext.CreateNewCollections(organizationId))
+        var org = _currentContext.GetOrganization(organizationId);
+        if (org != null && permissions.CreateNewCollections && !org.Permissions.CreateNewCollections)
         {
             return false;
         }

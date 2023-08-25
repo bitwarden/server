@@ -6,6 +6,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Vault.AuthorizationHandlers.Collections;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,19 +21,22 @@ public class CollectionsController : Controller
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
+    private readonly IAuthorizationService _authorizationService;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
         ICollectionService collectionService,
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IAuthorizationService authorizationService)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
         _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
         _currentContext = currentContext;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet("{id}")]
@@ -62,6 +66,7 @@ public class CollectionsController : Controller
             {
                 throw new NotFoundException();
             }
+
             return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
         }
         else
@@ -72,6 +77,7 @@ public class CollectionsController : Controller
             {
                 throw new NotFoundException();
             }
+
             return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
         }
     }
@@ -79,13 +85,15 @@ public class CollectionsController : Controller
     [HttpGet("details")]
     public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
     {
-        if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId) && !await _currentContext.ManageGroups(orgId))
+        if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId) &&
+            !await _currentContext.ManageGroups(orgId))
         {
             throw new NotFoundException();
         }
 
         // We always need to know which collections the current user is assigned to
-        var assignedOrgCollections = await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
+        var assignedOrgCollections =
+            await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
 
         if (await _currentContext.ViewAllCollections(orgId) || await _currentContext.ManageUsers(orgId))
         {
@@ -141,8 +149,8 @@ public class CollectionsController : Controller
     {
         var collection = model.ToCollection(orgId);
 
-        if (!await CanCreateCollection(orgId, collection.Id) &&
-            !await CanEditCollectionAsync(orgId, collection.Id))
+        var result = await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Create);
+        if (!result.Succeeded)
         {
             throw new NotFoundException();
         }
@@ -151,9 +159,10 @@ public class CollectionsController : Controller
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
 
         var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgId)) &&
-            await _currentContext.EditAssignedCollections(orgId);
+                                     await _currentContext.EditAssignedCollections(orgId);
 
-        await _collectionService.SaveAsync(collection, groups, users, assignUserToCollection ? _currentContext.UserId : null);
+        await _collectionService.SaveAsync(collection, groups, users,
+            assignUserToCollection ? _currentContext.UserId : null);
         return new CollectionResponseModel(collection);
     }
 
@@ -204,7 +213,8 @@ public class CollectionsController : Controller
     {
         var orgId = new Guid(model.OrganizationId);
         var collectionIds = model.Ids.Select(i => new Guid(i));
-        if (!await _currentContext.DeleteAssignedCollections(orgId) && !await _currentContext.DeleteAnyCollection(orgId))
+        if (!await _currentContext.DeleteAssignedCollections(orgId) &&
+            !await _currentContext.DeleteAnyCollection(orgId))
         {
             throw new NotFoundException();
         }
@@ -248,17 +258,6 @@ public class CollectionsController : Controller
         return collection;
     }
 
-
-    private async Task<bool> CanCreateCollection(Guid orgId, Guid collectionId)
-    {
-        if (collectionId != default)
-        {
-            return false;
-        }
-
-        return await _currentContext.CreateNewCollections(orgId);
-    }
-
     private async Task<bool> CanEditCollectionAsync(Guid orgId, Guid collectionId)
     {
         if (collectionId == default)
@@ -273,7 +272,8 @@ public class CollectionsController : Controller
 
         if (await _currentContext.EditAssignedCollections(orgId))
         {
-            var collectionDetails = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+            var collectionDetails =
+                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
             return collectionDetails != null;
         }
 
@@ -294,7 +294,8 @@ public class CollectionsController : Controller
 
         if (await _currentContext.DeleteAssignedCollections(orgId))
         {
-            var collectionDetails = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+            var collectionDetails =
+                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
             return collectionDetails != null;
         }
 
@@ -315,7 +316,8 @@ public class CollectionsController : Controller
 
         if (await _currentContext.ViewAssignedCollections(orgId))
         {
-            var collectionDetails = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+            var collectionDetails =
+                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
             return collectionDetails != null;
         }
 

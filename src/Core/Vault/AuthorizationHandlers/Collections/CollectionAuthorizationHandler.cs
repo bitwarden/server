@@ -20,26 +20,23 @@ internal class CollectionAuthorizationHandler : AuthorizationHandler<CollectionO
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        CollectionOperationRequirement requirement,
-        Collection resource)
+        CollectionOperationRequirement requirement, Collection resource)
     {
         switch (requirement)
         {
             case not null when requirement == CollectionOperations.Create:
                 await CanCreateAsync(context, requirement, resource);
                 break;
-
+            
             case not null when requirement == CollectionOperations.Delete:
                 await CanDeleteAsync(context, requirement, resource);
                 break;
         }
     }
-
-    private async Task CanCreateAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
-        Collection resource)
+    
+    private async Task CanCreateAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement, Collection resource)
     {
-        // Use Thomas' helper once his Group resource PR is merged
-        var org = _currentContext.Organizations.Find(o => o.Id == resource.OrganizationId);
+        var org = _currentContext.GetOrganization(resource.OrganizationId);
         if (org == null)
         {
             context.Fail();
@@ -60,8 +57,7 @@ internal class CollectionAuthorizationHandler : AuthorizationHandler<CollectionO
     private async Task CanDeleteAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         Collection resource)
     {
-        // Use Thomas' helper once his Group resource PR is merged
-        var org = _currentContext.Organizations.Find(o => o.Id == resource.OrganizationId);
+        var org = _currentContext.GetOrganization(resource.OrganizationId);
         if (org == null)
         {
             context.Fail();
@@ -76,11 +72,11 @@ internal class CollectionAuthorizationHandler : AuthorizationHandler<CollectionO
         {
             success = org.LimitCollectionCdOwnerAdmin &&
                       (org.Type == OrganizationUserType.Owner ||
-                      org.Type == OrganizationUserType.Admin ||
-                      org.Permissions.DeleteAnyCollection ||
-                      await _currentContext.ProviderUserForOrgAsync(org.Id));
+                       org.Type == OrganizationUserType.Admin ||
+                       org.Permissions.DeleteAnyCollection ||
+                       await _currentContext.ProviderUserForOrgAsync(org.Id));
         }
-        
+
         if (success)
         {
             context.Succeed(requirement);
