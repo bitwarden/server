@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Text;
+using System.Web;
 using Bit.Billing.Models;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -78,7 +79,7 @@ public class FreshdeskController : Controller
                 foreach (var org in orgs)
                 {
                     // Prevent org names from injecting any additional HTML
-                    var orgName = org.Name.Replace("<", string.Empty).Replace(">", string.Empty);
+                    var orgName = HttpUtility.HtmlEncode(org.Name);
                     var orgNote = $"{orgName} ({org.Seats.GetValueOrDefault()}): " +
                         $"{_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}";
                     note += $"<li>Org, {orgNote}</li>";
