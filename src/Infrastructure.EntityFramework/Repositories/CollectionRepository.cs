@@ -476,6 +476,92 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
     public async Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
         IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups)
     {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+
+            var collectionIdsList = collectionIds.ToList();
+
+            if (users != null)
+            {
+                var existingCollectionUsers = await dbContext.CollectionUsers
+                    .Where(cu => collectionIdsList.Contains(cu.CollectionId))
+                    .ToDictionaryAsync(x => (x.CollectionId, x.OrganizationUserId));
+
+                var requestedUsers = users.ToList();
+
+                foreach (var collectionId in collectionIdsList)
+                {
+                    foreach (var requestedUser in requestedUsers)
+                    {
+                        if (!existingCollectionUsers.TryGetValue(
+                                (collectionId, requestedUser.Id),
+                                out var existingCollectionUser)
+                            )
+                        {
+                            // This is a brand new entry
+                            dbContext.CollectionUsers.Add(new CollectionUser
+                            {
+                                CollectionId = collectionId,
+                                OrganizationUserId = requestedUser.Id,
+                                HidePasswords = requestedUser.HidePasswords,
+                                ReadOnly = requestedUser.ReadOnly,
+                                Manage = requestedUser.Manage
+                            });
+                            continue;
+                        }
+
+                        // It already exists, update it
+                        existingCollectionUser.HidePasswords = requestedUser.HidePasswords;
+                        existingCollectionUser.ReadOnly = requestedUser.ReadOnly;
+                        existingCollectionUser.Manage = requestedUser.Manage;
+                        dbContext.CollectionUsers.Update(existingCollectionUser);
+                    }
+                }
+            }
+
+            if (groups != null)
+            {
+                var existingCollectionGroups = await dbContext.CollectionGroups
+                    .Where(cu => collectionIdsList.Contains(cu.CollectionId))
+                    .ToDictionaryAsync(x => (x.CollectionId, x.GroupId));
+
+                var requestedGroups = groups.ToList();
+
+                foreach (var collectionId in collectionIdsList)
+                {
+                    foreach (var requestedGroup in requestedGroups)
+                    {
+                        if (!existingCollectionGroups.TryGetValue(
+                                (collectionId, requestedGroup.Id),
+                                out var existingCollectionGroup)
+                           )
+                        {
+                            // This is a brand new entry
+                            dbContext.CollectionGroups.Add(new CollectionGroup()
+                            {
+                                CollectionId = collectionId,
+                                GroupId = requestedGroup.Id,
+                                HidePasswords = requestedGroup.HidePasswords,
+                                ReadOnly = requestedGroup.ReadOnly,
+                                Manage = requestedGroup.Manage
+                            });
+                            continue;
+                        }
+
+                        // It already exists, update it
+                        existingCollectionGroup.HidePasswords = requestedGroup.HidePasswords;
+                        existingCollectionGroup.ReadOnly = requestedGroup.ReadOnly;
+                        existingCollectionGroup.Manage = requestedGroup.Manage;
+                        dbContext.CollectionGroups.Update(existingCollectionGroup);
+                    }
+                }
+            }
+
+            await dbContext.SaveChangesAsync();
+            await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIdsList, organizationId);
+            await dbContext.SaveChangesAsync();
+        }
     }
 
     private async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
