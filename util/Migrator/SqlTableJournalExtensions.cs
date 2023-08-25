@@ -45,15 +45,21 @@ public class RerunableSqlTableJournal : SqlTableJournal
         rerunableParam.Value = Rerunable;
         command.Parameters.Add(rerunableParam);
 
-        // command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied");
-        command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied", "@rerrunable");
+        command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied", "@rerunable");
         command.CommandType = CommandType.Text;
         return command;
     }
 
-    protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerrunable)
+    protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerunable)
     {
-        return $"insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerrunable})";
+        return $"IF EXISTS (SELECT * FROM {FqSchemaTableName} WHERE Rerunable = 1 AND ScriptName ='{@scriptName}')" +
+        "BEGIN" +
+        $"UPDATE {FqSchemaTableName} SET Applied = {@applied}, Rerunable = {@rerunable} WHERE ScriptName = '{@scriptName}'" +
+        "END" +
+        "ELSE" +
+        "BEGIN" +
+        $"insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerunable})" +
+        "END";
     }
 
     protected override string GetJournalEntriesSql()
