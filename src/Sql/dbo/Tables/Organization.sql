@@ -45,6 +45,12 @@
     [UseCustomPermissions]          BIT              NOT NULL CONSTRAINT [DF_Organization_UseCustomPermissions] DEFAULT (0),
     [UseSecretsManager]             BIT              NOT NULL CONSTRAINT [DF_Organization_UseSecretsManager] DEFAULT (0),
     [Status]                        TINYINT          NOT NULL CONSTRAINT [DF_Organization_Status] DEFAULT (1),
+    [UsePasswordManager]            BIT              NOT NULL CONSTRAINT [DF_Organization_UsePasswordManager] DEFAULT (1),
+    [SmSeats]                       INT              NULL,
+    [SmServiceAccounts]             INT              NULL,
+    [MaxAutoscaleSmSeats]           INT              NULL,
+    [MaxAutoscaleSmServiceAccounts] INT              NULL,
+    [SecretsManagerBeta]            BIT              NOT NULL CONSTRAINT [DF_Organization_SecretsManagerBeta] DEFAULT (0),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

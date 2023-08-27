@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -37,16 +38,17 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
         ICaptchaValidationService captchaValidationService,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
+        IFeatureService featureService,
+        ISsoConfigRepository ssoConfigRepository)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, policyService, tokenDataFactory)
+              applicationCacheService, mailService, logger, currentContext, globalSettings, userRepository, policyService,
+              tokenDataFactory, featureService, ssoConfigRepository)
     {
         _userManager = userManager;
         _userService = userService;
@@ -164,6 +166,11 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+    }
+
+    protected override ClaimsPrincipal GetSubject(ResourceOwnerPasswordValidationContext context)
+    {
+        return context.Result.Subject;
     }
 
     private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)

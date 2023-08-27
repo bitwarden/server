@@ -12,6 +12,7 @@ namespace Bit.Core.Services;
 
 public class PolicyService : IPolicyService
 {
+    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -21,6 +22,7 @@ public class PolicyService : IPolicyService
     private readonly GlobalSettings _globalSettings;
 
     public PolicyService(
+        IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -29,6 +31,7 @@ public class PolicyService : IPolicyService
         IMailService mailService,
         GlobalSettings globalSettings)
     {
+        _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -61,6 +64,7 @@ public class PolicyService : IPolicyService
                     await RequiredBySsoAsync(org);
                     await RequiredByVaultTimeoutAsync(org);
                     await RequiredByKeyConnectorAsync(org);
+                    await RequiredByAccountRecoveryAsync(org);
                 }
                 break;
 
@@ -72,6 +76,19 @@ public class PolicyService : IPolicyService
                 else
                 {
                     await RequiredByKeyConnectorAsync(org);
+                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
+                }
+                break;
+
+            case PolicyType.ResetPassword:
+                if (!policy.Enabled || policy.GetDataModel<ResetPasswordDataModel>()?.AutoEnrollEnabled == false)
+                {
+                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
+                }
+
+                if (policy.Enabled)
+                {
+                    await DependsOnSingleOrgAsync(org);
                 }
                 break;
 
@@ -185,7 +202,9 @@ public class PolicyService : IPolicyService
     {
         var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
         return organizationUserPolicyDetails.Where(o =>
+            (!orgAbilities.ContainsKey(o.OrganizationId) || orgAbilities[o.OrganizationId].UsePolicies) &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
             o.OrganizationUserStatus >= minStatus &&
@@ -230,11 +249,19 @@ public class PolicyService : IPolicyService
 
     private async Task RequiredByKeyConnectorAsync(Organization org)
     {
-
         var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
         if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.KeyConnector)
         {
             throw new BadRequestException("Key Connector is enabled.");
+        }
+    }
+
+    private async Task RequiredByAccountRecoveryAsync(Organization org)
+    {
+        var requireSso = await _policyRepository.GetByOrganizationIdTypeAsync(org.Id, PolicyType.ResetPassword);
+        if (requireSso?.Enabled == true)
+        {
+            throw new BadRequestException("Account recovery policy is enabled.");
         }
     }
 
@@ -252,6 +279,15 @@ public class PolicyService : IPolicyService
         if (org.PlanType != PlanType.EnterpriseAnnually && org.PlanType != PlanType.EnterpriseMonthly)
         {
             throw new BadRequestException("This policy is only available to 2020 Enterprise plans.");
+        }
+    }
+
+    private async Task RequiredBySsoTrustedDeviceEncryptionAsync(Organization org)
+    {
+        var ssoConfig = await _ssoConfigRepository.GetByOrganizationIdAsync(org.Id);
+        if (ssoConfig?.GetData()?.MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
+        {
+            throw new BadRequestException("Trusted device encryption is on and requires this policy.");
         }
     }
 }

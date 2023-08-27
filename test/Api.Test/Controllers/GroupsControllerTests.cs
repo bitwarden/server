@@ -40,10 +40,8 @@ public class GroupsControllerTests
             organization,
             Arg.Any<IEnumerable<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
-
-        Assert.NotNull(response.Id);
         Assert.Equal(groupRequestModel.Name, response.Name);
-        Assert.Equal(organization.Id.ToString(), response.OrganizationId);
+        Assert.Equal(organization.Id, response.OrganizationId);
         Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 
@@ -68,10 +66,8 @@ public class GroupsControllerTests
             Arg.Is<Organization>(o => o.Id == organization.Id),
             Arg.Any<IEnumerable<CollectionAccessSelection>>(),
             Arg.Any<IEnumerable<Guid>>());
-
-        Assert.NotNull(response.Id);
         Assert.Equal(groupRequestModel.Name, response.Name);
-        Assert.Equal(organization.Id.ToString(), response.OrganizationId);
+        Assert.Equal(organization.Id, response.OrganizationId);
         Assert.Equal(groupRequestModel.AccessAll, response.AccessAll);
     }
 

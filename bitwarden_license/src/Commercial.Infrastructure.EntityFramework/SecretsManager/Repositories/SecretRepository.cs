@@ -57,6 +57,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return await secrets.ToListAsync();
     }
 
+    public async Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.Secret
+                .CountAsync(ou => ou.OrganizationId == organizationId && ou.DeletedDate == null);
+        }
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -139,13 +149,13 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 .Include("Projects")
                 .FirstAsync(s => s.Id == secret.Id);
 
-            foreach (var p in entity.Projects?.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
+            foreach (var p in entity.Projects.Where(p => mappedEntity.Projects.All(mp => mp.Id != p.Id)))
             {
                 entity.Projects.Remove(p);
             }
 
             // Add new relationships
-            foreach (var project in mappedEntity.Projects?.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
+            foreach (var project in mappedEntity.Projects.Where(p => entity.Projects.All(ep => ep.Id != p.Id)))
             {
                 var p = dbContext.AttachToOrGet<Project>(_ => _.Id == project.Id, () => project);
                 entity.Projects.Add(p);
@@ -290,7 +300,17 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
 
         var policy = await query.FirstOrDefaultAsync();
 
-        return (policy.Read, policy.Write);
+        return policy == null ? (false, false) : (policy.Read, policy.Write);
+    }
+
+    public async Task EmptyTrash(DateTime currentDate, uint deleteAfterThisNumberOfDays)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.Secret.Where(s => s.DeletedDate != null && s.DeletedDate < currentDate.AddDays(-deleteAfterThisNumberOfDays)).ExecuteDeleteAsync();
+
+        await dbContext.SaveChangesAsync();
     }
 
     private IQueryable<SecretPermissionDetails> SecretToPermissionDetails(IQueryable<Secret> query, Guid userId, AccessClientType accessType)

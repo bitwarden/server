@@ -28,6 +28,7 @@ public class ConfigResponseModel : ResponseModel
         GitHash = AssemblyHelpers.GetGitHash();
         Environment = new EnvironmentConfigResponseModel
         {
+            CloudRegion = globalSettings.BaseServiceUri.CloudRegion,
             Vault = globalSettings.BaseServiceUri.Vault,
             Api = globalSettings.BaseServiceUri.Api,
             Identity = globalSettings.BaseServiceUri.Identity,
@@ -46,6 +47,7 @@ public class ServerConfigResponseModel
 
 public class EnvironmentConfigResponseModel
 {
+    public string CloudRegion { get; set; }
     public string Vault { get; set; }
     public string Api { get; set; }
     public string Identity { get; set; }

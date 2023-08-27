@@ -1,5 +1,10 @@
-﻿using Bit.Api.Models.Request;
+﻿using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Core.Auth.Models.Api.Request;
+using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -18,17 +23,20 @@ public class DevicesController : Controller
     private readonly IDeviceService _deviceService;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
+    private readonly ICurrentContext _currentContext;
 
     public DevicesController(
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
         IUserService userService,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        ICurrentContext currentContext)
     {
         _deviceRepository = deviceRepository;
         _deviceService = deviceService;
         _userService = userService;
         _userRepository = userRepository;
+        _currentContext = currentContext;
     }
 
     [HttpGet("{id}")]
@@ -89,6 +97,71 @@ public class DevicesController : Controller
 
         var response = new DeviceResponseModel(device);
         return response;
+    }
+
+    [HttpPut("{identifier}/keys")]
+    [HttpPost("{identifier}/keys")]
+    public async Task<DeviceResponseModel> PutKeys(string identifier, [FromBody] DeviceKeysRequestModel model)
+    {
+        var device = await _deviceRepository.GetByIdentifierAsync(identifier, _userService.GetProperUserId(User).Value);
+        if (device == null)
+        {
+            throw new NotFoundException();
+        }
+
+        await _deviceService.SaveAsync(model.ToDevice(device));
+
+        var response = new DeviceResponseModel(device);
+        return response;
+    }
+
+    [HttpPost("{identifier}/retrieve-keys")]
+    public async Task<ProtectedDeviceResponseModel> GetDeviceKeys(string identifier, [FromBody] SecretVerificationRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!await _userService.VerifySecretAsync(user, model.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        var device = await _deviceRepository.GetByIdentifierAsync(identifier, user.Id);
+
+        if (device == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return new ProtectedDeviceResponseModel(device);
+    }
+
+    [HttpPost("update-trust")]
+    public async Task PostUpdateTrust([FromBody] UpdateDevicesTrustRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        if (!await _userService.VerifySecretAsync(user, model.Secret))
+        {
+            await Task.Delay(2000);
+            throw new BadRequestException(string.Empty, "User verification failed.");
+        }
+
+        await _deviceService.UpdateDevicesTrustAsync(
+            _currentContext.DeviceIdentifier,
+            user.Id,
+            model.CurrentDevice,
+            model.OtherDevices ?? Enumerable.Empty<OtherDeviceKeysUpdateRequestModel>());
     }
 
     [HttpPut("identifier/{identifier}/token")]

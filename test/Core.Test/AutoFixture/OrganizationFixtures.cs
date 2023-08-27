@@ -20,11 +20,11 @@ public class OrganizationCustomization : ICustomization
     public void Customize(IFixture fixture)
     {
         var organizationId = Guid.NewGuid();
-        var maxConnections = (short)new Random().Next(10, short.MaxValue);
+        var maxCollections = (short)new Random().Next(10, short.MaxValue);
 
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
-            .With(o => o.MaxCollections, maxConnections)
+            .With(o => o.MaxCollections, maxCollections)
             .With(o => o.UseGroups, UseGroups));
 
         fixture.Customize<Collection>(composer =>
@@ -65,7 +65,7 @@ internal class PaidOrganization : ICustomization
     public PlanType CheckedPlanType { get; set; }
     public void Customize(IFixture fixture)
     {
-        var validUpgradePlans = StaticStore.Plans.Where(p => p.Type != PlanType.Free && p.LegacyYear == null).OrderBy(p => p.UpgradeSortOrder).Select(p => p.Type).ToList();
+        var validUpgradePlans = StaticStore.PasswordManagerPlans.Where(p => p.Type != PlanType.Free && p.LegacyYear == null).OrderBy(p => p.UpgradeSortOrder).Select(p => p.Type).ToList();
         var lowestActivePaidPlan = validUpgradePlans.First();
         CheckedPlanType = CheckedPlanType.Equals(PlanType.Free) ? lowestActivePaidPlan : CheckedPlanType;
         validUpgradePlans.Remove(lowestActivePaidPlan);
@@ -93,7 +93,7 @@ internal class FreeOrganizationUpgrade : ICustomization
             .With(o => o.PlanType, PlanType.Free));
 
         var plansToIgnore = new List<PlanType> { PlanType.Free, PlanType.Custom };
-        var selectedPlan = StaticStore.Plans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
+        var selectedPlan = StaticStore.PasswordManagerPlans.Last(p => !plansToIgnore.Contains(p.Type) && !p.Disabled);
 
         fixture.Customize<OrganizationUpgrade>(composer => composer
             .With(ou => ou.Plan, selectedPlan.Type)
@@ -124,6 +124,25 @@ internal class OrganizationInvite : ICustomization
             .With(ou => ou.Permissions, PermissionsBlob));
         fixture.Customize<OrganizationUserInvite>(composer => composer
             .With(oi => oi.Type, InviteeUserType));
+    }
+}
+
+public class SecretsManagerOrganizationCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        var organizationId = Guid.NewGuid();
+        var planType = PlanType.EnterpriseAnnually;
+
+        fixture.Customize<Organization>(composer => composer
+            .With(o => o.Id, organizationId)
+            .With(o => o.UseSecretsManager, true)
+            .With(o => o.SecretsManagerBeta, false)
+            .With(o => o.PlanType, planType)
+            .With(o => o.Plan, StaticStore.GetPasswordManagerPlan(planType).Name)
+            .With(o => o.MaxAutoscaleSmSeats, (int?)null)
+            .With(o => o.MaxAutoscaleSmServiceAccounts, (int?)null)
+        );
     }
 }
 
@@ -161,4 +180,10 @@ internal class OrganizationInviteCustomizeAttribute : BitCustomizeAttribute
         InvitorUserType = InvitorUserType,
         PermissionsBlob = PermissionsBlob,
     };
+}
+
+internal class SecretsManagerOrganizationCustomizeAttribute : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() =>
+        new SecretsManagerOrganizationCustomization();
 }

@@ -17,6 +17,7 @@ public class GlobalSettings : IGlobalSettings
     }
 
     public bool SelfHosted { get; set; }
+    public bool UnifiedDeployment { get; set; }
     public virtual string KnownProxies { get; set; }
     public virtual string SiteName { get; set; }
     public virtual string ProjectName { get; set; }
@@ -142,6 +143,7 @@ public class GlobalSettings : IGlobalSettings
             _globalSettings = globalSettings;
         }
 
+        public string CloudRegion { get; set; }
         public string Vault { get; set; }
         public string VaultWithHash => $"{Vault}/#";
 
@@ -481,6 +483,7 @@ public class GlobalSettings : IGlobalSettings
     {
         public string ApplicationCacheTopicName { get; set; }
         public string ApplicationCacheSubscriptionName { get; set; }
+        public string WebSiteInstanceId { get; set; }
     }
 
     public class AppleIapSettings
@@ -533,6 +536,9 @@ public class GlobalSettings : IGlobalSettings
     public class PasswordlessAuthSettings : IPasswordlessAuthSettings
     {
         public bool KnownDevicesOnly { get; set; } = true;
+        public TimeSpan UserRequestExpiration { get; set; } = TimeSpan.FromMinutes(15);
+        public TimeSpan AdminRequestExpiration { get; set; } = TimeSpan.FromDays(7);
+        public TimeSpan AfterAdminApprovalExpiration { get; set; } = TimeSpan.FromHours(12);
     }
 
     public class DomainVerificationSettings : IDomainVerificationSettings

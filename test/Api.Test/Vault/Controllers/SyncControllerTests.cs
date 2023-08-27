@@ -301,11 +301,11 @@ public class SyncControllerTests
         foreach (var profProviderOrg in result.Profile.ProviderOrganizations)
         {
             var matchedProviderUserOrgDetails =
-                providerUserOrganizationDetails.FirstOrDefault(p => p.OrganizationId.ToString() == profProviderOrg.Id);
+                providerUserOrganizationDetails.FirstOrDefault(p => p.OrganizationId == profProviderOrg.Id);
 
             if (matchedProviderUserOrgDetails != null)
             {
-                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).Product;
+                var providerOrgProductType = StaticStore.GetPasswordManagerPlan(matchedProviderUserOrgDetails.PlanType).Product;
                 Assert.Equal(providerOrgProductType, profProviderOrg.PlanProductType);
             }
         }
