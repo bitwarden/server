@@ -523,27 +523,20 @@ public class StripeController : Controller
             {
                 case HandledStripeWebhook.SubscriptionDeleted:
                 case HandledStripeWebhook.SubscriptionUpdated:
-                    customerMetadata = (await GetSubscriptionAsync(parsedEvent, true, expandOptions))
-                        ?.Customer
+                    customerMetadata = (await GetSubscriptionAsync(parsedEvent, true, expandOptions))?.Customer
                         ?.Metadata;
                     break;
                 case HandledStripeWebhook.ChargeSucceeded:
                 case HandledStripeWebhook.ChargeRefunded:
-                    customerMetadata = (await GetChargeAsync(parsedEvent, true, expandOptions))
-                        ?.Customer
-                        ?.Metadata;
+                    customerMetadata = (await GetChargeAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
                     break;
                 case HandledStripeWebhook.UpcomingInvoice:
-                    customerMetadata = (await GetInvoiceAsync(parsedEvent))
-                        ?.Customer
-                        ?.Metadata;
+                    customerMetadata = (await GetInvoiceAsync(parsedEvent))?.Customer?.Metadata;
                     break;
                 case HandledStripeWebhook.PaymentSucceeded:
                 case HandledStripeWebhook.PaymentFailed:
                 case HandledStripeWebhook.InvoiceCreated:
-                    customerMetadata = (await GetInvoiceAsync(parsedEvent, true, expandOptions))
-                        ?.Customer
-                        ?.Metadata;
+                    customerMetadata = (await GetInvoiceAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
                     break;
                 case HandledStripeWebhook.PaymentMethodAttached:
                     customerMetadata = (await GetPaymentMethodAsync(parsedEvent, true, expandOptions))

@@ -5,11 +5,11 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Context;
 
-public class CurrentContentOrganization
+public class CurrentContextOrganization
 {
-    public CurrentContentOrganization() { }
+    public CurrentContextOrganization() { }
 
-    public CurrentContentOrganization(OrganizationUserOrganizationDetails orgUser)
+    public CurrentContextOrganization(OrganizationUserOrganizationDetails orgUser)
     {
         Id = orgUser.OrganizationId;
         Type = orgUser.Type;
