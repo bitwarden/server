@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using Stripe;
 using Customer = Stripe.Customer;
 using Event = Stripe.Event;
+using PaymentMethod = Stripe.PaymentMethod;
 using Subscription = Stripe.Subscription;
 using TaxRate = Bit.Core.Entities.TaxRate;
 using Transaction = Bit.Core.Entities.Transaction;
@@ -138,10 +139,10 @@ public class StripeController : Controller
             var ids = GetIdsFromMetaData(subscription.Metadata);
             var organizationId = ids.Item1 ?? Guid.Empty;
             var userId = ids.Item2 ?? Guid.Empty;
-            var subCanceled = subDeleted && subscription.Status == "canceled";
-            var subUnpaid = subUpdated && subscription.Status == "unpaid";
-            var subActive = subUpdated && subscription.Status == "active";
-            var subIncompleteExpired = subUpdated && subscription.Status == "incomplete_expired";
+            var subCanceled = subDeleted && subscription.Status == StripeSubscriptionStatus.Canceled;
+            var subUnpaid = subUpdated && subscription.Status == StripeSubscriptionStatus.Unpaid;
+            var subActive = subUpdated && subscription.Status == StripeSubscriptionStatus.Active;
+            var subIncompleteExpired = subUpdated && subscription.Status == StripeSubscriptionStatus.IncompleteExpired;
 
             if (subCanceled || subUnpaid || subIncompleteExpired)
             {
@@ -153,7 +154,17 @@ public class StripeController : Controller
                 // user
                 else if (userId != Guid.Empty)
                 {
-                    await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+                    if (subUnpaid && subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
+                    {
+                        await CancelSubscription(subscription.Id);
+                        await VoidOpenInvoices(subscription.Id);
+                    }
+
+                    var user = await _userService.GetUserByIdAsync(userId);
+                    if (user.Premium)
+                    {
+                        await _userService.DisablePremiumAsync(userId, subscription.CurrentPeriodEnd);
+                    }
                 }
             }
 
@@ -271,7 +282,7 @@ public class StripeController : Controller
                 });
                 foreach (var sub in subscriptions)
                 {
-                    if (sub.Status != "canceled" && sub.Status != "incomplete_expired")
+                    if (sub.Status != StripeSubscriptionStatus.Canceled && sub.Status != StripeSubscriptionStatus.IncompleteExpired)
                     {
                         ids = GetIdsFromMetaData(sub.Metadata);
                         if (ids.Item1.HasValue || ids.Item2.HasValue)
@@ -421,7 +432,7 @@ public class StripeController : Controller
             {
                 var subscriptionService = new SubscriptionService();
                 var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-                if (subscription?.Status == "active")
+                if (subscription?.Status == StripeSubscriptionStatus.Active)
                 {
                     if (DateTime.UtcNow - invoice.Created < TimeSpan.FromMinutes(1))
                     {
@@ -478,6 +489,11 @@ public class StripeController : Controller
                 await AttemptToPayInvoiceAsync(invoice);
             }
         }
+        else if (parsedEvent.Type.Equals(HandledStripeWebhook.PaymentMethodAttached))
+        {
+            var paymentMethod = await GetPaymentMethodAsync(parsedEvent);
+            await HandlePaymentMethodAttachedAsync(paymentMethod);
+        }
         else
         {
             _logger.LogWarning("Unsupported event received. " + parsedEvent.Type);
@@ -521,6 +537,11 @@ public class StripeController : Controller
                 case HandledStripeWebhook.PaymentFailed:
                 case HandledStripeWebhook.InvoiceCreated:
                     customerMetadata = (await GetInvoiceAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
+                    break;
+                case HandledStripeWebhook.PaymentMethodAttached:
+                    customerMetadata = (await GetPaymentMethodAsync(parsedEvent, true, expandOptions))
+                        ?.Customer
+                        ?.Metadata;
                     break;
                 default:
                     customerMetadata = null;
@@ -579,6 +600,77 @@ public class StripeController : Controller
             : defaultRegion;
     }
 
+    private async Task HandlePaymentMethodAttachedAsync(PaymentMethod paymentMethod)
+    {
+        if (paymentMethod is null)
+        {
+            _logger.LogWarning("Attempted to handle the event payment_method.attached but paymentMethod was null");
+            return;
+        }
+
+        var subscriptionService = new SubscriptionService();
+        var subscriptionListOptions = new SubscriptionListOptions
+        {
+            Customer = paymentMethod.CustomerId,
+            Status = StripeSubscriptionStatus.Unpaid,
+            Expand = new List<string> { "data.latest_invoice" }
+        };
+
+        StripeList<Subscription> unpaidSubscriptions;
+        try
+        {
+            unpaidSubscriptions = await subscriptionService.ListAsync(subscriptionListOptions);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e,
+                "Attempted to get unpaid invoices for customer {CustomerId} but encountered an error while calling Stripe",
+                paymentMethod.CustomerId);
+
+            return;
+        }
+
+        foreach (var unpaidSubscription in unpaidSubscriptions)
+        {
+            await AttemptToPayOpenSubscriptionAsync(unpaidSubscription);
+        }
+    }
+
+    private async Task AttemptToPayOpenSubscriptionAsync(Subscription unpaidSubscription)
+    {
+        var latestInvoice = unpaidSubscription.LatestInvoice;
+
+        if (unpaidSubscription.LatestInvoice is null)
+        {
+            _logger.LogWarning(
+                "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice didn't exist",
+                unpaidSubscription.Id);
+
+            return;
+        }
+
+        if (latestInvoice.Status != StripeInvoiceStatus.Open)
+        {
+            _logger.LogWarning(
+                "Attempted to pay unpaid subscription {SubscriptionId} but latest invoice wasn't \"open\"",
+                unpaidSubscription.Id);
+
+            return;
+        }
+
+        try
+        {
+            await AttemptToPayInvoiceAsync(latestInvoice, true);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e,
+                "Attempted to pay open invoice {InvoiceId} on unpaid subscription {SubscriptionId} but encountered an error",
+                latestInvoice.Id, unpaidSubscription.Id);
+            throw;
+        }
+    }
+
     private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
     {
         if (metaData == null || !metaData.Any())
@@ -631,7 +723,7 @@ public class StripeController : Controller
         }
     }
 
-    private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice)
+    private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false)
     {
         var customerService = new CustomerService();
         var customer = await customerService.GetAsync(invoice.CustomerId);
@@ -639,10 +731,17 @@ public class StripeController : Controller
         {
             return await AttemptToPayInvoiceWithAppleReceiptAsync(invoice, customer);
         }
-        else if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
+
+        if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
         {
             return await AttemptToPayInvoiceWithBraintreeAsync(invoice, customer);
         }
+
+        if (attemptToPayWithStripe)
+        {
+            return await AttemptToPayInvoiceWithStripeAsync(invoice);
+        }
+
         return false;
     }
 
@@ -851,6 +950,25 @@ public class StripeController : Controller
         return true;
     }
 
+    private async Task<bool> AttemptToPayInvoiceWithStripeAsync(Invoice invoice)
+    {
+        try
+        {
+            var invoiceService = new InvoiceService();
+            await invoiceService.PayAsync(invoice.Id);
+            return true;
+        }
+        catch (Exception e)
+        {
+            _logger.LogWarning(
+                e,
+                "Exception occurred while trying to pay Stripe invoice with Id: {InvoiceId}",
+                invoice.Id);
+
+            throw;
+        }
+    }
+
     private bool UnpaidAutoChargeInvoiceForSubscriptionCycle(Invoice invoice)
     {
         return invoice.AmountDue > 0 && !invoice.Paid && invoice.CollectionMethod == "charge_automatically" &&
@@ -935,6 +1053,31 @@ public class StripeController : Controller
         return customer;
     }
 
+    private async Task<PaymentMethod> GetPaymentMethodAsync(Event parsedEvent, bool fresh = false,
+        List<string> expandOptions = null)
+    {
+        if (parsedEvent.Data.Object is not PaymentMethod eventPaymentMethod)
+        {
+            throw new Exception("Invoice is null (from parsed event). " + parsedEvent.Id);
+        }
+
+        if (!fresh)
+        {
+            return eventPaymentMethod;
+        }
+
+        var paymentMethodService = new PaymentMethodService();
+        var paymentMethodGetOptions = new PaymentMethodGetOptions { Expand = expandOptions };
+        var paymentMethod = await paymentMethodService.GetAsync(eventPaymentMethod.Id, paymentMethodGetOptions);
+
+        if (paymentMethod == null)
+        {
+            throw new Exception($"Payment method is null. {eventPaymentMethod.Id}");
+        }
+
+        return paymentMethod;
+    }
+
     private async Task<Subscription> VerifyCorrectTaxRateForCharge(Invoice invoice, Subscription subscription)
     {
         if (!string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.Country) && !string.IsNullOrWhiteSpace(invoice?.CustomerAddress?.PostalCode))
@@ -971,12 +1114,8 @@ public class StripeController : Controller
             var subscriptionService = new SubscriptionService();
             var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
             // attempt count 4 = 11 days after initial failure
-            if (invoice.AttemptCount > 3 && subscription.Items.Any(i => i.Price.Id == PremiumPlanId || i.Price.Id == PremiumPlanIdAppStore))
-            {
-                await CancelSubscription(invoice.SubscriptionId);
-                await VoidOpenInvoices(invoice.SubscriptionId);
-            }
-            else
+            if (invoice.AttemptCount <= 3 ||
+                !subscription.Items.Any(i => i.Price.Id is PremiumPlanId or PremiumPlanIdAppStore))
             {
                 await AttemptToPayInvoiceAsync(invoice);
             }
@@ -993,7 +1132,7 @@ public class StripeController : Controller
         var invoiceService = new InvoiceService();
         var options = new InvoiceListOptions
         {
-            Status = "open",
+            Status = StripeInvoiceStatus.Open,
             Subscription = subscriptionId
         };
         var invoices = invoiceService.List(options);
