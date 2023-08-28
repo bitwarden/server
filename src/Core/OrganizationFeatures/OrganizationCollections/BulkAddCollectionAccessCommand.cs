@@ -41,7 +41,7 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
 
     private async Task ValidateRequestAsync(Guid orgId, ICollection<Collection> collections, ICollection<CollectionAccessSelection> usersAccess, ICollection<CollectionAccessSelection> groupsAccess)
     {
-        if (collections.Count == 0)
+        if (collections == null || collections.Count == 0)
         {
             throw new BadRequestException("No collections were provided.");
         }
@@ -51,9 +51,9 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
             throw new BadRequestException("All collections must belong to the same organization.");
         }
 
-        var collectionUserIds = usersAccess.Select(u => u.Id).ToList();
+        var collectionUserIds = usersAccess?.Select(u => u.Id).ToList();
 
-        if (collectionUserIds.Count > 0)
+        if (collectionUserIds is { Count: > 0 })
         {
             var users = await _organizationUserRepository.GetManyAsync(collectionUserIds);
 
@@ -68,9 +68,9 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
             }
         }
 
-        var collectionGroupIds = groupsAccess.Select(g => g.Id).ToList();
+        var collectionGroupIds = groupsAccess?.Select(g => g.Id).ToList();
 
-        if (collectionGroupIds.Count > 0)
+        if (collectionGroupIds is { Count: > 0 })
         {
             var groups = await _groupRepository.GetManyByManyIds(collectionGroupIds);
 
