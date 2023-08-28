@@ -119,6 +119,19 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Theory]
     [InlineData(PermissionType.RunAsAdmin)]
     [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task Create_AtMaxProjects_BadRequest(PermissionType permissionType)
+    {
+        var (_, organization) = await SetupProjectsWithAccessAsync(permissionType, 3);
+        var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{organization.Id}/projects", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Create_Success(PermissionType permissionType)
     {
         var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
