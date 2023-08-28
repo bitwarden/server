@@ -10,12 +10,18 @@ using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Braintree;
+using Braintree.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
 using Stripe;
+using Customer = Stripe.Customer;
 using Event = Stripe.Event;
+using Subscription = Stripe.Subscription;
 using TaxRate = Bit.Core.Entities.TaxRate;
+using Transaction = Bit.Core.Entities.Transaction;
+using TransactionType = Bit.Core.Enums.TransactionType;
 
 namespace Bit.Billing.Controllers;
 
@@ -490,60 +496,87 @@ public class StripeController : Controller
     /// <exception cref="Exception"></exception>
     private async Task<bool> ValidateCloudRegionAsync(Event parsedEvent)
     {
-        string customerRegion;
-
         var serverRegion = _globalSettings.BaseServiceUri.CloudRegion;
         var eventType = parsedEvent.Type;
+        var expandOptions = new List<string> { "customer" };
 
-        switch (eventType)
+        try
         {
-            case HandledStripeWebhook.SubscriptionDeleted:
-            case HandledStripeWebhook.SubscriptionUpdated:
-                {
-                    var subscription = await GetSubscriptionAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(subscription.Customer.Metadata);
+            Dictionary<string, string> customerMetadata;
+            switch (eventType)
+            {
+                case HandledStripeWebhook.SubscriptionDeleted:
+                case HandledStripeWebhook.SubscriptionUpdated:
+                    customerMetadata = (await GetSubscriptionAsync(parsedEvent, true, expandOptions))?.Customer
+                        ?.Metadata;
                     break;
-                }
-            case HandledStripeWebhook.ChargeSucceeded:
-            case HandledStripeWebhook.ChargeRefunded:
-                {
-                    var charge = await GetChargeAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(charge.Customer.Metadata);
+                case HandledStripeWebhook.ChargeSucceeded:
+                case HandledStripeWebhook.ChargeRefunded:
+                    customerMetadata = (await GetChargeAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
                     break;
-                }
-            case HandledStripeWebhook.UpcomingInvoice:
-                var eventInvoice = await GetInvoiceAsync(parsedEvent);
-                var customer = await GetCustomerAsync(eventInvoice.CustomerId);
-                customerRegion = GetCustomerRegionFromMetadata(customer.Metadata);
-                break;
-            case HandledStripeWebhook.PaymentSucceeded:
-            case HandledStripeWebhook.PaymentFailed:
-            case HandledStripeWebhook.InvoiceCreated:
-                {
-                    var invoice = await GetInvoiceAsync(parsedEvent, true, new List<string> { "customer" });
-                    customerRegion = GetCustomerRegionFromMetadata(invoice.Customer.Metadata);
+                case HandledStripeWebhook.UpcomingInvoice:
+                    customerMetadata = (await GetInvoiceAsync(parsedEvent))?.Customer?.Metadata;
                     break;
-                }
-            default:
-                {
-                    // For all Stripe events that we're not listening to, just return 200
-                    return false;
-                }
-        }
+                case HandledStripeWebhook.PaymentSucceeded:
+                case HandledStripeWebhook.PaymentFailed:
+                case HandledStripeWebhook.InvoiceCreated:
+                    customerMetadata = (await GetInvoiceAsync(parsedEvent, true, expandOptions))?.Customer?.Metadata;
+                    break;
+                default:
+                    customerMetadata = null;
+                    break;
+            }
 
-        return customerRegion == serverRegion;
+            if (customerMetadata is null)
+            {
+                return false;
+            }
+
+            var customerRegion = GetCustomerRegionFromMetadata(customerMetadata);
+
+            return customerRegion == serverRegion;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Encountered unexpected error while validating cloud region");
+            throw;
+        }
     }
 
     /// <summary>
-    /// Gets the region from the customer metadata. If no region is present, defaults to "US"
+    /// Gets the customer's region from the metadata.
     /// </summary>
-    /// <param name="customerMetadata"></param>
-    /// <returns></returns>
-    private static string GetCustomerRegionFromMetadata(Dictionary<string, string> customerMetadata)
+    /// <param name="customerMetadata">The metadata of the customer.</param>
+    /// <returns>The region of the customer. If the region is not specified, it returns "US", if metadata is null,
+    /// it returns null. It is case insensitive.</returns>
+    private static string GetCustomerRegionFromMetadata(IDictionary<string, string> customerMetadata)
     {
-        return customerMetadata.TryGetValue("region", out var value)
-            ? value
-            : "US";
+        const string defaultRegion = "US";
+
+        if (customerMetadata is null)
+        {
+            return null;
+        }
+
+        if (customerMetadata.TryGetValue("region", out var value))
+        {
+            return value;
+        }
+
+        var miscasedRegionKey = customerMetadata.Keys
+            .FirstOrDefault(key =>
+                key.Equals("region", StringComparison.OrdinalIgnoreCase));
+
+        if (miscasedRegionKey is null)
+        {
+            return defaultRegion;
+        }
+
+        _ = customerMetadata.TryGetValue(miscasedRegionKey, out var regionValue);
+
+        return !string.IsNullOrWhiteSpace(regionValue)
+            ? regionValue
+            : defaultRegion;
     }
 
     private Tuple<Guid?, Guid?> GetIdsFromMetaData(IDictionary<string, string> metaData)
@@ -708,8 +741,11 @@ public class StripeController : Controller
 
     private async Task<bool> AttemptToPayInvoiceWithBraintreeAsync(Invoice invoice, Customer customer)
     {
+        _logger.LogDebug("Attempting to pay invoice with Braintree");
         if (!customer?.Metadata?.ContainsKey("btCustomerId") ?? true)
         {
+            _logger.LogWarning(
+                "Attempted to pay invoice with Braintree but btCustomerId wasn't on Stripe customer metadata");
             return false;
         }
 
@@ -718,6 +754,8 @@ public class StripeController : Controller
         var ids = GetIdsFromMetaData(subscription?.Metadata);
         if (!ids.Item1.HasValue && !ids.Item2.HasValue)
         {
+            _logger.LogWarning(
+                "Attempted to pay invoice with Braintree but Stripe subscription metadata didn't contain either a organizationId or userId");
             return false;
         }
 
@@ -740,25 +778,36 @@ public class StripeController : Controller
             return false;
         }
 
-        var transactionResult = await _btGateway.Transaction.SaleAsync(
-            new Braintree.TransactionRequest
-            {
-                Amount = btInvoiceAmount,
-                CustomerId = customer.Metadata["btCustomerId"],
-                Options = new Braintree.TransactionOptionsRequest
+        Result<Braintree.Transaction> transactionResult;
+        try
+        {
+            transactionResult = await _btGateway.Transaction.SaleAsync(
+                new Braintree.TransactionRequest
                 {
-                    SubmitForSettlement = true,
-                    PayPal = new Braintree.TransactionOptionsPayPalRequest
+                    Amount = btInvoiceAmount,
+                    CustomerId = customer.Metadata["btCustomerId"],
+                    Options = new Braintree.TransactionOptionsRequest
                     {
-                        CustomField = $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
+                        SubmitForSettlement = true,
+                        PayPal = new Braintree.TransactionOptionsPayPalRequest
+                        {
+                            CustomField =
+                                $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
+                        }
+                    },
+                    CustomFields = new Dictionary<string, string>
+                    {
+                        [btObjIdField] = btObjId.ToString(),
+                        ["region"] = _globalSettings.BaseServiceUri.CloudRegion
                     }
-                },
-                CustomFields = new Dictionary<string, string>
-                {
-                    [btObjIdField] = btObjId.ToString(),
-                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion
-                }
-            });
+                });
+        }
+        catch (NotFoundException e)
+        {
+            _logger.LogError(e,
+                "Attempted to make a payment with Braintree, but customer did not exist for the given btCustomerId present on the Stripe metadata");
+            throw;
+        }
 
         if (!transactionResult.IsSuccess())
         {
