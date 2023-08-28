@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -59,8 +60,7 @@ public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<Col
         // Ensure all target collections belong to the same organization
         if (targetCollections.Any(tc => tc.OrganizationId != targetOrganizationId))
         {
-            context.Fail();
-            return;
+            throw new BadRequestException("Requested collections must belong to the same organization.");
         }
 
         var org = (await _currentContext.OrganizationMembershipAsync(_organizationUserRepository, _currentContext.UserId.Value))

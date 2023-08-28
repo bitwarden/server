@@ -3,6 +3,7 @@ using Bit.Api.Vault.AuthorizationHandlers;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Test.Vault.AutoFixture;
@@ -123,8 +124,8 @@ public class CollectionAccessAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>()).Returns(collections);
 
-        await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.HandleAsync(context));
+        Assert.Equal("Requested collections must belong to the same organization.", exception.Message);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs().GetManyByManyIdsAsync(default);
         await sutProvider.GetDependency<ICurrentContext>().DidNotReceiveWithAnyArgs()
             .OrganizationMembershipAsync(default, default);
