@@ -358,7 +358,7 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewAssignedCollections(Guid orgId)
     {
-        return await EditAssignedCollections(orgId) || await DeleteAssignedCollections(orgId);
+        return await EditAssignedCollections(orgId) || await DeleteAssignedCollections(orgId) || await CreateNewCollections(orgId);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
