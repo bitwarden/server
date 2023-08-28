@@ -861,8 +861,8 @@ public class OrganizationService : IOrganizationService
         var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
         if (additionalSmSeatsRequired > 0)
         {
-            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true);
-            smSubscriptionUpdate.AdjustSeats(additionalSmSeatsRequired);
+            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true)
+                .AdjustSeats(additionalSmSeatsRequired);
             await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
         }
 
@@ -1418,8 +1418,8 @@ public class OrganizationService : IOrganizationService
             if (additionalSmSeatsRequired > 0)
             {
                 var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-                var update = new SecretsManagerSubscriptionUpdate(organization, true);
-                update.AdjustSeats(additionalSmSeatsRequired);
+                var update = new SecretsManagerSubscriptionUpdate(organization, true)
+                    .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
