@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 
 internal class Program
 {
+    private IDictionary<string, string> Parameters { get; set; }
+
     private static int Main(string[] args)
     {
         if (args.Length == 0)
@@ -23,12 +25,27 @@ internal class Program
 
         var verbose = false;
 
-        if (args.Length == 2 && (args[1] == "--verbose" || args[1] == "-v"))
+        if (Parameters.ContainsKey("--verbose") || Parameters.ContainsKey("-v"))
         {
             verbose = true;
         }
 
-        var success = MigrateDatabase(databaseConnectionString, verbose);
+        var rerunable = false;
+
+        if (Parameters.ContainsKey("--rerunable") || Parameters.ContainsKey("-r"))
+        {
+            rerunable = true;
+        }
+
+
+        var folderName = "";
+
+        if (Parameters.ContainsKey("--folder") || Parameters.ContainsKey("-f"))
+        {
+            folderName = Parameters["--folder"] ?? Parameters["-f"];
+        }
+
+        var success = MigrateDatabase(databaseConnectionString, verbose, rerunable, folderName);
 
         if (!success)
         {
@@ -42,14 +59,24 @@ internal class Program
     {
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string>");
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs)");
+        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -r|--rerunable (for marking scripts as rerunable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
+        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs) -r|--rerunable (for marking scripts as rerunable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
     }
 
-    private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, int attempt = 1)
+    private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, bool rerunable = false, string folderName = "")
     {
         var logger = CreateLogger(verbose);
 
         var migrator = new DbMigrator(databaseConnectionString, logger);
-        var success = migrator.MigrateMsSqlDatabaseWithRetries(verbose);
+        bool success = false;
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, rerunable, folderName);
+        }
+        else
+        {
+            success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, rerunable);
+        }
 
         return success;
     }
@@ -74,5 +101,19 @@ internal class Program
         });
         var logger = loggerFactory.CreateLogger<DbMigrator>();
         return logger;
+    }
+
+    private static void ParseParameters(string[] args)
+    {
+        Parameters = new Dictionary<string, string>();
+        for (var i = 0; i < args.Length; i = i + 2)
+        {
+            if (!args[i].StartsWith("-"))
+            {
+                continue;
+            }
+
+            Parameters.Add(args[i].Substring(1), args[i + 1]);
+        }
     }
 }
