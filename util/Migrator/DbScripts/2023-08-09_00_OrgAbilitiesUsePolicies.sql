@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Organization_ReadAbilities]
+CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadAbilities]
 AS
 BEGIN
     SET NOCOUNT ON
@@ -24,3 +24,4 @@ BEGIN
     FROM
         [dbo].[Organization]
 END
+GO
