@@ -624,8 +624,8 @@ public static class CoreHelpers
         return configDict;
     }
 
-    public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs,
-        ICollection<CurrentContentProvider> providers, bool isPremium)
+    public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContextOrganization> orgs,
+        ICollection<CurrentContextProvider> providers, bool isPremium)
     {
         var claims = new List<KeyValuePair<string, string>>()
         {
