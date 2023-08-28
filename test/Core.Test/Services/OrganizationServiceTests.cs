@@ -592,13 +592,19 @@ public class OrganizationServiceTests
         currentContext.ManageSso(organization.Id).Returns(true);
         currentContext.AccessEventLogs(organization.Id).Returns(true);
         currentContext.AccessImportExport(organization.Id).Returns(true);
-        currentContext.DeleteAnyCollection(organization.Id).Returns(true);
         currentContext.DeleteAssignedCollections(organization.Id).Returns(true);
         currentContext.EditAnyCollection(organization.Id).Returns(true);
         currentContext.EditAssignedCollections(organization.Id).Returns(true);
         currentContext.ManageResetPassword(organization.Id).Returns(true);
         currentContext.GetOrganization(organization.Id)
-            .Returns(new CurrentContentOrganization {Permissions = new Permissions {CreateNewCollections = true}});
+            .Returns(new CurrentContentOrganization 
+                {
+                    Permissions = new Permissions
+                    {
+                        CreateNewCollections = true,
+                        DeleteAnyCollection = true
+                    }
+                });
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
 

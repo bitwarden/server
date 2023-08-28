@@ -2132,12 +2132,12 @@ public class OrganizationService : IOrganizationService
         }
 
         var org = _currentContext.GetOrganization(organizationId);
-        if (org != null && permissions.CreateNewCollections && !org.Permissions.CreateNewCollections)
+        if (permissions.CreateNewCollections && org != null && !org.Permissions.CreateNewCollections)
         {
             return false;
         }
 
-        if (permissions.DeleteAnyCollection && !await _currentContext.DeleteAnyCollection(organizationId))
+        if (permissions.DeleteAnyCollection && org!= null && org.Permissions.DeleteAnyCollection)
         {
             return false;
         }

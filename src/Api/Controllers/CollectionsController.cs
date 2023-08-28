@@ -198,12 +198,13 @@ public class CollectionsController : Controller
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid orgId, Guid id)
     {
-        if (!await CanDeleteCollectionAsync(orgId, id))
+        var collection = await GetCollectionAsync(id, orgId);
+        var result = await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Delete);
+        if (!result.Succeeded)
         {
             throw new NotFoundException();
         }
-
-        var collection = await GetCollectionAsync(id, orgId);
+        
         await _deleteCollectionCommand.DeleteAsync(collection);
     }
 
@@ -213,6 +214,7 @@ public class CollectionsController : Controller
     {
         var orgId = new Guid(model.OrganizationId);
         var collectionIds = model.Ids.Select(i => new Guid(i));
+        // TODO Implement Bulk Auth Handler from Shane's PR
         if (!await _currentContext.DeleteAssignedCollections(orgId) &&
             !await _currentContext.DeleteAnyCollection(orgId))
         {
@@ -279,29 +281,7 @@ public class CollectionsController : Controller
 
         return false;
     }
-
-    private async Task<bool> CanDeleteCollectionAsync(Guid orgId, Guid collectionId)
-    {
-        if (collectionId == default)
-        {
-            return false;
-        }
-
-        if (await _currentContext.DeleteAnyCollection(orgId))
-        {
-            return true;
-        }
-
-        if (await _currentContext.DeleteAssignedCollections(orgId))
-        {
-            var collectionDetails =
-                await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
-            return collectionDetails != null;
-        }
-
-        return false;
-    }
-
+    
     private async Task<bool> CanViewCollectionAsync(Guid orgId, Guid collectionId)
     {
         if (collectionId == default)
