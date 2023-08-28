@@ -66,6 +66,21 @@ public class BulkAddCollectionAccessCommandTests
         );
     }
 
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task ValidateRequestAsync_NoCollectionsProvided_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
+        Organization org)
+    {
+        var exception =
+            await Assert.ThrowsAsync<BadRequestException>(
+                () => sutProvider.Sut.AddAccessAsync(org.Id, null, null, null));
+
+        Assert.Contains("No collections were provided.", exception.Message);
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs().GetManyAsync(default);
+        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
+    }
+
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_MissingCollection_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,

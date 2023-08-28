@@ -207,8 +207,8 @@ public class CollectionsController : Controller
 
         await _bulkAddCollectionAccessCommand.AddAccessAsync(orgId,
             model.CollectionIds.ToList(),
-            model.Users.Select(u => u.ToSelectionReadOnly()).ToList(),
-            model.Groups.Select(g => g.ToSelectionReadOnly()).ToList());
+            model.Users?.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Groups?.Select(g => g.ToSelectionReadOnly()).ToList());
     }
 
     [HttpDelete("{id}")]

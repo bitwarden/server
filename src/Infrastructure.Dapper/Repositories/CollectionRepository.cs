@@ -257,9 +257,12 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
+            var usersArray = users != null ? users.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
+            var groupsArray = groups != null ? groups.ToArrayTVP() : Enumerable.Empty<CollectionAccessSelection>().ToArrayTVP();
+
             var results = await connection.ExecuteAsync(
                 $"[{Schema}].[Collection_CreateOrUpdateAccessForMany]",
-                new { OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP(), Users = users.ToArrayTVP(), Groups = groups.ToArrayTVP() },
+                new { OrganizationId = organizationId, CollectionIds = collectionIds.ToGuidIdArrayTVP(), Users = usersArray, Groups = groupsArray },
                 commandType: CommandType.StoredProcedure);
         }
     }
