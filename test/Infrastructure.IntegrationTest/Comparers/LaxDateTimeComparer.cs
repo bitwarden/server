@@ -3,7 +3,7 @@
 namespace Bit.Infrastructure.IntegrationTest.Comparers;
 
 /// <summary>
-/// A datetime comparer that doesn't care about overall ticks and instead only cares about Second precision.
+/// A datetime comparer that doesn't care about overall ticks and instead allows a configurable allowed difference.
 /// </summary>
 public class LaxDateTimeComparer : IEqualityComparer<DateTime>
 {
