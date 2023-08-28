@@ -12,6 +12,7 @@ namespace Bit.Core.Services;
 
 public class PolicyService : IPolicyService
 {
+    private readonly IApplicationCacheService _applicationCacheService;
     private readonly IEventService _eventService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -20,9 +21,8 @@ public class PolicyService : IPolicyService
     private readonly IMailService _mailService;
     private readonly GlobalSettings _globalSettings;
 
-    private IEnumerable<OrganizationUserPolicyDetails> _cachedOrganizationUserPolicyDetails;
-
     public PolicyService(
+        IApplicationCacheService applicationCacheService,
         IEventService eventService,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -31,6 +31,7 @@ public class PolicyService : IPolicyService
         IMailService mailService,
         GlobalSettings globalSettings)
     {
+        _applicationCacheService = applicationCacheService;
         _eventService = eventService;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -75,6 +76,7 @@ public class PolicyService : IPolicyService
                 else
                 {
                     await RequiredByKeyConnectorAsync(org);
+                    await RequiredBySsoTrustedDeviceEncryptionAsync(org);
                 }
                 break;
 
@@ -196,25 +198,20 @@ public class PolicyService : IPolicyService
         return result.Any();
     }
 
-    private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType? policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
+    private async Task<IEnumerable<OrganizationUserPolicyDetails>> QueryOrganizationUserPolicyDetailsAsync(Guid userId, PolicyType policyType, OrganizationUserStatusType minStatus = OrganizationUserStatusType.Accepted)
     {
-        // Check if the cached policies are available
-        if (_cachedOrganizationUserPolicyDetails == null)
-        {
-            // Cached policies not available, retrieve from the repository
-            _cachedOrganizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId);
-        }
-
+        var organizationUserPolicyDetails = await _organizationUserRepository.GetByUserIdWithPolicyDetailsAsync(userId, policyType);
         var excludedUserTypes = GetUserTypesExcludedFromPolicy(policyType);
-        return _cachedOrganizationUserPolicyDetails.Where(o =>
-            (policyType == null || o.PolicyType == policyType) &&
+        var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        return organizationUserPolicyDetails.Where(o =>
+            (!orgAbilities.ContainsKey(o.OrganizationId) || orgAbilities[o.OrganizationId].UsePolicies) &&
             o.PolicyEnabled &&
             !excludedUserTypes.Contains(o.OrganizationUserType) &&
             o.OrganizationUserStatus >= minStatus &&
             !o.IsProvider);
     }
 
-    private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType? policyType)
+    private OrganizationUserType[] GetUserTypesExcludedFromPolicy(PolicyType policyType)
     {
         switch (policyType)
         {

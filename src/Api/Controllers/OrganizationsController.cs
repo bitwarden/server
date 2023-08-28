@@ -682,8 +682,8 @@ public class OrganizationsController : Controller
         await _paymentService.SaveTaxInfoAsync(organization, taxInfo);
     }
 
-    [HttpGet("{id}/keys")]
-    public async Task<OrganizationKeysResponseModel> GetKeys(string id)
+    [HttpGet("{id}/public-key")]
+    public async Task<OrganizationPublicKeyResponseModel> GetPublicKey(string id)
     {
         var org = await _organizationRepository.GetByIdAsync(new Guid(id));
         if (org == null)
@@ -691,7 +691,14 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        return new OrganizationKeysResponseModel(org);
+        return new OrganizationPublicKeyResponseModel(org);
+    }
+
+    [Obsolete("TDL-136 Renamed to public-key (2023.8), left for backwards compatability with older clients.")]
+    [HttpGet("{id}/keys")]
+    public async Task<OrganizationPublicKeyResponseModel> GetKeys(string id)
+    {
+        return await GetPublicKey(id);
     }
 
     [HttpPost("{id}/keys")]
@@ -755,38 +762,5 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateAsync(organization);
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
-    }
-
-    // This is a temporary endpoint to self-enroll in secrets manager
-    [SelfHosted(NotSelfHostedOnly = true)]
-    [HttpPost("{id}/enroll-secrets-manager")]
-    public async Task EnrollSecretsManager(Guid id, [FromBody] OrganizationEnrollSecretsManagerRequestModel model)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        if (!await _currentContext.OrganizationAdmin(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        organization.UseSecretsManager = model.Enabled;
-        organization.SecretsManagerBeta = model.Enabled;
-        await _organizationService.UpdateAsync(organization);
-
-        // Turn on Secrets Manager for the user
-        if (model.Enabled)
-        {
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(id, userId);
-            if (orgUser != null)
-            {
-                orgUser.AccessSecretsManager = true;
-                await _organizationUserRepository.ReplaceAsync(orgUser);
-            }
-        }
     }
 }

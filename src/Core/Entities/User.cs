@@ -213,4 +213,9 @@ public class User : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscri
             SecurityStamp = SecurityStamp
         };
     }
+
+    public bool HasMasterPassword()
+    {
+        return MasterPassword != null;
+    }
 }
