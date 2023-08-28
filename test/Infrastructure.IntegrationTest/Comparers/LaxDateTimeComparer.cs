@@ -7,17 +7,28 @@ namespace Bit.Infrastructure.IntegrationTest.Comparers;
 /// </summary>
 public class LaxDateTimeComparer : IEqualityComparer<DateTime>
 {
-    public static readonly IEqualityComparer<DateTime> Default = new LaxDateTimeComparer();
+    public static readonly IEqualityComparer<DateTime> Default = new LaxDateTimeComparer(TimeSpan.FromMilliseconds(2));
+    private readonly TimeSpan _allowedDifference;
+
+    public LaxDateTimeComparer(TimeSpan allowedDifference)
+    {
+        _allowedDifference = allowedDifference;
+    }
 
     public bool Equals(DateTime x, DateTime y)
     {
-        return x.Date == y.Date
-            && x.Hour == y.Hour
-            && x.Minute == y.Minute
-            && x.Second == y.Second;
+        var difference = x - y;
+        return difference.Duration() < _allowedDifference;
     }
+
     public int GetHashCode([DisallowNull] DateTime obj)
     {
-        return HashCode.Combine(obj.Date, obj.Hour, obj.Minute, obj.Second);
+        // Not used when used for Assert.Equal() overload
+        throw new NotImplementedException();
+    }
+
+    public static int RoundMilliseconds(int milliseconds)
+    {
+        return (int)Math.Round(milliseconds / 100d) * 100;
     }
 }
