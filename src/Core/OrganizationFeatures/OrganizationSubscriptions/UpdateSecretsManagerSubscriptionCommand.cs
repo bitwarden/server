@@ -99,7 +99,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
     private async Task ProcessChargesAndRaiseEventsForAdjustSeatsAsync(Organization organization, Plan plan,
         SecretsManagerSubscriptionUpdate update)
     {
-        await _paymentService.AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase, update.ProrationDate);
+        await _paymentService.AdjustSecretsManagerSeatsAsync(organization, plan, update.SmSeatsExcludingBase, update.ProrationDate);
 
         // TODO: call ReferenceEventService - see AC-1481
     }

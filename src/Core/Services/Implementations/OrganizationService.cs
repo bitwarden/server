@@ -474,10 +474,8 @@ public class OrganizationService : IOrganizationService
         }
         else if (plan.Type != PlanType.Free)
         {
-            var purchaseOrganizationPlan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
-
             await _paymentService.PurchaseOrganizationAsync(organization, signup.PaymentMethodType.Value,
-                signup.PaymentToken, purchaseOrganizationPlan, signup.AdditionalStorageGb, signup.AdditionalSeats,
+                signup.PaymentToken, plan, signup.AdditionalStorageGb, signup.AdditionalSeats,
                 signup.PremiumAccessAddon, signup.TaxInfo, provider, signup.AdditionalSmSeats.GetValueOrDefault(),
                 signup.AdditionalServiceAccounts.GetValueOrDefault());
         }

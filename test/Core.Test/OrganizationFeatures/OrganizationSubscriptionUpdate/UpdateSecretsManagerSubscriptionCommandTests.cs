@@ -311,7 +311,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1)
-            .AdjustSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
+            .AdjustSecretsManagerSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, organizationUpdate.SmServiceAccountsExcludingBase);
 
@@ -366,7 +366,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         await sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1)
-            .AdjustSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
+            .AdjustSecretsManagerSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, organizationUpdate.SmServiceAccountsExcludingBase);
 
@@ -726,7 +726,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
-            .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
+            .AdjustSecretsManagerSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         // TODO: call ReferenceEventService - see AC-1481

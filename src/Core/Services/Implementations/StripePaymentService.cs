@@ -863,6 +863,11 @@ public class StripePaymentService : IPaymentService
         return FinalizeSubscriptionChangeAsync(organization, new SeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
     }
 
+    public Task<string> AdjustSecretsManagerSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
+    {
+        return FinalizeSubscriptionChangeAsync(organization, new SmSeatSubscriptionUpdate(organization, plan, additionalSeats), prorationDate);
+    }
+
     public Task<string> AdjustServiceAccountsAsync(Organization organization, StaticStore.Plan plan, int additionalServiceAccounts, DateTime? prorationDate = null)
     {
         return FinalizeSubscriptionChangeAsync(organization, new ServiceAccountSubscriptionUpdate(organization, plan, additionalServiceAccounts), prorationDate);

@@ -18,6 +18,7 @@ public interface IPaymentService
     Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
         short additionalStorageGb, TaxInfo taxInfo);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
+    Task<string> AdjustSecretsManagerSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
     Task<string> AdjustStorageAsync(IStorableSubscriber storableSubscriber, int additionalStorage, string storagePlanId, DateTime? prorationDate = null);
 
     Task<string> AdjustServiceAccountsAsync(Organization organization, Plan plan, int additionalServiceAccounts,

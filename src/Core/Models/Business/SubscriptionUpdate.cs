@@ -29,7 +29,74 @@ public abstract class SubscriptionUpdate
         planId == null ? null : subscription.Items?.Data?.FirstOrDefault(i => i.Plan.Id == planId);
 }
 
-public class SeatSubscriptionUpdate : SubscriptionUpdate
+public abstract class BaseSeatSubscriptionUpdate : SubscriptionUpdate
+{
+    private readonly int _previousSeats;
+    protected readonly StaticStore.Plan _plan;
+    private readonly long? _additionalSeats;
+
+    protected BaseSeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats, int previousSeats)
+    {
+        _plan = plan;
+        _additionalSeats = additionalSeats;
+        _previousSeats = previousSeats;
+    }
+
+    protected abstract string GetPlanId();
+
+    protected override List<string> PlanIds => new() { GetPlanId() };
+
+    public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
+    {
+        var item = SubscriptionItem(subscription, PlanIds.Single());
+        return new()
+        {
+            new SubscriptionItemOptions
+            {
+                Id = item?.Id,
+                Plan = PlanIds.Single(),
+                Quantity = _additionalSeats,
+                Deleted = (item?.Id != null && _additionalSeats == 0) ? true : (bool?)null,
+            }
+        };
+    }
+
+    public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
+    {
+
+        var item = SubscriptionItem(subscription, PlanIds.Single());
+        return new()
+        {
+            new SubscriptionItemOptions
+            {
+                Id = item?.Id,
+                Plan = PlanIds.Single(),
+                Quantity = _previousSeats,
+                Deleted = _previousSeats == 0 ? true : (bool?)null,
+            }
+        };
+    }
+}
+
+public class SeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
+{
+    public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
+        : base(organization, plan, additionalSeats, organization.Seats.GetValueOrDefault())
+    { }
+
+    protected override string GetPlanId() => _plan.PasswordManager.StripeSeatPlanId;
+}
+
+public class SmSeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
+{
+    public SmSeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
+        : base(organization, plan, additionalSeats, organization.SmSeats.GetValueOrDefault())
+    { }
+
+    protected override string GetPlanId() => _plan.SecretsManager.StripeSeatPlanId;
+}
+
+/*public class SeatSubscriptionUpdate : SubscriptionUpdate
 {
     private readonly int _previousSeats;
     private readonly StaticStore.Plan _plan;
@@ -83,7 +150,7 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
             }
         };
     }
-}
+}*/
 
 public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
 {
