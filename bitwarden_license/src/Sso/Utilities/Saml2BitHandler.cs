@@ -64,6 +64,9 @@ public class Saml2BitHandler : IAuthenticationRequestHandler
         var commandResult = CommandFactory.GetCommand(commandName).Run(
             _context.ToHttpRequestData(_options.CookieManager, _dataProtector.Unprotect), _options);
 
+        // Scheme is the organization ID since we use dynamic handlers for authentication schemes.
+        // We need to compare this to the scheme returned in the RelayData to ensure this value hasn't been
+        // tampered with
         if (commandResult.RelayData["scheme"] != _scheme)
         {
             return false;
