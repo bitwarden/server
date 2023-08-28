@@ -6,7 +6,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 
-namespace Bit.Core.Vault.AuthorizationHandlers.Collections;
+namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
 
 internal class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOperationRequirement, Collection>
 {
