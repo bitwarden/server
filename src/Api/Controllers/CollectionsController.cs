@@ -195,10 +195,10 @@ public class CollectionsController : Controller
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
         // Check if user can manage each of the collections in the request
-        var collectionUsers = model.ToAllCollectionUsers().ToList();
-        var collectionGroups = model.ToAllCollectionGroups().ToList();
-
-        var result = await _authorizationService.AuthorizeAsync(User, collectionUsers.Concat<ICollectionAccess>(collectionGroups), CollectionAccessOperation.CreateUpdateDelete);
+        var result = await _authorizationService.AuthorizeAsync(
+            User,
+            model.ToCollectionAccessList(),
+            CollectionAccessOperation.CreateUpdateDelete);
 
         if (!result.Succeeded)
         {
