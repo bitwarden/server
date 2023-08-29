@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 internal class Program
 {
-    private IDictionary<string, string> Parameters { get; set; }
+    private static IDictionary<string, string> Parameters { get; set; }
 
     private static int Main(string[] args)
     {
@@ -106,7 +106,7 @@ internal class Program
     private static void ParseParameters(string[] args)
     {
         Parameters = new Dictionary<string, string>();
-        for (var i = 0; i < args.Length; i = i + 2)
+        for (var i = 0; i < args.Length; i += 2)
         {
             if (!args[i].StartsWith("-"))
             {
