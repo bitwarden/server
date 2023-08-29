@@ -107,6 +107,40 @@ public static class DapperHelpers
         return organizationSponsorships.BuildTable(table, columnData);
     }
 
+    public static DataTable ToTvp(this IEnumerable<CollectionUser> collectionUsers)
+    {
+        var table = new DataTable();
+        table.SetTypeName("[dbo].[CollectionUserType]");
+
+        var columnData = new List<(string name, Type type, Func<CollectionUser, object> getter)>
+        {
+            (nameof(CollectionUser.CollectionId), typeof(Guid), cu => cu.CollectionId),
+            (nameof(CollectionUser.OrganizationUserId), typeof(Guid), cu => cu.OrganizationUserId),
+            (nameof(CollectionUser.ReadOnly), typeof(bool), cu => cu.ReadOnly),
+            (nameof(CollectionUser.HidePasswords), typeof(bool), cu => cu.HidePasswords),
+            (nameof(CollectionUser.Manage), typeof(bool), cu => cu.Manage),
+        };
+
+        return collectionUsers.BuildTable(table, columnData);
+    }
+
+    public static DataTable ToTvp(this IEnumerable<CollectionGroup> collectionGroups)
+    {
+        var table = new DataTable();
+        table.SetTypeName("[dbo].[CollectionGroupType]");
+
+        var columnData = new List<(string name, Type type, Func<CollectionGroup, object> getter)>
+        {
+            (nameof(CollectionGroup.CollectionId), typeof(Guid), cg => cg.CollectionId),
+            (nameof(CollectionGroup.GroupId), typeof(Guid), cg => cg.GroupId),
+            (nameof(CollectionGroup.ReadOnly), typeof(bool), cg => cg.ReadOnly),
+            (nameof(CollectionGroup.HidePasswords), typeof(bool), cg => cg.HidePasswords),
+            (nameof(CollectionGroup.Manage), typeof(bool), cg => cg.Manage),
+        };
+
+        return collectionGroups.BuildTable(table, columnData);
+    }
+
     private static DataTable BuildTable<T>(this IEnumerable<T> entities, DataTable table, List<(string name, Type type, Func<T, object> getter)> columnData)
     {
         foreach (var (name, type, getter) in columnData)
