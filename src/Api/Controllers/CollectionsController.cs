@@ -194,10 +194,12 @@ public class CollectionsController : Controller
     [HttpPost("bulk-access")]
     public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
     {
+        var accessList = model.ToCollectionAccessList().ToList();
+
         // Check if user can manage each of the collections in the request
         var result = await _authorizationService.AuthorizeAsync(
             User,
-            model.ToCollectionAccessList(),
+            accessList,
             CollectionAccessOperation.CreateUpdateDelete);
 
         if (!result.Succeeded)
@@ -205,10 +207,7 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
-        await _bulkAddCollectionAccessCommand.AddAccessAsync(orgId,
-            model.CollectionIds.ToList(),
-            model.Users?.Select(u => u.ToSelectionReadOnly()).ToList(),
-            model.Groups?.Select(g => g.ToSelectionReadOnly()).ToList());
+        await _bulkAddCollectionAccessCommand.AddAccessAsync(orgId, accessList);
     }
 
     [HttpDelete("{id}")]
