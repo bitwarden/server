@@ -13,7 +13,7 @@ public class SecretUpdateRequestModel : IValidatableObject
 
     [Required]
     [EncryptedString]
-    [EncryptedStringLength(5000)]
+    [EncryptedStringLength(35000)]
     public string Value { get; set; }
 
     [Required]
