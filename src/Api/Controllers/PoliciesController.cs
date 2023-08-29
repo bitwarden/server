@@ -104,18 +104,20 @@ public class PoliciesController : Controller
         return new ListResponseModel<PolicyResponseModel>(responses);
     }
 
+    // TODO: remove GetByInvitedUser once all clients are updated to use the GetMasterPasswordPolicy endpoint below
+    // TODO: create PM-??? tech debt item to track this work. In theory, target release for removal should be 2024.01.0
+    // TODO: figure out how to mark this as deprecated.  [Obsolete("Deprecated API", false)]?
     [AllowAnonymous]
     [HttpGet("invited-user")]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(string orgId, [FromQuery] string userId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(Guid orgId, [FromQuery] string userId)
     {
         var user = await _userService.GetUserByIdAsync(new Guid(userId));
         if (user == null)
         {
             throw new UnauthorizedAccessException();
         }
-        var orgIdGuid = new Guid(orgId);
         var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgIdGuid);
+        var orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
         if (orgUser == null)
         {
             throw new NotFoundException();
@@ -125,9 +127,31 @@ public class PoliciesController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId);
         var responses = policies.Where(p => p.Enabled).Select(p => new PolicyResponseModel(p));
         return new ListResponseModel<PolicyResponseModel>(responses);
+    }
+
+    [HttpGet("master-password")]
+    public async Task<PolicyResponseModel> GetMasterPasswordPolicy(Guid orgId)
+    {
+        var userId = _userService.GetProperUserId(User).Value;
+
+        var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(userId);
+        var orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
+        if (orgUser == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.MasterPassword);
+
+        if (!policy.Enabled)
+        {
+            throw new NotFoundException();
+        }
+
+        return new PolicyResponseModel(policy);
     }
 
     [HttpPut("{type}")]
