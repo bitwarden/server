@@ -564,6 +564,8 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
+    public async Task CreateOrUpdateAccessForMany2Async(Guid organizationId, IEnumerable<Core.Entities.CollectionUser> users, IEnumerable<Core.Entities.CollectionGroup> groups) => throw new NotImplementedException();
+
     private async Task ReplaceCollectionGroupsAsync(DatabaseContext dbContext, Core.Entities.Collection collection, IEnumerable<CollectionAccessSelection> groups)
     {
         var groupsInOrg = dbContext.Groups.Where(g => g.OrganizationId == collection.OrganizationId);

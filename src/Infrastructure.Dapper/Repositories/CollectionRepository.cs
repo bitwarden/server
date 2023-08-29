@@ -267,6 +267,20 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
+    public async Task CreateOrUpdateAccessForMany2Async(Guid organizationId, IEnumerable<CollectionUser> users, IEnumerable<CollectionGroup> groups)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var usersDt = users != null ? users.ToTvp() : Enumerable.Empty<CollectionUser>().ToTvp();
+            var groupsDt = groups != null ? groups.ToTvp() : Enumerable.Empty<CollectionGroup>().ToTvp();
+
+            var results = await connection.ExecuteAsync(
+                $"[{Schema}].[Collection_CreateOrUpdateAccessForManyV2]",
+                new { OrganizationId = organizationId, Users = usersDt, Groups = groupsDt },
+                commandType: CommandType.StoredProcedure);
+        }
+    }
+
     public async Task CreateUserAsync(Guid collectionId, Guid organizationUserId)
     {
         using (var connection = new SqlConnection(ConnectionString))
