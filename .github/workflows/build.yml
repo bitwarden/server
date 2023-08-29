@@ -515,7 +515,7 @@ jobs:
           if-no-files-found: error
 
 
-  trigger-self-host-build:
+  self-host-build:
     name: Trigger self-host build
     runs-on: ubuntu-22.04
     needs:
