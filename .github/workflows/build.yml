@@ -528,13 +528,13 @@ jobs:
 
       - name: Retrieve github PAT secrets
         id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@c86ced0dc8c9daeecf057a6333e6f318db9c5a2b
+        uses: bitwarden/gh-actions/get-keyvault-secrets@f096207b7a2f31723165aee6ad03e91716686e78
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
       - name: Trigger self-host build
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
         with:
           github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
           script: |
