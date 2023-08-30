@@ -17,7 +17,7 @@ public class CollectionCustomization : ICustomization
     {
         var orgId = Guid.NewGuid();
 
-        fixture.Customize<CurrentContentOrganization>(composer => composer
+        fixture.Customize<CurrentContextOrganization>(composer => composer
             .With(o => o.Id, orgId));
 
         fixture.Customize<OrganizationUser>(composer => composer

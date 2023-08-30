@@ -29,7 +29,7 @@ public class CollectionAuthorizationHandlerTests
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         ICollection<CollectionDetails> collectionDetails,
-        CurrentContentOrganization organization)
+        CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
         foreach (var collectionDetail in collectionDetails)
@@ -102,7 +102,7 @@ public class CollectionAuthorizationHandlerTests
     public async Task CanManageCollectionAccessAsync_MissingOrgMembership_Failure(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
-        CurrentContentOrganization organization)
+        CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
@@ -129,7 +129,7 @@ public class CollectionAuthorizationHandlerTests
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         ICollection<CollectionDetails> collectionDetails,
-        CurrentContentOrganization organization)
+        CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
