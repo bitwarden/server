@@ -1,7 +1,9 @@
-﻿using Bit.Core.IdentityServer;
+﻿using Bit.Api.Vault.AuthorizationHandlers;
+using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Health;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.OpenApi.Models;
 
 namespace Bit.Api.Utilities;
@@ -114,5 +116,10 @@ public static class ServiceCollectionExtensions
                 builder.AddSendGrid(globalSettings.Mail.SendGridApiKey);
             }
         });
+    }
+
+    public static void AddAuthorizationHandlers(this IServiceCollection services)
+    {
+        services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
     }
 }
