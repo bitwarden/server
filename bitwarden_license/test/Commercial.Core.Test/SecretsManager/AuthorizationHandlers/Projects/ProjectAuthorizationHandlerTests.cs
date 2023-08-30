@@ -39,6 +39,11 @@ public class ProjectAuthorizationHandlerTests
                     .ReturnsForAnyArgs(
                         (AccessClientType.User, userId));
                 break;
+            case PermissionType.RunAsServiceAccountWithPermission:
+                sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, organizationId)
+                    .ReturnsForAnyArgs(
+                        (AccessClientType.ServiceAccount, userId));
+                break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(permissionType), permissionType, null);
         }
@@ -103,7 +108,6 @@ public class ProjectAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task CanCreateProject_NotSupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
@@ -125,6 +129,7 @@ public class ProjectAuthorizationHandlerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin)]
     [BitAutoData(PermissionType.RunAsUserWithPermission)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission)]
     public async Task CanCreateProject_Success(PermissionType permissionType,
         SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
     {
@@ -186,7 +191,7 @@ public class ProjectAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(false);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
             .ReturnsForAnyArgs(
-                (AccessClientType.ServiceAccount, new Guid()));
+                (AccessClientType.Organization, new Guid()));
         var requirement = ProjectOperations.Update;
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
@@ -197,17 +202,43 @@ public class ProjectAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false)]
-    public async Task CanUpdateProject_ShouldNotSucceed(PermissionType permissionType, bool read, bool write,
-        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal,
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
+    public async Task CanUpdateProject_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project,
+        ClaimsPrincipal claimsPrincipal,
         Guid userId)
     {
+        var requirement = ProjectOperations.Update;
         SetupPermission(sutProvider, permissionType, project.OrganizationId, userId);
         sutProvider.GetDependency<IProjectRepository>()
             .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
             .Returns((read, write));
-        var requirement = ProjectOperations.Update;
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, project);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteProject_AccessToSecretsManagerFalse_DoesNotSucceed(
+        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = ProjectOperations.Delete;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+            .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
 
@@ -217,24 +248,68 @@ public class ProjectAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin, true, true)]
-    [BitAutoData(PermissionType.RunAsAdmin, false, true)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true)]
-    public async Task CanUpdateProject_Success(PermissionType permissionType, bool read, bool write,
-        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal,
+    [BitAutoData]
+    public async Task CanDeleteProject_NullResource_DoesNotSucceed(
+        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project,
+        ClaimsPrincipal claimsPrincipal,
         Guid userId)
     {
-        SetupPermission(sutProvider, permissionType, project.OrganizationId, userId);
-        sutProvider.GetDependency<IProjectRepository>()
-            .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
-            .Returns((read, write));
-        var requirement = ProjectOperations.Update;
+        var requirement = ProjectOperations.Delete;
+        SetupPermission(sutProvider, PermissionType.RunAsAdmin, project.OrganizationId, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, null);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteProject_NotSupportedClientType_DoesNotSucceed(
+        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project, ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = ProjectOperations.Delete;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(project.OrganizationId)
+            .Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(project.OrganizationId).Returns(false);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, project.OrganizationId)
+            .ReturnsForAnyArgs(
+                (AccessClientType.Organization, new Guid()));
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, project);
 
         await sutProvider.Sut.HandleAsync(authzContext);
 
-        Assert.True(authzContext.HasSucceeded);
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsServiceAccountWithPermission, true, true, true)]
+    public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<ProjectAuthorizationHandler> sutProvider, Project project,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ProjectOperations.Delete;
+        SetupPermission(sutProvider, permissionType, project.OrganizationId, userId);
+        sutProvider.GetDependency<IProjectRepository>()
+            .AccessToProjectAsync(project.Id, userId, Arg.Any<AccessClientType>())
+            .Returns((read, write));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, project);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
     }
 }

@@ -40,6 +40,12 @@ public class OrganizationCreateRequestModel : IValidatableObject
     [StringLength(2)]
     public string BillingAddressCountry { get; set; }
     public int? MaxAutoscaleSeats { get; set; }
+    [Range(0, int.MaxValue)]
+    public int? AdditionalSmSeats { get; set; }
+    [Range(0, int.MaxValue)]
+    public int? AdditionalServiceAccounts { get; set; }
+    [Required]
+    public bool UseSecretsManager { get; set; }
 
     public virtual OrganizationSignup ToOrganizationSignup(User user)
     {
@@ -58,6 +64,9 @@ public class OrganizationCreateRequestModel : IValidatableObject
             BillingEmail = BillingEmail,
             BusinessName = BusinessName,
             CollectionName = CollectionName,
+            AdditionalSmSeats = AdditionalSmSeats.GetValueOrDefault(),
+            AdditionalServiceAccounts = AdditionalServiceAccounts.GetValueOrDefault(),
+            UseSecretsManager = UseSecretsManager,
             TaxInfo = new TaxInfo
             {
                 TaxIdNumber = TaxIdNumber,

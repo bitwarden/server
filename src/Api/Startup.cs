@@ -15,6 +15,7 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -133,10 +134,14 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
 
         //health check
-        services.AddHealthChecks(globalSettings);
+        if (!globalSettings.SelfHosted)
+        {
+            services.AddHealthChecks(globalSettings);
+        }
 
 #if OSS
         services.AddOosServices();
@@ -144,6 +149,7 @@ public class Startup
         services.AddCommercialCoreServices();
         services.AddCommercialSecretsManagerServices();
         services.AddSecretsManagerEfRepositories();
+        Jobs.JobsHostedService.AddCommercialSecretsManagerJobServices(services);
 #endif
 
         // MVC
@@ -215,12 +221,15 @@ public class Startup
         {
             endpoints.MapDefaultControllerRoute();
 
-            endpoints.MapHealthChecks("/healthz");
-
-            endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
+            if (!globalSettings.SelfHosted)
             {
-                ResponseWriter = HealthCheckServiceExtensions.WriteResponse
-            });
+                endpoints.MapHealthChecks("/healthz");
+
+                endpoints.MapHealthChecks("/healthz/extended", new HealthCheckOptions
+                {
+                    ResponseWriter = HealthCheckServiceExtensions.WriteResponse
+                });
+            }
         });
 
         // Add Swagger
