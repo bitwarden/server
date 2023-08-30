@@ -861,8 +861,8 @@ public class OrganizationService : IOrganizationService
         var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(organization.Id, inviteWithSmAccessCount);
         if (additionalSmSeatsRequired > 0)
         {
-            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true);
-            smSubscriptionUpdate.AdjustSeats(additionalSmSeatsRequired);
+            smSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, true)
+                .AdjustSeats(additionalSmSeatsRequired);
             await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(smSubscriptionUpdate);
         }
 
@@ -1099,6 +1099,24 @@ public class OrganizationService : IOrganizationService
     public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)
     {
         var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier);
+        if (org == null)
+        {
+            throw new BadRequestException("Organization invalid.");
+        }
+
+        var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+        var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
+        if (orgUser == null)
+        {
+            throw new BadRequestException("User not found within organization.");
+        }
+
+        return await AcceptUserAsync(orgUser, user, userService);
+    }
+
+    public async Task<OrganizationUser> AcceptUserAsync(Guid organizationId, User user, IUserService userService)
+    {
+        var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
         {
             throw new BadRequestException("Organization invalid.");
@@ -1400,8 +1418,8 @@ public class OrganizationService : IOrganizationService
             if (additionalSmSeatsRequired > 0)
             {
                 var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-                var update = new SecretsManagerSubscriptionUpdate(organization, true);
-                update.AdjustSeats(additionalSmSeatsRequired);
+                var update = new SecretsManagerSubscriptionUpdate(organization, true)
+                    .AdjustSeats(additionalSmSeatsRequired);
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
             }
         }
