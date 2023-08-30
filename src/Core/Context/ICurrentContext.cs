@@ -18,7 +18,7 @@ public interface ICurrentContext
     string DeviceIdentifier { get; set; }
     DeviceType? DeviceType { get; set; }
     string IpAddress { get; set; }
-    List<CurrentContentOrganization> Organizations { get; set; }
+    List<CurrentContextOrganization> Organizations { get; set; }
     Guid? InstallationId { get; set; }
     Guid? OrganizationId { get; set; }
     ClientType ClientType { get; set; }
@@ -66,10 +66,10 @@ public interface ICurrentContext
     bool AccessProviderOrganizations(Guid providerId);
     bool ManageProviderOrganizations(Guid providerId);
 
-    Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
+    Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId);
 
-    Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
+    Task<ICollection<CurrentContextProvider>> ProviderMembershipAsync(
         IProviderUserRepository providerUserRepository, Guid userId);
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
