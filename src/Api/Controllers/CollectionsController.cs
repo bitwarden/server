@@ -157,12 +157,8 @@ public class CollectionsController : Controller
 
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
-
-        var assignUserToCollection = !(await _currentContext.EditAnyCollection(orgId)) &&
-                                     await _currentContext.EditAssignedCollections(orgId);
-
-        await _collectionService.SaveAsync(collection, groups, users,
-            assignUserToCollection ? _currentContext.UserId : null);
+        
+        await _collectionService.SaveAsync(collection, groups, users, _currentContext.UserId);
         return new CollectionResponseModel(collection);
     }
 

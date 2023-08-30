@@ -71,7 +71,7 @@ public class CollectionService : ICollectionService
                 {
                     await _collectionRepository.UpdateUsersAsync(collection.Id,
                         new List<CollectionAccessSelection> {
-                            new CollectionAccessSelection { Id = orgUser.Id, ReadOnly = false } });
+                            new CollectionAccessSelection { Id = orgUser.Id, Manage = true} });
                 }
             }
 
