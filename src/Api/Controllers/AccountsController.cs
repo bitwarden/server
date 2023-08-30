@@ -7,6 +7,7 @@ using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -45,6 +46,7 @@ public class AccountsController : Controller
     private readonly ISendService _sendService;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
+    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -59,7 +61,9 @@ public class AccountsController : Controller
         ISendRepository sendRepository,
         ISendService sendService,
         ICaptchaValidationService captchaValidationService,
-        IPolicyService policyService)
+        IPolicyService policyService,
+        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand
+        )
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -74,6 +78,7 @@ public class AccountsController : Controller
         _sendService = sendService;
         _captchaValidationService = captchaValidationService;
         _policyService = policyService;
+        _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -251,7 +256,7 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key,
+        var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key,
             model.OrgIdentifier);
         if (result.Succeeded)
         {

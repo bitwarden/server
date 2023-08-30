@@ -1103,9 +1103,8 @@ public class OrganizationService : IOrganizationService
         {
             throw new BadRequestException("Organization invalid.");
         }
-
-        var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
+        
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, user.Id);
         if (orgUser == null)
         {
             throw new BadRequestException("User not found within organization.");

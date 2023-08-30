@@ -10,6 +10,7 @@ using Bit.Core.Auth.LoginFeatures;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Services.Implementations;
+using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.HostedServices;
@@ -124,7 +125,7 @@ public static class ServiceCollectionExtensions
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<ICipherService, CipherService>();
-        services.AddScoped<IUserService, UserService>();
+        services.AddUserServices(globalSettings);
         services.AddOrganizationServices(globalSettings);
         services.AddScoped<ICollectionService, CollectionService>();
         services.AddScoped<IGroupService, GroupService>();

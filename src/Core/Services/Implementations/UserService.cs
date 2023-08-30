@@ -600,6 +600,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
+    // TODO: delete this unused method
     public override Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword)
     {
         throw new NotImplementedException();
@@ -636,40 +637,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         Logger.LogWarning("Change password failed for user {userId}.", user.Id);
         return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
-    }
-
-    public async Task<IdentityResult> SetPasswordAsync(User user, string masterPassword, string key,
-        string orgIdentifier = null)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (!string.IsNullOrWhiteSpace(user.MasterPassword))
-        {
-            Logger.LogWarning("Change password failed for user {userId} - already has password.", user.Id);
-            return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
-        }
-
-        var result = await UpdatePasswordHash(user, masterPassword, true, false);
-        if (!result.Succeeded)
-        {
-            return result;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.Key = key;
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
-
-        if (!string.IsNullOrWhiteSpace(orgIdentifier))
-        {
-            await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
-        }
-
-        return IdentityResult.Success;
     }
 
     public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier)
@@ -1352,7 +1319,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return token;
     }
 
-    private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
+    public async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
         bool validatePassword = true, bool refreshStamp = true)
     {
         if (validatePassword)
