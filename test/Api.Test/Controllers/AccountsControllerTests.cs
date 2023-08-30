@@ -3,6 +3,7 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Controllers;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -36,6 +37,7 @@ public class AccountsControllerTests : IDisposable
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
+    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
 
     public AccountsControllerTests()
     {
@@ -52,6 +54,8 @@ public class AccountsControllerTests : IDisposable
         _sendService = Substitute.For<ISendService>();
         _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _policyService = Substitute.For<IPolicyService>();
+        _setInitialMasterPasswordCommand = Substitute.For<ISetInitialMasterPasswordCommand>();
+
         _sut = new AccountsController(
             _globalSettings,
             _cipherRepository,
@@ -65,7 +69,8 @@ public class AccountsControllerTests : IDisposable
             _sendRepository,
             _sendService,
             _captchaValidationService,
-            _policyService
+            _policyService,
+            _setInitialMasterPasswordCommand
         );
     }
 
