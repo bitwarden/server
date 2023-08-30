@@ -600,12 +600,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
-    // TODO: delete this unused method
-    public override Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
