@@ -212,24 +212,21 @@ public class CollectionsController : Controller
     [HttpPost("delete")]
     public async Task DeleteMany([FromBody] CollectionBulkDeleteRequestModel model)
     {
-        var orgId = new Guid(model.OrganizationId);
         var collectionIds = model.Ids.Select(i => new Guid(i));
-        // TODO Implement Bulk Auth Handler from Shane's PR
-        if (!await _currentContext.DeleteAssignedCollections(orgId) &&
-            !await _currentContext.DeleteAnyCollection(orgId))
-        {
-            throw new NotFoundException();
-        }
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(collectionIds);
 
-        var userCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
-        var filteredCollections = userCollections.Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == orgId);
-
-        if (!filteredCollections.Any())
+        if (!collections.Any())
         {
             throw new BadRequestException("No collections found.");
         }
 
-        await _deleteCollectionCommand.DeleteManyAsync(filteredCollections);
+        var result = await _authorizationService.AuthorizeAsync(User, collections, CollectionOperations.Delete);
+        if (!result.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        await _deleteCollectionCommand.DeleteManyAsync(collections);
     }
 
     [HttpDelete("{id}/user/{orgUserId}")]
