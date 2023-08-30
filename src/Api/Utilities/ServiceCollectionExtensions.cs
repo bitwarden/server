@@ -120,6 +120,6 @@ public static class ServiceCollectionExtensions
 
     public static void AddAuthorizationHandlers(this IServiceCollection services)
     {
-        services.AddScoped<IAuthorizationHandler, CollectionAccessAuthorizationHandler>();
+        services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();
     }
 }

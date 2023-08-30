@@ -8,26 +8,26 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.Vault.AuthorizationHandlers;
 
-public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<CollectionAccessOperationRequirement, ICollectionAccess>
+public class CollectionAuthorizationHandler : BulkAuthorizationHandler<CollectionOperationRequirement, Collection>
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public CollectionAccessAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository, IOrganizationUserRepository organizationUserRepository)
+    public CollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository, IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _organizationUserRepository = organizationUserRepository;
     }
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, CollectionAccessOperationRequirement requirement,
-        ICollection<ICollectionAccess> resources)
+    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
+        ICollection<Collection> resources)
     {
         switch (requirement)
         {
-            case not null when requirement == CollectionAccessOperation.CreateUpdateDelete:
-                await CanManageCollectionAccessAsync(context, requirement, resources.Select(c => c.CollectionId));
+            case not null when requirement == CollectionOperation.ModifyAccess:
+                await CanManageCollectionAccessAsync(context, requirement, resources);
                 break;
         }
     }
@@ -35,21 +35,9 @@ public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<Col
     /// <summary>
     /// Ensures the acting user is allowed to manage access permissions for the target collections.
     /// </summary>
-    private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement, IEnumerable<Guid> collectionIds)
+    private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement, ICollection<Collection> targetCollections)
     {
         if (!_currentContext.UserId.HasValue)
-        {
-            context.Fail();
-            return;
-        }
-
-        var distinctTargetCollectionIds = collectionIds.Distinct().ToList();
-
-        // List of collections the user is performing the operation on
-        var targetCollections = await _collectionRepository.GetManyByManyIdsAsync(distinctTargetCollectionIds);
-
-        // A target collection does not exist, fail the requirement
-        if (targetCollections.Count != distinctTargetCollectionIds.Count)
         {
             context.Fail();
             return;
@@ -86,7 +74,7 @@ public class CollectionAccessAuthorizationHandler : BulkAuthorizationHandler<Col
         // List of collection Ids the acting user is allowed to manage
         var manageableCollectionIds =
             (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value))
-            .Where(c => c.Manage)
+            .Where(c => c.Manage && c.OrganizationId == targetOrganizationId)
             .Select(c => c.Id)
             .ToHashSet();
 
