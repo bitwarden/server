@@ -5,11 +5,11 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Context;
 
-public class CurrentContentProvider
+public class CurrentContextProvider
 {
-    public CurrentContentProvider() { }
+    public CurrentContextProvider() { }
 
-    public CurrentContentProvider(ProviderUser providerUser)
+    public CurrentContextProvider(ProviderUser providerUser)
     {
         Id = providerUser.ProviderId;
         Type = providerUser.Type;

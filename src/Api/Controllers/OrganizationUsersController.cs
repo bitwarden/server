@@ -447,8 +447,8 @@ public class OrganizationUsersController : Controller
         if (additionalSmSeatsRequired > 0)
         {
             var organization = await _organizationRepository.GetByIdAsync(orgId);
-            var update = new SecretsManagerSubscriptionUpdate(organization, true);
-            update.AdjustSeats(additionalSmSeatsRequired);
+            var update = new SecretsManagerSubscriptionUpdate(organization, true)
+                .AdjustSeats(additionalSmSeatsRequired);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
         }
 
