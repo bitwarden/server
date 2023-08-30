@@ -101,7 +101,13 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
                 switch (value.Type)
                 {
                     case LaunchDarkly.Sdk.LdValueType.Bool:
-                        results.Add(key, value.AsBool);
+                        if(key == FeatureFlagKeys.TrustedDeviceEncryption) {
+                            results.Add(key, true);
+                        }
+                        else
+                        {
+                            results.Add(key, value.AsBool);
+                        }
                         break;
 
                     case LaunchDarkly.Sdk.LdValueType.Number:
