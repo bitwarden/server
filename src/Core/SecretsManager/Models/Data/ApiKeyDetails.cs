@@ -4,8 +4,6 @@ namespace Bit.Core.SecretsManager.Models.Data;
 
 public class ApiKeyDetails : ApiKey
 {
-    public string ClientSecret { get; set; } // Deprecated as of 2023-05-17
-
     protected ApiKeyDetails() { }
 
     protected ApiKeyDetails(ApiKey apiKey)
