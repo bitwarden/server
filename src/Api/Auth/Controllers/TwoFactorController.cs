@@ -245,7 +245,7 @@ public class TwoFactorController : Controller
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     public async Task<CredentialCreateOptions> GetWebAuthnChallenge([FromBody] SecretVerificationRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, false);
         var reg = await _userService.StartWebAuthnRegistrationAsync(user);
         return reg;
     }
@@ -254,7 +254,7 @@ public class TwoFactorController : Controller
     [HttpPost("webauthn")]
     public async Task<TwoFactorWebAuthnResponseModel> PutWebAuthn([FromBody] TwoFactorWebAuthnRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, false);
 
         var success = await _userService.CompleteWebAuthRegistrationAsync(
             user, model.Id.Value, model.Name, model.DeviceResponse);
@@ -271,7 +271,7 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorWebAuthnResponseModel> DeleteWebAuthn(
         [FromBody] TwoFactorWebAuthnDeleteRequestModel model)
     {
-        var user = await CheckAsync(model, true);
+        var user = await CheckAsync(model, false);
         await _userService.DeleteWebAuthnKeyAsync(user, model.Id.Value);
         var response = new TwoFactorWebAuthnResponseModel(user);
         return response;
