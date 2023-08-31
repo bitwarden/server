@@ -138,6 +138,9 @@ public class Startup
         services.AddCoreLocalizationServices();
         services.AddAuthorizationHandlers();
 
+        // Authorization Handlers
+        services.AddAuthorizationHandlers();
+
         //health check
         if (!globalSettings.SelfHosted)
         {

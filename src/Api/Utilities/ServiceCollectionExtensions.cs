@@ -1,4 +1,4 @@
-﻿using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
@@ -117,7 +117,7 @@ public static class ServiceCollectionExtensions
             }
         });
     }
-    
+
     public static void AddAuthorizationHandlers(this IServiceCollection services)
     {
         services.AddScoped<IAuthorizationHandler, CollectionAuthorizationHandler>();

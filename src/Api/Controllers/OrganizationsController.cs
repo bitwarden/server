@@ -763,7 +763,7 @@ public class OrganizationsController : Controller
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
     }
-    
+
     [HttpPut("{id}/collection-management")]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
