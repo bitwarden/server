@@ -29,12 +29,12 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
             // support configuration directly from settings
             else if (globalSettings.LaunchDarkly?.FlagValues?.Any() is true)
             {
-                ldConfig.DataSource(GetTestData(globalSettings.LaunchDarkly.FlagValues));
+                ldConfig.DataSource(BuildDataSource(globalSettings.LaunchDarkly.FlagValues));
             }
             // support local overrides
             else if (FeatureFlagKeys.GetLocalOverrideFlagValues()?.Any() is true)
             {
-                ldConfig.DataSource(GetTestData(FeatureFlagKeys.GetLocalOverrideFlagValues()));
+                ldConfig.DataSource(BuildDataSource(FeatureFlagKeys.GetLocalOverrideFlagValues()));
             }
             else
             {
@@ -176,7 +176,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         return builder.Build();
     }
 
-    private TestData GetTestData(Dictionary<string, string> values)
+    private TestData BuildDataSource(Dictionary<string, string> values)
     {
         var source = TestData.DataSource();
         foreach (var kvp in values)
