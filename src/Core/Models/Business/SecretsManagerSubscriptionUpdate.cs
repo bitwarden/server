@@ -6,7 +6,7 @@ namespace Bit.Core.Models.Business;
 
 public class SecretsManagerSubscriptionUpdate
 {
-    public Organization Organization { get; set; }
+    public Organization Organization { get; }
 
     /// <summary>
     /// The total seats the organization will have after the update, including any base seats included in the plan
@@ -14,8 +14,7 @@ public class SecretsManagerSubscriptionUpdate
     public int? SmSeats { get; set; }
 
     /// <summary>
-    /// The new autoscale limit for seats, expressed as a total (not an adjustment).
-    /// This may or may not be the same as the current autoscale limit.
+    /// The new autoscale limit for seats after the update
     /// </summary>
     public int? MaxAutoscaleSmSeats { get; set; }
 
@@ -26,8 +25,7 @@ public class SecretsManagerSubscriptionUpdate
     public int? SmServiceAccounts { get; set; }
 
     /// <summary>
-    /// The new autoscale limit for service accounts, expressed as a total (not an adjustment).
-    /// This may or may not be the same as the current autoscale limit.
+    /// The new autoscale limit for service accounts after the update
     /// </summary>
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
 
@@ -39,7 +37,7 @@ public class SecretsManagerSubscriptionUpdate
     /// <summary>
     /// Whether the subscription update is a result of autoscaling
     /// </summary>
-    public bool Autoscaling { get; init; }
+    public bool Autoscaling { get; }
 
     /// <summary>
     /// The seats the organization will have after the update, excluding the base seats included in the plan
@@ -57,18 +55,11 @@ public class SecretsManagerSubscriptionUpdate
     public bool MaxAutoscaleSmServiceAccountsChanged =>
         MaxAutoscaleSmServiceAccounts != Organization.MaxAutoscaleSmServiceAccounts;
     public Plan Plan => Utilities.StaticStore.GetPlan(Organization.PlanType);
+    public bool SmSeatAutoscaleLimitReached => SmSeats.HasValue && MaxAutoscaleSmSeats.HasValue && SmSeats == MaxAutoscaleSmSeats;
 
-    public SecretsManagerSubscriptionUpdate(
-        Organization organization,
-        int seatAdjustment, int? maxAutoscaleSeats,
-        int serviceAccountAdjustment, int? maxAutoscaleServiceAccounts) : this(organization, false)
-    {
-        AdjustSeats(seatAdjustment);
-        AdjustServiceAccounts(serviceAccountAdjustment);
-
-        MaxAutoscaleSmSeats = maxAutoscaleSeats;
-        MaxAutoscaleSmServiceAccounts = maxAutoscaleServiceAccounts;
-    }
+    public bool SmServiceAccountAutoscaleLimitReached => SmServiceAccounts.HasValue &&
+                                                         MaxAutoscaleSmServiceAccounts.HasValue &&
+                                                         SmServiceAccounts == MaxAutoscaleSmServiceAccounts;
 
     public SecretsManagerSubscriptionUpdate(Organization organization, bool autoscaling)
     {
@@ -91,13 +82,15 @@ public class SecretsManagerSubscriptionUpdate
         Autoscaling = autoscaling;
     }
 
-    public void AdjustSeats(int adjustment)
+    public SecretsManagerSubscriptionUpdate AdjustSeats(int adjustment)
     {
         SmSeats = SmSeats.GetValueOrDefault() + adjustment;
+        return this;
     }
 
-    public void AdjustServiceAccounts(int adjustment)
+    public SecretsManagerSubscriptionUpdate AdjustServiceAccounts(int adjustment)
     {
         SmServiceAccounts = SmServiceAccounts.GetValueOrDefault() + adjustment;
+        return this;
     }
 }

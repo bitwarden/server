@@ -763,37 +763,4 @@ public class OrganizationsController : Controller
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
     }
-
-    // This is a temporary endpoint to self-enroll in secrets manager
-    [SelfHosted(NotSelfHostedOnly = true)]
-    [HttpPost("{id}/enroll-secrets-manager")]
-    public async Task EnrollSecretsManager(Guid id, [FromBody] OrganizationEnrollSecretsManagerRequestModel model)
-    {
-        var userId = _userService.GetProperUserId(User).Value;
-        if (!await _currentContext.OrganizationAdmin(id))
-        {
-            throw new NotFoundException();
-        }
-
-        var organization = await _organizationRepository.GetByIdAsync(id);
-        if (organization == null)
-        {
-            throw new NotFoundException();
-        }
-
-        organization.UseSecretsManager = model.Enabled;
-        organization.SecretsManagerBeta = model.Enabled;
-        await _organizationService.UpdateAsync(organization);
-
-        // Turn on Secrets Manager for the user
-        if (model.Enabled)
-        {
-            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(id, userId);
-            if (orgUser != null)
-            {
-                orgUser.AccessSecretsManager = true;
-                await _organizationUserRepository.ReplaceAsync(orgUser);
-            }
-        }
-    }
 }

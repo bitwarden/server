@@ -8,6 +8,7 @@ using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -17,315 +18,58 @@ using Xunit;
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
 [SutProviderCustomize]
+[SecretsManagerOrganizationCustomize]
 public class UpdateSecretsManagerSubscriptionCommandTests
 {
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSubscriptionAsync_NoOrganization_Throws(
-        SecretsManagerSubscriptionUpdate secretsManagerSubscriptionUpdate,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        secretsManagerSubscriptionUpdate.Organization = null;
-
-        var exception = await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate));
-
-        Assert.Contains("Organization is not found", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSubscriptionAsync_NoSecretsManagerAccess_ThrowsException(
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            SmSeats = 10,
-            SmServiceAccounts = 5,
-            UseSecretsManager = false,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 10
-        };
-
-        var secretsManagerSubscriptionUpdate = new SecretsManagerSubscriptionUpdate(organization, seatAdjustment: 0, maxAutoscaleSeats: null, serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: null);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-             () => sutProvider.Sut.UpdateSubscriptionAsync(secretsManagerSubscriptionUpdate));
-
-        Assert.Contains("Organization has no access to Secrets Manager.", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSubscriptionAsync_SeatsAdjustmentGreaterThanMaxAutoscaleSeats_ThrowsException(
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            SmSeats = 10,
-            UseSecretsManager = true,
-            SmServiceAccounts = 5,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 10,
-            PlanType = PlanType.EnterpriseAnnually,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 15, maxAutoscaleSeats: 10, serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: null);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("Cannot set max seat autoscaling below seat count.", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSubscriptionAsync_ServiceAccountsGreaterThanMaxAutoscaleSeats_ThrowsException(
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            SmSeats = 10,
-            UseSecretsManager = true,
-            SmServiceAccounts = 5,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 10,
-            PlanType = PlanType.EnterpriseAnnually,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "9"
-        };
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 1, maxAutoscaleSeats: 15, serviceAccountAdjustment: 11, maxAutoscaleServiceAccounts: 10);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("Cannot set max service accounts autoscaling below service account amount", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSubscriptionAsync_NullGatewayCustomerId_ThrowsException(
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            SmSeats = 10,
-            SmServiceAccounts = 5,
-            UseSecretsManager = true,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 15,
-            PlanType = PlanType.EnterpriseAnnually
-        };
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 1, maxAutoscaleSeats: 15, serviceAccountAdjustment: 1, maxAutoscaleServiceAccounts: 15);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("No payment method found.", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSubscriptionAsync_NullGatewaySubscriptionId_ThrowsException(
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            SmSeats = 10,
-            UseSecretsManager = true,
-            SmServiceAccounts = 5,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 15,
-            PlanType = PlanType.EnterpriseAnnually,
-            GatewayCustomerId = "1"
-        };
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 1, maxAutoscaleSeats: 15, serviceAccountAdjustment: 1, maxAutoscaleServiceAccounts: 15);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("No subscription found.", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task UpdateSubscriptionAsync_OrgWithNullSmSeatOnSeatsAdjustment_ThrowsException(
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            SmSeats = null,
-            UseSecretsManager = true,
-            SmServiceAccounts = 5,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 15,
-            PlanType = PlanType.EnterpriseAnnually,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 1, maxAutoscaleSeats: 15, serviceAccountAdjustment: 1, maxAutoscaleServiceAccounts: 15);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-
-        Assert.Contains("Organization has no Secrets Manager seat limit, no need to adjust seats", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.Custom)]
-    [BitAutoData(PlanType.FamiliesAnnually)]
-    [BitAutoData(PlanType.FamiliesAnnually2019)]
-    [BitAutoData(PlanType.EnterpriseMonthly2019)]
-    [BitAutoData(PlanType.EnterpriseAnnually2019)]
-    [BitAutoData(PlanType.TeamsMonthly2019)]
-    [BitAutoData(PlanType.TeamsAnnually2019)]
-    public async Task UpdateSubscriptionAsync_WithNonSecretsManagerPlanType_ThrowsBadRequestException(
-        PlanType planType,
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            SmSeats = 10,
-            UseSecretsManager = true,
-            SmServiceAccounts = 200,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 300,
-            PlanType = PlanType.EnterpriseAnnually,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 1, maxAutoscaleSeats: 15, serviceAccountAdjustment: 1, maxAutoscaleServiceAccounts: 300);
-        organization.PlanType = planType;
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("Existing plan not found", exception.Message, StringComparison.InvariantCultureIgnoreCase);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.Free)]
-    public async Task UpdateSubscriptionAsync_WithHasAdditionalSeatsOptionFalse_ThrowsBadRequestException(
-        PlanType planType,
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 2,
-            SmServiceAccounts = 3,
-            PlanType = planType,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
-        var plan = StaticStore.GetPlan(planType);
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 1, maxAutoscaleSeats: null, serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: null);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("You have reached the maximum number of Secrets Manager seats (2) for this plan",
-            exception.Message, StringComparison.InvariantCultureIgnoreCase);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.Free)]
-    public async Task UpdateSubscriptionAsync_WithHasAdditionalServiceAccountOptionFalse_ThrowsBadRequestException(
-        PlanType planType,
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 2,
-            SmServiceAccounts = 3,
-            PlanType = planType,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 0, maxAutoscaleSeats: null, serviceAccountAdjustment: 1, maxAutoscaleServiceAccounts: null);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("You have reached the maximum number of service accounts (3) for this plan",
-            exception.Message, StringComparison.InvariantCultureIgnoreCase);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
     [Theory]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
-    public async Task UpdateSubscriptionAsync_ValidInput_Passes(
+    public async Task UpdateSubscriptionAsync_UpdateEverything_ValidInput_Passes(
         PlanType planType,
-        Guid organizationId,
+        Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        const int organizationServiceAccounts = 200;
-        const int seatAdjustment = 5;
-        const int maxAutoscaleSeats = 15;
-        const int serviceAccountAdjustment = 100;
-        const int maxAutoScaleServiceAccounts = 300;
+        organization.PlanType = planType;
+        organization.SmSeats = 10;
+        organization.MaxAutoscaleSmSeats = 20;
+        organization.SmServiceAccounts = 200;
+        organization.MaxAutoscaleSmServiceAccounts = 350;
 
-        var organization = new Organization
+        var updateSmSeats = 15;
+        var updateSmServiceAccounts = 300;
+        var updateMaxAutoscaleSmSeats = 16;
+        var updateMaxAutoscaleSmServiceAccounts = 301;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 10,
-            MaxAutoscaleSmSeats = 20,
-            SmServiceAccounts = organizationServiceAccounts,
-            MaxAutoscaleSmServiceAccounts = 350,
-            PlanType = planType,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
+            SmSeats = updateSmSeats,
+            SmServiceAccounts = updateSmServiceAccounts,
+            MaxAutoscaleSmSeats = updateMaxAutoscaleSmSeats,
+            MaxAutoscaleSmServiceAccounts = updateMaxAutoscaleSmServiceAccounts
         };
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization,
-            seatAdjustment: seatAdjustment, maxAutoscaleSeats: maxAutoscaleSeats,
-            serviceAccountAdjustment: serviceAccountAdjustment, maxAutoscaleServiceAccounts: maxAutoScaleServiceAccounts);
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate);
-
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType && x.SupportsSecretsManager);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
-            .AdjustSecretsManagerSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
+            .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
-            .AdjustServiceAccountsAsync(organization, plan, organizationUpdate.SmServiceAccountsExcludingBase);
+            .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
 
         // TODO: call ReferenceEventService - see AC-1481
 
         AssertUpdatedOrganization(() => Arg.Is<Organization>(org =>
-                org.Id == organizationId
-                && org.SmSeats == organizationUpdate.SmSeats
-                && org.MaxAutoscaleSmSeats == organizationUpdate.MaxAutoscaleSmSeats
-                && org.SmServiceAccounts == (organizationServiceAccounts + serviceAccountAdjustment)
-                && org.MaxAutoscaleSmServiceAccounts == organizationUpdate.MaxAutoscaleSmServiceAccounts), sutProvider);
+                org.Id == organization.Id &&
+                org.SmSeats == updateSmSeats &&
+                org.MaxAutoscaleSmSeats == updateMaxAutoscaleSmSeats &&
+                org.SmServiceAccounts == updateSmServiceAccounts &&
+                org.MaxAutoscaleSmServiceAccounts == updateMaxAutoscaleSmServiceAccounts),
+                sutProvider);
 
-        await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxSeatLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmSeats.Value, Arg.Any<IEnumerable<string>>());
-        await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(organization, organization.MaxAutoscaleSmServiceAccounts.Value, Arg.Any<IEnumerable<string>>());
+        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendSecretsManagerMaxSeatLimitReachedEmailAsync(default, default, default);
+        await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(default, default, default);
     }
 
     [Theory]
@@ -335,210 +79,92 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [BitAutoData(PlanType.TeamsAnnually)]
     public async Task UpdateSubscriptionAsync_ValidInput_WithNullMaxAutoscale_Passes(
         PlanType planType,
-        Guid organizationId,
+        Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        int organizationServiceAccounts = 200;
-        int seatAdjustment = 5;
-        int? maxAutoscaleSeats = null;
-        int serviceAccountAdjustment = 100;
-        int? maxAutoScaleServiceAccounts = null;
+        organization.PlanType = planType;
 
-        var organization = new Organization
+        const int updateSmSeats = 15;
+        const int updateSmServiceAccounts = 450;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 10,
-            MaxAutoscaleSmSeats = 20,
-            SmServiceAccounts = organizationServiceAccounts,
-            MaxAutoscaleSmServiceAccounts = 350,
-            PlanType = planType,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
+            SmSeats = updateSmSeats,
+            MaxAutoscaleSmSeats = null,
+            SmServiceAccounts = updateSmServiceAccounts,
+            MaxAutoscaleSmServiceAccounts = null
         };
 
-        var plan = StaticStore.GetPlan(organization.PlanType);
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization,
-            seatAdjustment: seatAdjustment, maxAutoscaleSeats: maxAutoscaleSeats,
-            serviceAccountAdjustment: serviceAccountAdjustment, maxAutoscaleServiceAccounts: maxAutoScaleServiceAccounts);
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        await sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate);
-
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType && x.SupportsSecretsManager);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
-            .AdjustSecretsManagerSeatsAsync(organization, plan, organizationUpdate.SmSeatsExcludingBase);
+            .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
-            .AdjustServiceAccountsAsync(organization, plan, organizationUpdate.SmServiceAccountsExcludingBase);
+            .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
 
         // TODO: call ReferenceEventService - see AC-1481
 
         AssertUpdatedOrganization(() => Arg.Is<Organization>(org =>
-                org.Id == organizationId
-                && org.SmSeats == organizationUpdate.SmSeats
-                && org.MaxAutoscaleSmSeats == organizationUpdate.MaxAutoscaleSmSeats
-                && org.SmServiceAccounts == (organizationServiceAccounts + serviceAccountAdjustment)
-                && org.MaxAutoscaleSmServiceAccounts == organizationUpdate.MaxAutoscaleSmServiceAccounts), sutProvider);
+                org.Id == organization.Id &&
+                org.SmSeats == updateSmSeats &&
+                org.MaxAutoscaleSmSeats == null &&
+                org.SmServiceAccounts == updateSmServiceAccounts &&
+                org.MaxAutoscaleSmServiceAccounts == null),
+            sutProvider);
 
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendSecretsManagerMaxSeatLimitReachedEmailAsync(default, default, default);
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(default, default, default);
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task UpdateSubscriptionAsync_ThrowsBadRequestException_WhenMaxAutoscaleSeatsBelowSeatCount(
-        Guid organizationId,
+    [BitAutoData(false, "Cannot update subscription on a self-hosted instance.")]
+    [BitAutoData(true, "Cannot autoscale on a self-hosted instance.")]
+    public async Task UpdatingSubscription_WhenSelfHosted_ThrowsBadRequestException(
+        bool autoscaling,
+        string expectedError,
+        Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 5,
-            SmServiceAccounts = 200,
-            MaxAutoscaleSmSeats = 4,
-            MaxAutoscaleSmServiceAccounts = 300,
-            PlanType = PlanType.EnterpriseAnnually,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
-        var update = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 1, maxAutoscaleSeats: 4, serviceAccountAdjustment: 5, maxAutoscaleServiceAccounts: 300);
+        var update = new SecretsManagerSubscriptionUpdate(organization, autoscaling).AdjustSeats(2);
+
+        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Cannot set max seat autoscaling below seat count.", exception.Message);
+        Assert.Contains(expectedError, exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task UpdateSubscriptionAsync_ThrowsBadRequestException_WhenOccupiedSeatsExceedNewSeatTotal(
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    public async Task UpdateSubscriptionAsync_NoSecretsManagerAccess_ThrowsException(
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization)
     {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 10,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2",
-            PlanType = PlanType.EnterpriseAnnually
-        };
-        var update = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: -3, maxAutoscaleSeats: 7, serviceAccountAdjustment: 5, maxAutoscaleServiceAccounts: 300);
+        organization.UseSecretsManager = false;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false);
 
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetOccupiedSmSeatCountByOrganizationIdAsync(organizationId).Returns(8);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+             () => sutProvider.Sut.UpdateSubscriptionAsync(update));
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Your organization currently has 8 Secrets Manager seats. Your plan only allows 7 Secrets Manager seats. Remove some Secrets Manager users", exception.Message);
+        Assert.Contains("Organization has no access to Secrets Manager.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task AdjustServiceAccountsAsync_ThrowsBadRequestException_WhenSmServiceAccountsIsNull(
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    public async Task UpdateSubscriptionAsync_OrganizationEnrolledInSmBeta_ThrowsException(
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization)
     {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            SmSeats = 10,
-            UseSecretsManager = true,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2",
-            SmServiceAccounts = null,
-            PlanType = PlanType.EnterpriseAnnually
-        };
-        var update = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 10, maxAutoscaleSeats: 21, serviceAccountAdjustment: 1, maxAutoscaleServiceAccounts: 250);
+        organization.UseSecretsManager = true;
+        organization.SecretsManagerBeta = true;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Organization has no Service Accounts limit, no need to adjust Service Accounts", exception.Message);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+             () => sutProvider.Sut.UpdateSubscriptionAsync(update));
+
+        Assert.Contains("Organization is enrolled in Secrets Manager Beta", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task AutoscaleSeatsAsync_ThrowsBadRequestException_WhenMaxAutoscaleSeatsExceedPlanMaxUsers(
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            SmSeats = 3,
-            UseSecretsManager = true,
-            SmServiceAccounts = 100,
-            PlanType = PlanType.Free,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2",
-        };
-
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 0, maxAutoscaleSeats: 15, serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: 200);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("Your plan has a Secrets Manager seat limit of 2, but you have specified a max autoscale count of 15.Reduce your max autoscale count.", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.Free)]
-    public async Task AutoscaleSeatsAsync_ThrowsBadRequestException_WhenPlanDoesNotAllowSeatAutoscale(
-        PlanType planType,
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 1,
-            SmServiceAccounts = 200,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 350,
-            PlanType = planType,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
-
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 0, maxAutoscaleSeats: 1, serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: 300);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("Your plan does not allow Secrets Manager seat autoscaling", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.Free)]
-    public async Task UpdateServiceAccountAutoscaling_ThrowsBadRequestException_WhenPlanDoesNotAllowServiceAccountAutoscale(
-        PlanType planType,
-        Guid organizationId,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 10,
-            SmServiceAccounts = 200,
-            MaxAutoscaleSmSeats = 20,
-            MaxAutoscaleSmServiceAccounts = 350,
-            PlanType = planType,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
-
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 0, maxAutoscaleSeats: null, serviceAccountAdjustment: 0, maxAutoscaleServiceAccounts: 300);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("Your plan does not allow Service Accounts autoscaling.", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-
     }
 
     [Theory]
@@ -546,35 +172,36 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [BitAutoData(PlanType.EnterpriseMonthly)]
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
-    public async Task UpdateServiceAccountAutoscaling_WhenCurrentServiceAccountsIsGreaterThanNew_ThrowsBadRequestException(
+    public async Task UpdateSubscriptionAsync_PaidPlan_NullGatewayCustomerId_ThrowsException(
         PlanType planType,
-        Guid organizationId,
+        Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        var organization = new Organization
-        {
-            Id = organizationId,
-            UseSecretsManager = true,
-            SmSeats = 10,
-            MaxAutoscaleSmSeats = 20,
-            SmServiceAccounts = 301,
-            MaxAutoscaleSmServiceAccounts = 350,
-            PlanType = planType,
-            GatewayCustomerId = "1",
-            GatewaySubscriptionId = "2"
-        };
+        organization.PlanType = planType;
+        organization.GatewayCustomerId = null;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustSeats(1);
 
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization, seatAdjustment: 5, maxAutoscaleSeats: 15, serviceAccountAdjustment: -100, maxAutoscaleServiceAccounts: 300);
-        var currentServiceAccounts = 301;
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("No payment method found.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
 
-        sutProvider.GetDependency<IServiceAccountRepository>()
-            .GetServiceAccountCountByOrganizationIdAsync(organization.Id)
-            .Returns(currentServiceAccounts);
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    public async Task UpdateSubscriptionAsync_PaidPlan_NullGatewaySubscriptionId_ThrowsException(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        organization.GatewaySubscriptionId = null;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustSeats(1);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate));
-        Assert.Contains("Your organization currently has 301 Service Accounts. Your plan only allows 201 Service Accounts. Remove some Service Accounts", exception.Message);
-        await sutProvider.GetDependency<IServiceAccountRepository>().Received(1).GetServiceAccountCountByOrganizationIdAsync(organization.Id);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("No subscription found.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
@@ -586,7 +213,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     public async Task AdjustServiceAccountsAsync_WithEnterpriseOrTeamsPlans_Success(PlanType planType, Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == planType);
+        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == planType && p.SupportsSecretsManager);
 
         var organizationSeats = plan.SecretsManager.BaseSeats + 10;
         var organizationMaxAutoscaleSeats = 20;
@@ -610,7 +237,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var expectedSmServiceAccounts = organizationServiceAccounts + smServiceAccountsAdjustment;
         var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.SecretsManager.BaseServiceAccount.GetValueOrDefault();
 
-        await sutProvider.Sut.AdjustServiceAccountsAsync(organization, smServiceAccountsAdjustment);
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(10);
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
         await sutProvider.GetDependency<IPaymentService>().Received(1).AdjustServiceAccountsAsync(
             Arg.Is<Organization>(o => o.Id == organizationId),
@@ -626,75 +255,46 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task ServiceAccountAutoscaling_MaxLimitReached_ThrowsBadRequestException(
-        PlanType planType,
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_UpdateSeatsToAutoscaleLimit_EmailsOwners(
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.PlanType = planType;
-        organization.UseSecretsManager = true;
-        organization.SmServiceAccounts = 9;
-        organization.MaxAutoscaleSmServiceAccounts = 10;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            SmSeats = 10,
+            MaxAutoscaleSmSeats = 10
+        };
 
-        var update = new SecretsManagerSubscriptionUpdate(organization, true);
-        update.AdjustServiceAccounts(2);
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Secrets Manager service account limit has been reached.", exception.Message);
+        await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxSeatLimitReachedEmailAsync(
+            organization, organization.MaxAutoscaleSmSeats.Value, Arg.Any<IEnumerable<string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_OrgWithNullSmSeatOnSeatsAdjustment_ThrowsException(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.SmSeats = null;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustSeats(1);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateSubscriptionAsync(update));
+
+        Assert.Contains("Organization has no Secrets Manager seat limit, no need to adjust seats", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task ServiceAccountAutoscaling_Subtracting_ThrowsBadRequestException(
-        PlanType planType,
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_SmSeatAutoscaling_Subtracting_ThrowsBadRequestException(
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.PlanType = planType;
-        organization.UseSecretsManager = true;
-
-        var update = new SecretsManagerSubscriptionUpdate(organization, true);
-        update.AdjustServiceAccounts(-2);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Cannot use autoscaling to subtract service accounts.", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task SmSeatAutoscaling_MaxLimitReached_ThrowsBadRequestException(
-        PlanType planType,
-        Organization organization,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        organization.PlanType = planType;
-        organization.UseSecretsManager = true;
-        organization.SmSeats = 9;
-        organization.MaxAutoscaleSmSeats = 10;
-
-        var update = new SecretsManagerSubscriptionUpdate(organization, true);
-        update.AdjustSeats(2);
-
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains("Secrets Manager seat limit has been reached.", exception.Message);
-        await VerifyDependencyNotCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task SmSeatAutoscaling_Subtracting_ThrowsBadRequestException(
-        PlanType planType,
-        Organization organization,
-        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
-    {
-        organization.PlanType = planType;
-        organization.UseSecretsManager = true;
-
-        var update = new SecretsManagerSubscriptionUpdate(organization, true);
-        update.AdjustSeats(-2);
+        var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustSeats(-2);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
         Assert.Contains("Cannot use autoscaling to subtract seats.", exception.Message);
@@ -702,31 +302,303 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
-    [BitAutoData(false, "Cannot update subscription on a self-hosted instance.")]
-    [BitAutoData(true, "Cannot autoscale on a self-hosted instance.")]
-    public async Task UpdatingSubscription_WhenSelfHosted_ThrowsBadRequestException(
-        bool autoscaling,
-        string expectedError,
+    [BitAutoData(PlanType.Free)]
+    public async Task UpdateSubscriptionAsync_WithHasAdditionalSeatsOptionFalse_ThrowsBadRequestException(
+        PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        organization.PlanType = PlanType.EnterpriseAnnually;
-        organization.UseSecretsManager = true;
-
-        var update = new SecretsManagerSubscriptionUpdate(organization, autoscaling);
-        update.AdjustSeats(2);
-
-        sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
+        organization.PlanType = planType;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustSeats(1);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
-        Assert.Contains(expectedError, exception.Message);
+        Assert.Contains("You have reached the maximum number of Secrets Manager seats (2) for this plan",
+            exception.Message, StringComparison.InvariantCultureIgnoreCase);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SmSeatAutoscaling_MaxLimitReached_ThrowsBadRequestException(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.SmSeats = 9;
+        organization.MaxAutoscaleSmSeats = 10;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustSeats(2);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Secrets Manager seat limit has been reached.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_SeatsAdjustmentGreaterThanMaxAutoscaleSeats_ThrowsException(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            SmSeats = 15,
+            MaxAutoscaleSmSeats = 10
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Cannot set max seat autoscaling below seat count.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_ThrowsBadRequestException_WhenSmSeatsLessThanOne(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            SmSeats = 0,
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(8);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("You must have at least 1 Secrets Manager seat.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_ThrowsBadRequestException_WhenOccupiedSeatsExceedNewSeatTotal(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            SmSeats = 7,
+        };
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id).Returns(8);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("8 users are currently occupying Secrets Manager seats. You cannot decrease your subscription below your current occupied seat count", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_UpdateServiceAccountsToAutoscaleLimit_EmailsOwners(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            SmServiceAccounts = 300,
+            MaxAutoscaleSmServiceAccounts = 300
+        };
+
+        await sutProvider.Sut.UpdateSubscriptionAsync(update);
+
+        await sutProvider.GetDependency<IMailService>().Received(1).SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(
+            organization, organization.MaxAutoscaleSmServiceAccounts.Value, Arg.Any<IEnumerable<string>>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AdjustServiceAccountsAsync_ThrowsBadRequestException_WhenSmServiceAccountsIsNull(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.SmServiceAccounts = null;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(1);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Organization has no service accounts limit, no need to adjust service accounts", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_ServiceAccountAutoscaling_Subtracting_ThrowsBadRequestException(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustServiceAccounts(-2);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Cannot use autoscaling to subtract service accounts.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public async Task UpdateSubscriptionAsync_WithHasAdditionalServiceAccountOptionFalse_ThrowsBadRequestException(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(1);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("You have reached the maximum number of service accounts (3) for this plan",
+            exception.Message, StringComparison.InvariantCultureIgnoreCase);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ServiceAccountAutoscaling_MaxLimitReached_ThrowsBadRequestException(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.SmServiceAccounts = 9;
+        organization.MaxAutoscaleSmServiceAccounts = 10;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, true).AdjustServiceAccounts(2);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Secrets Manager service account limit has been reached.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_ServiceAccountsGreaterThanMaxAutoscaleSeats_ThrowsException(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            SmServiceAccounts = 15,
+            MaxAutoscaleSmServiceAccounts = 10
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Cannot set max service accounts autoscaling below service account amount", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_ServiceAccountsLessThanPlanMinimum_ThrowsException(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            SmServiceAccounts = 199,
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Plan has a minimum of 200 service accounts", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    public async Task UpdateSmServiceAccounts_WhenCurrentServiceAccountsIsGreaterThanNew_ThrowsBadRequestException(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var currentServiceAccounts = 301;
+        organization.PlanType = planType;
+        organization.SmServiceAccounts = currentServiceAccounts;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false) { SmServiceAccounts = 201 };
+
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .GetServiceAccountCountByOrganizationIdAsync(organization.Id)
+            .Returns(currentServiceAccounts);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Your organization currently has 301 service accounts. You cannot decrease your subscription below your current service account usage", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateSubscriptionAsync_ThrowsBadRequestException_WhenMaxAutoscaleSeatsBelowSeatCount(
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            SmSeats = 10,
+            MaxAutoscaleSmSeats = 5
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Cannot set max seat autoscaling below seat count.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public async Task UpdateMaxAutoscaleSmSeats_ThrowsBadRequestException_WhenExceedsPlanMaxUsers(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        organization.SmSeats = 2;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            MaxAutoscaleSmSeats = 3
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Your plan has a Secrets Manager seat limit of 2, but you have specified a max autoscale count of 3.Reduce your max autoscale count.", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public async Task UpdateMaxAutoscaleSmSeats_ThrowsBadRequestException_WhenPlanDoesNotAllowAutoscale(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        organization.SmSeats = 2;
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            MaxAutoscaleSmSeats = 2
+        };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Your plan does not allow Secrets Manager seat autoscaling", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.Free)]
+    public async Task UpdateMaxAutoscaleSmServiceAccounts_ThrowsBadRequestException_WhenPlanDoesNotAllowAutoscale(
+        PlanType planType,
+        Organization organization,
+        SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
+    {
+        organization.PlanType = planType;
+        organization.SmServiceAccounts = 3;
+
+        var update = new SecretsManagerSubscriptionUpdate(organization, false) { MaxAutoscaleSmServiceAccounts = 3 };
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
+        Assert.Contains("Your plan does not allow service accounts autoscaling.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
-            .AdjustSecretsManagerSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
+            .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         // TODO: call ReferenceEventService - see AC-1481

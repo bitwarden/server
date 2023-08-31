@@ -647,6 +647,7 @@ public class OrganizationServiceTests
         [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
         SutProvider<OrganizationService> sutProvider)
     {
+        organization.PlanType = PlanType.EnterpriseAnnually;
         InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
 
         // Set up some invites to grant access to SM
