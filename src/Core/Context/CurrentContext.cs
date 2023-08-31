@@ -510,7 +510,7 @@ public class CurrentContext : ICurrentContext
         return Providers;
     }
     
-    public CurrentContentOrganization GetOrganization(Guid orgId)
+    public CurrentContextOrganization GetOrganization(Guid orgId)
     {
         return Organizations.Find(o => o.Id == orgId);
     }
