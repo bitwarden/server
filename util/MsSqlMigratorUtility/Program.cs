@@ -23,6 +23,8 @@ internal class Program
 
         var databaseConnectionString = args[0];
 
+        ParseParameters(args);
+
         var verbose = false;
 
         if (Parameters.ContainsKey("--verbose") || Parameters.ContainsKey("-v"))
