@@ -31,7 +31,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
     private readonly IOrganizationRepository _organizationRepository;
 
 
-    public SetInitialMasterPasswordCommand( ILogger<SetInitialMasterPasswordCommand> logger,
+    public SetInitialMasterPasswordCommand(ILogger<SetInitialMasterPasswordCommand> logger,
         IdentityErrorDescriber identityErrorDescriber,
         IUserService userService,
         IUserRepository userRepository,
