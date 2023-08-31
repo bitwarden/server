@@ -124,6 +124,7 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationUserCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
+        services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
     }
 
     // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of

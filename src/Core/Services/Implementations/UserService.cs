@@ -7,6 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
@@ -52,7 +53,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IOrganizationService _organizationService;
+    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
 
@@ -83,7 +84,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IFido2 fido2,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings,
-        IOrganizationService organizationService,
+        IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService)
         : base(
@@ -119,7 +120,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _fido2 = fido2;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
-        _organizationService = organizationService;
+        _acceptOrgUserCommand = acceptOrgUserCommand;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
     }
@@ -648,7 +649,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
-        await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
+        await _acceptOrgUserCommand.AcceptOrgUserAsync(orgIdentifier, user, this);
 
         return IdentityResult.Success;
     }

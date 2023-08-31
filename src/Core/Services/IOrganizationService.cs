@@ -39,9 +39,6 @@ public interface IOrganizationService
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
-    Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token, IUserService userService);
-    Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService);
-    Task<OrganizationUser> AcceptUserAsync(Guid organizationId, User user, IUserService userService);
     Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,

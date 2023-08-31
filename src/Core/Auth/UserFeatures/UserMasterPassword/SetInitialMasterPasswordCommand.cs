@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
@@ -10,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace Bit.Core.Auth.UserFeatures.UserMasterPassword;
 
 /// <summary>
-/// <para>Manages the setting of the initial master password for a user in an organization.</para>
+/// <para>Manages the setting of the initial master password for a <see cref="User"/> in an organization.</para>
 /// <para>This class is primarily invoked in two scenarios:</para>
 /// <para>1) In organizations configured with Single Sign-On (SSO) and master password decryption:
 /// just in time (JIT) provisioned users logging in via SSO are required to set a master password.</para>
@@ -25,7 +26,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
     private readonly IEventService _eventService;
-    private readonly IOrganizationService _organizationService;
+    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationRepository _organizationRepository;
 
@@ -35,7 +36,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         IUserService userService,
         IUserRepository userRepository,
         IEventService eventService,
-        IOrganizationService organizationService,
+        IAcceptOrgUserCommand acceptOrgUserCommand,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
     {
@@ -44,7 +45,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         _userService = userService;
         _userRepository = userRepository;
         _eventService = eventService;
-        _organizationService = organizationService;
+        _acceptOrgUserCommand = acceptOrgUserCommand;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
     }
@@ -95,9 +96,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         // TLDR: only accept post SSO user if they are invited
         if (!string.IsNullOrWhiteSpace(orgIdentifier) && orgUser.Status == OrganizationUserStatusType.Invited)
         {
-            // TODO: should pass org user to AcceptUserAsync
-            // TODO: convert AcceptUserAsync to own command AcceptOrgUserCommand
-            await _organizationService.AcceptUserAsync(orgUser, user, _userService);
+            await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
         }
 
         return IdentityResult.Success;

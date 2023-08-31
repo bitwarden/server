@@ -5,6 +5,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -251,7 +252,7 @@ public class UserServiceTests
             sutProvider.GetDependency<IFido2>(),
             sutProvider.GetDependency<ICurrentContext>(),
             sutProvider.GetDependency<IGlobalSettings>(),
-            sutProvider.GetDependency<IOrganizationService>(),
+            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
             sutProvider.GetDependency<IProviderUserRepository>(),
             sutProvider.GetDependency<IStripeSyncService>());
 
