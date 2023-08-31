@@ -263,6 +263,22 @@ public class OrganizationServiceTests
     }
 
     [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task SignUp_SM_Throws_WhenManagedByMSP(PlanType planType, OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
+    {
+        signup.Plan = planType;
+        signup.UseSecretsManager = true;
+        signup.AdditionalSeats = 15;
+        signup.AdditionalSmSeats = 10;
+        signup.AdditionalServiceAccounts = 20;
+        signup.PaymentMethodType = PaymentMethodType.Card;
+        signup.PremiumAccessAddon = false;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SignUpAsync(signup, true));
+        Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
+    }
+
+    [Theory]
     [BitAutoData]
     public async Task SignUpAsync_SecretManager_AdditionalServiceAccounts_NotAllowedByPlan_ShouldThrowException(OrganizationSignup signup, SutProvider<OrganizationService> sutProvider)
     {
