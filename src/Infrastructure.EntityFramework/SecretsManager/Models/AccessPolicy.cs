@@ -12,13 +12,32 @@ public class AccessPolicyMapperProfile : Profile
 {
     public AccessPolicyMapperProfile()
     {
-        CreateMap<Core.SecretsManager.Entities.UserProjectAccessPolicy, UserProjectAccessPolicy>().ReverseMap()
+        CreateMap<Core.SecretsManager.Entities.UserProjectAccessPolicy, UserProjectAccessPolicy>()
+            .ForMember(dst => dst.GrantedProject, opt => opt.Ignore())
+            .ForMember(dst => dst.OrganizationUser, opt => opt.Ignore())
+            .ReverseMap()
             .ForMember(dst => dst.User, opt => opt.MapFrom(src => src.OrganizationUser.User));
-        CreateMap<Core.SecretsManager.Entities.UserServiceAccountAccessPolicy, UserServiceAccountAccessPolicy>().ReverseMap()
+
+        CreateMap<Core.SecretsManager.Entities.UserServiceAccountAccessPolicy, UserServiceAccountAccessPolicy>()
+            .ForMember(dst => dst.GrantedServiceAccount, opt => opt.Ignore())
+            .ForMember(dst => dst.OrganizationUser, opt => opt.Ignore())
+            .ReverseMap()
             .ForMember(dst => dst.User, opt => opt.MapFrom(src => src.OrganizationUser.User));
-        CreateMap<Core.SecretsManager.Entities.GroupProjectAccessPolicy, GroupProjectAccessPolicy>().ReverseMap();
-        CreateMap<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy, GroupServiceAccountAccessPolicy>().ReverseMap();
-        CreateMap<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy, ServiceAccountProjectAccessPolicy>().ReverseMap();
+
+        CreateMap<Core.SecretsManager.Entities.GroupProjectAccessPolicy, GroupProjectAccessPolicy>()
+            .ForMember(dst => dst.GrantedProject, opt => opt.Ignore())
+            .ForMember(dst => dst.Group, opt => opt.Ignore())
+            .ReverseMap();
+
+        CreateMap<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy, GroupServiceAccountAccessPolicy>()
+            .ForMember(dst => dst.GrantedServiceAccount, opt => opt.Ignore())
+            .ForMember(dst => dst.Group, opt => opt.Ignore())
+            .ReverseMap();
+
+        CreateMap<Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy, ServiceAccountProjectAccessPolicy>()
+            .ForMember(dst => dst.GrantedProject, opt => opt.Ignore())
+            .ForMember(dst => dst.ServiceAccount, opt => opt.Ignore())
+            .ReverseMap();
     }
 }
 
