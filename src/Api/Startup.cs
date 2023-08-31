@@ -136,7 +136,6 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
-        services.AddAuthorizationHandlers();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();

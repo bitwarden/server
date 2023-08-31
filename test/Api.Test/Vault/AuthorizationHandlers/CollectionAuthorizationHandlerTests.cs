@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using Bit.Api.Vault.AuthorizationHandlers;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -41,7 +41,7 @@ public class CollectionAuthorizationHandlerTests
         organization.Permissions.EditAnyCollection = editAnyCollection;
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperation.ModifyAccess },
+            new[] { CollectionOperations.ModifyAccess },
             new ClaimsPrincipal(),
             collections);
 
@@ -61,7 +61,7 @@ public class CollectionAuthorizationHandlerTests
         ICollection<Collection> collections)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperation.ModifyAccess },
+            new[] { CollectionOperations.ModifyAccess },
             new ClaimsPrincipal(),
             collections
         );
@@ -85,7 +85,7 @@ public class CollectionAuthorizationHandlerTests
         collections.First().OrganizationId = Guid.NewGuid();
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperation.ModifyAccess },
+            new[] { CollectionOperations.ModifyAccess },
             new ClaimsPrincipal(),
             collections
         );
@@ -107,7 +107,7 @@ public class CollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperation.ModifyAccess },
+            new[] { CollectionOperations.ModifyAccess },
             new ClaimsPrincipal(),
             collections
         );
@@ -145,7 +145,7 @@ public class CollectionAuthorizationHandlerTests
         organization.Permissions.EditAnyCollection = false;
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperation.ModifyAccess },
+            new[] { CollectionOperations.ModifyAccess },
             new ClaimsPrincipal(),
             collections
         );
