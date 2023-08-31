@@ -597,7 +597,7 @@ public class OrganizationServiceTests
         currentContext.EditAssignedCollections(organization.Id).Returns(true);
         currentContext.ManageResetPassword(organization.Id).Returns(true);
         currentContext.GetOrganization(organization.Id)
-            .Returns(new CurrentContentOrganization 
+            .Returns(new CurrentContextOrganization() 
                 {
                     Permissions = new Permissions
                     {
