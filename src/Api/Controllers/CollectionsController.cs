@@ -157,7 +157,7 @@ public class CollectionsController : Controller
 
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
-        
+
         await _collectionService.SaveAsync(collection, groups, users, _currentContext.UserId);
         return new CollectionResponseModel(collection);
     }
@@ -200,7 +200,7 @@ public class CollectionsController : Controller
         {
             throw new NotFoundException();
         }
-        
+
         await _deleteCollectionCommand.DeleteAsync(collection);
     }
 
@@ -274,7 +274,7 @@ public class CollectionsController : Controller
 
         return false;
     }
-    
+
     private async Task<bool> CanViewCollectionAsync(Guid orgId, Guid collectionId)
     {
         if (collectionId == default)

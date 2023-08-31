@@ -2137,7 +2137,7 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.DeleteAnyCollection && org!= null && org.Permissions.DeleteAnyCollection)
+        if (permissions.DeleteAnyCollection && org != null && org.Permissions.DeleteAnyCollection)
         {
             return false;
         }

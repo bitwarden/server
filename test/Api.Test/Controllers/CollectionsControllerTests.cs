@@ -34,7 +34,7 @@ public class CollectionsControllerTests
                 ExpectedCollection(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Create)))
             .Returns(AuthorizationResult.Success());
-        
+
         _ = await sutProvider.Sut.Post(orgId, collectionRequest);
 
         await sutProvider.GetDependency<ICollectionService>()

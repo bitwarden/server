@@ -1,4 +1,4 @@
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -20,7 +20,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         _collectionRepository = collectionRepository;
         _organizationUserRepository = organizationUserRepository;
     }
-    
+
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         CollectionOperationRequirement requirement, ICollection<Collection> resources)
     {
@@ -29,17 +29,17 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             case not null when requirement == CollectionOperations.Create:
                 await CanCreateAsync(context, requirement, resources);
                 break;
-            
+
             case not null when requirement == CollectionOperations.Delete:
                 await CanDeleteAsync(context, requirement, resources);
                 break;
-            
+
             case not null when requirement == CollectionOperations.ModifyAccess:
                 await CanManageCollectionAccessAsync(context, requirement, resources);
                 break;
         }
     }
-    
+
     private async Task CanCreateAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement, ICollection<Collection> resources)
     {
         // Bulk creation of collections is not supported
@@ -47,7 +47,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         {
             throw new NotSupportedException();
         }
-        
+
         // Acting user is not a member of the target organization, fail
         var org = _currentContext.GetOrganization(resources.First().OrganizationId);
         if (org == null)
@@ -77,13 +77,13 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         }
 
         var targetOrganizationId = resources.First().OrganizationId;
-        
+
         // Ensure all target collections belong to the same organization
         if (resources.Any(tc => tc.OrganizationId != targetOrganizationId))
         {
             throw new BadRequestException("Requested collections must belong to the same organization.");
         }
-        
+
         // Acting user is not a member of the target organization, fail
         var org = _currentContext.GetOrganization(targetOrganizationId);
         if (org == null)
@@ -91,7 +91,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             context.Fail();
             return;
         }
-        
+
         // Owners, Admins, Providers, and users with DeleteAnyCollection or EditAnyCollection permission can always delete collections
         if (
             org.Permissions is { DeleteAnyCollection: true, EditAnyCollection: true } ||
@@ -101,7 +101,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             context.Succeed(requirement);
             return;
         }
-        
+
         // Other members types should have the Manage capability for all collections being deleted
         if (!org.LimitCollectionCdOwnerAdmin)
         {
@@ -121,12 +121,12 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         else
         {
             context.Fail();
-            return; 
+            return;
         }
 
         context.Succeed(requirement);
     }
-    
+
     /// <summary>
     /// Ensures the acting user is allowed to manage access permissions for the target collections.
     /// </summary>

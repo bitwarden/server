@@ -597,14 +597,14 @@ public class OrganizationServiceTests
         currentContext.EditAssignedCollections(organization.Id).Returns(true);
         currentContext.ManageResetPassword(organization.Id).Returns(true);
         currentContext.GetOrganization(organization.Id)
-            .Returns(new CurrentContextOrganization() 
+            .Returns(new CurrentContextOrganization()
+            {
+                Permissions = new Permissions
                 {
-                    Permissions = new Permissions
-                    {
-                        CreateNewCollections = true,
-                        DeleteAnyCollection = true
-                    }
-                });
+                    CreateNewCollections = true,
+                    DeleteAnyCollection = true
+                }
+            });
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
 
