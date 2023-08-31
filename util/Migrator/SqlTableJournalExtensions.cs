@@ -89,15 +89,4 @@ public class RerunableSqlTableJournal : SqlTableJournal
 
             EXECUTE sp_executesql @SQLString";
     }
-
-    protected override string CreateSchemaTableSql(string quotedPrimaryKeyName)
-    {
-        return
-$@"create table {FqSchemaTableName} (
-    [Id] int identity(1,1) not null constraint {quotedPrimaryKeyName} primary key,
-    [ScriptName] nvarchar(255) not null,
-    [Applied] datetime not null,
-    [Rerunable] bit not null DEFAULT 0
-)";
-    }
 }
