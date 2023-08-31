@@ -52,19 +52,42 @@ public class RerunableSqlTableJournal : SqlTableJournal
 
     protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerunable)
     {
-        return $"IF EXISTS (SELECT * FROM {FqSchemaTableName} WHERE Rerunable = 1 AND ScriptName ='{@scriptName}')" +
-        "BEGIN" +
-        $"UPDATE {FqSchemaTableName} SET Applied = {@applied}, Rerunable = {@rerunable} WHERE ScriptName = '{@scriptName}'" +
-        "END" +
-        "ELSE" +
-        "BEGIN" +
-        $"insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerunable})" +
-        "END";
+        return $"IF EXISTS (SELECT * FROM {FqSchemaTableName} WHERE Rerunable = 1 AND ScriptName ='{@scriptName}') " +
+        "BEGIN " +
+        $"UPDATE {FqSchemaTableName} SET Applied = {@applied}, Rerunable = {@rerunable} WHERE ScriptName = '{@scriptName}' " +
+        "END " +
+        "ELSE " +
+        "BEGIN " +
+        $"insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerunable}) " +
+        "END ";
     }
 
     protected override string GetJournalEntriesSql()
     {
-        return $"select [ScriptName] from {FqSchemaTableName} where [Rerunable] = 0 order by [ScriptName]";
+        return @$"DECLARE @columnVariable AS NVARCHAR(max)
+            DECLARE @SQLString AS NVARCHAR(max)
+
+
+            SELECT @columnVariable =
+            CASE WHEN EXISTS
+            (
+            SELECT 1 FROM sys.columns WHERE Name = N'Rerunable' AND Object_ID = Object_ID(N'dbo.Migration')
+            )
+            THEN
+            (
+                'where [Rerunable] = 0'
+            )
+            ELSE
+            ('')
+            END
+
+            PRINT @columnVariable
+
+            SET @SQLString = N'select [ScriptName] from dbo.Migration ' + @columnVariable + ' order by [ScriptName]'
+
+            PRINT @SQLString
+
+            EXECUTE sp_executesql @SQLString";
     }
 
     protected override string CreateSchemaTableSql(string quotedPrimaryKeyName)
