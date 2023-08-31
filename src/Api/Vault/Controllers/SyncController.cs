@@ -1,4 +1,6 @@
 ﻿using Bit.Api.Vault.Models.Response;
+using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -8,6 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
+using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +31,8 @@ public class SyncController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
+    private readonly ICurrentContext _currentContext;
+    private readonly Version _fido2KeyCipherMinimumVersion = new Version(Constants.Fido2KeyCipherMinimumVersion);
 
     public SyncController(
         IUserService userService,
@@ -39,7 +44,8 @@ public class SyncController : Controller
         IProviderUserRepository providerUserRepository,
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        ICurrentContext currentContext)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -51,6 +57,7 @@ public class SyncController : Controller
         _policyRepository = policyRepository;
         _sendRepository = sendRepository;
         _globalSettings = globalSettings;
+        _currentContext = currentContext;
     }
 
     [HttpGet("")]
@@ -71,7 +78,8 @@ public class SyncController : Controller
                 ProviderUserStatusType.Confirmed);
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
+        var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
+        var ciphers = FilterFidoKeys(allCiphers);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
@@ -91,5 +99,14 @@ public class SyncController : Controller
             providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
             collectionCiphersGroupDict, excludeDomains, policies, sends);
         return response;
+    }
+
+    private ICollection<CipherDetails> FilterFidoKeys(ICollection<CipherDetails> ciphers)
+    {
+        if (_currentContext.ClientVersion >= _fido2KeyCipherMinimumVersion)
+        {
+            return ciphers;
+        }
+        return ciphers.Where(c => c.Type != Core.Vault.Enums.CipherType.Fido2Key).ToList();
     }
 }
