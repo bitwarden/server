@@ -5,6 +5,7 @@ using Bit.Admin.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
@@ -206,6 +207,12 @@ public class OrganizationsController : Controller
             )
         {
             throw new BadRequestException("Plan does not support Secrets Manager");
+        }
+
+        if (organization.UseSecretsManager && model.Provider is { Type: ProviderType.Msp })
+        {
+            throw new BadRequestException(
+                "Organizations with a Managed Service Provider do not support Secrets Manager.");
         }
 
         await _organizationRepository.ReplaceAsync(organization);
