@@ -1,9 +1,12 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
@@ -124,6 +127,25 @@ public class AddSecretsManagerSubscriptionCommandTests
             () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
 
         Assert.Contains("Organization already uses Secrets Manager", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_ThrowsException_WhenOrganizationIsManagedByMSP(
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization,
+        Provider provider)
+    {
+        organization.UseSecretsManager = false;
+        organization.SecretsManagerBeta = false;
+        provider.Type = ProviderType.Msp;
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
+
+        Assert.Contains("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
