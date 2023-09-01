@@ -1,5 +1,6 @@
 ﻿using Bit.Migrator;
 using Microsoft.Extensions.Logging;
+using CommandDotNet;
 
 internal class Program
 {
@@ -7,55 +8,19 @@ internal class Program
 
     private static int Main(string[] args)
     {
-        if (args.Length == 0)
-        {
-            Console.WriteLine("Please enter a database connection string argument.");
-            WriteUsageToConsole();
-            return 1;
-        }
-
-        if (args.Length == 1 && (args[0] == "--verbose" || args[0] == "-v"))
-        {
-            Console.WriteLine($"Please enter a database connection string argument before {args[0]} option.");
-            WriteUsageToConsole();
-            return 1;
-        }
-
-        var databaseConnectionString = args[0];
-
-        ParseParameters(args);
-
-        var verbose = false;
-
-        if (Parameters.ContainsKey("--verbose") || Parameters.ContainsKey("-v"))
-        {
-            verbose = true;
-        }
-
-        var rerunable = false;
-
-        if (Parameters.ContainsKey("--rerunable") || Parameters.ContainsKey("-r"))
-        {
-            rerunable = true;
-        }
-
-
-        var folderName = "";
-
-        if (Parameters.ContainsKey("--folder") || Parameters.ContainsKey("-f"))
-        {
-            folderName = Parameters["--folder"] ?? Parameters["-f"];
-        }
-
-        var success = MigrateDatabase(databaseConnectionString, verbose, rerunable, folderName);
-
-        if (!success)
-        {
-            return -1;
-        }
-
-        return 0;
+        return new AppRunner<Program>().Run(args);
     }
+
+    [DefaultCommand]
+    public void Execute(
+        [Operand(Description = "Database connection string")]
+        string databaseConnectionString,
+        [Option('v', "verbose", Description = "Enable verbose output of migrator logs")]
+        bool verbose = false,
+        [Option('r', "rerunable", Description = "Mark scripts as rerunable")]
+        bool rerunable = false,
+        [Option('f', "folder", Description = "Folder name of database scripts")]
+        string folderName = "DbScripts") => MigrateDatabase(databaseConnectionString, verbose, rerunable, folderName);
 
     private static void WriteUsageToConsole()
     {
@@ -67,11 +32,13 @@ internal class Program
 
     private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, bool rerunable = false, string folderName = "")
     {
+        Console.WriteLine($"rerunable: {rerunable}");
+        Console.WriteLine($"folderName: {folderName}");
         var logger = CreateLogger(verbose);
 
         var migrator = new DbMigrator(databaseConnectionString, logger);
         bool success = false;
-        if (string.IsNullOrWhiteSpace(folderName))
+        if (!string.IsNullOrWhiteSpace(folderName))
         {
             success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, rerunable, folderName);
         }
@@ -114,8 +81,14 @@ internal class Program
             {
                 continue;
             }
-
-            Parameters.Add(args[i].Substring(1), args[i + 1]);
+            if (i + 1 <= args.Length && !args[i + 1].StartsWith("-"))
+            {
+                Parameters.Add(args[i].Substring(1), args[i + 1]);
+            }
+            else
+            {
+                Parameters.Add(args[i].Substring(1), null);
+            }
         }
     }
 }

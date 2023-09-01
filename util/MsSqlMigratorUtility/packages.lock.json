@@ -2,6 +2,15 @@
   "version": 1,
   "dependencies": {
     "net6.0": {
+      "CommandDotNet": {
+        "type": "Direct",
+        "requested": "[7.0.2, )",
+        "resolved": "7.0.2",
+        "contentHash": "sFfqn4T6Ux4AbGnhS+BZvf9iVeP6b9p9bwaMT8nsefVcYH2tC9MHj3AoY+GG0nnBPmFawRqdgud08cBjBdPByQ==",
+        "dependencies": {
+          "Microsoft.CSharp": "4.7.0"
+        }
+      },
       "Microsoft.Extensions.Logging": {
         "type": "Direct",
         "requested": "[6.0.0, )",
