@@ -165,13 +165,13 @@ public class CollectionsControllerTests
 
         sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(collections);
-        
+
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 collections,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Delete)))
             .Returns(AuthorizationResult.Success());
-        
+
         // Act
         await sutProvider.Sut.DeleteMany(model);
 
@@ -227,7 +227,7 @@ public class CollectionsControllerTests
                     OrganizationId = orgId,
                 },
             };
-        
+
         sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(collections);
 
@@ -236,7 +236,7 @@ public class CollectionsControllerTests
                 collections,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Delete)))
             .Returns(AuthorizationResult.Success());
-        
+
         // Act
         await sutProvider.Sut.DeleteMany(model);
 
