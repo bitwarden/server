@@ -432,6 +432,23 @@ public class ProviderServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task AddOrganization_OrganizationHasSecretsManager_Throws(Provider provider, Organization organization, string key,
+        SutProvider<ProviderService> sutProvider)
+    {
+        organization.PlanType = PlanType.EnterpriseAnnually;
+        organization.UseSecretsManager = true;
+
+        sutProvider.GetDependency<IProviderRepository>().GetByIdAsync(provider.Id).Returns(provider);
+        var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
+        providerOrganizationRepository.GetByOrganizationId(organization.Id).ReturnsNull();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key));
+        Assert.Equal("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task AddOrganization_Success(Provider provider, Organization organization, string key,
         SutProvider<ProviderService> sutProvider)
     {

@@ -354,6 +354,12 @@ public class ProviderService : IProviderService
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         ThrowOnInvalidPlanType(organization.PlanType);
 
+        if (organization.UseSecretsManager)
+        {
+            throw new BadRequestException(
+                "Organizations with a Managed Service Provider do not support Secrets Manager.");
+        }
+
         var providerOrganization = new ProviderOrganization
         {
             ProviderId = providerId,
