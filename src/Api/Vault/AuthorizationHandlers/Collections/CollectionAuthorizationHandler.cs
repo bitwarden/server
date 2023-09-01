@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.AuthorizationHandlers;
+using Bit.Core.Utilities;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Authorization;
 
