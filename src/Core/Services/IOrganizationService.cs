@@ -54,7 +54,6 @@ public interface IOrganizationService
     Task DeleteUserAsync(Guid organizationId, Guid userId);
     Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
-    Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
     Task ImportAsync(Guid organizationId, Guid? importingUserId, IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
@@ -82,4 +81,6 @@ public interface IOrganizationService
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
+    Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
+        OrganizationUserType? oldType, Permissions permissions);
 }
