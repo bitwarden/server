@@ -17,7 +17,7 @@ public class CipherFido2KeyModel
         RpId = data.RpId;
         RpName = data.RpName;
         UserHandle = data.UserHandle;
-        UserName = data.UserName;
+        UserDisplayName = data.UserDisplayName;
         Counter = data.Counter;
     }
 
@@ -31,7 +31,7 @@ public class CipherFido2KeyModel
         RpId = data.RpId;
         RpName = data.RpName;
         UserHandle = data.UserHandle;
-        UserName = data.UserName;
+        UserDisplayName = data.UserDisplayName;
         Counter = data.Counter;
     }
 
@@ -61,7 +61,7 @@ public class CipherFido2KeyModel
     public string UserHandle { get; set; }
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string UserName { get; set; }
+    public string UserDisplayName { get; set; }
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Counter { get; set; }
@@ -78,7 +78,7 @@ public class CipherFido2KeyModel
             RpId = RpId,
             RpName = RpName,
             UserHandle = UserHandle,
-            UserName = UserName,
+            UserDisplayName = UserDisplayName,
             Counter = Counter,
         };
     }
