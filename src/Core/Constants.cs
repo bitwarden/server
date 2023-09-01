@@ -45,4 +45,13 @@ public static class FeatureFlagKeys
             .Select(x => (string)x.GetRawConstantValue())
             .ToList();
     }
+
+    public static Dictionary<string, string> GetLocalOverrideFlagValues()
+    {
+        // place overriding values when needed locally (offline), or return null
+        return new Dictionary<string, string>()
+        {
+            { TrustedDeviceEncryption, "true" }
+        };
+    }
 }
