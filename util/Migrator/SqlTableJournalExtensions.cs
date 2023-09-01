@@ -26,6 +26,15 @@ public class RerunableSqlTableJournal : SqlTableJournal
         Rerunable = rerunable;
     }
 
+    public override void StoreExecutedScript(SqlScript script, Func<IDbCommand> dbCommandFactory)
+    {
+        EnsureTableExistsAndIsLatestVersion(dbCommandFactory);
+        using (var command = GetInsertScriptCommand(dbCommandFactory, script))
+        {
+            command.ExecuteNonQuery();
+        }
+    }
+
     protected new IDbCommand GetInsertScriptCommand(Func<IDbCommand> dbCommandFactory, SqlScript script)
     {
         var command = dbCommandFactory();
@@ -34,6 +43,14 @@ public class RerunableSqlTableJournal : SqlTableJournal
         scriptNameParam.ParameterName = "scriptName";
         scriptNameParam.Value = script.Name;
         command.Parameters.Add(scriptNameParam);
+
+        var scriptFilename = script.Name.Replace("Bit.Migrator.", "");
+		scriptFilename = scriptFilename.Substring(scriptFilename.IndexOf('.')+1);
+
+        var scriptFileNameParam = command.CreateParameter();
+        scriptFileNameParam.ParameterName = "scriptFileName";
+        scriptFileNameParam.Value = $"%{scriptFilename}";
+        command.Parameters.Add(scriptFileNameParam);
 
         var appliedParam = command.CreateParameter();
         appliedParam.ParameterName = "applied";
@@ -45,47 +62,43 @@ public class RerunableSqlTableJournal : SqlTableJournal
         rerunableParam.Value = Rerunable;
         command.Parameters.Add(rerunableParam);
 
-        command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied", "@rerunable");
+        command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied", "@rerunable", "@scriptFileName");
         command.CommandType = CommandType.Text;
         return command;
     }
 
-    protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerunable)
+    protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerunable, string @scriptFileName)
     {
-        return $"IF EXISTS (SELECT * FROM {FqSchemaTableName} WHERE Rerunable = 1 AND ScriptName ='{@scriptName}') " +
-        "BEGIN " +
-        $"UPDATE {FqSchemaTableName} SET Applied = {@applied}, Rerunable = {@rerunable} WHERE ScriptName = '{@scriptName}' " +
-        "END " +
-        "ELSE " +
-        "BEGIN " +
-        $"insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerunable}) " +
-        "END ";
+        return @$"IF EXISTS (SELECT * FROM {FqSchemaTableName} WHERE Rerunable = 1 AND ScriptName like {@scriptFileName})
+            BEGIN
+                UPDATE {FqSchemaTableName} SET ScriptName = {@scriptName}, Applied = {@applied}, Rerunable = {@rerunable} WHERE ScriptName like {@scriptFileName}
+            END
+        ELSE
+            BEGIN
+                insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerunable})
+            END ";
     }
 
     protected override string GetJournalEntriesSql()
     {
         return @$"DECLARE @columnVariable AS NVARCHAR(max)
-            DECLARE @SQLString AS NVARCHAR(max)
-
 
             SELECT @columnVariable =
             CASE WHEN EXISTS
             (
-            SELECT 1 FROM sys.columns WHERE Name = N'Rerunable' AND Object_ID = Object_ID(N'dbo.Migration')
+                SELECT 1 FROM sys.columns WHERE Name = N'Rerunable' AND Object_ID = Object_ID(N'dbo.Migration')
             )
             THEN
             (
                 'where [Rerunable] = 0'
             )
             ELSE
-            ('')
+            (
+                ''
+            )
             END
 
-            PRINT @columnVariable
-
-            SET @SQLString = N'select [ScriptName] from dbo.Migration ' + @columnVariable + ' order by [ScriptName]'
-
-            PRINT @SQLString
+            DECLARE @SQLString AS NVARCHAR(max) = N'select [ScriptName] from dbo.Migration ' + @columnVariable + ' order by [ScriptName]'
 
             EXECUTE sp_executesql @SQLString";
     }
