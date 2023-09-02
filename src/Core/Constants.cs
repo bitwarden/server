@@ -20,7 +20,7 @@ public static class Constants
     /// </summary>
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 
-    public const string CipherKeyEncryptionMinimumVersion = "2023.8.0";
+    public const string CipherKeyEncryptionMinimumVersion = "2023.9.0";
 }
 
 public static class TokenPurposes
