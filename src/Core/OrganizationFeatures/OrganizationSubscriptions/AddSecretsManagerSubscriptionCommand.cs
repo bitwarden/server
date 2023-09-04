@@ -73,39 +73,6 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
             throw new BadRequestException("Organization already uses Secrets Manager.");
         }
 
-        if (organization.SecretsManagerBeta)
-        {
-            throw new BadRequestException("Organization is enrolled in Secrets Manager Beta. " +
-                                          "Please contact Customer Success to add Secrets Manager to your subscription.");
-        }
-
-        if (organization.UseSecretsManager)
-        {
-            throw new BadRequestException("Organization already uses Secrets Manager.");
-        }
-
-        if (organization.SecretsManagerBeta)
-        {
-            throw new BadRequestException("Organization is enrolled in Secrets Manager Beta. " +
-                                          "Please contact Customer Success to add Secrets Manager to your subscription.");
-        }
-
-        if (organization.UseSecretsManager)
-        {
-            throw new BadRequestException("Organization already uses Secrets Manager.");
-        }
-
-        if (organization.SecretsManagerBeta)
-        {
-            throw new BadRequestException("Organization is enrolled in Secrets Manager Beta. " +
-                                          "Please contact Customer Success to add Secrets Manager to your subscription.");
-        }
-
-        if (organization.UseSecretsManager)
-        {
-            throw new BadRequestException("Organization already uses Secrets Manager.");
-        }
-
         var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType && p.SupportsSecretsManager);
         if (string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && plan.Product != ProductType.Free)
         {

@@ -52,7 +52,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType && x.SupportsSecretsManager);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
@@ -96,7 +96,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType);
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType && x.SupportsSecretsManager);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
