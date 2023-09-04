@@ -56,7 +56,6 @@ public class SecretsManagerSubscriptionUpdate
         MaxAutoscaleSmServiceAccounts != Organization.MaxAutoscaleSmServiceAccounts;
     public Plan Plan => Utilities.StaticStore.GetPlan(Organization.PlanType);
     public bool SmSeatAutoscaleLimitReached => SmSeats.HasValue && MaxAutoscaleSmSeats.HasValue && SmSeats == MaxAutoscaleSmSeats;
-    public bool SmSeatAutoscaleLimitReached => SmSeats.HasValue && MaxAutoscaleSmSeats.HasValue && SmSeats == MaxAutoscaleSmSeats;
 
     public bool SmServiceAccountAutoscaleLimitReached => SmServiceAccounts.HasValue &&
                                                          MaxAutoscaleSmServiceAccounts.HasValue &&

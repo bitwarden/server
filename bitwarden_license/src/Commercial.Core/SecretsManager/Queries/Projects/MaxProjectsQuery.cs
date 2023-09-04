@@ -37,7 +37,7 @@ public class MaxProjectsQuery : IMaxProjectsQuery
         if (plan.Type == PlanType.Free)
         {
             var projects = await _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId);
-            return projects >= plan.SecretsManager.MaxProjects ? (plan.SecretsManager.MaxProjects, true) : (plan.SecretsManager.MaxProjects, false);
+            return projects >= plan.SecretsManager.MaxProjects ? ((short?)plan.SecretsManager.MaxProjects, true) : ((short?)plan.SecretsManager.MaxProjects, false);
         }
 
         return (null, null);

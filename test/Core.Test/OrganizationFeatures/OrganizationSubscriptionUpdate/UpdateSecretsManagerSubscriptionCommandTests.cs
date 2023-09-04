@@ -52,14 +52,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization,
-            seatAdjustment: seatAdjustment, maxAutoscaleSeats: maxAutoscaleSeats,
-            serviceAccountAdjustment: serviceAccountAdjustment, maxAutoscaleServiceAccounts: maxAutoScaleServiceAccounts);
-
-        await sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate);
-
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
@@ -103,14 +96,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
-        var organizationUpdate = new SecretsManagerSubscriptionUpdate(
-            organization,
-            seatAdjustment: seatAdjustment, maxAutoscaleSeats: maxAutoscaleSeats,
-            serviceAccountAdjustment: serviceAccountAdjustment, maxAutoscaleServiceAccounts: maxAutoScaleServiceAccounts);
-
-        await sutProvider.Sut.UpdateSubscriptionAsync(organizationUpdate);
-
+        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
@@ -250,8 +236,6 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         var smServiceAccountsAdjustment = 10;
         var expectedSmServiceAccounts = organizationServiceAccounts + smServiceAccountsAdjustment;
         var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.SecretsManager.BaseServiceAccount.GetValueOrDefault();
-
-        var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(10);
 
         var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(10);
 
