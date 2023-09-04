@@ -182,5 +182,4 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         return orgUser;
     }
-
 }
