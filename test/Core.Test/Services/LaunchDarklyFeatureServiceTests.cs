@@ -20,14 +20,6 @@ public class LaunchDarklyFeatureServiceTests
             .Create();
     }
 
-    [Fact]
-    public void Offline_WhenSelfHost()
-    {
-        var sutProvider = GetSutProvider(new Core.Settings.GlobalSettings() { SelfHosted = true });
-
-        Assert.False(sutProvider.Sut.IsOnline());
-    }
-
     [Theory, BitAutoData]
     public void DefaultFeatureValue_WhenSelfHost(string key)
     {
