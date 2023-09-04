@@ -45,7 +45,7 @@ public class RerunableSqlTableJournal : SqlTableJournal
         command.Parameters.Add(scriptNameParam);
 
         var scriptFilename = script.Name.Replace("Bit.Migrator.", "");
-		scriptFilename = scriptFilename.Substring(scriptFilename.IndexOf('.')+1);
+        scriptFilename = scriptFilename.Substring(scriptFilename.IndexOf('.') + 1);
 
         var scriptFileNameParam = command.CreateParameter();
         scriptFileNameParam.ParameterName = "scriptFileName";

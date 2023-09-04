@@ -1,6 +1,6 @@
 ﻿using Bit.Migrator;
-using Microsoft.Extensions.Logging;
 using CommandDotNet;
+using Microsoft.Extensions.Logging;
 
 internal class Program
 {
