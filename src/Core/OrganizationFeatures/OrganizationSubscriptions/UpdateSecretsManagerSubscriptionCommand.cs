@@ -283,7 +283,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         // Check minimum service accounts included with plan
         if (plan.SecretsManager.BaseServiceAccount.HasValue && plan.SecretsManager.BaseServiceAccount.Value > update.SmServiceAccounts.Value)
         {
-            throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseServiceAccount} service accounts.");
+            throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} service accounts.");
         }
 
         // Check minimum service accounts required by business logic
@@ -319,10 +319,10 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
 
-        if (plan.SecretsManager.MaxSeats.HasValue && update.MaxAutoscaleSmSeats.Value > plan.SecretsManager.MaxSeats)
+        if (plan.MaxUsers.HasValue && update.MaxAutoscaleSmSeats.Value > plan.MaxUsers)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a Secrets Manager seat limit of {plan.SecretsManager.MaxSeats}, ",
+                $"Your plan has a Secrets Manager seat limit of {plan.MaxUsers}, ",
                 $"but you have specified a max autoscale count of {update.MaxAutoscaleSmSeats}.",
                 "Reduce your max autoscale count."));
         }
@@ -354,10 +354,10 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Your plan does not allow service accounts autoscaling.");
         }
 
-        if (plan.SecretsManager.MaxServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value > plan.SecretsManager.MaxServiceAccounts)
+        if (plan.MaxServiceAccounts.HasValue && maxAutoscaleServiceAccounts.Value > plan.MaxServiceAccounts)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a service account limit of {plan.SecretsManager.MaxServiceAccounts}, ",
+                $"Your plan has a service account limit of {plan.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {update.MaxAutoscaleSmServiceAccounts}.",
                 "Reduce your max autoscale count."));
         }
