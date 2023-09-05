@@ -7,12 +7,12 @@ IF COL_LENGTH('[dbo].[ApiKey]', 'ClientSecretHash') IS NOT NULL AND COL_LENGTH('
 BEGIN
 
   -- Add index
-  -- IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_ApiKey_ClientSecretHash')
-  -- BEGIN
-  --  CREATE NONCLUSTERED INDEX [IX_ApiKey_ClientSecretHash]
-  --  ON [dbo].[ApiKey]([ClientSecretHash] ASC)
-  --  WITH (ONLINE = ON)
-  -- END
+  IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_ApiKey_ClientSecretHash')
+  BEGIN
+   CREATE NONCLUSTERED INDEX [IX_ApiKey_ClientSecretHash] 
+   ON [dbo].[ApiKey]([ClientSecretHash] ASC)
+   WITH (ONLINE = ON)
+  END
 
   -- Data Migration
   DECLARE @BatchSize INT = 10000
@@ -30,7 +30,7 @@ BEGIN
     WHERE [ClientSecretHash] IS NULL
 
     SET @BatchSize = @@ROWCOUNT
-
+    
     COMMIT TRANSACTION Migrate_ClientSecretHash
   END
 
