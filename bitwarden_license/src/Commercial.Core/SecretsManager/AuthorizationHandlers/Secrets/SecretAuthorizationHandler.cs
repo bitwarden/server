@@ -38,6 +38,9 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             case not null when requirement == SecretOperations.Create:
                 await CanCreateSecretAsync(context, requirement, resource);
                 break;
+            case not null when requirement == SecretOperations.Read:
+                await CanReadSecretAsync(context, requirement, resource);
+                break;
             case not null when requirement == SecretOperations.Update:
                 await CanUpdateSecretAsync(context, requirement, resource);
                 break;
@@ -85,6 +88,18 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         }
     }
 
+    private async Task CanReadSecretAsync(AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement, Secret resource)
+    {
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+
+        var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
+
+        if (access.Read)
+        {
+            context.Succeed(requirement);
+        }
+    }
 
     private async Task CanUpdateSecretAsync(AuthorizationHandlerContext context,
         SecretOperationRequirement requirement, Secret resource)

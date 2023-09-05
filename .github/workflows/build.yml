@@ -33,13 +33,11 @@ jobs:
     name: Lint
     runs-on: ubuntu-22.04
     steps:
-      - name: Set up dotnet
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: "6.0.x"
-
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
       - name: Verify Format
         run: dotnet format --verify-no-changes
@@ -50,10 +48,11 @@ jobs:
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: "6.0.x"
 
       - name: Print environment
         run: |
@@ -61,9 +60,6 @@ jobs:
           nuget help | grep Version
           echo "GitHub ref: $GITHUB_REF"
           echo "GitHub event: $GITHUB_EVENT"
-
-      - name: Checkout repo
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Restore
         run: dotnet restore --locked-mode
@@ -138,13 +134,11 @@ jobs:
             base_path: ./bitwarden_license/src
             node: true
     steps:
-      - name: Set up dotnet
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: "6.0.x"
-
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
       - name: Set up Node
         uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
@@ -342,6 +336,12 @@ jobs:
     runs-on: ubuntu-22.04
     needs: build-docker
     steps:
+      - name: Checkout repo
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
+
       - name: Login to Azure - PROD Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
         with:
@@ -349,14 +349,6 @@ jobs:
 
       - name: Login to PROD ACR
         run: az acr login -n $_AZ_REGISTRY --only-show-errors
-
-      - name: Set up dotnet
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: "6.0.x"
-
-      - name: Checkout repo
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
       - name: Restore
         run: dotnet tool restore
@@ -483,13 +475,11 @@ jobs:
           - linux-x64
           - win-x64
     steps:
-      - name: Set up dotnet
-        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: "6.0.x"
-
       - name: Checkout repo
         uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+
+      - name: Set up dotnet
+        uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
 
       - name: Print environment
         run: |
@@ -524,13 +514,39 @@ jobs:
           path: util/MsSqlMigratorUtility/obj/build-output/publish/MsSqlMigratorUtility
           if-no-files-found: error
 
+
   self-host-build:
-    name: Self-host build
-    needs: build-docker
-    uses: bitwarden/self-host/.github/workflows/build-unified.yml@master
-    with:
-      server_branch: ${{ github.ref_name }}
-    secrets: inherit
+    name: Trigger self-host build
+    runs-on: ubuntu-22.04
+    needs:
+      - build-docker
+    steps:
+      - name: Login to Azure - CI Subscription
+        uses: Azure/login@1f63701bf3e6892515f1b7ce2d2bf1708b46beaf # v1.4.3
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+
+      - name: Retrieve github PAT secrets
+        id: retrieve-secret-pat
+        uses: bitwarden/gh-actions/get-keyvault-secrets@f096207b7a2f31723165aee6ad03e91716686e78
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+
+      - name: Trigger self-host build
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        with:
+          github-token: ${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'bitwarden',
+              repo: 'self-host',
+              workflow_id: 'build-unified.yml',
+              ref: 'master',
+              inputs: {
+                server_branch: '${{ github.ref }}'
+              }
+            })
 
   check-failures:
     name: Check for failures

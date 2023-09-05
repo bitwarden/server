@@ -3,6 +3,7 @@ using Bit.Api.Models.Public.Request;
 using Bit.Api.Models.Public.Response;
 using Bit.Core.Context;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -19,19 +20,22 @@ public class MembersController : Controller
     private readonly IOrganizationService _organizationService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
+    private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
 
     public MembersController(
         IOrganizationUserRepository organizationUserRepository,
         IGroupRepository groupRepository,
         IOrganizationService organizationService,
         IUserService userService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
         _organizationService = organizationService;
         _userService = userService;
         _currentContext = currentContext;
+        _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
     }
 
     /// <summary>
@@ -183,7 +187,7 @@ public class MembersController : Controller
         {
             return new NotFoundResult();
         }
-        await _organizationService.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
+        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(existingUser, model.GroupIds, null);
         return new OkResult();
     }
 
