@@ -1,9 +1,4 @@
-﻿
-
-using Bit.Core.Entities;
-using Bit.Core.Exceptions;
-
-namespace Bit.Api.Models.Request;
+﻿namespace Bit.Api.Models.Request;
 
 public class BulkCollectionAccessRequestModel
 {
