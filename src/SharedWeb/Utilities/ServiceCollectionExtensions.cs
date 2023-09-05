@@ -539,6 +539,7 @@ public static class ServiceCollectionExtensions
     {
         var options = new ForwardedHeadersOptions
         {
+            ForwardedForHeaderName = "X-Connecting-IP",
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
         };
 
