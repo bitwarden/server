@@ -292,19 +292,14 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
+        var savingUserId = _userService.GetProperUserId(User);
         var updateSecretsManagerAccess = !organizationUser.AccessSecretsManager && model.AccessSecretsManager;
         var updatedOrganizationUser = model.ToOrganizationUser(organizationUser);
-        var savingUserId = _userService.GetProperUserId(User);
+        var additionalSmSeatsRequired = updateSecretsManagerAccess
+            ? await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(updatedOrganizationUser.OrganizationId, 1)
+            : 0;
 
-        if (updateSecretsManagerAccess)
-        {
-            await HandleUpdateWithSecretsManagerAccessAsync(updatedOrganizationUser, savingUserId.Value, model);
-        }
-        else
-        {
-            await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId.Value,
-                model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
-        }
+        await HandleOrganizationUserUpdateAsync(updatedOrganizationUser, savingUserId.Value, model, additionalSmSeatsRequired);
     }
 
     [HttpPut("{id}/groups")]
@@ -512,14 +507,14 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
 
-    private async Task HandleUpdateWithSecretsManagerAccessAsync(OrganizationUser updatedOrganizationUser, Guid savingUserId, OrganizationUserUpdateRequestModel model)
+    private async Task HandleOrganizationUserUpdateAsync(OrganizationUser updatedOrganizationUser, Guid savingUserId,
+        OrganizationUserUpdateRequestModel model, int additionalSmSeatsRequired)
     {
-        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(updatedOrganizationUser.OrganizationId, 1);
         if (additionalSmSeatsRequired > 0)
         {
             var organization = await _organizationRepository.GetByIdAsync(updatedOrganizationUser.OrganizationId);
-            var update = new SecretsManagerSubscriptionUpdate(organization, true);
-            update.AdjustSeats(additionalSmSeatsRequired);
+            var update = new SecretsManagerSubscriptionUpdate(organization, true)
+                .AdjustSeats(additionalSmSeatsRequired);
             await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(update);
             await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
                 model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
