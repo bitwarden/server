@@ -119,4 +119,10 @@ public class NoopEventService : IEventService
     {
         return Task.FromResult(0);
     }
+
+    public Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type,
+        DateTime? date = null)
+    {
+        return Task.FromResult(0);
+    }
 }
