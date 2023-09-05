@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.Context;
+using Bit.Core.OrganizationFeatures;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
@@ -68,6 +69,7 @@ public class Startup
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
+        services.AddOrganizationUserServices();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 

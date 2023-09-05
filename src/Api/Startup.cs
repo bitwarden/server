@@ -15,6 +15,7 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
+using Bit.Core.OrganizationFeatures;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 #if !OSS
@@ -135,6 +136,7 @@ public class Startup
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
+        services.AddOrganizationUserServices();
         services.AddCoreLocalizationServices();
 
         //health check
