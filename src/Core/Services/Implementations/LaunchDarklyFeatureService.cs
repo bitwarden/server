@@ -29,24 +29,12 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
             // support configuration directly from settings
             else if (globalSettings.LaunchDarkly?.FlagValues?.Any() is true)
             {
-                var source = TestData.DataSource();
-                foreach (var kvp in globalSettings.LaunchDarkly.FlagValues)
-                {
-                    if (bool.TryParse(kvp.Value, out bool boolValue))
-                    {
-                        source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(boolValue)));
-                    }
-                    else if (int.TryParse(kvp.Value, out int intValue))
-                    {
-                        source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(intValue)));
-                    }
-                    else
-                    {
-                        source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(kvp.Value)));
-                    }
-                }
-
-                ldConfig.DataSource(source);
+                ldConfig.DataSource(BuildDataSource(globalSettings.LaunchDarkly.FlagValues));
+            }
+            // support local overrides
+            else if (FeatureFlagKeys.GetLocalOverrideFlagValues()?.Any() is true)
+            {
+                ldConfig.DataSource(BuildDataSource(FeatureFlagKeys.GetLocalOverrideFlagValues()));
             }
             else
             {
@@ -186,5 +174,27 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         }
 
         return builder.Build();
+    }
+
+    private TestData BuildDataSource(Dictionary<string, string> values)
+    {
+        var source = TestData.DataSource();
+        foreach (var kvp in values)
+        {
+            if (bool.TryParse(kvp.Value, out bool boolValue))
+            {
+                source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(boolValue)));
+            }
+            else if (int.TryParse(kvp.Value, out int intValue))
+            {
+                source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(intValue)));
+            }
+            else
+            {
+                source.Update(source.Flag(kvp.Key).ValueForAll(LaunchDarkly.Sdk.LdValue.Of(kvp.Value)));
+            }
+        }
+
+        return source;
     }
 }
