@@ -170,7 +170,12 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
             .ValidateUpdate(Arg.Is<SecretsManagerSubscriptionUpdate>(s => s.Organization == org && s.SmSeats == (org.SmSeats + 1)));
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
-            Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.OrganizationId == org.Id),
+            Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id &&
+                                           ou.OrganizationId == org.Id &&
+                                           ou.AccessSecretsManager == model.AccessSecretsManager &&
+                                           ou.AccessAll == model.AccessAll &&
+                                           ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
+                                           ou.CreationDate == orgUser.CreationDate),
             savingUserId,
             Arg.Any<IEnumerable<CollectionAccessSelection>>(),
             model.Groups);
@@ -197,11 +202,44 @@ public class OrganizationUsersControllerTests
         await sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>().Received(1).CountNewSmSeatsRequiredAsync(orgUser.OrganizationId, 1);
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs().ValidateUpdate(default);
         await sutProvider.GetDependency<IUpdateOrganizationUserCommand>().Received(1).UpdateUserAsync(
-            Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.OrganizationId == org.Id),
+            Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id &&
+                                           ou.OrganizationId == org.Id &&
+                                           ou.AccessSecretsManager == model.AccessSecretsManager &&
+                                           ou.AccessAll == model.AccessAll &&
+                                           ou.Permissions == CoreHelpers.ClassToJsonData(model.Permissions) &&
+                                           ou.CreationDate == orgUser.CreationDate),
             savingUserId,
             Arg.Any<IEnumerable<CollectionAccessSelection>>(),
             model.Groups);
         await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().DidNotReceiveWithAnyArgs()
             .UpdateSubscriptionAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Put_WithAccessSecretsManagerTrue_RequireNewSeat_ThrowsUpdateSubscriptionException_RevertsChanges(
+        Organization org, OrganizationUser orgUser, OrganizationUserUpdateRequestModel model, Guid? savingUserId, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        orgUser.OrganizationId = org.Id;
+        orgUser.AccessSecretsManager = false;
+        model.AccessSecretsManager = true;
+
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(org.Id).Returns(true);
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUser.Id).Returns(orgUser);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(savingUserId);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(org.Id).Returns(org);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>().CountNewSmSeatsRequiredAsync(org.Id, 1).Returns(1);
+        sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().WhenForAnyArgs(x =>
+            x.UpdateSubscriptionAsync(default)).Throw(new BadRequestException("test"));
+
+        await sutProvider.Sut.Put(org.Id, orgUser.Id, model);
+
+        await sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>().Received(1).CountNewSmSeatsRequiredAsync(orgUser.OrganizationId, 1);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+            .ValidateUpdate(Arg.Is<SecretsManagerSubscriptionUpdate>(s => s.Organization == org && s.SmSeats == (org.SmSeats + 1)));
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>().Received(1)
+            .UpdateSubscriptionAsync(Arg.Is<SecretsManagerSubscriptionUpdate>(s => s.Organization == org && s.SmSeats == (org.SmSeats + 1)));
+        // Assert that the Organization was reverted to the original state.
+        await sutProvider.GetDependency<IOrganizationService>().Received(1).UpdateAsync(org);
     }
 }

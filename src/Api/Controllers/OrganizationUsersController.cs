@@ -515,12 +515,22 @@ public class OrganizationUsersController : Controller
             var organization = await _organizationRepository.GetByIdAsync(updatedOrganizationUser.OrganizationId);
             var update = new SecretsManagerSubscriptionUpdate(organization, true)
                 .AdjustSeats(additionalSmSeatsRequired);
+
             await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(update);
-            await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
-                model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
-            // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
-            // updating Stripe
-            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+
+            try
+            {
+                // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
+                // updating Stripe
+                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+                await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
+                    model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+            }
+            catch
+            {
+                // If we fail to update Stripe, we need to revert the update to Organization
+                await _organizationService.UpdateAsync(organization);
+            }
         }
         else
         {
