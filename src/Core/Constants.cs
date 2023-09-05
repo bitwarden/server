@@ -38,6 +38,7 @@ public static class FeatureFlagKeys
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
     public const string SecretsManagerBilling = "sm-ga-billing";
     public const string AutofillV2 = "autofill-v2";
+    public const string AutofillOverlay = "autofill-overlay";
 
     public static List<string> GetAllKeys()
     {
