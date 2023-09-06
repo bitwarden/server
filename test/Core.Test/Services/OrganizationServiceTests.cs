@@ -1871,7 +1871,7 @@ public class OrganizationServiceTests
 
         return token;
     }
-   
+
     [Theory]
     [OrganizationInviteCustomize(
          InviteeUserType = OrganizationUserType.Owner,
