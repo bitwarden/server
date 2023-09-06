@@ -19,6 +19,7 @@ BEGIN
         [UseKeyConnector],
         [UseScim],
         [UseResetPassword],
+        [UsePolicies],
         [Enabled]
     FROM
         [dbo].[Organization]

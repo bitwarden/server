@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
-    <Version>2023.8.1</Version>
+    <Version>2023.8.3</Version>
     <RootNamespace>Bit.$(MSBuildProjectName)</RootNamespace>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <ImplicitUsings>enable</ImplicitUsings>

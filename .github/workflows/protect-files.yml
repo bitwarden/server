@@ -49,7 +49,7 @@ jobs:
           done
 
       - name: Add label to pull request
-        if: contains(steps.check-changes.outputs.changes_detected, true)
+        if: contains(steps.check-changes.outputs.changes_detected, 'true')
         uses: andymckay/labeler@e6c4322d0397f3240f0e7e30a33b5c5df2d39e90 # 1.0.4
         with:
           add-labels: ${{ matrix.label }}

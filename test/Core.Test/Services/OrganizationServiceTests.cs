@@ -643,17 +643,21 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>());
     }
 
-    [Theory, BitAutoData]
+    [Theory, BitAutoData, OrganizationInviteCustomize]
     public async Task InviteUser_WithSecretsManager_Passes(Organization organization,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
-        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        SutProvider<OrganizationService> sutProvider)
+        OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
     {
+        organization.PlanType = PlanType.EnterpriseAnnually;
         InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
 
         // Set up some invites to grant access to SM
         invites.First().invite.AccessSecretsManager = true;
         var invitedSmUsers = invites.First().invite.Emails.Count();
+        foreach (var (invite, externalId) in invites.Skip(1))
+        {
+            invite.AccessSecretsManager = false;
+        }
 
         // Assume we need to add seats for all invited SM users
         sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
@@ -669,11 +673,10 @@ public class OrganizationServiceTests
                 !update.MaxAutoscaleSmSeatsChanged));
     }
 
-    [Theory, BitAutoData]
+    [Theory, BitAutoData, OrganizationInviteCustomize]
     public async Task InviteUser_WithSecretsManager_WhenErrorIsThrown_RevertsAutoscaling(Organization organization,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
-        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        SutProvider<OrganizationService> sutProvider)
+        OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
     {
         var initialSmSeats = organization.SmSeats;
         InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
@@ -681,6 +684,10 @@ public class OrganizationServiceTests
         // Set up some invites to grant access to SM
         invites.First().invite.AccessSecretsManager = true;
         var invitedSmUsers = invites.First().invite.Emails.Count();
+        foreach (var (invite, externalId) in invites.Skip(1))
+        {
+            invite.AccessSecretsManager = false;
+        }
 
         // Assume we need to add seats for all invited SM users
         sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
@@ -725,13 +732,9 @@ public class OrganizationServiceTests
     private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
     SutProvider<OrganizationService> sutProvider)
     {
-        savingUser.OrganizationId = organization.Id;
-        organization.UseCustomPermissions = true;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new List<OrganizationUser> { savingUser });
     }
 
     [Theory, BitAutoData]
@@ -1849,7 +1852,8 @@ public class OrganizationServiceTests
             Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
     }
 
-    private string SetupAcceptUserAsyncTest(SutProvider<OrganizationService> sutProvider, User user, OrganizationUser organizationUser)
+    private string SetupAcceptUserAsyncTest(SutProvider<OrganizationService> sutProvider, User user,
+        OrganizationUser organizationUser)
     {
         user.Email = organizationUser.Email;
         user.EmailVerified = false;
@@ -1866,5 +1870,75 @@ public class OrganizationServiceTests
             .Returns(organizationUser);
 
         return token;
+    }
+   
+    [Theory]
+    [OrganizationInviteCustomize(
+         InviteeUserType = OrganizationUserType.Owner,
+         InvitorUserType = OrganizationUserType.Admin
+     ), BitAutoData]
+    public async Task ValidateOrganizationUserUpdatePermissions_WithAdminAddingOwner_Throws(
+        Guid organizationId,
+        OrganizationUserInvite organizationUserInvite,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, organizationUserInvite.Permissions));
+
+        Assert.Contains("only an owner can configure another owner's account.", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(
+        InviteeUserType = OrganizationUserType.Admin,
+        InvitorUserType = OrganizationUserType.Owner
+    ), BitAutoData]
+    public async Task ValidateOrganizationUserUpdatePermissions_WithoutManageUsersPermission_Throws(
+        Guid organizationId,
+        OrganizationUserInvite organizationUserInvite,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, organizationUserInvite.Permissions));
+
+        Assert.Contains("your account does not have permission to manage users.", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(
+         InviteeUserType = OrganizationUserType.Admin,
+         InvitorUserType = OrganizationUserType.Custom
+     ), BitAutoData]
+    public async Task ValidateOrganizationUserUpdatePermissions_WithCustomAddingAdmin_Throws(
+        Guid organizationId,
+        OrganizationUserInvite organizationUserInvite,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationId).Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, organizationUserInvite.Permissions));
+
+        Assert.Contains("custom users can not manage admins or owners.", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(
+         InviteeUserType = OrganizationUserType.Custom,
+         InvitorUserType = OrganizationUserType.Custom
+     ), BitAutoData]
+    public async Task ValidateOrganizationUserUpdatePermissions_WithCustomAddingUser_WithoutPermissions_Throws(
+        Guid organizationId,
+        OrganizationUserInvite organizationUserInvite,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var invitePermissions = new Permissions { AccessReports = true };
+        sutProvider.GetDependency<ICurrentContext>().ManageUsers(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().AccessReports(organizationId).Returns(false);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ValidateOrganizationUserUpdatePermissions(organizationId, organizationUserInvite.Type.Value, null, invitePermissions));
+
+        Assert.Contains("custom users can only grant the same custom permissions that they have.", exception.Message.ToLowerInvariant());
     }
 }
