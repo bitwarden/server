@@ -71,10 +71,17 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             return;
         }
 
-        // List of collection Ids the acting user is allowed to manage
+        // Acting user does not have permission to edit assigned collections, fail
+        if (!org.Permissions.EditAssignedCollections)
+        {
+            context.Fail();
+            return;
+        }
+
+        // List of assigned collection Ids for the acting user
         var manageableCollectionIds =
             (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value))
-            .Where(c => c.Manage && c.OrganizationId == targetOrganizationId)
+            .Where(c => c.OrganizationId == targetOrganizationId)
             .Select(c => c.Id)
             .ToHashSet();
 

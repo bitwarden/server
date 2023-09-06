@@ -20,7 +20,7 @@ public class CollectionCustomization : ICustomization
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, orgId));
 
-        fixture.Customize<CurrentContentOrganization>(composer => composer
+        fixture.Customize<CurrentContextOrganization>(composer => composer
             .With(o => o.Id, orgId));
 
         fixture.Customize<OrganizationUser>(composer => composer

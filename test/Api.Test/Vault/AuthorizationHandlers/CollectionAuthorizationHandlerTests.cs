@@ -25,16 +25,19 @@ public class CollectionAuthorizationHandlerTests
     [BitAutoData(OrganizationUserType.Custom, true, false)]
     [BitAutoData(OrganizationUserType.Owner, true, true)]
     public async Task CanManageCollectionAccessAsync_Success(
-        OrganizationUserType userType, bool editAnyCollection, bool manageCollections,
+        OrganizationUserType userType, bool editAnyCollection, bool manageAssignedCollections,
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
-        ICollection<CollectionDetails> collectionDetails,
-        CurrentContentOrganization organization)
+        IList<CollectionDetails> collectionDetails,
+        CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
-        foreach (var collectionDetail in collectionDetails)
+
+        if (!manageAssignedCollections)
         {
-            collectionDetail.Manage = manageCollections;
+            // Simulate the user not being assigned to a collection
+            collectionDetails.RemoveAt(0);
+            organization.Permissions.EditAssignedCollections = false;
         }
 
         organization.Type = userType;
@@ -102,7 +105,7 @@ public class CollectionAuthorizationHandlerTests
     public async Task CanManageCollectionAccessAsync_MissingOrgMembership_Failure(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
-        CurrentContentOrganization organization)
+        CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
@@ -128,17 +131,14 @@ public class CollectionAuthorizationHandlerTests
     public async Task CanManageCollectionAccessAsync_MissingManageCollectionPermission_Failure(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
-        ICollection<CollectionDetails> collectionDetails,
-        CurrentContentOrganization organization)
+        IList<CollectionDetails> collectionDetails,
+        CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
-        foreach (var collectionDetail in collectionDetails)
-        {
-            collectionDetail.Manage = true;
-        }
-        // Simulate one collection missing the manage permission
-        collectionDetails.First().Manage = false;
+        // Simulate the user not being assigned to a collection
+        collectionDetails.RemoveAt(0);
+        organization.Permissions.EditAssignedCollections = true;
 
         // Ensure the user is not an owner/admin and does not have edit any collection permission
         organization.Type = OrganizationUserType.User;

@@ -13,8 +13,7 @@ BEGIN
 			cId.[Id] AS [CollectionId],
 			gu.[Id] AS [GroupId],
 			gu.[ReadOnly],
-			gu.[HidePasswords],
-			gu.[Manage]
+			gu.[HidePasswords]
 		FROM
 			@Groups AS gu
 		CROSS JOIN
@@ -32,21 +31,19 @@ BEGIN
 		[Target].[CollectionId] = [Source].[CollectionId]
 		AND [Target].[GroupId] = [Source].[GroupId]
 	WHEN MATCHED AND EXISTS(
-		SELECT [Source].[ReadOnly], [Source].[HidePasswords], [Source].[Manage]
+		SELECT [Source].[ReadOnly], [Source].[HidePasswords]
 		EXCEPT
-		SELECT [Target].[ReadOnly], [Target].[HidePasswords], [Target].[Manage]
+		SELECT [Target].[ReadOnly], [Target].[HidePasswords]
 	) THEN UPDATE SET
 		[Target].[ReadOnly] = [Source].[ReadOnly],
-		[Target].[HidePasswords] = [Source].[HidePasswords],
-		[Target].[Manage] = [Source].[Manage]
+		[Target].[HidePasswords] = [Source].[HidePasswords]
 	WHEN NOT MATCHED BY TARGET
 		THEN INSERT VALUES
 		(
 			[Source].[CollectionId],
 			[Source].[GroupId],
 			[Source].[ReadOnly],
-			[Source].[HidePasswords],
-			[Source].[Manage]
+			[Source].[HidePasswords]
 		);
 
 	-- Users
@@ -55,8 +52,7 @@ BEGIN
 			cId.[Id] AS [CollectionId],
 			cu.[Id] AS [OrganizationUserId],
 			cu.[ReadOnly],
-			cu.[HidePasswords],
-			cu.[Manage]
+			cu.[HidePasswords]
 		FROM
 			@Users AS cu
 		CROSS JOIN
@@ -74,21 +70,19 @@ BEGIN
 		[Target].[CollectionId] = [Source].[CollectionId]
 		AND [Target].[OrganizationUserId] = [Source].[OrganizationUserId]
 	WHEN MATCHED AND EXISTS(
-		SELECT [Source].[ReadOnly], [Source].[HidePasswords], [Source].[Manage]
+		SELECT [Source].[ReadOnly], [Source].[HidePasswords]
 		EXCEPT
-		SELECT [Target].[ReadOnly], [Target].[HidePasswords], [Target].[Manage]
+		SELECT [Target].[ReadOnly], [Target].[HidePasswords]
 	) THEN UPDATE SET
 		[Target].[ReadOnly] = [Source].[ReadOnly],
-		[Target].[HidePasswords] = [Source].[HidePasswords],
-		[Target].[Manage] = [Source].[Manage]
+		[Target].[HidePasswords] = [Source].[HidePasswords]
 	WHEN NOT MATCHED BY TARGET
 		THEN INSERT VALUES
 		(
 			[Source].[CollectionId],
 			[Source].[OrganizationUserId],
 			[Source].[ReadOnly],
-			[Source].[HidePasswords],
-			[Source].[Manage]
+			[Source].[HidePasswords]
 		);
 
     EXEC [dbo].[User_BumpAccountRevisionDateByCollectionIds] @CollectionIds, @OrganizationId

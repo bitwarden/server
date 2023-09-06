@@ -228,7 +228,6 @@ public class BulkAddCollectionAccessCommandTests
         return collectionUsers.Select(cu => new CollectionAccessSelection
         {
             Id = cu.OrganizationUserId,
-            Manage = cu.Manage,
             HidePasswords = cu.HidePasswords,
             ReadOnly = cu.ReadOnly
         }).ToList();
@@ -238,7 +237,6 @@ public class BulkAddCollectionAccessCommandTests
         return collectionGroups.Select(cg => new CollectionAccessSelection
         {
             Id = cg.GroupId,
-            Manage = cg.Manage,
             HidePasswords = cg.HidePasswords,
             ReadOnly = cg.ReadOnly
         }).ToList();

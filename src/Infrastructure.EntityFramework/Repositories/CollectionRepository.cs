@@ -491,7 +491,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                 OrganizationUserId = requestedUser.Id,
                                 HidePasswords = requestedUser.HidePasswords,
                                 ReadOnly = requestedUser.ReadOnly,
-                                Manage = requestedUser.Manage
                             });
                             continue;
                         }
@@ -499,7 +498,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         // It already exists, update it
                         existingCollectionUser.HidePasswords = requestedUser.HidePasswords;
                         existingCollectionUser.ReadOnly = requestedUser.ReadOnly;
-                        existingCollectionUser.Manage = requestedUser.Manage;
                         dbContext.CollectionUsers.Update(existingCollectionUser);
                     }
                 }
@@ -528,8 +526,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                                 CollectionId = collectionId,
                                 GroupId = requestedGroup.Id,
                                 HidePasswords = requestedGroup.HidePasswords,
-                                ReadOnly = requestedGroup.ReadOnly,
-                                Manage = requestedGroup.Manage
+                                ReadOnly = requestedGroup.ReadOnly
                             });
                             continue;
                         }
@@ -537,7 +534,6 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                         // It already exists, update it
                         existingCollectionGroup.HidePasswords = requestedGroup.HidePasswords;
                         existingCollectionGroup.ReadOnly = requestedGroup.ReadOnly;
-                        existingCollectionGroup.Manage = requestedGroup.Manage;
                         dbContext.CollectionGroups.Update(existingCollectionGroup);
                     }
                 }
