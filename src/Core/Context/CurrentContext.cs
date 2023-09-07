@@ -358,7 +358,9 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewAssignedCollections(Guid orgId)
     {
-        return await EditAssignedCollections(orgId) || await DeleteAssignedCollections(orgId);
+        return await CreateNewCollections(orgId) // Required to display the existing collections under which the new collection can be nested
+               || await EditAssignedCollections(orgId)
+               || await DeleteAssignedCollections(orgId);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)

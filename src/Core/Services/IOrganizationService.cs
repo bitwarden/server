@@ -39,6 +39,12 @@ public interface IOrganizationService
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
+    /// <summary>
+    /// Moves an OrganizationUser into the Accepted status and marks their email as verified.
+    /// This method is used where the user has clicked the invitation link sent by email.
+    /// </summary>
+    /// <param name="token">The token embedded in the email invitation link</param>
+    /// <returns>The accepted OrganizationUser.</returns>
     Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token, IUserService userService);
     Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService);
     Task<OrganizationUser> AcceptUserAsync(Guid organizationId, User user, IUserService userService);
