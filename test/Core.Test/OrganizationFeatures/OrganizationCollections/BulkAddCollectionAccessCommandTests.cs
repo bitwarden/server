@@ -20,17 +20,21 @@ public class BulkAddCollectionAccessCommandTests
     public async Task AddAccessAsync_Success(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
         Organization org,
         ICollection<Collection> collections,
-        ICollection<OrganizationUser> users,
+        ICollection<OrganizationUser> organizationUsers,
         ICollection<Group> groups,
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(users);
+            .GetManyAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+            )
+            .Returns(organizationUsers);
 
         sutProvider.GetDependency<IGroupRepository>()
-            .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
+            .GetManyByManyIds(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
+            )
             .Returns(groups);
 
         var userAccessSelections = ToAccessSelection(collectionUsers);
@@ -40,8 +44,12 @@ public class BulkAddCollectionAccessCommandTests
             groupAccessSelections
         );
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().ReceivedWithAnyArgs().GetManyAsync(default);
-        await sutProvider.GetDependency<IGroupRepository>().ReceivedWithAnyArgs().GetManyByManyIds(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(userAccessSelections.Select(u => u.Id)))
+        );
+        await sutProvider.GetDependency<IGroupRepository>().Received().GetManyByManyIds(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(groupAccessSelections.Select(g => g.Id)))
+        );
 
         await sutProvider.GetDependency<ICollectionRepository>().Received().CreateOrUpdateAccessForManyAsync(
             org.Id,
@@ -113,15 +121,17 @@ public class BulkAddCollectionAccessCommandTests
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_MissingUser_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
         IList<Collection> collections,
-        IList<OrganizationUser> users,
+        IList<OrganizationUser> organizationUsers,
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
-        users.RemoveAt(0);
+        organizationUsers.RemoveAt(0);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(users);
+            .GetManyAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+            )
+            .Returns(organizationUsers);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
             ToAccessSelection(collectionUsers),
@@ -130,22 +140,26 @@ public class BulkAddCollectionAccessCommandTests
 
         Assert.Contains("One or more users do not exist.", exception.Message);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().ReceivedWithAnyArgs().GetManyAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+        );
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_UserWrongOrg_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
         IList<Collection> collections,
-        IList<OrganizationUser> users,
+        IList<OrganizationUser> organizationUsers,
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
-        users.First().OrganizationId = Guid.NewGuid();
+        organizationUsers.First().OrganizationId = Guid.NewGuid();
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(users);
+            .GetManyAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+            )
+            .Returns(organizationUsers);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
             ToAccessSelection(collectionUsers),
@@ -154,14 +168,16 @@ public class BulkAddCollectionAccessCommandTests
 
         Assert.Contains("One or more users do not belong to the same organization as the collection being assigned.", exception.Message);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().ReceivedWithAnyArgs().GetManyAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+        );
         await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIds(default);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_MissingGroup_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
         IList<Collection> collections,
-        IList<OrganizationUser> users,
+        IList<OrganizationUser> organizationUsers,
         IList<Group> groups,
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
@@ -169,11 +185,15 @@ public class BulkAddCollectionAccessCommandTests
         groups.RemoveAt(0);
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(users);
+            .GetManyAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+            )
+            .Returns(organizationUsers);
 
         sutProvider.GetDependency<IGroupRepository>()
-            .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
+            .GetManyByManyIds(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
+            )
             .Returns(groups);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
@@ -183,14 +203,18 @@ public class BulkAddCollectionAccessCommandTests
 
         Assert.Contains("One or more groups do not exist.", exception.Message);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().ReceivedWithAnyArgs().GetManyAsync(default);
-        await sutProvider.GetDependency<IGroupRepository>().ReceivedWithAnyArgs().GetManyByManyIds(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+        );
+        await sutProvider.GetDependency<IGroupRepository>().Received().GetManyByManyIds(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
+        );
     }
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_GroupWrongOrg_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
         IList<Collection> collections,
-        IList<OrganizationUser> users,
+        IList<OrganizationUser> organizationUsers,
         IList<Group> groups,
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
@@ -198,11 +222,15 @@ public class BulkAddCollectionAccessCommandTests
         groups.First().OrganizationId = Guid.NewGuid();
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
-            .Returns(users);
+            .GetManyAsync(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+            )
+            .Returns(organizationUsers);
 
         sutProvider.GetDependency<IGroupRepository>()
-            .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
+            .GetManyByManyIds(
+                Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
+            )
             .Returns(groups);
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
@@ -212,8 +240,12 @@ public class BulkAddCollectionAccessCommandTests
 
         Assert.Contains("One or more groups do not belong to the same organization as the collection being assigned.", exception.Message);
 
-        await sutProvider.GetDependency<IOrganizationUserRepository>().ReceivedWithAnyArgs().GetManyAsync(default);
-        await sutProvider.GetDependency<IGroupRepository>().ReceivedWithAnyArgs().GetManyByManyIds(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received().GetManyAsync(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionUsers.Select(u => u.OrganizationUserId)))
+        );
+        await sutProvider.GetDependency<IGroupRepository>().Received().GetManyByManyIds(
+            Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(collectionGroups.Select(u => u.GroupId)))
+        );
     }
 
     private static ICollection<CollectionAccessSelection> ToAccessSelection(IEnumerable<CollectionUser> collectionUsers)

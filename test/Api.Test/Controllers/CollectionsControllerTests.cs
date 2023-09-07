@@ -1,4 +1,6 @@
-﻿using System.Security.Claims;
+﻿using System.Collections;
+using System.Security.Claims;
+using AutoFixture;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers;
@@ -262,7 +264,7 @@ public class CollectionsControllerTests
         var model = new BulkCollectionAccessRequestModel
         {
             CollectionIds = collections.Select(c => c.Id),
-            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, ReadOnly = true } },
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, Manage = true } },
             Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId, ReadOnly = true } },
         };
 
@@ -273,8 +275,11 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<ICurrentContext>()
             .UserId.Returns(actingUser.Id);
 
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+        sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(), ExpectedCollectionAccess(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(
+                    r => r.Contains(CollectionOperation.ModifyAccess)
+                ))
             .Returns(AuthorizationResult.Success());
 
         IEnumerable<Collection> ExpectedCollectionAccess() => Arg.Is<IEnumerable<Collection>>(cols => cols.SequenceEqual(collections));
@@ -292,7 +297,7 @@ public class CollectionsControllerTests
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().Received()
             .AddAccessAsync(
                 Arg.Is<ICollection<Collection>>(g => g.SequenceEqual(collections)),
-                Arg.Is<ICollection<CollectionAccessSelection>>(u => u.All(c => c.Id == userId && c.ReadOnly)),
+                Arg.Is<ICollection<CollectionAccessSelection>>(u => u.All(c => c.Id == userId && c.Manage)),
                 Arg.Is<ICollection<CollectionAccessSelection>>(g => g.All(c => c.Id == groupId && c.ReadOnly)));
     }
 
@@ -304,7 +309,7 @@ public class CollectionsControllerTests
         var model = new BulkCollectionAccessRequestModel
         {
             CollectionIds = collections.Select(c => c.Id),
-            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, ReadOnly = true } },
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, Manage = true } },
             Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId, ReadOnly = true } },
         };
 
@@ -315,20 +320,13 @@ public class CollectionsControllerTests
             .GetManyByManyIdsAsync(model.CollectionIds)
             .Returns(collections.Skip(1).ToList());
 
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
-            .Returns(AuthorizationResult.Failed());
-
-        IEnumerable<Collection> ExpectedCollectionAccess() => Arg.Is<IEnumerable<Collection>>(cols => cols.SequenceEqual(collections));
-
         var exception = await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.PostBulkCollectionAccess(model));
 
         Assert.Equal("One or more collections not found.", exception.Message);
         await sutProvider.GetDependency<IAuthorizationService>().DidNotReceiveWithAnyArgs().AuthorizeAsync(
             Arg.Any<ClaimsPrincipal>(),
-            ExpectedCollectionAccess(),
-            Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                r => r.Contains(CollectionOperation.ModifyAccess))
+            Arg.Any<IEnumerable<Collection>>(),
+            Arg.Any<IEnumerable<IAuthorizationRequirement>>()
         );
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
             .AddAccessAsync(default, default, default);
@@ -342,7 +340,7 @@ public class CollectionsControllerTests
         var model = new BulkCollectionAccessRequestModel
         {
             CollectionIds = collections.Select(c => c.Id),
-            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, ReadOnly = true } },
+            Users = new[] { new SelectionReadOnlyRequestModel { Id = userId, Manage = true } },
             Groups = new[] { new SelectionReadOnlyRequestModel { Id = groupId, ReadOnly = true } },
         };
 
@@ -353,8 +351,11 @@ public class CollectionsControllerTests
             .GetManyByManyIdsAsync(model.CollectionIds)
             .Returns(collections);
 
-        sutProvider.GetDependency<IAuthorizationService>()
-            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
+        sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(), ExpectedCollectionAccess(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(
+                    r => r.Contains(CollectionOperation.ModifyAccess)
+                ))
             .Returns(AuthorizationResult.Failed());
 
         IEnumerable<Collection> ExpectedCollectionAccess() => Arg.Is<IEnumerable<Collection>>(cols => cols.SequenceEqual(collections));
