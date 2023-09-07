@@ -58,7 +58,7 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
             throw new BadRequestException("All collections must belong to the same organization.");
         }
 
-        var collectionUserIds = usersAccess?.Select(u => u.Id).ToList();
+        var collectionUserIds = usersAccess?.Select(u => u.Id).Distinct().ToList();
 
         if (collectionUserIds is { Count: > 0 })
         {
@@ -75,7 +75,7 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
             }
         }
 
-        var collectionGroupIds = groupsAccess?.Select(g => g.Id).ToList();
+        var collectionGroupIds = groupsAccess?.Select(g => g.Id).Distinct().ToList();
 
         if (collectionGroupIds is { Count: > 0 })
         {
