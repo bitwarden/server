@@ -15,8 +15,8 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
-using Bit.Core.OrganizationFeatures;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.OrganizationFeatures.OrganizationUsers;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;

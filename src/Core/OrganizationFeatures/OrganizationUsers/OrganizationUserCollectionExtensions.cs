@@ -1,8 +1,7 @@
-﻿using Bit.Core.OrganizationFeatures.OrganizationUsers;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
+﻿using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Core.OrganizationFeatures;
+namespace Bit.Core.OrganizationFeatures.OrganizationUsers;
 
 public static class OrganizationUserCollectionExtensions
 {

@@ -1,6 +1,6 @@
 ﻿using System.Globalization;
 using Bit.Core.Context;
-using Bit.Core.OrganizationFeatures;
+using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
