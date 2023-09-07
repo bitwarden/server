@@ -6,6 +6,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -33,6 +34,7 @@ public class OrganizationUsersController : Controller
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly ILogger<OrganizationUsersController> _logger;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -46,7 +48,8 @@ public class OrganizationUsersController : Controller
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpdateOrganizationUserCommand updateOrganizationUserCommand,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        ILogger<OrganizationUsersController> logger)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -60,6 +63,7 @@ public class OrganizationUsersController : Controller
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -286,7 +290,7 @@ public class OrganizationUsersController : Controller
             throw new NotFoundException();
         }
 
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(id);
+        var (organizationUser, organizationUserCollections) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
         if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
@@ -296,13 +300,13 @@ public class OrganizationUsersController : Controller
         var updateSecretsManagerAccess = !organizationUser.AccessSecretsManager && model.AccessSecretsManager;
         var updatedOrganizationUser = model.ToOrganizationUser(organizationUser);
         var additionalSmSeatsRequired = updateSecretsManagerAccess
-            ? await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(updatedOrganizationUser.OrganizationId, 1)
+            ? await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(orgId, 1)
             : 0;
 
         if (additionalSmSeatsRequired > 0)
         {
-            await HandleUpdateWithSecretsManagerSeatsRequiredAsync(updatedOrganizationUser, savingUserId.Value, model,
-                additionalSmSeatsRequired);
+            await HandleUpdateWithSecretsManagerSeatsRequiredAsync(organizationUser, organizationUserCollections,
+                updatedOrganizationUser, savingUserId.Value, model, additionalSmSeatsRequired);
         }
         else
         {
@@ -516,7 +520,9 @@ public class OrganizationUsersController : Controller
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
     }
 
-    private async Task HandleUpdateWithSecretsManagerSeatsRequiredAsync(OrganizationUser updatedOrganizationUser, Guid savingUserId,
+    private async Task HandleUpdateWithSecretsManagerSeatsRequiredAsync(
+        OrganizationUser savedOrganizationUser, ICollection<CollectionAccessSelection> savedCollections,
+        OrganizationUser updatedOrganizationUser, Guid savingUserId,
         OrganizationUserUpdateRequestModel model, int additionalSmSeatsRequired)
     {
         var organization = await _organizationRepository.GetByIdAsync(updatedOrganizationUser.OrganizationId);
@@ -525,18 +531,24 @@ public class OrganizationUsersController : Controller
 
         await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(update);
 
+        // Retrieve the original OrganizationUser Groups data so that we can revert if Stripe fails
+        var organizationUserGroupIds = await _groupRepository.GetManyIdsByUserIdAsync(updatedOrganizationUser.Id);
+
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
+            model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+
         try
         {
             // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
             // updating Stripe
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
-            await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
-                model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
         }
-        catch
+        catch (Exception e)
         {
-            // If we fail to update Stripe, we need to revert the update to Organization
-            await _organizationService.UpdateAsync(organization);
+            // If we fail to update Stripe, we need to revert the updates to OrganizationUser and its Collections and Groups
+            await _updateOrganizationUserCommand.UpdateUserAsync(savedOrganizationUser, savingUserId,
+                savedCollections, organizationUserGroupIds);
+            _logger.LogError(e, "Failed to update Secrets Manager subscription, reverted OrganizationUser updates");
         }
     }
 }

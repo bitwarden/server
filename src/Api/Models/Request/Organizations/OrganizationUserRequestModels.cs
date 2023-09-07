@@ -93,11 +93,12 @@ public class OrganizationUserUpdateRequestModel
 
     public OrganizationUser ToOrganizationUser(OrganizationUser existingUser)
     {
-        existingUser.Type = Type.Value;
-        existingUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
-        existingUser.AccessAll = AccessAll;
-        existingUser.AccessSecretsManager = AccessSecretsManager;
-        return existingUser;
+        var updatedOrganizationUser = existingUser.Clone();
+        updatedOrganizationUser.Type = Type.Value;
+        updatedOrganizationUser.Permissions = CoreHelpers.ClassToJsonData(Permissions);
+        updatedOrganizationUser.AccessAll = AccessAll;
+        updatedOrganizationUser.AccessSecretsManager = AccessSecretsManager;
+        return updatedOrganizationUser;
     }
 }
 

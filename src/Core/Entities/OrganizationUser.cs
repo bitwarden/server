@@ -6,7 +6,7 @@ using Bit.Core.Utilities;
 
 namespace Bit.Core.Entities;
 
-public class OrganizationUser : ITableObject<Guid>, IExternal
+public class OrganizationUser : ITableObject<Guid>, IExternal, ICloneable
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
@@ -34,5 +34,15 @@ public class OrganizationUser : ITableObject<Guid>, IExternal
     {
         return string.IsNullOrWhiteSpace(Permissions) ? null
             : CoreHelpers.LoadClassFromJsonData<Permissions>(Permissions);
+    }
+
+    object ICloneable.Clone() => Clone();
+    public OrganizationUser Clone()
+    {
+        var clone = CoreHelpers.CloneObject(this);
+        clone.CreationDate = CreationDate;
+        clone.RevisionDate = RevisionDate;
+
+        return clone;
     }
 }
