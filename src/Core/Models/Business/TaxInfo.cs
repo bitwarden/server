@@ -35,13 +35,22 @@ public class TaxInfo
                 return _taxIdType;
             }
 
-            switch (BillingAddressCountry)
+            switch (BillingAddressCountry.ToUpper())
             {
+                case "AD":
+                    _taxIdType = "ad_nrt";
+                    break;
                 case "AE":
                     _taxIdType = "ae_trn";
                     break;
+                case "AR":
+                    _taxIdType = "ar_cuit";
+                    break;
                 case "AU":
                     _taxIdType = "au_abn";
+                    break;
+                case "BO":
+                    _taxIdType = "bo_tin";
                     break;
                 case "BR":
                     _taxIdType = "br_cnpj";
@@ -55,8 +64,44 @@ public class TaxInfo
                     }
                     _taxIdType = "ca_bn";
                     break;
+                case "CH":
+                    _taxIdType = "ch_vat";
+                    break;
                 case "CL":
                     _taxIdType = "cl_tin";
+                    break;
+                case "CN":
+                    _taxIdType = "cn_tin";
+                    break;
+                case "CO":
+                    _taxIdType = "co_nit";
+                    break;
+                case "CR":
+                    _taxIdType = "cr_tin";
+                    break;
+                case "DO":
+                    _taxIdType = "do_rcn";
+                    break;
+                case "EC":
+                    _taxIdType = "ec_ruc";
+                    break;
+                case "EG":
+                    _taxIdType = "eg_tin";
+                    break;
+                case "GE":
+                    _taxIdType = "ge_vat";
+                    break;
+                case "ID":
+                    _taxIdType = "id_npwp";
+                    break;
+                case "IL":
+                    _taxIdType = "il_vat";
+                    break;
+                case "IS":
+                    _taxIdType = "is_vat";
+                    break;
+                case "KE":
+                    _taxIdType = "ke_pin";
                     break;
                 case "AT":
                 case "BE":
@@ -115,6 +160,15 @@ public class TaxInfo
                 case "NZ":
                     _taxIdType = "nz_gst";
                     break;
+                case "PE":
+                    _taxIdType = "pe_ruc";
+                    break;
+                case "PH":
+                    _taxIdType = "ph_tin";
+                    break;
+                case "RS":
+                    _taxIdType = "rs_pib";
+                    break;
                 case "RU":
                     _taxIdType = "ru_inn";
                     break;
@@ -124,14 +178,32 @@ public class TaxInfo
                 case "SG":
                     _taxIdType = "sg_gst";
                     break;
+                case "SV":
+                    _taxIdType = "sv_nit";
+                    break;
                 case "TH":
                     _taxIdType = "th_vat";
+                    break;
+                case "TR":
+                    _taxIdType = "tr_tin";
                     break;
                 case "TW":
                     _taxIdType = "tw_vat";
                     break;
+                case "UA":
+                    _taxIdType = "ua_vat";
+                    break;
                 case "US":
                     _taxIdType = "us_ein";
+                    break;
+                case "UY":
+                    _taxIdType = "uy_ruc";
+                    break;
+                case "VE":
+                    _taxIdType = "ve_rif";
+                    break;
+                case "VN":
+                    _taxIdType = "vn_tin";
                     break;
                 case "ZA":
                     _taxIdType = "za_vat";
