@@ -209,12 +209,6 @@ public class CollectionsController : Controller
     public async Task DeleteMany([FromBody] CollectionBulkDeleteRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
-
-        if (!collections.Any())
-        {
-            throw new BadRequestException("No collections found.");
-        }
-
         var result = await _authorizationService.AuthorizeAsync(User, collections, CollectionOperations.Delete);
         if (!result.Succeeded)
         {
