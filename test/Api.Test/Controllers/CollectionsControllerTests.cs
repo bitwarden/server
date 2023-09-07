@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Security.Claims;
-using AutoFixture;
+﻿using System.Security.Claims;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers;
