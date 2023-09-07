@@ -36,7 +36,6 @@ public static class FeatureFlagKeys
     public const string DisplayEuEnvironment = "display-eu-environment";
     public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
-    public const string SecretsManagerBilling = "sm-ga-billing";
     public const string AutofillV2 = "autofill-v2";
 
     public static List<string> GetAllKeys()
