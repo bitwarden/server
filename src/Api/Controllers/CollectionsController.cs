@@ -201,7 +201,6 @@ public class CollectionsController : Controller
             throw new NotFoundException("One or more collections not found.");
         }
 
-        // Check if user can manage each of the collections in the request
         var result = await _authorizationService.AuthorizeAsync(User, collections, CollectionOperation.ModifyAccess);
 
         if (!result.Succeeded)
