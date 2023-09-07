@@ -145,8 +145,7 @@ public class CollectionsControllerTests
         // Arrange
         var model = new CollectionBulkDeleteRequestModel
         {
-            Ids = new[] { collection1.Id.ToString(), collection2.Id.ToString() },
-            OrganizationId = orgId.ToString()
+            Ids = new[] { collection1.Id, collection2.Id }
         };
 
         var collections = new List<Collection>
@@ -183,13 +182,12 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteMany_PermissionDenied_ThrowsBadRequest(Guid orgId, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
+    public async Task DeleteMany_PermissionDenied_ThrowsBadRequest(Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
         var model = new CollectionBulkDeleteRequestModel
         {
-            Ids = new[] { collection1.Id.ToString(), collection2.Id.ToString() },
-            OrganizationId = orgId.ToString()
+            Ids = new[] { collection1.Id, collection2.Id }
         };
 
         sutProvider.GetDependency<IAuthorizationService>()
@@ -215,8 +213,7 @@ public class CollectionsControllerTests
         // Arrange
         var model = new CollectionBulkDeleteRequestModel
         {
-            Ids = new[] { collection1.Id.ToString(), collection2.Id.ToString() },
-            OrganizationId = orgId.ToString()
+            Ids = new[] { collection1.Id, collection2.Id }
         };
 
         var collections = new List<Collection>

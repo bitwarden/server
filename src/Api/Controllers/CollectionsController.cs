@@ -208,8 +208,7 @@ public class CollectionsController : Controller
     [HttpPost("delete")]
     public async Task DeleteMany([FromBody] CollectionBulkDeleteRequestModel model)
     {
-        var collectionIds = model.Ids.Select(i => new Guid(i));
-        var collections = await _collectionRepository.GetManyByManyIdsAsync(collectionIds);
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
 
         if (!collections.Any())
         {
