@@ -242,7 +242,7 @@ public class CipherRequestModel
             Fields = Fields?.Select(f => f.ToCipherFieldData()),
             PasswordHistory = PasswordHistory?.Select(ph => ph.ToCipherPasswordHistoryData()),
 
-            NonDiscoverableId = Fido2Key.NonDiscoverableId,
+            CredentialId = Fido2Key.CredentialId,
             KeyAlgorithm = Fido2Key.KeyAlgorithm,
             KeyType = Fido2Key.KeyType,
             KeyCurve = Fido2Key.KeyCurve,

@@ -4,7 +4,7 @@ public class CipherLoginFido2KeyData
 {
     public CipherLoginFido2KeyData() { }
 
-    public string NonDiscoverableId { get; set; }
+    public string CredentialId { get; set; }
     public string KeyType { get; set; }
     public string KeyAlgorithm { get; set; }
     public string KeyCurve { get; set; }

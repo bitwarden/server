@@ -9,7 +9,7 @@ public class CipherFido2KeyModel
 
     public CipherFido2KeyModel(CipherFido2KeyData data)
     {
-        NonDiscoverableId = data.NonDiscoverableId;
+        CredentialId = data.CredentialId;
         KeyType = data.KeyType;
         KeyAlgorithm = data.KeyAlgorithm;
         KeyCurve = data.KeyCurve;
@@ -23,7 +23,7 @@ public class CipherFido2KeyModel
 
     public CipherFido2KeyModel(CipherLoginFido2KeyData data)
     {
-        NonDiscoverableId = data.NonDiscoverableId;
+        CredentialId = data.CredentialId;
         KeyType = data.KeyType;
         KeyAlgorithm = data.KeyAlgorithm;
         KeyCurve = data.KeyCurve;
@@ -37,7 +37,7 @@ public class CipherFido2KeyModel
 
     [EncryptedString]
     [EncryptedStringLength(1000)]
-    public string NonDiscoverableId { get; set; }
+    public string CredentialId { get; set; }
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string KeyType { get; set; }
@@ -70,7 +70,7 @@ public class CipherFido2KeyModel
     {
         return new CipherLoginFido2KeyData
         {
-            NonDiscoverableId = NonDiscoverableId,
+            CredentialId = CredentialId,
             KeyType = KeyType,
             KeyAlgorithm = KeyAlgorithm,
             KeyCurve = KeyCurve,
