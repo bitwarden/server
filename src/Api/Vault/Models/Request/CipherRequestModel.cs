@@ -250,7 +250,7 @@ public class CipherRequestModel
             RpId = Fido2Key.RpId,
             RpName = Fido2Key.RpName,
             UserHandle = Fido2Key.UserHandle,
-            UserName = Fido2Key.UserName,
+            UserDisplayName = Fido2Key.UserDisplayName,
             Counter = Fido2Key.Counter
         };
     }
@@ -318,6 +318,7 @@ public class CipherBulkRestoreRequestModel
 {
     [Required]
     public IEnumerable<string> Ids { get; set; }
+    public Guid OrganizationId { get; set; }
 }
 
 public class CipherBulkMoveRequestModel

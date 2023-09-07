@@ -57,6 +57,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return await secrets.ToListAsync();
     }
 
+    public async Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.Secret
+                .CountAsync(ou => ou.OrganizationId == organizationId && ou.DeletedDate == null);
+        }
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -293,6 +303,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return policy == null ? (false, false) : (policy.Read, policy.Write);
     }
 
+    public async Task EmptyTrash(DateTime currentDate, uint deleteAfterThisNumberOfDays)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await dbContext.Secret.Where(s => s.DeletedDate != null && s.DeletedDate < currentDate.AddDays(-deleteAfterThisNumberOfDays)).ExecuteDeleteAsync();
+
+        await dbContext.SaveChangesAsync();
+    }
+
     private IQueryable<SecretPermissionDetails> SecretToPermissionDetails(IQueryable<Secret> query, Guid userId, AccessClientType accessType)
     {
         var secrets = accessType switch
@@ -309,7 +329,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 {
                     Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
                     Read = true,
-                    Write = false,
+                    Write = s.Projects.Any(p =>
+                        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)),
                 }),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };

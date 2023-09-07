@@ -6,6 +6,8 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
+using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -21,6 +23,7 @@ public class ProjectsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IUserService _userService;
     private readonly IProjectRepository _projectRepository;
+    private readonly IMaxProjectsQuery _maxProjectsQuery;
     private readonly ICreateProjectCommand _createProjectCommand;
     private readonly IUpdateProjectCommand _updateProjectCommand;
     private readonly IDeleteProjectCommand _deleteProjectCommand;
@@ -30,6 +33,7 @@ public class ProjectsController : Controller
         ICurrentContext currentContext,
         IUserService userService,
         IProjectRepository projectRepository,
+        IMaxProjectsQuery maxProjectsQuery,
         ICreateProjectCommand createProjectCommand,
         IUpdateProjectCommand updateProjectCommand,
         IDeleteProjectCommand deleteProjectCommand,
@@ -38,6 +42,7 @@ public class ProjectsController : Controller
         _currentContext = currentContext;
         _userService = userService;
         _projectRepository = projectRepository;
+        _maxProjectsQuery = maxProjectsQuery;
         _createProjectCommand = createProjectCommand;
         _updateProjectCommand = updateProjectCommand;
         _deleteProjectCommand = deleteProjectCommand;
@@ -73,6 +78,13 @@ public class ProjectsController : Controller
         {
             throw new NotFoundException();
         }
+
+        var (max, atMax) = await _maxProjectsQuery.GetByOrgIdAsync(organizationId);
+        if (atMax != null && atMax.Value)
+        {
+            throw new BadRequestException($"You have reached the maximum number of projects ({max}) for this plan.");
+        }
+
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _createProjectCommand.CreateAsync(project, userId, _currentContext.ClientType);
 
@@ -127,11 +139,44 @@ public class ProjectsController : Controller
     }
 
     [HttpPost("projects/delete")]
-    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync([FromBody] List<Guid> ids)
+    public async Task<ListResponseModel<BulkDeleteResponseModel>> BulkDeleteAsync(
+        [FromBody] List<Guid> ids)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var results = await _deleteProjectCommand.DeleteProjects(ids, userId);
-        var responses = results.Select(r => new BulkDeleteResponseModel(r.Item1.Id, r.Item2));
+        var projects = (await _projectRepository.GetManyWithSecretsByIds(ids)).ToList();
+        if (!projects.Any() || projects.Count != ids.Count)
+        {
+            throw new NotFoundException();
+        }
+
+        // Ensure all projects belongs to the same organization
+        var organizationId = projects.First().OrganizationId;
+        if (projects.Any(p => p.OrganizationId != organizationId) ||
+            !_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var projectsToDelete = new List<Project>();
+        var results = new List<(Project Project, string Error)>();
+
+        foreach (var project in projects)
+        {
+            var authorizationResult =
+                await _authorizationService.AuthorizeAsync(User, project, ProjectOperations.Delete);
+            if (authorizationResult.Succeeded)
+            {
+                projectsToDelete.Add(project);
+                results.Add((project, ""));
+            }
+            else
+            {
+                results.Add((project, "access denied"));
+            }
+        }
+
+        await _deleteProjectCommand.DeleteProjects(projectsToDelete);
+
+        var responses = results.Select(r => new BulkDeleteResponseModel(r.Project.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
     }
 }

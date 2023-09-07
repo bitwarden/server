@@ -2,14 +2,14 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
-using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,7 +20,6 @@ namespace Bit.Api.Controllers;
 [Authorize("Application")]
 public class OrganizationUsersController : Controller
 {
-    private readonly IEnableAccessSecretsManagerCommand _enableAccessSecretsManagerCommand;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IOrganizationService _organizationService;
@@ -29,9 +28,10 @@ public class OrganizationUsersController : Controller
     private readonly IUserService _userService;
     private readonly IPolicyRepository _policyRepository;
     private readonly ICurrentContext _currentContext;
+    private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
+    private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
     public OrganizationUsersController(
-        IEnableAccessSecretsManagerCommand enableAccessSecretsManagerCommand,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationService organizationService,
@@ -39,9 +39,10 @@ public class OrganizationUsersController : Controller
         IGroupRepository groupRepository,
         IUserService userService,
         IPolicyRepository policyRepository,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
     {
-        _enableAccessSecretsManagerCommand = enableAccessSecretsManagerCommand;
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _organizationService = organizationService;
@@ -50,6 +51,8 @@ public class OrganizationUsersController : Controller
         _userService = userService;
         _policyRepository = policyRepository;
         _currentContext = currentContext;
+        _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
+        _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
     }
 
     [HttpGet("{id}")]
@@ -309,7 +312,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
-    public async Task PutResetPasswordEnrollment(string orgId, string userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
+    public async Task PutResetPasswordEnrollment(Guid orgId, Guid userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
@@ -317,16 +320,14 @@ public class OrganizationUsersController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        if (model.ResetPasswordKey != null && !await _userService.VerifySecretAsync(user, model.Secret))
+        var callingUserId = user.Id;
+        await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
+            orgId, userId, model.ResetPasswordKey, callingUserId);
+
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
+        if (orgUser.Status == OrganizationUserStatusType.Invited)
         {
-            await Task.Delay(2000);
-            throw new BadRequestException("MasterPasswordHash", "Invalid password.");
-        }
-        else
-        {
-            var callingUserId = user.Id;
-            await _organizationService.UpdateUserResetPasswordEnrollmentAsync(
-               new Guid(orgId), new Guid(userId), model.ResetPasswordKey, callingUserId);
+            await _organizationService.AcceptUserAsync(orgId, user, _userService);
         }
     }
 
@@ -426,7 +427,7 @@ public class OrganizationUsersController : Controller
 
     [HttpPatch("enable-secrets-manager")]
     [HttpPut("enable-secrets-manager")]
-    public async Task<ListResponseModel<OrganizationUserBulkResponseModel>> BulkEnableSecretsManagerAsync(Guid orgId,
+    public async Task BulkEnableSecretsManagerAsync(Guid orgId,
         [FromBody] OrganizationUserBulkRequestModel model)
     {
         if (!await _currentContext.ManageUsers(orgId))
@@ -435,22 +436,34 @@ public class OrganizationUsersController : Controller
         }
 
         var orgUsers = (await _organizationUserRepository.GetManyAsync(model.Ids))
-            .Where(ou => ou.OrganizationId == orgId).ToList();
+            .Where(ou => ou.OrganizationId == orgId && !ou.AccessSecretsManager).ToList();
         if (orgUsers.Count == 0)
         {
             throw new BadRequestException("Users invalid.");
         }
 
-        var results = await _enableAccessSecretsManagerCommand.EnableUsersAsync(orgUsers);
+        var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(orgId,
+            orgUsers.Count);
+        if (additionalSmSeatsRequired > 0)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(orgId);
+            var update = new SecretsManagerSubscriptionUpdate(organization, true)
+                .AdjustSeats(additionalSmSeatsRequired);
+            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+        }
 
-        return new ListResponseModel<OrganizationUserBulkResponseModel>(results.Select(r =>
-            new OrganizationUserBulkResponseModel(r.organizationUser.Id, r.error)));
+        foreach (var orgUser in orgUsers)
+        {
+            orgUser.AccessSecretsManager = true;
+        }
+
+        await _organizationUserRepository.ReplaceManyAsync(orgUsers);
     }
 
     private async Task RestoreOrRevokeUserAsync(
         Guid orgId,
         Guid id,
-        Func<OrganizationUser, Guid?, Task> statusAction)
+        Func<Core.Entities.OrganizationUser, Guid?, Task> statusAction)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
@@ -470,7 +483,7 @@ public class OrganizationUsersController : Controller
     private async Task<ListResponseModel<OrganizationUserBulkResponseModel>> RestoreOrRevokeUsersAsync(
         Guid orgId,
         OrganizationUserBulkRequestModel model,
-        Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<OrganizationUser, string>>>> statusAction)
+        Func<Guid, IEnumerable<Guid>, Guid?, Task<List<Tuple<Core.Entities.OrganizationUser, string>>>> statusAction)
     {
         if (!await _currentContext.ManageUsers(orgId))
         {
