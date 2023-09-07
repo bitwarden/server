@@ -27,24 +27,31 @@ public class BulkAddCollectionAccessCommand : IBulkAddCollectionAccessCommand
         _eventService = eventService;
     }
 
-    public async Task AddAccessAsync(Guid organizationId, ICollection<Collection> collections,
+    public async Task AddAccessAsync(ICollection<Collection> collections,
         ICollection<CollectionAccessSelection> users,
         ICollection<CollectionAccessSelection> groups)
     {
-        await ValidateRequestAsync(organizationId, collections, users, groups);
+        await ValidateRequestAsync(collections, users, groups);
 
-        await _collectionRepository.CreateOrUpdateAccessForManyAsync(organizationId, collections.Select(c => c.Id), users, groups);
+        await _collectionRepository.CreateOrUpdateAccessForManyAsync(
+            collections.First().OrganizationId,
+            collections.Select(c => c.Id),
+            users,
+            groups
+        );
 
         await _eventService.LogCollectionEventsAsync(collections.Select(c =>
             (c, EventType.Collection_Updated, (DateTime?)DateTime.UtcNow)));
     }
 
-    private async Task ValidateRequestAsync(Guid orgId, ICollection<Collection> collections, ICollection<CollectionAccessSelection> usersAccess, ICollection<CollectionAccessSelection> groupsAccess)
+    private async Task ValidateRequestAsync(ICollection<Collection> collections, ICollection<CollectionAccessSelection> usersAccess, ICollection<CollectionAccessSelection> groupsAccess)
     {
         if (collections == null || collections.Count == 0)
         {
             throw new BadRequestException("No collections were provided.");
         }
+
+        var orgId = collections.First().OrganizationId;
 
         if (collections.Any(c => c.OrganizationId != orgId))
         {

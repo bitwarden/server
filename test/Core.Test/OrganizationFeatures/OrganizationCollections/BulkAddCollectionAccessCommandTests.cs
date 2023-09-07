@@ -35,7 +35,7 @@ public class BulkAddCollectionAccessCommandTests
 
         var userAccessSelections = ToAccessSelection(collectionUsers);
         var groupAccessSelections = ToAccessSelection(collectionGroups);
-        await sutProvider.Sut.AddAccessAsync(org.Id, collections,
+        await sutProvider.Sut.AddAccessAsync(collections,
             userAccessSelections,
             groupAccessSelections
         );
@@ -61,12 +61,11 @@ public class BulkAddCollectionAccessCommandTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task ValidateRequestAsync_NoCollectionsProvided_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        Organization org)
+    public async Task ValidateRequestAsync_NoCollectionsProvided_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider)
     {
         var exception =
             await Assert.ThrowsAsync<BadRequestException>(
-                () => sutProvider.Sut.AddAccessAsync(org.Id, null, null, null));
+                () => sutProvider.Sut.AddAccessAsync(null, null, null));
 
         Assert.Contains("No collections were provided.", exception.Message);
 
@@ -78,11 +77,10 @@ public class BulkAddCollectionAccessCommandTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_NoCollection_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        Organization org,
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(org.Id, Enumerable.Empty<Collection>().ToList(),
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(Enumerable.Empty<Collection>().ToList(),
             ToAccessSelection(collectionUsers),
             ToAccessSelection(collectionGroups)
         ));
@@ -95,14 +93,13 @@ public class BulkAddCollectionAccessCommandTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_DifferentOrgs_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        Organization org,
         ICollection<Collection> collections,
         IEnumerable<CollectionUser> collectionUsers,
         IEnumerable<CollectionGroup> collectionGroups)
     {
         collections.First().OrganizationId = Guid.NewGuid();
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(org.Id, collections,
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
             ToAccessSelection(collectionUsers),
             ToAccessSelection(collectionGroups)
         ));
@@ -115,7 +112,6 @@ public class BulkAddCollectionAccessCommandTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_MissingUser_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        Organization org,
         IList<Collection> collections,
         IList<OrganizationUser> users,
         IEnumerable<CollectionUser> collectionUsers,
@@ -127,7 +123,7 @@ public class BulkAddCollectionAccessCommandTests
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(users);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(org.Id, collections,
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
             ToAccessSelection(collectionUsers),
             ToAccessSelection(collectionGroups)
         ));
@@ -140,7 +136,6 @@ public class BulkAddCollectionAccessCommandTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_UserWrongOrg_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        Organization org,
         IList<Collection> collections,
         IList<OrganizationUser> users,
         IEnumerable<CollectionUser> collectionUsers,
@@ -152,7 +147,7 @@ public class BulkAddCollectionAccessCommandTests
             .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(users);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(org.Id, collections,
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
             ToAccessSelection(collectionUsers),
             ToAccessSelection(collectionGroups)
         ));
@@ -165,7 +160,6 @@ public class BulkAddCollectionAccessCommandTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_MissingGroup_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        Organization org,
         IList<Collection> collections,
         IList<OrganizationUser> users,
         IList<Group> groups,
@@ -182,7 +176,7 @@ public class BulkAddCollectionAccessCommandTests
             .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
             .Returns(groups);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(org.Id, collections,
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
             ToAccessSelection(collectionUsers),
             ToAccessSelection(collectionGroups)
         ));
@@ -195,7 +189,6 @@ public class BulkAddCollectionAccessCommandTests
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task ValidateRequestAsync_GroupWrongOrg_Failure(SutProvider<BulkAddCollectionAccessCommand> sutProvider,
-        Organization org,
         IList<Collection> collections,
         IList<OrganizationUser> users,
         IList<Group> groups,
@@ -212,7 +205,7 @@ public class BulkAddCollectionAccessCommandTests
             .GetManyByManyIds(Arg.Any<IEnumerable<Guid>>())
             .Returns(groups);
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(org.Id, collections,
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.AddAccessAsync(collections,
             ToAccessSelection(collectionUsers),
             ToAccessSelection(collectionGroups)
         ));

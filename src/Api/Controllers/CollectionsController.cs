@@ -192,7 +192,7 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("bulk-access")]
-    public async Task PostBulkCollectionAccess(Guid orgId, [FromBody] BulkCollectionAccessRequestModel model)
+    public async Task PostBulkCollectionAccess([FromBody] BulkCollectionAccessRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
 
@@ -208,7 +208,7 @@ public class CollectionsController : Controller
             throw new NotFoundException();
         }
 
-        await _bulkAddCollectionAccessCommand.AddAccessAsync(orgId,
+        await _bulkAddCollectionAccessCommand.AddAccessAsync(
             collections,
             model.Users?.Select(u => u.ToSelectionReadOnly()).ToList(),
             model.Groups?.Select(g => g.ToSelectionReadOnly()).ToList());
