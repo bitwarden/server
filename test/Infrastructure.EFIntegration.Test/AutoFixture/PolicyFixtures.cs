@@ -28,19 +28,6 @@ internal class PolicyBuilder : ISpecimenBuilder
     }
 }
 
-internal class EfPolicy : ICustomization
-{
-    public void Customize(IFixture fixture)
-    {
-        fixture.Customizations.Add(new IgnoreVirtualMembersCustomization());
-        fixture.Customizations.Add(new GlobalSettingsBuilder());
-        fixture.Customizations.Add(new PolicyBuilder());
-        fixture.Customizations.Add(new OrganizationBuilder());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<PolicyRepository>());
-        fixture.Customizations.Add(new EfRepositoryListBuilder<OrganizationRepository>());
-    }
-}
-
 internal class EfPolicyApplicableToUser : ICustomization
 {
     public void Customize(IFixture fixture)
@@ -59,21 +46,8 @@ internal class EfPolicyApplicableToUser : ICustomization
     }
 }
 
-internal class EfPolicyAutoDataAttribute : CustomAutoDataAttribute
-{
-    public EfPolicyAutoDataAttribute() : base(new SutProviderCustomization(), new EfPolicy())
-    { }
-}
-
 internal class EfPolicyApplicableToUserInlineAutoDataAttribute : InlineCustomAutoDataAttribute
 {
     public EfPolicyApplicableToUserInlineAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization), typeof(EfPolicyApplicableToUser) }, values)
-    { }
-}
-
-internal class InlineEfPolicyAutoDataAttribute : InlineCustomAutoDataAttribute
-{
-    public InlineEfPolicyAutoDataAttribute(params object[] values) : base(new[] { typeof(SutProviderCustomization),
-        typeof(EfPolicy) }, values)
     { }
 }
