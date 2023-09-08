@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
@@ -26,7 +26,7 @@ public class CollectionCipherRepositoryTests
             Name = "Test Collection",
         },
         groups: Array.Empty<CollectionAccessSelection>(),
-        users: new []
+        users: new[]
         {
             new CollectionAccessSelection
             {
@@ -58,7 +58,7 @@ public class CollectionCipherRepositoryTests
                 ExternalId = externalId,
             },
             groups: Array.Empty<CollectionAccessSelection>(),
-            users: new []
+            users: new[]
             {
                 new CollectionAccessSelection
                 {
@@ -103,7 +103,7 @@ public class CollectionCipherRepositoryTests
             Name = "Test Collection",
         },
         groups: Array.Empty<CollectionAccessSelection>(),
-        users: new []
+        users: new[]
         {
             new CollectionAccessSelection
             {
@@ -138,7 +138,7 @@ public class CollectionCipherRepositoryTests
                 ExternalId = externalId,
             },
             groups: Array.Empty<CollectionAccessSelection>(),
-            users: new []
+            users: new[]
             {
                 new CollectionAccessSelection
                 {

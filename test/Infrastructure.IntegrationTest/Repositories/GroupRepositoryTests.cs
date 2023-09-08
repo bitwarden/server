@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Xunit;
@@ -28,7 +28,7 @@ public class GroupRepositoryTests
             Name = "Test Group",
             AccessAll = true,
             ExternalId = groupExternalId,
-        }, new []
+        }, new[]
         {
             new CollectionAccessSelection
             {
@@ -70,7 +70,7 @@ public class GroupRepositoryTests
                 Name = "Test Collection",
             }), 5);
 
-        var groupExternalIds = new []
+        var groupExternalIds = new[]
         {
             Guid.NewGuid().ToString(),
             Guid.NewGuid().ToString(),
@@ -86,7 +86,7 @@ public class GroupRepositoryTests
                     Name = "Test Group",
                     AccessAll = true,
                     ExternalId = externalId,
-                }, new []
+                }, new[]
                 {
                     new CollectionAccessSelection
                     {
