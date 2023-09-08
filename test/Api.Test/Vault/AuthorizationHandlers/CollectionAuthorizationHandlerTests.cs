@@ -46,7 +46,7 @@ public class CollectionAuthorizationHandlerTests
             collections);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), actingUserId).Returns(new[] { organization });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
@@ -151,12 +151,12 @@ public class CollectionAuthorizationHandlerTests
         );
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), actingUserId).Returns(new[] { organization });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.True(context.HasFailed);
-        await sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().OrganizationMembershipAsync(default, default);
+        sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().GetOrganization(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
             .GetManyByUserIdAsync(default);
     }
