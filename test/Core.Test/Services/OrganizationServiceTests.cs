@@ -934,6 +934,14 @@ public class OrganizationServiceTests
         currentContext.OrganizationCustom(savingUser.OrganizationId).Returns(true);
         currentContext.ManageUsers(savingUser.OrganizationId).Returns(true);
         currentContext.AccessReports(savingUser.OrganizationId).Returns(true);
+        currentContext.GetOrganization(savingUser.OrganizationId).Returns(
+            new CurrentContextOrganization()
+            {
+                Permissions = new Permissions
+                {
+                    AccessReports = true
+                }
+            });
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
     }
