@@ -41,9 +41,7 @@ public interface ICurrentContext
     Task<bool> AccessEventLogs(Guid orgId);
     Task<bool> AccessImportExport(Guid orgId);
     Task<bool> AccessReports(Guid orgId);
-    Task<bool> CreateNewCollections(Guid orgId);
     Task<bool> EditAnyCollection(Guid orgId);
-    Task<bool> DeleteAnyCollection(Guid orgId);
     Task<bool> ViewAllCollections(Guid orgId);
     Task<bool> EditAssignedCollections(Guid orgId);
     Task<bool> DeleteAssignedCollections(Guid orgId);

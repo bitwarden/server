@@ -321,24 +321,10 @@ public class CurrentContext : ICurrentContext
                     && (o.Permissions?.AccessReports ?? false)) ?? false);
     }
 
-    [Obsolete("CreateNewCollections is deprecated, use the CollectionAuthorizationHandler for controller level permission checks or CurrentContext.GetOrganization if permission checks are needed outside of that scope.")]
-    public async Task<bool> CreateNewCollections(Guid orgId)
-    {
-        return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.CreateNewCollections ?? false)) ?? false);
-    }
-
     public async Task<bool> EditAnyCollection(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
-    }
-
-    [Obsolete("DeleteAnyCollection is deprecated, use the CollectionAuthorizationHandler for controller level permission checks or CurrentContext.GetOrganization if permission checks are needed outside of that scope.")]
-    public async Task<bool> DeleteAnyCollection(Guid orgId)
-    {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.DeleteAnyCollection ?? false)) ?? false);
     }
 
     public async Task<bool> ViewAllCollections(Guid orgId)
