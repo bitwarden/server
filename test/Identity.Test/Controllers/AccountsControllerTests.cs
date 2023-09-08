@@ -1,5 +1,4 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Auth.Services;
+﻿using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -7,6 +6,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Identity.Controllers;
+using Bit.Identity.Models.Request;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using NSubstitute;

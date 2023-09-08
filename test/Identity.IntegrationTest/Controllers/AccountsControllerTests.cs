@@ -1,4 +1,4 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Identity.Models.Request;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.EntityFrameworkCore;
 using Xunit;

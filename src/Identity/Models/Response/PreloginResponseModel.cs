@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
-namespace Bit.Core.Auth.Models.Api.Response.Accounts;
+namespace Bit.Identity.Models.Response;
 
 public class PreloginResponseModel
 {

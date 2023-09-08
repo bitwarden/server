@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Models.Api;
 
-namespace Bit.Core.Auth.Models.Api.Response.Accounts;
+namespace Bit.Identity.Models.Response;
 
 public class RegisterResponseModel : ResponseModel, ICaptchaProtectedResponseModel
 {

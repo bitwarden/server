@@ -5,15 +5,11 @@ using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Auth.Models.Api.Response.Accounts;
-using Bit.Core.Auth.Services;
-using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -39,11 +35,9 @@ public class AccountsController : Controller
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPaymentService _paymentService;
-    private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
     private readonly ISendRepository _sendRepository;
     private readonly ISendService _sendService;
-    private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
 
     public AccountsController(
@@ -54,11 +48,9 @@ public class AccountsController : Controller
         IOrganizationUserRepository organizationUserRepository,
         IProviderUserRepository providerUserRepository,
         IPaymentService paymentService,
-        IUserRepository userRepository,
         IUserService userService,
         ISendRepository sendRepository,
         ISendService sendService,
-        ICaptchaValidationService captchaValidationService,
         IPolicyService policyService)
     {
         _cipherRepository = cipherRepository;
@@ -68,58 +60,11 @@ public class AccountsController : Controller
         _organizationUserRepository = organizationUserRepository;
         _providerUserRepository = providerUserRepository;
         _paymentService = paymentService;
-        _userRepository = userRepository;
         _userService = userService;
         _sendRepository = sendRepository;
         _sendService = sendService;
-        _captchaValidationService = captchaValidationService;
         _policyService = policyService;
     }
-
-    #region DEPRECATED (Moved to Identity Service)
-
-    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
-    [HttpPost("prelogin")]
-    [AllowAnonymous]
-    public async Task<PreloginResponseModel> PostPrelogin([FromBody] PreloginRequestModel model)
-    {
-        var kdfInformation = await _userRepository.GetKdfInformationByEmailAsync(model.Email);
-        if (kdfInformation == null)
-        {
-            kdfInformation = new UserKdfInformation
-            {
-                Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = 100000,
-            };
-        }
-        return new PreloginResponseModel(kdfInformation);
-    }
-
-    [Obsolete("TDL-136 Moved to Identity (2022-01-12 cloud, 2022-09-19 self-hosted), left for backwards compatability with older clients.")]
-    [HttpPost("register")]
-    [AllowAnonymous]
-    [CaptchaProtected]
-    public async Task<RegisterResponseModel> PostRegister([FromBody] RegisterRequestModel model)
-    {
-        var user = model.ToUser();
-        var result = await _userService.RegisterUserAsync(user, model.MasterPasswordHash,
-            model.Token, model.OrganizationUserId);
-        if (result.Succeeded)
-        {
-            var captchaBypassToken = _captchaValidationService.GenerateCaptchaBypassToken(user);
-            return new RegisterResponseModel(captchaBypassToken);
-        }
-
-        foreach (var error in result.Errors.Where(e => e.Code != "DuplicateUserName"))
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
-    }
-
-    #endregion
 
     [HttpPost("password-hint")]
     [AllowAnonymous]

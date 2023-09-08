@@ -1,9 +1,9 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
-using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Identity;
+using Bit.Identity.Models.Request;
 using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Http;
 

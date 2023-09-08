@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Auth.Models.Api.Request.Accounts;
+namespace Bit.Identity.Models.Request;
 
 public class PreloginRequestModel
 {
