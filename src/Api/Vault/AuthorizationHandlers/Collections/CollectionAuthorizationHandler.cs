@@ -12,14 +12,12 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public CollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository,
         IOrganizationUserRepository organizationUserRepository)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
-        _organizationUserRepository = organizationUserRepository;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
