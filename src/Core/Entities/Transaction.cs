@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
@@ -14,11 +16,11 @@ public class Transaction : ITableObject<Guid>
     public bool? Refunded { get; set; }
     public decimal? RefundedAmount { get; set; }
     [MaxLength(100)]
-    public string Details { get; set; }
+    public string? Details { get; set; }
     public PaymentMethodType? PaymentMethodType { get; set; }
     public GatewayType? Gateway { get; set; }
     [MaxLength(50)]
-    public string GatewayId { get; set; }
+    public string? GatewayId { get; set; }
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
     public void SetNewId()

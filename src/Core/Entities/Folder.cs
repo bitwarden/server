@@ -1,4 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿#nullable enable
+
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.Vault.Entities;
@@ -7,7 +9,7 @@ public class Folder : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
-    public string Name { get; set; }
+    public string? Name { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

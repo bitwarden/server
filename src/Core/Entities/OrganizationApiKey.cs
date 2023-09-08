@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
@@ -10,7 +12,7 @@ public class OrganizationApiKey : ITableObject<Guid>
     public Guid OrganizationId { get; set; }
     public OrganizationApiKeyType Type { get; set; }
     [MaxLength(30)]
-    public string ApiKey { get; set; }
+    public string ApiKey { get; set; } = null!;
     public DateTime RevisionDate { get; set; }
 
     public void SetNewId()

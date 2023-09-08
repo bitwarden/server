@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿#nullable enable
+
+using System.ComponentModel.DataAnnotations;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
@@ -49,10 +51,10 @@ public class Event : ITableObject<Guid>, IEvent
     public Guid? ProviderOrganizationId { get; set; }
     public DeviceType? DeviceType { get; set; }
     [MaxLength(50)]
-    public string IpAddress { get; set; }
+    public string? IpAddress { get; set; }
     public Guid? ActingUserId { get; set; }
     public EventSystemUser? SystemUser { get; set; }
-    public string DomainName { get; set; }
+    public string? DomainName { get; set; }
     public Guid? SecretId { get; set; }
     public Guid? ServiceAccountId { get; set; }
 
