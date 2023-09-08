@@ -8,6 +8,40 @@ namespace Bit.Infrastructure.IntegrationTest.Repositories;
 public class CollectionRepositoryTests
 {
     [DatabaseTheory, DatabaseData]
+    public async Task CreateAsync_Works(ICollectionRepository collectionRepository,
+        IServiceProvider services)
+    {
+        var organizationUser = await services.CreateOrganizationUserAsync();
+
+        var externalId = Guid.NewGuid().ToString();
+
+        var createdCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Test Collection",
+            OrganizationId = organizationUser.OrganizationId,
+            ExternalId = externalId,
+        });
+
+        // Assert that we get the Id back right away so that we know we set the Id client side
+        Assert.NotEqual(createdCollection.Id, Guid.Empty);
+
+        // Assert that we can find one from the database
+        var collection = await collectionRepository.GetByIdAsync(createdCollection.Id);
+        Assert.NotNull(collection);
+
+        // Assert the found item has all the data we expect
+        Assert.Equal("Test Collection", collection.Name);
+        Assert.Equal(organizationUser.OrganizationId, collection.OrganizationId);
+        Assert.Equal(externalId, collection.ExternalId);
+
+        // Assert the items returned from CreateAsync match what is found by id
+        Assert.Equal(createdCollection.Id, collection.Id);
+        Assert.Equal(createdCollection.Name, collection.Name);
+        Assert.Equal(createdCollection.OrganizationId, collection.OrganizationId);
+        // TODO: Assert dates
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task GetManyByUserIdAsync_UserInCollection_ReturnsCollection(ICollectionRepository collectionRepository,
         IServiceProvider services)
     {
