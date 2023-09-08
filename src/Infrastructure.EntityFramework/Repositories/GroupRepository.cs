@@ -57,16 +57,16 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = await (
-                from cg in dbContext.CollectionGroups
-                where cg.GroupId == id
-                select cg).ToListAsync();
-            var collections = query.Select(c => new CollectionAccessSelection
-            {
-                Id = c.CollectionId,
-                ReadOnly = c.ReadOnly,
-                HidePasswords = c.HidePasswords,
-            }).ToList();
+            var collections = await dbContext.CollectionGroups
+                .Where(cg => cg.GroupId == id)
+                .Select(cg => new CollectionAccessSelection
+                {
+                    Id = cg.CollectionId,
+                    ReadOnly = cg.ReadOnly,
+                    HidePasswords = cg.HidePasswords,
+                })
+                .ToListAsync();
+
             return new Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>(
                 grp, collections);
         }
@@ -120,10 +120,9 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = from g in dbContext.Groups
-                        where groupIds.Contains(g.Id)
-                        select g;
-            var groups = await query.ToListAsync();
+            var groups = await dbContext.Groups
+                .Where(g => groupIds.Contains(g.Id))
+                .ToListAsync();
             return Mapper.Map<List<Core.Entities.Group>>(groups);
         }
     }
@@ -149,12 +148,10 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query =
-                from gu in dbContext.GroupUsers
-                where gu.OrganizationUserId == organizationUserId
-                select gu;
-            var groupIds = await query.Select(x => x.GroupId).ToListAsync();
-            return groupIds;
+            return await dbContext.GroupUsers
+                .Where(gu => gu.OrganizationUserId == organizationUserId)
+                .Select(gu => gu.GroupId)
+                .ToListAsync();
         }
     }
 
