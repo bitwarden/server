@@ -77,8 +77,8 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        var (max, atMax) = await _maxProjectsQuery.GetByOrgIdAsync(organizationId);
-        if (atMax != null && atMax.Value)
+        var (max, overMax) = await _maxProjectsQuery.GetByOrgIdAsync(organizationId, 1);
+        if (overMax != null && overMax.Value)
         {
             throw new BadRequestException($"You have reached the maximum number of projects ({max}) for this plan.");
         }
