@@ -13,8 +13,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
 
-    public CollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository,
-        IOrganizationUserRepository organizationUserRepository)
+    public CollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
@@ -25,6 +24,12 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     {
         // Establish pattern of authorization handler null checking passed resources
         if (resources == null || !resources.Any())
+        {
+            context.Fail();
+            return;
+        }
+
+        if (!_currentContext.UserId.HasValue)
         {
             context.Fail();
             return;
@@ -88,12 +93,6 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private async Task CanDeleteAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         ICollection<Collection> resources, CurrentContextOrganization org)
     {
-        if (!_currentContext.UserId.HasValue)
-        {
-            context.Fail();
-            return;
-        }
-
         // Owners, Admins, Providers, and users with DeleteAnyCollection or EditAnyCollection permission can always delete collections
         if (
             org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
@@ -113,7 +112,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
 
         // Other members types should have the Manage capability for all collections being deleted
         var manageableCollectionIds =
-            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value))
+            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
             .Where(c => c.Manage && c.OrganizationId == org.Id)
             .Select(c => c.Id)
             .ToHashSet();
@@ -134,12 +133,6 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context,
         IAuthorizationRequirement requirement, ICollection<Collection> targetCollections, CurrentContextOrganization org)
     {
-        if (!_currentContext.UserId.HasValue)
-        {
-            context.Fail();
-            return;
-        }
-
         // Owners, Admins, Providers, and users with EditAnyCollection permission can always manage collection access
         if (
             org.Permissions is { EditAnyCollection: true } ||
@@ -152,7 +145,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
 
         // List of collection Ids the acting user is allowed to manage
         var manageableCollectionIds =
-            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value))
+            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
             .Where(c => c.Manage && c.OrganizationId == org.Id)
             .Select(c => c.Id)
             .ToHashSet();
