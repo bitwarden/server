@@ -102,11 +102,19 @@ public class DbMigrator
         cancellationToken.ThrowIfCancellationRequested();
         var builder = DeployChanges.To
             .SqlDatabase(_connectionString)
-            .JournalRepeatableToSqlTable("dbo", "Migration", repeatable)
             .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                 s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
             .WithTransaction()
             .WithExecutionTimeout(new TimeSpan(0, 5, 0));
+
+        if (repeatable)
+        {
+            builder.JournalTo(new NullJournal());
+        }
+        else
+        {
+            builder.JournalToSqlTable("dbo", "Migration");
+        }
 
         if (enableLogging)
         {
