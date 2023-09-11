@@ -7,21 +7,6 @@ public class CipherFido2KeyModel
 {
     public CipherFido2KeyModel() { }
 
-    public CipherFido2KeyModel(CipherFido2KeyData data)
-    {
-        CredentialId = data.CredentialId;
-        KeyType = data.KeyType;
-        KeyAlgorithm = data.KeyAlgorithm;
-        KeyCurve = data.KeyCurve;
-        KeyValue = data.KeyValue;
-        RpId = data.RpId;
-        RpName = data.RpName;
-        UserHandle = data.UserHandle;
-        UserDisplayName = data.UserDisplayName;
-        Counter = data.Counter;
-        Discoverable = data.Discoverable;
-    }
-
     public CipherFido2KeyModel(CipherLoginFido2KeyData data)
     {
         CredentialId = data.CredentialId;
