@@ -56,12 +56,12 @@ public class CollectionAuthorizationHandlerTests
 
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_MissingUserId_Failure(
+    public async Task HandleRequirementAsync_MissingUserId_Failure(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ModifyAccess },
+            new[] { CollectionOperations.Create },
             new ClaimsPrincipal(),
             collections
         );
@@ -75,7 +75,7 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_TargetCollectionsMultipleOrgs_Failure(
+    public async Task HandleRequirementAsync_TargetCollectionsMultipleOrgs_Failure(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         IList<Collection> collections)
     {
@@ -85,7 +85,7 @@ public class CollectionAuthorizationHandlerTests
         collections.First().OrganizationId = Guid.NewGuid();
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ModifyAccess },
+            new[] { CollectionOperations.Create },
             new ClaimsPrincipal(),
             collections
         );
@@ -94,34 +94,27 @@ public class CollectionAuthorizationHandlerTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.HandleAsync(context));
         Assert.Equal("Requested collections must belong to the same organization.", exception.Message);
-        await sutProvider.GetDependency<ICurrentContext>().DidNotReceiveWithAnyArgs()
-            .OrganizationMembershipAsync(default, default);
+        sutProvider.GetDependency<ICurrentContext>().DidNotReceiveWithAnyArgs().GetOrganization(default);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_MissingOrgMembership_Failure(
+    public async Task HandleRequirementAsync_MissingOrg_Failure(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
-        ICollection<Collection> collections,
-        CurrentContextOrganization organization)
+        ICollection<Collection> collections)
     {
         var actingUserId = Guid.NewGuid();
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ModifyAccess },
+            new[] { CollectionOperations.Create },
             new ClaimsPrincipal(),
             collections
         );
 
-        // Simulate a missing org membership
-        organization.Id = Guid.NewGuid();
-
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().OrganizationMembershipAsync(Arg.Any<IOrganizationUserRepository>(), actingUserId).Returns(new[] { organization });
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.True(context.HasFailed);
-        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByUserIdAsync(default);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
