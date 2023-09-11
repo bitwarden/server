@@ -27,6 +27,8 @@ namespace Bit.Api.Vault.Controllers;
 [Authorize("Application")]
 public class CiphersController : Controller
 {
+    private static readonly Version _fido2KeyCipherMinimumVersion = new Version(Constants.Fido2KeyCipherMinimumVersion);
+
     private readonly ICipherRepository _cipherRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICipherService _cipherService;
@@ -184,6 +186,14 @@ public class CiphersController : Controller
         {
             throw new BadRequestException("Organization mismatch. Re-sync if you recently moved this item, " +
                 "then try again.");
+        }
+
+        // Temporary protection against old clients overwriting and deleting Fido2Keys
+        // Response model used to re-use logic for parsing 'data' property
+        var cipherModel = new CipherResponseModel(cipher, _globalSettings);
+        if (cipherModel.Login?.Fido2Key != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
+        {
+            throw new BadRequestException("Please update your client to edit this item.");
         }
 
         await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate, collectionIds);
