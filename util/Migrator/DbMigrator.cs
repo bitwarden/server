@@ -24,7 +24,7 @@ public class DbMigrator
     }
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
-        bool rerunable = false,
+        bool repeatable = false,
         string folderName = "DbScripts",
         CancellationToken cancellationToken = default(CancellationToken))
     {
@@ -34,7 +34,7 @@ public class DbMigrator
         {
             try
             {
-                var success = MigrateDatabase(enableLogging, rerunable, folderName, cancellationToken);
+                var success = MigrateDatabase(enableLogging, repeatable, folderName, cancellationToken);
                 return success;
             }
             catch (SqlException ex)
@@ -56,7 +56,7 @@ public class DbMigrator
     }
 
     public bool MigrateDatabase(bool enableLogging = true,
-        bool rerunable = false,
+        bool repeatable = false,
         string folderName = "DbScripts",
         CancellationToken cancellationToken = default(CancellationToken))
     {
@@ -102,7 +102,7 @@ public class DbMigrator
         cancellationToken.ThrowIfCancellationRequested();
         var builder = DeployChanges.To
             .SqlDatabase(_connectionString)
-            .JournalRerunableToSqlTable("dbo", "Migration", rerunable)
+            .JournalRepeatableToSqlTable("dbo", "Migration", repeatable)
             .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                 s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
             .WithTransaction()

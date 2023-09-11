@@ -17,22 +17,22 @@ internal class Program
         string databaseConnectionString,
         [Option('v', "verbose", Description = "Enable verbose output of migrator logs")]
         bool verbose = false,
-        [Option('r', "rerunable", Description = "Mark scripts as rerunable")]
-        bool rerunable = false,
+        [Option('r', "repeatable", Description = "Mark scripts as repeatable")]
+        bool repeatable = false,
         [Option('f', "folder", Description = "Folder name of database scripts")]
-        string folderName = "DbScripts") => MigrateDatabase(databaseConnectionString, verbose, rerunable, folderName);
+        string folderName = "DbScripts") => MigrateDatabase(databaseConnectionString, verbose, repeatable, folderName);
 
     private static void WriteUsageToConsole()
     {
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string>");
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs)");
-        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -r|--rerunable (for marking scripts as rerunable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
-        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs) -r|--rerunable (for marking scripts as rerunable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
+        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -r|--repeatable (for marking scripts as repeatable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
+        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs) -r|--repeatable (for marking scripts as repeatable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
     }
 
-    private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, bool rerunable = false, string folderName = "")
+    private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, bool repeatable = false, string folderName = "")
     {
-        Console.WriteLine($"rerunable: {rerunable}");
+        Console.WriteLine($"repeatable: {repeatable}");
         Console.WriteLine($"folderName: {folderName}");
         var logger = CreateLogger(verbose);
 
@@ -40,11 +40,11 @@ internal class Program
         bool success = false;
         if (!string.IsNullOrWhiteSpace(folderName))
         {
-            success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, rerunable, folderName);
+            success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, repeatable, folderName);
         }
         else
         {
-            success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, rerunable);
+            success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, repeatable);
         }
 
         return success;

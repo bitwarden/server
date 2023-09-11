@@ -9,21 +9,21 @@ namespace Bit.Migrator;
 
 public static class SqlTableJournalExtensions
 {
-    public static UpgradeEngineBuilder JournalRerunableToSqlTable(this UpgradeEngineBuilder builder, string schema, string table, bool rerunable = false)
+    public static UpgradeEngineBuilder JournalRepeatableToSqlTable(this UpgradeEngineBuilder builder, string schema, string table, bool repeatable = false)
     {
-        builder.Configure(c => c.Journal = new RerunableSqlTableJournal(() => c.ConnectionManager, () => c.Log, schema, table, rerunable));
+        builder.Configure(c => c.Journal = new RepeatableSqlTableJournal(() => c.ConnectionManager, () => c.Log, schema, table, repeatable));
         return builder;
     }
 }
 
-public class RerunableSqlTableJournal : SqlTableJournal
+public class RepeatableSqlTableJournal : SqlTableJournal
 {
-    private bool Rerunable { get; set; }
+    private bool Repeatable { get; set; }
 
-    public RerunableSqlTableJournal(Func<IConnectionManager> connectionManager, Func<IUpgradeLog> logger, string schema, string table, bool rerunable = false)
+    public RepeatableSqlTableJournal(Func<IConnectionManager> connectionManager, Func<IUpgradeLog> logger, string schema, string table, bool repeatable = false)
         : base(connectionManager, logger, schema, table)
     {
-        Rerunable = rerunable;
+        Repeatable = repeatable;
     }
 
     public override void StoreExecutedScript(SqlScript script, Func<IDbCommand> dbCommandFactory)
@@ -57,25 +57,25 @@ public class RerunableSqlTableJournal : SqlTableJournal
         appliedParam.Value = DateTime.Now;
         command.Parameters.Add(appliedParam);
 
-        var rerunableParam = command.CreateParameter();
-        rerunableParam.ParameterName = "rerunable";
-        rerunableParam.Value = Rerunable;
-        command.Parameters.Add(rerunableParam);
+        var repeatableParam = command.CreateParameter();
+        repeatableParam.ParameterName = "repeatable";
+        repeatableParam.Value = Repeatable;
+        command.Parameters.Add(repeatableParam);
 
-        command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied", "@rerunable", "@scriptFileName");
+        command.CommandText = GetInsertJournalEntrySql("@scriptName", "@applied", "@repeatable", "@scriptFileName");
         command.CommandType = CommandType.Text;
         return command;
     }
 
-    protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @rerunable, string @scriptFileName)
+    protected string GetInsertJournalEntrySql(string @scriptName, string @applied, string @repeatable, string @scriptFileName)
     {
-        return @$"IF EXISTS (SELECT * FROM {FqSchemaTableName} WHERE Rerunable = 1 AND ScriptName like {@scriptFileName})
+        return @$"IF EXISTS (SELECT * FROM {FqSchemaTableName} WHERE Repeatable = 1 AND ScriptName like {@scriptFileName})
             BEGIN
-                UPDATE {FqSchemaTableName} SET ScriptName = {@scriptName}, Applied = {@applied}, Rerunable = {@rerunable} WHERE ScriptName like {@scriptFileName}
+                UPDATE {FqSchemaTableName} SET ScriptName = {@scriptName}, Applied = {@applied}, Repeatable = {@repeatable} WHERE ScriptName like {@scriptFileName}
             END
         ELSE
             BEGIN
-                insert into {FqSchemaTableName} (ScriptName, Applied, Rerunable) values ({@scriptName}, {@applied}, {@rerunable})
+                insert into {FqSchemaTableName} (ScriptName, Applied, Repeatable) values ({@scriptName}, {@applied}, {@repeatable})
             END ";
     }
 
@@ -86,11 +86,11 @@ public class RerunableSqlTableJournal : SqlTableJournal
             SELECT @columnVariable =
             CASE WHEN EXISTS
             (
-                SELECT 1 FROM sys.columns WHERE Name = N'Rerunable' AND Object_ID = Object_ID(N'dbo.Migration')
+                SELECT 1 FROM sys.columns WHERE Name = N'Repeatable' AND Object_ID = Object_ID(N'dbo.Migration')
             )
             THEN
             (
-                'where [Rerunable] = 0'
+                'where [Repeatable] = 0'
             )
             ELSE
             (
