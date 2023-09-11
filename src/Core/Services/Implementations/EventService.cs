@@ -407,21 +407,33 @@ public class EventService : IEventService
 
     public async Task LogServiceAccountSecretEventAsync(Guid serviceAccountId, Secret secret, EventType type, DateTime? date = null)
     {
+        await LogServiceAccountSecretsEventAsync(serviceAccountId, new[] { secret }, type, date);
+    }
+
+    public async Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null)
+    {
         var orgAbilities = await _applicationCacheService.GetOrganizationAbilitiesAsync();
-        if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+        var eventMessages = new List<IEvent>();
+
+        foreach (var secret in secrets)
         {
-            return;
+            if (!CanUseEvents(orgAbilities, secret.OrganizationId))
+            {
+                continue;
+            }
+
+            var e = new EventMessage(_currentContext)
+            {
+                OrganizationId = secret.OrganizationId,
+                Type = type,
+                SecretId = secret.Id,
+                ServiceAccountId = serviceAccountId,
+                Date = date.GetValueOrDefault(DateTime.UtcNow)
+            };
+            eventMessages.Add(e);
         }
 
-        var e = new EventMessage(_currentContext)
-        {
-            OrganizationId = secret.OrganizationId,
-            Type = type,
-            SecretId = secret.Id,
-            ServiceAccountId = serviceAccountId,
-            Date = date.GetValueOrDefault(DateTime.UtcNow)
-        };
-        await _eventWriteService.CreateAsync(e);
+        await _eventWriteService.CreateManyAsync(eventMessages);
     }
 
     private async Task<Guid?> GetProviderIdAsync(Guid? orgId)

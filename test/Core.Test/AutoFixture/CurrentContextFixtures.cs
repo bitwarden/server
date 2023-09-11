@@ -32,7 +32,7 @@ internal class CurrentContextBuilder : ISpecimenBuilder
         }
 
         var obj = new Fixture().WithAutoNSubstitutions().Create<ICurrentContext>();
-        obj.Organizations = context.Create<List<CurrentContentOrganization>>();
+        obj.Organizations = context.Create<List<CurrentContextOrganization>>();
         return obj;
     }
 }

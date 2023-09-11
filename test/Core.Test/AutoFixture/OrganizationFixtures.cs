@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
 
@@ -137,6 +138,7 @@ public class SecretsManagerOrganizationCustomization : ICustomization
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
             .With(o => o.UseSecretsManager, true)
+            .With(o => o.SecretsManagerBeta, false)
             .With(o => o.PlanType, planType)
             .With(o => o.Plan, StaticStore.GetPasswordManagerPlan(planType).Name)
             .With(o => o.MaxAutoscaleSmSeats, (int?)null)
@@ -185,4 +187,32 @@ internal class SecretsManagerOrganizationCustomizeAttribute : BitCustomizeAttrib
 {
     public override ICustomization GetCustomization() =>
         new SecretsManagerOrganizationCustomization();
+}
+
+internal class EphemeralDataProtectionCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        fixture.Customizations.Add(new EphemeralDataProtectionProviderBuilder());
+    }
+
+    private class EphemeralDataProtectionProviderBuilder : ISpecimenBuilder
+    {
+        public object Create(object request, ISpecimenContext context)
+        {
+            var type = request as Type;
+            if (type == null || type != typeof(IDataProtectionProvider))
+            {
+                return new NoSpecimen();
+            }
+
+            return new EphemeralDataProtectionProvider();
+        }
+    }
+}
+
+internal class EphemeralDataProtectionAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EphemeralDataProtectionAutoDataAttribute() : base(new SutProviderCustomization(), new EphemeralDataProtectionCustomization())
+    { }
 }
