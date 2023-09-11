@@ -19,6 +19,7 @@ public class CipherFido2KeyModel
         UserHandle = data.UserHandle;
         UserDisplayName = data.UserDisplayName;
         Counter = data.Counter;
+        Discoverable = data.Discoverable;
     }
 
     public CipherFido2KeyModel(CipherLoginFido2KeyData data)
@@ -33,6 +34,7 @@ public class CipherFido2KeyModel
         UserHandle = data.UserHandle;
         UserDisplayName = data.UserDisplayName;
         Counter = data.Counter;
+        Discoverable = data.Discoverable;
     }
 
     [EncryptedString]
@@ -65,6 +67,9 @@ public class CipherFido2KeyModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Counter { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string Discoverable { get; set; }
 
     public CipherLoginFido2KeyData ToCipherLoginFido2KeyData()
     {
@@ -80,6 +85,7 @@ public class CipherFido2KeyModel
             UserHandle = UserHandle,
             UserDisplayName = UserDisplayName,
             Counter = Counter,
+            Discoverable = Discoverable
         };
     }
 }
