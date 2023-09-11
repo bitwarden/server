@@ -92,7 +92,7 @@ public class Configuration
         "client IP address.\n" +
         "Learn more: https://nginx.org/en/docs/http/ngx_http_realip_module.html\n\n" +
         "Defined as a dictionary, e.g.:\n" +
-        "real_ips: ['10.10.0.0/24', '172.16.0.0/16']")]
+        "real_ips: ['10.10.0.0/24', '172.16.0.0/12']")]
     public List<string> RealIps { get; set; }
 
     [Description("Enable Key Connector (https://bitwarden.com/help/article/deploy-key-connector)")]
