@@ -36,7 +36,6 @@ public class CipherRequestModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
-    public CipherFido2KeyModel Fido2Key { get; set; }
     public DateTime? LastKnownRevisionDate { get; set; } = null;
 
     public CipherDetails ToCipherDetails(Guid userId, bool allowOrgIdSet = true)
