@@ -331,10 +331,11 @@
       },
       "Braintree": {
         "type": "Transitive",
-        "resolved": "5.12.0",
-        "contentHash": "bV2tsVIvBQeKwULT4qPZUWhxSr8mFwyAAcvLDvDpCU0cMYPHzGSahha+ghUdgGMb317BqL34/Od59n2s3MkhOQ==",
+        "resolved": "5.19.0",
+        "contentHash": "B60wIX54g78nMsy5cJkvSfqs1VasYDXWFZQW0cUQ4QeW8Y5jPyBSaoxHwKC806lXUDaKC8kr5Y7Q6EdsBkPANQ==",
         "dependencies": {
-          "Newtonsoft.Json": "9.0.1",
+          "Microsoft.CSharp": "4.7.0",
+          "Newtonsoft.Json": "13.0.1",
           "System.Xml.XPath.XmlDocument": "4.3.0"
         }
       },
@@ -3014,25 +3015,25 @@
           "AspNetCore.HealthChecks.SqlServer": "[6.0.2, )",
           "AspNetCore.HealthChecks.Uris": "[6.0.3, )",
           "Azure.Messaging.EventGrid": "[4.10.0, )",
-          "Commercial.Core": "[2023.7.2, )",
-          "Commercial.Infrastructure.EntityFramework": "[2023.7.2, )",
-          "Core": "[2023.7.2, )",
-          "SharedWeb": "[2023.7.2, )",
+          "Commercial.Core": "[2023.8.3, )",
+          "Commercial.Infrastructure.EntityFramework": "[2023.8.3, )",
+          "Core": "[2023.8.3, )",
+          "SharedWeb": "[2023.8.3, )",
           "Swashbuckle.AspNetCore": "[6.5.0, )"
         }
       },
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.7.2, )"
+          "Core": "[2023.8.3, )"
         }
       },
       "commercial.infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.7.2, )",
-          "Infrastructure.EntityFramework": "[2023.7.2, )"
+          "Core": "[2023.8.3, )",
+          "Infrastructure.EntityFramework": "[2023.8.3, )"
         }
       },
       "common": {
@@ -3040,7 +3041,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2023.7.2, )",
+          "Core": "[2023.8.3, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -3059,7 +3060,7 @@
           "Azure.Storage.Blobs": "[12.14.1, )",
           "Azure.Storage.Queues": "[12.12.0, )",
           "BitPay.Light": "[1.0.1907, )",
-          "Braintree": "[5.12.0, )",
+          "Braintree": "[5.19.0, )",
           "DnsClient": "[1.7.0, )",
           "Fido2.AspNet": "[3.0.1, )",
           "Handlebars.Net": "[2.1.2, )",
@@ -3094,8 +3095,8 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Common": "[2023.7.2, )",
-          "Core": "[2023.7.2, )",
+          "Common": "[2023.8.3, )",
+          "Core": "[2023.8.3, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -3105,7 +3106,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.7.2, )",
+          "Core": "[2023.8.3, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -3113,7 +3114,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.7.2, )",
+          "Core": "[2023.8.3, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -3125,9 +3126,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.7.2, )",
-          "Infrastructure.Dapper": "[2023.7.2, )",
-          "Infrastructure.EntityFramework": "[2023.7.2, )"
+          "Core": "[2023.8.3, )",
+          "Infrastructure.Dapper": "[2023.8.3, )",
+          "Infrastructure.EntityFramework": "[2023.8.3, )"
         }
       }
     }
