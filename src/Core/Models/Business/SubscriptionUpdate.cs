@@ -96,62 +96,6 @@ public class SmSeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
     protected override string GetPlanId() => _plan.SecretsManager.StripeSeatPlanId;
 }
 
-/*public class SeatSubscriptionUpdate : SubscriptionUpdate
-{
-    private readonly int _previousSeats;
-    private readonly StaticStore.Plan _plan;
-    private readonly long? _additionalSeats;
-
-    protected override List<string> PlanIds => new()
-    {
-        _plan.SupportsSecretsManager
-            ? _plan.SecretsManager.StripeSeatPlanId
-            : _plan.PasswordManager.StripeSeatPlanId
-    };
-
-
-    public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
-    {
-        _plan = plan;
-        _additionalSeats = additionalSeats;
-        _previousSeats = plan.SupportsSecretsManager
-            ? organization.SmSeats.GetValueOrDefault()
-            : organization.Seats.GetValueOrDefault();
-
-    }
-
-    public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
-    {
-        var item = SubscriptionItem(subscription, PlanIds.Single());
-        return new()
-        {
-            new SubscriptionItemOptions
-            {
-                Id = item?.Id,
-                Plan = PlanIds.Single(),
-                Quantity = _additionalSeats,
-                Deleted = (item?.Id != null && _additionalSeats == 0) ? true : (bool?)null,
-            }
-        };
-    }
-
-    public override List<SubscriptionItemOptions> RevertItemsOptions(Subscription subscription)
-    {
-
-        var item = SubscriptionItem(subscription, PlanIds.Single());
-        return new()
-        {
-            new SubscriptionItemOptions
-            {
-                Id = item?.Id,
-                Plan = PlanIds.Single(),
-                Quantity = _previousSeats,
-                Deleted = _previousSeats == 0 ? true : (bool?)null,
-            }
-        };
-    }
-}*/
-
 public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
 {
     private long? _prevServiceAccounts;
