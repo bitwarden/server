@@ -28,6 +28,7 @@ using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -1848,6 +1849,42 @@ public class OrganizationServiceTests
         };
 
         sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup);
+    }
+
+    [Theory]
+    [EphemeralDataProtectionAutoData]
+    public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
+        User user, SutProvider<OrganizationService> sutProvider)
+    {
+        var token = SetupAcceptUserAsyncTest(sutProvider, user, organizationUser);
+        var userService = Substitute.For<IUserService>();
+
+        await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
+    }
+
+    private string SetupAcceptUserAsyncTest(SutProvider<OrganizationService> sutProvider, User user,
+        OrganizationUser organizationUser)
+    {
+        user.Email = organizationUser.Email;
+        user.EmailVerified = false;
+
+        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("OrganizationServiceDataProtector");
+        // Token matching the format used in OrganizationService.InviteUserAsync
+        var token = dataProtector.Protect(
+            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        return token;
     }
 
     [Theory]

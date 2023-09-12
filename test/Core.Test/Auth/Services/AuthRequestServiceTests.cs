@@ -142,15 +142,19 @@ public class AuthRequestServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task CreateAuthRequestAsync_NoUser_ThrowsNotFound(
+    public async Task CreateAuthRequestAsync_NoUser_ThrowsBadRequest(
         SutProvider<AuthRequestService> sutProvider,
         AuthRequestCreateRequestModel createModel)
     {
+        sutProvider.GetDependency<ICurrentContext>()
+            .DeviceType
+            .Returns(DeviceType.Android);
+
         sutProvider.GetDependency<IUserRepository>()
             .GetByEmailAsync(createModel.Email)
             .Returns((User?)null);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.CreateAuthRequestAsync(createModel));
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAuthRequestAsync(createModel));
     }
 
     [Theory, BitAutoData]
@@ -253,7 +257,7 @@ public class AuthRequestServiceTests
 
     /// <summary>
     /// Story: If a user happens to exist to more than one organization, we will send the device approval request to
-    /// each of them. 
+    /// each of them.
     /// </summary>
     [Theory, BitAutoData]
     public async Task CreateAuthRequestAsync_AdminApproval_CreatesForEachOrganization(
@@ -627,8 +631,8 @@ public class AuthRequestServiceTests
     }
 
     /// <summary>
-    /// Story: An admin approves a request for one of their org users. For auditing purposes we need to 
-    /// log an event that correlates the action for who the request was approved for. On approval we also need to 
+    /// Story: An admin approves a request for one of their org users. For auditing purposes we need to
+    /// log an event that correlates the action for who the request was approved for. On approval we also need to
     /// push the notification to the user.
     /// </summary>
     [Theory, BitAutoData]
