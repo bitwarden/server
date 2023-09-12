@@ -13,6 +13,7 @@ using Bit.Core.Utilities;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -44,11 +45,12 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
-        ISsoConfigRepository ssoConfigRepository)
+        ISsoConfigRepository ssoConfigRepository,
+        IDistributedCache distributedCache)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
               applicationCacheService, mailService, logger, currentContext, globalSettings, userRepository, policyService,
-              tokenDataFactory, featureService, ssoConfigRepository)
+              tokenDataFactory, featureService, ssoConfigRepository, distributedCache)
     {
         _userManager = userManager;
         _userService = userService;

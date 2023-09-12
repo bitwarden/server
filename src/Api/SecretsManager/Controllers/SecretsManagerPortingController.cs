@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
+using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -19,14 +20,18 @@ public class SecretsManagerPortingController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IUserService _userService;
+    private readonly IMaxProjectsQuery _maxProjectsQuery;
     private readonly IImportCommand _importCommand;
     private readonly ICurrentContext _currentContext;
 
-    public SecretsManagerPortingController(ISecretRepository secretRepository, IProjectRepository projectRepository, IUserService userService, IImportCommand importCommand, ICurrentContext currentContext)
+    public SecretsManagerPortingController(ISecretRepository secretRepository, IProjectRepository projectRepository,
+        IUserService userService, IMaxProjectsQuery maxProjectsQuery, IImportCommand importCommand,
+        ICurrentContext currentContext)
     {
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _userService = userService;
+        _maxProjectsQuery = maxProjectsQuery;
         _importCommand = importCommand;
         _currentContext = currentContext;
     }
@@ -67,6 +72,16 @@ public class SecretsManagerPortingController : Controller
         if (importRequest.Secrets.Any(s => s.ProjectIds.Count() > 1))
         {
             throw new BadRequestException("A secret can only be in one project at a time.");
+        }
+
+        var projectsToAdd = importRequest.Projects?.Count();
+        if (projectsToAdd is > 0)
+        {
+            var (max, overMax) = await _maxProjectsQuery.GetByOrgIdAsync(organizationId, projectsToAdd.Value);
+            if (overMax != null && overMax.Value)
+            {
+                throw new BadRequestException($"The maximum number of projects for this plan is ({max}).");
+            }
         }
 
         await _importCommand.ImportAsync(organizationId, importRequest.ToSMImport());
