@@ -20,7 +20,7 @@ public class CurrentContextOrganization
 
     public Guid Id { get; set; }
     public OrganizationUserType Type { get; set; }
-    public Permissions Permissions { get; set; }
+    public Permissions Permissions { get; set; } = new();
     public bool AccessSecretsManager { get; set; }
     public bool LimitCollectionCdOwnerAdmin { get; set; }
 }
