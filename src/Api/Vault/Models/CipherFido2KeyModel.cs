@@ -7,20 +7,6 @@ public class CipherFido2KeyModel
 {
     public CipherFido2KeyModel() { }
 
-    public CipherFido2KeyModel(CipherFido2KeyData data)
-    {
-        CredentialId = data.CredentialId;
-        KeyType = data.KeyType;
-        KeyAlgorithm = data.KeyAlgorithm;
-        KeyCurve = data.KeyCurve;
-        KeyValue = data.KeyValue;
-        RpId = data.RpId;
-        RpName = data.RpName;
-        UserHandle = data.UserHandle;
-        UserDisplayName = data.UserDisplayName;
-        Counter = data.Counter;
-    }
-
     public CipherFido2KeyModel(CipherLoginFido2KeyData data)
     {
         CredentialId = data.CredentialId;
@@ -33,6 +19,7 @@ public class CipherFido2KeyModel
         UserHandle = data.UserHandle;
         UserDisplayName = data.UserDisplayName;
         Counter = data.Counter;
+        Discoverable = data.Discoverable;
     }
 
     [EncryptedString]
@@ -65,6 +52,9 @@ public class CipherFido2KeyModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Counter { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
+    public string Discoverable { get; set; }
 
     public CipherLoginFido2KeyData ToCipherLoginFido2KeyData()
     {
@@ -80,6 +70,7 @@ public class CipherFido2KeyModel
             UserHandle = UserHandle,
             UserDisplayName = UserDisplayName,
             Counter = Counter,
+            Discoverable = Discoverable
         };
     }
 }
