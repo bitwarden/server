@@ -70,6 +70,13 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private async Task CanCreateAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         CurrentContextOrganization org)
     {
+        // If false, all organization members are allowed to create collections
+        if (!org.LimitCollectionCdOwnerAdmin)
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
         // Owners, Admins, Providers, and users with CreateNewCollections or EditAnyCollection permission can always create collections
         if (
             org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
@@ -80,14 +87,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             return;
         }
 
-        // The above conditional should have passed if the following collection management setting is true, fail check
-        if (org.LimitCollectionCdOwnerAdmin)
-        {
-            context.Fail();
-            return;
-        }
-
-        context.Succeed(requirement);
+        context.Fail();
     }
 
     private async Task CanDeleteAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
@@ -103,7 +103,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             return;
         }
 
-        // The above conditional should have passed if the following collection management setting is true, fail check
+        // The limit collection management setting is enabled and we are not an Admin (above condition), fail
         if (org.LimitCollectionCdOwnerAdmin)
         {
             context.Fail();
