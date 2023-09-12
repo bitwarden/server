@@ -46,7 +46,7 @@ public class CollectionAuthorizationHandlerTests
             collections);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns(organization);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
@@ -54,6 +54,71 @@ public class CollectionAuthorizationHandlerTests
         Assert.True(context.HasSucceeded);
     }
 
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.User, false, false)]
+    [BitAutoData(OrganizationUserType.Admin, false, true)]
+    [BitAutoData(OrganizationUserType.Owner, false, true)]
+    [BitAutoData(OrganizationUserType.Custom, true, true)]
+    public async Task CanCreateAsync_Success(
+        OrganizationUserType userType, bool createNewCollection, bool limitCollectionCreateDelete,
+        SutProvider<CollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions.CreateNewCollections = createNewCollection;
+        organization.LimitCollectionCdOwnerAdmin = limitCollectionCreateDelete;
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.Create },
+            new ClaimsPrincipal(),
+            collections);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.User, false, false, true)]
+    [BitAutoData(OrganizationUserType.Admin, false, true, false)]
+    [BitAutoData(OrganizationUserType.Owner, false, true, false)]
+    [BitAutoData(OrganizationUserType.Custom, true, true, false)]
+    public async Task CanDeleteAsync_Success(
+        OrganizationUserType userType, bool deleteAnyCollection, bool limitCollectionCreateDelete, bool manageCollections,
+        SutProvider<CollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        ICollection<CollectionDetails> collectionDetails,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+        foreach (var collectionDetail in collectionDetails)
+        {
+            collectionDetail.Manage = manageCollections;
+        }
+
+        organization.Type = userType;
+        organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
+        organization.LimitCollectionCdOwnerAdmin = limitCollectionCreateDelete;
+
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
 
     [Theory, BitAutoData, CollectionCustomization]
     public async Task HandleRequirementAsync_MissingUserId_Failure(
