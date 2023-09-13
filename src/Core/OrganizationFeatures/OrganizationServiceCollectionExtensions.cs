@@ -45,6 +45,7 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationAuthCommands();
+        services.AddOrganizationUserCommands();
         services.AddOrganizationUserCommandsQueries();
         services.AddBaseOrganizationSubscriptionCommandsQueries();
     }
@@ -79,6 +80,12 @@ public static class OrganizationServiceCollectionExtensions
         {
             services.AddScoped<IRevokeSponsorshipCommand, CloudRevokeSponsorshipCommand>();
         }
+    }
+
+    private static void AddOrganizationUserCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IDeleteOrganizationUserCommand, DeleteOrganizationUserCommand>();
+        services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
     }
 
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)

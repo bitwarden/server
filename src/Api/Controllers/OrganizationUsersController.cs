@@ -30,6 +30,7 @@ public class OrganizationUsersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
 
     public OrganizationUsersController(
@@ -43,6 +44,7 @@ public class OrganizationUsersController : Controller
         ICurrentContext currentContext,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
         IAcceptOrgUserCommand acceptOrgUserCommand)
     {
         _organizationRepository = organizationRepository;
@@ -55,6 +57,7 @@ public class OrganizationUsersController : Controller
         _currentContext = currentContext;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
         _acceptOrgUserCommand = acceptOrgUserCommand;
     }
 
@@ -311,7 +314,7 @@ public class OrganizationUsersController : Controller
         }
 
         var loggedInUserId = _userService.GetProperUserId(User);
-        await _organizationService.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
+        await _updateOrganizationUserGroupsCommand.UpdateUserGroupsAsync(organizationUser, model.GroupIds.Select(g => new Guid(g)), loggedInUserId);
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
