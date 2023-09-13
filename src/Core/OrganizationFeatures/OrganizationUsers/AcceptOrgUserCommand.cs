@@ -39,6 +39,10 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _userRepository = userRepository;
     }
 
+    // TODO: consider removing overloading and renaming based on purpose for increased clarity / readability
+    // AcceptOrgUserWithEmailedTokenAsync ?
+    // AcceptOrgUserByOrgIdentifierAsync ?
+    // AcceptOrgUserByOrgIdAsync ?
     public async Task<OrganizationUser> AcceptOrgUserAsync(Guid organizationUserId, User user, string token,
         IUserService userService)
     {
