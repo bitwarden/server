@@ -163,7 +163,10 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 return;
             }
-            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
+            if (twoFactorProviderType != TwoFactorProviderType.Remember)
+            {
+                await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
+            }
         }
         else
         {
