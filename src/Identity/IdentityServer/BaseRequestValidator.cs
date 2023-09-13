@@ -147,29 +147,26 @@ public abstract class BaseRequestValidator<T> where T : class
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
 
-            var cacheKey = "TOTP_" + user.Email;
+            var cacheKey = "TOTP_" + user.Email + "_" + twoFactorToken;
 
             var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, cacheKey, out string _);
-            if (isOtpCached)
+            if (!verified || isBot || isOtpCached)
             {
-                await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
+                if (twoFactorProviderType != TwoFactorProviderType.Remember)
+                {
+                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                    await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
+                }
+                else if (twoFactorProviderType == TwoFactorProviderType.Remember)
+                {
+                    await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
+                }
                 return;
             }
-
-            if ((!verified || isBot) && twoFactorProviderType != TwoFactorProviderType.Remember)
+            if (twoFactorProviderType != TwoFactorProviderType.Remember)
             {
-                await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
-                await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
-                return;
+                await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
             }
-            else if ((!verified || isBot) && twoFactorProviderType == TwoFactorProviderType.Remember)
-            {
-                // Delay for brute force.
-                await Task.Delay(2000);
-                await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
-                return;
-            }
-            await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
         }
         else
         {
