@@ -347,9 +347,20 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewAssignedCollections(Guid orgId)
     {
-        return await CreateNewCollections(orgId) // Required to display the existing collections under which the new collection can be nested
-               || await EditAssignedCollections(orgId)
-               || await DeleteAssignedCollections(orgId);
+        /*
+         * Required to display the existing collections under which the new collection can be nested.
+         * Owner, Admin, Manager, and Provider checks are handled via the EditAssigned/DeleteAssigned context calls.
+         * This entire method will be moved to the ControllerAuthorizationHandler in the future
+         */
+        var canCreateNewCollections = false;
+        var org = GetOrganization(orgId);
+        if (org != null)
+        {
+            canCreateNewCollections = !org.LimitCollectionCdOwnerAdmin || org.Permissions.CreateNewCollections;
+        }
+        return await EditAssignedCollections(orgId)
+               || await DeleteAssignedCollections(orgId)
+               || canCreateNewCollections;
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
@@ -500,7 +511,7 @@ public class CurrentContext : ICurrentContext
 
     public CurrentContextOrganization GetOrganization(Guid orgId)
     {
-        return Organizations.Find(o => o.Id == orgId);
+        return Organizations?.Find(o => o.Id == orgId);
     }
 
     private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)
