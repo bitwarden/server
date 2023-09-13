@@ -40,7 +40,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     }
 
     // TODO: consider removing overloading and renaming based on purpose for increased clarity / readability
-    // AcceptOrgUserWithEmailedTokenAsync ?
+    // AcceptOrgUserWithEmailedTokenAsync or AcceptOrgUserByOrgUserIdAndTokenAsync ?
     // AcceptOrgUserByOrgIdentifierAsync ?
     // AcceptOrgUserByOrgIdAsync ?
     public async Task<OrganizationUser> AcceptOrgUserAsync(Guid organizationUserId, User user, string token,
