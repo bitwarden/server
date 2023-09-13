@@ -18,6 +18,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IPolicyService _policyService;
     private readonly IMailService _mailService;
+    private readonly IUserRepository _userRepository;
 
     public AcceptOrgUserCommand(
         IDataProtectionProvider dataProtectionProvider,
@@ -25,7 +26,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository,
         IPolicyService policyService,
-        IMailService mailService)
+        IMailService mailService,
+        IUserRepository userRepository)
     {
 
         _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
@@ -34,6 +36,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _organizationRepository = organizationRepository;
         _policyService = policyService;
         _mailService = mailService;
+        _userRepository = userRepository;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserAsync(Guid organizationUserId, User user, string token,
@@ -67,7 +70,16 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             throw new BadRequestException("User email does not match invite.");
         }
 
-        return await AcceptOrgUserAsync(orgUser, user, userService);
+        var organizationUser = await AcceptOrgUserAsync(orgUser, user, userService);
+
+        // Verify user email if they accept org invite via email link
+        if (user.EmailVerified == false)
+        {
+            user.EmailVerified = true;
+            await _userRepository.ReplaceAsync(user);
+        }
+
+        return organizationUser;
     }
 
     public async Task<OrganizationUser> AcceptOrgUserAsync(string orgIdentifier, User user, IUserService userService)
