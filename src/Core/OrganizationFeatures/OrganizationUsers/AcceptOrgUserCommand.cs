@@ -30,7 +30,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IUserRepository userRepository)
     {
 
-        _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
+        _dataProtector = dataProtectionProvider.CreateProtector("AcceptOrgUserCommandDataProtector");
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
