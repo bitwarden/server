@@ -249,7 +249,7 @@ BEGIN
         [UsesKeyConnector] = @UsesKeyConnector,
         [FailedLoginCount] = @FailedLoginCount,
         [LastFailedLoginDate] = @LastFailedLoginDate,
-	    [AvatarColor] = @AvatarColor,
+        [AvatarColor] = @AvatarColor,
         [LastPasswordChangeDate] = @LastPasswordChangeDate,
         [LastKdfChangeDate] = @LastKdfChangeDate,
         [LastKeyRotationDate] = @LastKeyRotationDate,
