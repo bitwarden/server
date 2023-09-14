@@ -33,7 +33,7 @@ from @TwoFactorByUser t1
 where t1.TwoFactorType = 7
 AND NOT EXISTS (SELECT * FROM @TwoFactorByUser t2 WHERE t2.Id = t1.Id and t2.TwoFactorType <> 7)
 
-UPDATE [User]
-SET TwoFactorProviders = NULL
-FROM @TwoFactorByUser tf
-WHERE tf.Id = [User].Id
+-- UPDATE [User]
+-- SET TwoFactorProviders = NULL
+-- FROM @TwoFactorByUser tf
+-- WHERE tf.Id = [User].Id
