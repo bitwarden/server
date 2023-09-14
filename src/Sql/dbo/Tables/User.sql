@@ -40,7 +40,7 @@
     [LastPasswordChangeDate]           DATETIME2 (7)    NULL,
     [LastKdfChangeDate]                DATETIME2 (7)    NULL,
     [LastKeyRotationDate]              DATETIME2 (7)    NULL,
-    [LastEmailChangeDate]              DATETIME2 (7)    NULL
+    [LastEmailChangeDate]              DATETIME2 (7)    NULL,
     CONSTRAINT [PK_User] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 
