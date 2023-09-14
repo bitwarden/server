@@ -82,25 +82,30 @@ public class AuthRequestService : IAuthRequestService
     /// </remarks>
     public async Task<AuthRequest> CreateAuthRequestAsync(AuthRequestCreateRequestModel model)
     {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
-        {
-            throw new NotFoundException();
-        }
-
         if (!_currentContext.DeviceType.HasValue)
         {
             throw new BadRequestException("Device type not provided.");
         }
 
-        if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
+        var userNotFound = false;
+        var user = await _userRepository.GetByEmailAsync(model.Email);
+        if (user == null)
+        {
+            userNotFound = true;
+        }
+        else if (_globalSettings.PasswordlessAuth.KnownDevicesOnly)
         {
             var devices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
             if (devices == null || !devices.Any(d => d.Identifier == model.DeviceIdentifier))
             {
-                throw new BadRequestException(
-                    "Login with device is only available on devices that have been previously logged in.");
+                userNotFound = true;
             }
+        }
+
+        // Anonymous endpoints must not leak that a user exists or not
+        if (userNotFound)
+        {
+            throw new BadRequestException("User or known device not found.");
         }
 
         // AdminApproval requests require correlating the user and their organization
@@ -109,7 +114,7 @@ public class AuthRequestService : IAuthRequestService
             // TODO: When single org policy is turned on we should query for only a single organization from the current user
             // and create only an AuthRequest for that organization and return only that one
 
-            // This will send out the request to all organizations this user belongs to 
+            // This will send out the request to all organizations this user belongs to
             var organizationUsers = await _organizationUserRepository.GetManyByUserAsync(_currentContext.UserId!.Value);
 
             if (organizationUsers.Count == 0)
@@ -173,7 +178,7 @@ public class AuthRequestService : IAuthRequestService
         switch (authRequest.Type)
         {
             case AuthRequestType.AdminApproval:
-                // AdminApproval has a different expiration time, by default is 7 days compared to 
+                // AdminApproval has a different expiration time, by default is 7 days compared to
                 // non-AdminApproval ones having a default of 15 minutes.
                 if (IsDateExpired(authRequest.CreationDate, _globalSettings.PasswordlessAuth.AdminRequestExpiration))
                 {
@@ -213,7 +218,7 @@ public class AuthRequestService : IAuthRequestService
 
         await _authRequestRepository.ReplaceAsync(authRequest);
 
-        // We only want to send an approval notification if the request is approved (or null), 
+        // We only want to send an approval notification if the request is approved (or null),
         // to not leak that it was denied to the originating client if it was originated by a malicious actor.
         if (authRequest.Approved ?? true)
         {

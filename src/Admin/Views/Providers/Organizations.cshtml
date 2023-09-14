@@ -44,7 +44,7 @@
                                     <div class="float-right">
                                         @if (org.Status == OrganizationStatusType.Pending)
                                         {
-                                            <a href="#" class="float-right" onclick="return resendOwnerInvite('@org.OrganizationId', '@org.OrganizationName');">
+                                            <a href="#" class="float-right" onclick="return resendOwnerInvite('@org.OrganizationId');">
                                                 <i class="fa fa-envelope-o fa-lg" title="Resend Setup Invite"></i>
                                             </a>
                                         }
