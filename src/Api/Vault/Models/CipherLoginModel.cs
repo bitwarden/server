@@ -16,9 +16,9 @@ public class CipherLoginModel
             Uri = data.Uri;
         }
 
-        if (data.Fido2Key != null)
+        if (data.Fido2Keys != null)
         {
-            Fido2Key = new CipherFido2KeyModel(data.Fido2Key);
+            Fido2Keys = data.Fido2Keys.Select(key => new CipherFido2KeyModel(key)).ToArray();
         }
 
         Username = data.Username;
@@ -60,7 +60,7 @@ public class CipherLoginModel
     [EncryptedStringLength(1000)]
     public string Totp { get; set; }
     public bool? AutofillOnPageLoad { get; set; }
-    public CipherFido2KeyModel Fido2Key { get; set; }
+    public CipherFido2KeyModel[] Fido2Keys { get; set; }
 
     public class CipherLoginUriModel
     {

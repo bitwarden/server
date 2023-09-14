@@ -164,7 +164,7 @@ public class CipherRequestModel
             PasswordRevisionDate = Login.PasswordRevisionDate,
             Totp = Login.Totp,
             AutofillOnPageLoad = Login.AutofillOnPageLoad,
-            Fido2Key = Login.Fido2Key == null ? null : Login.Fido2Key.ToCipherLoginFido2KeyData(),
+            Fido2Keys = Login.Fido2Keys == null ? null : Login.Fido2Keys.ToCipherLoginFido2KeyData(),
         };
     }
 

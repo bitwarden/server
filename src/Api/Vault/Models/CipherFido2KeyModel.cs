@@ -74,3 +74,11 @@ public class CipherFido2KeyModel
         };
     }
 }
+
+static class CipherFido2KeyModelExtensions
+{
+    public static CipherLoginFido2KeyData[] ToCipherLoginFido2KeyData(this CipherFido2KeyModel[] models)
+    {
+        return models.Select(m => m.ToCipherLoginFido2KeyData()).ToArray();
+    }
+}
