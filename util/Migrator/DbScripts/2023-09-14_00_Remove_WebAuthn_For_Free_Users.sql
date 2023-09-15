@@ -6,34 +6,52 @@
 -- WebAuthn, which is effectively disabled by a server-side permission check for Premium status.
 -- With WebAuthn being made free, we want to avoid these users suddenly being forced
 -- to provide 2FA using a key that they haven't used in a long time, by deleting that key from their TwoFactorProviders.
-declare @TwoFactorByUser TABLE
+
+declare @UsersWithoutPremium TABLE
 (
     Id UNIQUEIDENTIFIER,
-    Email NVARCHAR(256),
+    TwoFactorProviders NVARCHAR(MAX)
+);
+
+declare @TwoFactorMethodsForUsersWithoutPremium TABLE
+(
+    Id UNIQUEIDENTIFIER,
     TwoFactorType INT
 )
 
-INSERT INTO @TwoFactorByUser
+-- Insert users who don't have Premium
+INSERT INTO @UsersWithoutPremium
+SELECT u.Id, u.TwoFactorProviders
+from [User] u
+WHERE u.Premium = 0;
+
+-- Filter out those users who get Premium from their org
+DELETE FROM @UsersWithoutPremium
+WHERE Id IN 
+    (SELECT UserId 
+    FROM [OrganizationUser] ou 
+    INNER JOIN [Organization] o on o.Id = ou.OrganizationId WHERE o.Enabled = 1 AND o.UsersGetPremium = 1)
+
+-- From users without Premium, get their enabled 2FA methods
+INSERT INTO @TwoFactorMethodsForUsersWithoutPremium
 SELECT  u.Id, 
-        u.Email,
         tfp1.[key] as TwoFactorType
-FROM [User] u
-LEFT OUTER JOIN [OrganizationUser] ou on ou.UserId = u.Id
-LEFT OUTER JOIN [Organization] o on o.Id = ou.OrganizationId
+FROM @UsersWithoutPremium u
 CROSS APPLY OPENJSON(u.TwoFactorProviders) tfp1
 CROSS APPLY OPENJSON(tfp1.[value]) WITH (
-   [Enabled] nvarchar(10) '$.Enabled'
+   [Enabled] BIT '$.Enabled'
 ) tfp2
 WHERE [Enabled] = 'true' -- We only want enabled 2FA methods
-AND Premium = 0 -- User isn't Premium
-AND (o IS NULL OR (o IS NOT NULL AND o.Enabled = 1 AND o.UsersGetPremium = 0)) -- User doesn't have Premium from their org
 
 select *
-from @TwoFactorByUser t1
+from @TwoFactorMethodsForUsersWithoutPremium t1
 where t1.TwoFactorType = 7
-AND NOT EXISTS (SELECT * FROM @TwoFactorByUser t2 WHERE t2.Id = t1.Id and t2.TwoFactorType <> 7)
-
+AND NOT EXISTS 
+    (SELECT * 
+    FROM @TwoFactorMethodsForUsersWithoutPremium t2 
+    WHERE t2.Id = t1.Id AND t2.TwoFactorType <> 7)
+    
 -- UPDATE [User]
 -- SET TwoFactorProviders = NULL
--- FROM @TwoFactorByUser tf
+-- FROM @TwoFactorMethodsForUsersWithoutPremium tf
 -- WHERE tf.Id = [User].Id
