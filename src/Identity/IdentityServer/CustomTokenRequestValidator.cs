@@ -14,7 +14,6 @@ using IdentityModel;
 using IdentityServer4.Extensions;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Distributed;
 
 #nullable enable
 
@@ -43,13 +42,11 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IUserRepository userRepository,
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
-        IFeatureService featureService,
-        IDistributedCache distributedCache)
+        IFeatureService featureService)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
             organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
-            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository,
-            distributedCache)
+            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository)
     {
         _userManager = userManager;
     }
