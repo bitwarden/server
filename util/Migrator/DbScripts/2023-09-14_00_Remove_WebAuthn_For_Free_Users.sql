@@ -19,6 +19,11 @@ declare @TwoFactorMethodsForUsersWithoutPremium TABLE
     TwoFactorType INT
 )
 
+declare @UsersToAdjust TABLE
+(
+    Id UNIQUEIDENTIFIER
+);
+
 -- Insert users who don't have Premium
 INSERT INTO @UsersWithoutPremium
 SELECT u.Id, u.TwoFactorProviders
@@ -43,15 +48,19 @@ CROSS APPLY OPENJSON(tfp1.[value]) WITH (
 ) tfp2
 WHERE [Enabled] = 'true' -- We only want enabled 2FA methods
 
-select *
+insert into @UsersToAdjust
+select t1.Id
 from @TwoFactorMethodsForUsersWithoutPremium t1
 where t1.TwoFactorType = 7
 AND NOT EXISTS 
     (SELECT * 
     FROM @TwoFactorMethodsForUsersWithoutPremium t2 
-    WHERE t2.Id = t1.Id AND t2.TwoFactorType <> 7)
-    
+    WHERE t2.Id = t1.Id AND t2.TwoFactorType <> 7 AND t2.TwoFactorType <> 4)
+
+select *
+from @UsersToAdjust
+
 -- UPDATE [User]
 -- SET TwoFactorProviders = NULL
--- FROM @TwoFactorMethodsForUsersWithoutPremium tf
--- WHERE tf.Id = [User].Id
+-- FROM @UsersToAdjust ua
+-- WHERE ua.Id = [User].Id
