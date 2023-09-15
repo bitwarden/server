@@ -9,7 +9,7 @@ namespace Bit.Core.Test.Auth.Models.Business.Tokenables;
 public class SsoEmail2faSessionTokenableTests
 {
     // Allow a small tolerance for possible execution delays or clock precision to avoid flaky tests.
-    private readonly TimeSpan _timeTolerance = TimeSpan.FromMilliseconds(10);
+    private static readonly TimeSpan _timeTolerance = TimeSpan.FromMilliseconds(10);
 
     /// <summary>
     /// Tests the default constructor behavior when passed a null user.
@@ -59,7 +59,7 @@ public class SsoEmail2faSessionTokenableTests
             ExpirationDate = customExpiration
         };
 
-        Assert.True(Math.Abs((customExpiration - token.ExpirationDate).TotalMilliseconds) < _timeTolerance.TotalMilliseconds);
+        Assert.True((customExpiration - token.ExpirationDate).Duration() < _timeTolerance);
     }
 
     /// <summary>
