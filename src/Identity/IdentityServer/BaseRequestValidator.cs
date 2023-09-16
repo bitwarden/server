@@ -26,7 +26,6 @@ using Bit.Core.Utilities;
 using Bit.Identity.Utilities;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -46,8 +45,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
-    private readonly IDistributedCache _distributedCache;
-    private readonly DistributedCacheEntryOptions _cacheEntryOptions;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
@@ -72,8 +69,7 @@ public abstract class BaseRequestValidator<T> where T : class
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IFeatureService featureService,
-        ISsoConfigRepository ssoConfigRepository,
-        IDistributedCache distributedCache)
+        ISsoConfigRepository ssoConfigRepository)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -93,14 +89,6 @@ public abstract class BaseRequestValidator<T> where T : class
         _tokenDataFactory = tokenDataFactory;
         FeatureService = featureService;
         SsoConfigRepository = ssoConfigRepository;
-        _distributedCache = distributedCache;
-        _cacheEntryOptions = new DistributedCacheEntryOptions
-        {
-            // This sets the time an item is cached to 15 minutes. This value is hard coded 
-            // to 15 because to it covers all time-out windows for both Authenticators and
-            // Email TOTP.
-            AbsoluteExpirationRelativeToNow = new TimeSpan(0, 15, 0)
-        };
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -147,25 +135,18 @@ public abstract class BaseRequestValidator<T> where T : class
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
 
-            var cacheKey = "TOTP_" + user.Email + "_" + twoFactorToken;
-
-            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, cacheKey, out string _);
-            if (!verified || isBot || isOtpCached)
+            if ((!verified || isBot) && twoFactorProviderType != TwoFactorProviderType.Remember)
             {
-                if (twoFactorProviderType != TwoFactorProviderType.Remember)
-                {
-                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
-                    await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
-                }
-                else if (twoFactorProviderType == TwoFactorProviderType.Remember)
-                {
-                    await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
-                }
+                await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
                 return;
             }
-            if (twoFactorProviderType != TwoFactorProviderType.Remember)
+            else if ((!verified || isBot) && twoFactorProviderType == TwoFactorProviderType.Remember)
             {
-                await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
+                // Delay for brute force.
+                await Task.Delay(2000);
+                await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
+                return;
             }
         }
         else
