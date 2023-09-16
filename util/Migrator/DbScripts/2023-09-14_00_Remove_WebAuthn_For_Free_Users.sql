@@ -2,24 +2,24 @@
 -- When a 2FA method is disabled, it is removed from the TwoFactorProviders array
 
 -- Problem statement:
--- We have users who currently do not have any 2FA method, with the only one being
+-- We have users who currently do not have any available 2FA method, with the only one being
 -- WebAuthn, which is effectively disabled by a server-side permission check for Premium status.
 -- With WebAuthn being made free, we want to avoid these users suddenly being forced
 -- to provide 2FA using a key that they haven't used in a long time, by deleting that key from their TwoFactorProviders.
 
-declare @UsersWithoutPremium TABLE
+DECLARE @UsersWithoutPremium TABLE
 (
     Id UNIQUEIDENTIFIER,
     TwoFactorProviders NVARCHAR(MAX)
 );
 
-declare @TwoFactorMethodsForUsersWithoutPremium TABLE
+DECLARE @TwoFactorMethodsForUsersWithoutPremium TABLE
 (
     Id UNIQUEIDENTIFIER,
     TwoFactorType INT
 )
 
-declare @UsersToAdjust TABLE
+DECLARE @UsersToAdjust TABLE
 (
     Id UNIQUEIDENTIFIER
 );
@@ -46,19 +46,19 @@ CROSS APPLY OPENJSON(u.TwoFactorProviders) tfp1
 CROSS APPLY OPENJSON(tfp1.[value]) WITH (
    [Enabled] BIT '$.Enabled'
 ) tfp2
-WHERE [Enabled] = 'true' -- We only want enabled 2FA methods
+WHERE [Enabled] = 1 -- We only want enabled 2FA methods
 
-insert into @UsersToAdjust
-select t1.Id
-from @TwoFactorMethodsForUsersWithoutPremium t1
-where t1.TwoFactorType = 7
+INSERT INTO @UsersToAdjust
+SELECT t1.Id
+FROM @TwoFactorMethodsForUsersWithoutPremium t1
+WHERE t1.TwoFactorType = 7
 AND NOT EXISTS 
     (SELECT * 
     FROM @TwoFactorMethodsForUsersWithoutPremium t2 
     WHERE t2.Id = t1.Id AND t2.TwoFactorType <> 7 AND t2.TwoFactorType <> 4)
 
-select *
-from @UsersToAdjust
+SELECT *
+FROM @UsersToAdjust
 
 -- UPDATE [User]
 -- SET TwoFactorProviders = NULL
