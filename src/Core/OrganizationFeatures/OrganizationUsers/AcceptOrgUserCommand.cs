@@ -40,12 +40,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _userRepository = userRepository;
     }
 
-    // TODO: consider removing overloading and renaming based on purpose for increased clarity / readability
-    // Yes
-    // AcceptOrgUserByTokenAsync
-    // AcceptOrgUserByOrgSsoIdentifierAsync
-    // AcceptOrgUserByOrgIdAsync
-    public async Task<OrganizationUser> AcceptOrgUserAsync(Guid organizationUserId, User user, string token,
+    public async Task<OrganizationUser> AcceptOrgUserByTokenAsync(Guid organizationUserId, User user, string token,
         IUserService userService)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
@@ -93,7 +88,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return organizationUser;
     }
 
-    public async Task<OrganizationUser> AcceptOrgUserAsync(string orgSsoIdentifier, User user, IUserService userService)
+    public async Task<OrganizationUser> AcceptOrgUserByOrgSsoIdAsync(string orgSsoIdentifier, User user, IUserService userService)
     {
         var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
         if (org == null)
@@ -110,7 +105,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return await AcceptOrgUserAsync(orgUser, user, userService);
     }
 
-    public async Task<OrganizationUser> AcceptOrgUserAsync(Guid organizationId, User user, IUserService userService)
+    public async Task<OrganizationUser> AcceptOrgUserByOrgIdAsync(Guid organizationId, User user, IUserService userService)
     {
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)

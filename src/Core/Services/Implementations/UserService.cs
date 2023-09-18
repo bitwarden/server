@@ -649,7 +649,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
-        await _acceptOrgUserCommand.AcceptOrgUserAsync(orgIdentifier, user, this);
+        await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
 
         return IdentityResult.Success;
     }
