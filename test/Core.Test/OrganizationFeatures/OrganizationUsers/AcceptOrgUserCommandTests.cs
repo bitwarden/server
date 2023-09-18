@@ -4,6 +4,7 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -13,6 +14,8 @@ using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 
+
+// Note: test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
 [SutProviderCustomize]
 public class AcceptOrgUserCommandTests
 {
@@ -24,27 +27,50 @@ public class AcceptOrgUserCommandTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task AcceptOrgUser_ByOrgUserId_Success(SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Guid organizationUserId, string token, OrganizationUser orgUser)
+    [EphemeralDataProtectionAutoData]
+    public async Task AcceptOrgUserByToken_OldToken_Success(SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Guid organizationUserId, OrganizationUser orgUser)
     {
         // Arrange
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
+
+        user.EmailVerified = false;
+
         orgUser.Status = OrganizationUserStatusType.Invited;
+        orgUser.Email = user.Email;
+
+
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)
             .Returns(orgUser);
 
-        // TODO: can't mock static methods
-        // See CoreHelpersTests to figure out how to properly mock valid token
-        CoreHelpers.UserInviteTokenIsValid(Arg.Any<IDataProtector>(), token, user.Email, orgUser.Id,
-                Arg.Any<IGlobalSettings>())
-            .Returns(true);
+        var oldToken = CreateOldToken(sutProvider, orgUser);
 
         // Act
-        var result = await sutProvider.Sut.AcceptOrgUserAsync(organizationUserId, user, token, _userService);
-
+        var result = await sutProvider.Sut.AcceptOrgUserByTokenAsync(organizationUserId, user, oldToken, _userService);
 
         // Assert
-        // Assert.Equal(IdentityResult.Success, result);
+        Assert.NotNull(result);
+        Assert.Equal(OrganizationUserStatusType.Accepted, result.Status);
+        Assert.Equal(orgUser.Id, result.Id);
+        Assert.Null(result.Email);
+        Assert.Equal(user.Id, result.UserId);
+        Assert.True(user.EmailVerified);  // Verifying the EmailVerified flag.
+    }
+
+
+
+    private string CreateOldToken(SutProvider<AcceptOrgUserCommand> sutProvider,
+        OrganizationUser organizationUser)
+    {
+
+        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("OrganizationServiceDataProtector");
+
+        // Token matching the format used in OrganizationService.InviteUserAsync
+        var oldToken = dataProtector.Protect(
+            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        return oldToken;
     }
 }
