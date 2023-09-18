@@ -124,6 +124,9 @@ public static class ServiceCollectionExtensions
 
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
+        // TODO: ask if this is the correct place for this.
+        services.AddSingleton<OrgUserInviteTokenableFactory>();
+
         services.AddScoped<ICipherService, CipherService>();
         services.AddUserServices(globalSettings);
         services.AddOrganizationServices(globalSettings);

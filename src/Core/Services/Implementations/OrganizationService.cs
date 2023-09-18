@@ -54,6 +54,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly OrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public OrganizationService(
@@ -83,6 +84,7 @@ public class OrganizationService : IOrganizationService
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        OrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
     {
         _organizationRepository = organizationRepository;
@@ -111,6 +113,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
     }
 
@@ -1049,7 +1052,7 @@ public class OrganizationService : IOrganizationService
     {
         (OrganizationUser, ExpiringToken) MakeOrgUserExpiringTokenPair(OrganizationUser orgUser)
         {
-            var orgUserInviteTokenable = new OrgUserInviteTokenable(orgUser);
+            var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
             var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
             return (orgUser, new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate));
         }
@@ -1065,7 +1068,7 @@ public class OrganizationService : IOrganizationService
 
     private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
     {
-        var orgUserInviteTokenable = new OrgUserInviteTokenable(orgUser);
+        var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
         var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
         await _mailService.SendOrganizationInviteEmailAsync(
             organization.Name,
