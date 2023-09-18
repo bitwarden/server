@@ -51,7 +51,7 @@ WHERE [Enabled] = 1 -- We only want enabled 2FA methods
 INSERT INTO @UsersToAdjust
 SELECT t1.Id
 FROM @TwoFactorMethodsForUsersWithoutPremium t1
-WHERE t1.TwoFactorType = 7
+WHERE t1.TwoFactorType = '7'
 AND NOT EXISTS 
     (SELECT * 
     FROM @TwoFactorMethodsForUsersWithoutPremium t2 
@@ -60,7 +60,9 @@ AND NOT EXISTS
 SELECT *
 FROM @UsersToAdjust
 
--- UPDATE [User]
--- SET TwoFactorProviders = NULL
--- FROM @UsersToAdjust ua
--- WHERE ua.Id = [User].Id
+DECLARE @revisionDate DATETIME2(7) = GETUTCDATE();
+
+UPDATE [User]
+SET TwoFactorProviders = NULL, RevisionDate = @revisionDate
+FROM @UsersToAdjust ua
+WHERE ua.Id = [User].Id
