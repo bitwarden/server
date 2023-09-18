@@ -74,7 +74,7 @@ public class CipherFido2KeyModel
             UserDisplayName = UserDisplayName,
             Counter = Counter,
             Discoverable = Discoverable,
-            CreationDate =  CreationDate.Value
+            CreationDate = CreationDate.Value
         };
     }
 }
