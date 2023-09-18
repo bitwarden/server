@@ -16,7 +16,7 @@ DECLARE @UsersWithoutPremium TABLE
 DECLARE @TwoFactorMethodsForUsersWithoutPremium TABLE
 (
     Id UNIQUEIDENTIFIER,
-    TwoFactorType INT
+    TwoFactorType NVARCHAR(50)
 )
 
 DECLARE @UsersToAdjust TABLE
@@ -55,7 +55,7 @@ WHERE t1.TwoFactorType = 7
 AND NOT EXISTS 
     (SELECT * 
     FROM @TwoFactorMethodsForUsersWithoutPremium t2 
-    WHERE t2.Id = t1.Id AND t2.TwoFactorType <> 7 AND t2.TwoFactorType <> 4)
+    WHERE t2.Id = t1.Id AND t2.TwoFactorType <> '7' AND t2.TwoFactorType <> '4')
 
 SELECT *
 FROM @UsersToAdjust
