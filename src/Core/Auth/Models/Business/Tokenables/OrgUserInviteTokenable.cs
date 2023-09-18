@@ -12,7 +12,9 @@ public class OrgUserInviteTokenable : ExpiringTokenable
     public const string ClearTextPrefix = "BwOrgUserInviteToken_";
 
     // Backwards compatibility Note:
-    // Must use existing DataProtectorPurpose to be able to decrypt tokens
+    // Previously, tokens were manually created in the OrganizationService using a data protector
+    // initialized with purpose: "OrganizationServiceDataProtector"
+    // So, we must continue to use the existing purpose to be able to decrypt tokens
     // in emailed invites that have not yet been accepted.
     public const string DataProtectorPurpose = "OrganizationServiceDataProtector";
 
