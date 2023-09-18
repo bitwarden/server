@@ -30,7 +30,8 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IUserRepository userRepository)
     {
 
-        _dataProtector = dataProtectionProvider.CreateProtector("AcceptOrgUserCommandDataProtector");
+        // TODO: Not going to be able to remove this for 1 releases for backwards compatibility reasons
+        _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
@@ -40,9 +41,10 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     }
 
     // TODO: consider removing overloading and renaming based on purpose for increased clarity / readability
-    // AcceptOrgUserWithEmailedTokenAsync or AcceptOrgUserByOrgUserIdAndTokenAsync ?
-    // AcceptOrgUserByOrgIdentifierAsync ?
-    // AcceptOrgUserByOrgIdAsync ?
+    // Yes
+    // AcceptOrgUserByTokenAsync
+    // AcceptOrgUserByOrgSsoIdentifierAsync
+    // AcceptOrgUserByOrgIdAsync
     public async Task<OrganizationUser> AcceptOrgUserAsync(Guid organizationUserId, User user, string token,
         IUserService userService)
     {
@@ -51,6 +53,11 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         {
             throw new BadRequestException("User invalid.");
         }
+
+        // TODO: For backwards compatibility, going to have to try and convert token into OrgUserInviteTokenable first
+        // and then fallback to CoreHelpers.UserInviteTokenIsValid otherwise we will break all existing invites
+        // probably will need try catch b/c old tokens aren't valid JSON
+        // As tokens only are valid for 5 days, only need this code for 1 release.
 
         if (!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
         {
@@ -86,9 +93,9 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         return organizationUser;
     }
 
-    public async Task<OrganizationUser> AcceptOrgUserAsync(string orgIdentifier, User user, IUserService userService)
+    public async Task<OrganizationUser> AcceptOrgUserAsync(string orgSsoIdentifier, User user, IUserService userService)
     {
-        var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier);
+        var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
         if (org == null)
         {
             throw new BadRequestException("Organization invalid.");
