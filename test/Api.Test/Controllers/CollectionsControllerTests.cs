@@ -1,5 +1,7 @@
-﻿using Bit.Api.Controllers;
+﻿using System.Security.Claims;
+using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -9,6 +11,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.Authorization;
 using NSubstitute;
 using Xunit;
 
@@ -19,27 +22,25 @@ namespace Bit.Api.Test.Controllers;
 public class CollectionsControllerTests
 {
     [Theory, BitAutoData]
-    public async Task Post_Success(Guid orgId, SutProvider<CollectionsController> sutProvider)
+    public async Task Post_Success(Guid orgId, CollectionRequestModel collectionRequest,
+        SutProvider<CollectionsController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>()
-            .CreateNewCollections(orgId)
-            .Returns(true);
+        Collection ExpectedCollection() => Arg.Is<Collection>(c =>
+            c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId &&
+            c.OrganizationId == orgId);
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .EditAnyCollection(orgId)
-            .Returns(false);
-
-        var collectionRequest = new CollectionRequestModel
-        {
-            Name = "encrypted_string",
-            ExternalId = "my_external_id"
-        };
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                ExpectedCollection(),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Create)))
+            .Returns(AuthorizationResult.Success());
 
         _ = await sutProvider.Sut.Post(orgId, collectionRequest);
 
         await sutProvider.GetDependency<ICollectionService>()
             .Received(1)
-            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(), null);
+            .SaveAsync(Arg.Any<Collection>(), Arg.Any<IEnumerable<CollectionAccessSelection>>(),
+                Arg.Any<IEnumerable<CollectionAccessSelection>>(), null);
     }
 
     [Theory, BitAutoData]
@@ -139,13 +140,12 @@ public class CollectionsControllerTests
 
 
     [Theory, BitAutoData]
-    public async Task DeleteMany_Success(Guid orgId, User user, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
+    public async Task DeleteMany_Success(Guid orgId, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
         var model = new CollectionBulkDeleteRequestModel
         {
-            Ids = new[] { collection1.Id.ToString(), collection2.Id.ToString() },
-            OrganizationId = orgId.ToString()
+            Ids = new[] { collection1.Id, collection2.Id }
         };
 
         var collections = new List<Collection>
@@ -162,17 +162,14 @@ public class CollectionsControllerTests
                 },
             };
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .DeleteAssignedCollections(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(user.Id);
-
-        sutProvider.GetDependency<ICollectionService>()
-            .GetOrganizationCollectionsAsync(orgId)
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(collections);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                collections,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Delete)))
+            .Returns(AuthorizationResult.Success());
 
         // Act
         await sutProvider.Sut.DeleteMany(model);
@@ -185,18 +182,36 @@ public class CollectionsControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task DeleteMany_CanNotDeleteAssignedCollection_ThrowsNotFound(Guid orgId, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
+    public async Task DeleteMany_PermissionDenied_ThrowsNotFound(Guid orgId, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
     {
         // Arrange
         var model = new CollectionBulkDeleteRequestModel
         {
-            Ids = new[] { collection1.Id.ToString(), collection2.Id.ToString() },
-            OrganizationId = orgId.ToString()
+            Ids = new[] { collection1.Id, collection2.Id }
         };
 
-        sutProvider.GetDependency<ICurrentContext>()
-            .DeleteAssignedCollections(orgId)
-            .Returns(false);
+        var collections = new List<Collection>
+        {
+            new CollectionDetails
+            {
+                Id = collection1.Id,
+                OrganizationId = orgId,
+            },
+            new CollectionDetails
+            {
+                Id = collection2.Id,
+                OrganizationId = orgId,
+            },
+        };
+
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(collections);
+
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
+                collections,
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Delete)))
+            .Returns(AuthorizationResult.Failed());
 
         // Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
@@ -205,49 +220,5 @@ public class CollectionsControllerTests
         await sutProvider.GetDependency<IDeleteCollectionCommand>()
             .DidNotReceiveWithAnyArgs()
             .DeleteManyAsync((IEnumerable<Collection>)default);
-
     }
-
-
-    [Theory, BitAutoData]
-    public async Task DeleteMany_UserCanNotAccessCollections_FiltersOutInvalid(Guid orgId, User user, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
-    {
-        // Arrange
-        var model = new CollectionBulkDeleteRequestModel
-        {
-            Ids = new[] { collection1.Id.ToString(), collection2.Id.ToString() },
-            OrganizationId = orgId.ToString()
-        };
-
-        var collections = new List<Collection>
-            {
-                new CollectionDetails
-                {
-                    Id = collection2.Id,
-                    OrganizationId = orgId,
-                },
-            };
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .DeleteAssignedCollections(orgId)
-            .Returns(true);
-
-        sutProvider.GetDependency<ICurrentContext>()
-            .UserId
-            .Returns(user.Id);
-
-        sutProvider.GetDependency<ICollectionService>()
-            .GetOrganizationCollectionsAsync(orgId)
-            .Returns(collections);
-
-        // Act
-        await sutProvider.Sut.DeleteMany(model);
-
-        // Assert
-        await sutProvider.GetDependency<IDeleteCollectionCommand>()
-            .Received(1)
-            .DeleteManyAsync(Arg.Is<IEnumerable<Collection>>(coll => coll.Select(c => c.Id).SequenceEqual(collections.Select(c => c.Id))));
-    }
-
-
 }

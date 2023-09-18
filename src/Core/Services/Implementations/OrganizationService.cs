@@ -2083,7 +2083,7 @@ public class OrganizationService : IOrganizationService
 
     private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
     {
-        if (permissions == null || await _currentContext.OrganizationOwner(organizationId) || await _currentContext.OrganizationAdmin(organizationId))
+        if (permissions == null || await _currentContext.OrganizationAdmin(organizationId))
         {
             return true;
         }
@@ -2128,16 +2128,6 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.CreateNewCollections && !await _currentContext.CreateNewCollections(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.DeleteAnyCollection && !await _currentContext.DeleteAnyCollection(organizationId))
-        {
-            return false;
-        }
-
         if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
         {
             return false;
@@ -2154,6 +2144,22 @@ public class OrganizationService : IOrganizationService
         }
 
         if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
+        {
+            return false;
+        }
+
+        var org = _currentContext.GetOrganization(organizationId);
+        if (org == null)
+        {
+            return false;
+        }
+
+        if (permissions.CreateNewCollections && !org.Permissions.CreateNewCollections)
+        {
+            return false;
+        }
+
+        if (permissions.DeleteAnyCollection && !org.Permissions.DeleteAnyCollection)
         {
             return false;
         }
