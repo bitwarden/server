@@ -2,13 +2,13 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
@@ -86,8 +86,8 @@ public class SetInitialMasterPasswordCommandTests
             .ReturnsNull();
 
         // Act & Assert
-       var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier));
-       Assert.Equal("Organization invalid.", exception.Message);
+        var exception = await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgIdentifier));
+        Assert.Equal("Organization invalid.", exception.Message);
     }
 
     [Theory]
