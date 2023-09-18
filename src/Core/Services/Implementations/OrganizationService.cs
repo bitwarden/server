@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -15,11 +16,11 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -32,7 +33,6 @@ public class OrganizationService : IOrganizationService
     private readonly ICollectionRepository _collectionRepository;
     private readonly IUserRepository _userRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly IDataProtector _dataProtector;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
@@ -54,6 +54,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -61,7 +62,6 @@ public class OrganizationService : IOrganizationService
         ICollectionRepository collectionRepository,
         IUserRepository userRepository,
         IGroupRepository groupRepository,
-        IDataProtectionProvider dataProtectionProvider,
         IMailService mailService,
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
@@ -82,14 +82,14 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
         _collectionRepository = collectionRepository;
         _userRepository = userRepository;
         _groupRepository = groupRepository;
-        _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
         _mailService = mailService;
         _pushNotificationService = pushNotificationService;
         _pushRegistrationService = pushRegistrationService;
@@ -111,6 +111,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -1046,20 +1047,33 @@ public class OrganizationService : IOrganizationService
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
     {
-        string MakeToken(OrganizationUser orgUser) =>
-            _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+        (OrganizationUser, ExpiringToken) MakeOrgUserExpiringTokenPair(OrganizationUser orgUser)
+        {
+            var orgUserInviteTokenable = new OrgUserInviteTokenable(orgUser);
+            var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+            return (orgUser, new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate));
+        }
 
-        await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
-            orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))), organization.PlanType == PlanType.Free);
+        var orgUsersWithExpTokens = orgUsers.Select(MakeOrgUserExpiringTokenPair);
+
+        await _mailService.BulkSendOrganizationInviteEmailAsync(
+            organization.Name,
+            orgUsersWithExpTokens,
+            organization.PlanType == PlanType.Free
+        );
     }
 
     private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
     {
-        var now = DateTime.UtcNow;
-        var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
-        var token = _dataProtector.Protect(
-            $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)), organization.PlanType == PlanType.Free, initOrganization);
+        var orgUserInviteTokenable = new OrgUserInviteTokenable(orgUser);
+        var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+        await _mailService.SendOrganizationInviteEmailAsync(
+            organization.Name,
+            orgUser,
+            new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate),
+            organization.PlanType == PlanType.Free,
+            initOrganization
+        );
     }
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
