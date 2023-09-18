@@ -45,13 +45,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
     }
 
-    private bool ValidateOrgUserInviteToken(string orgUserInviteToken, OrganizationUser orgUser)
-    {
-        return _orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
-               && decryptedToken.Valid
-               && decryptedToken.TokenIsValid(orgUser);
-    }
-
     public async Task<OrganizationUser> AcceptOrgUserByTokenAsync(Guid organizationUserId, User user, string token,
         IUserService userService)
     {
@@ -103,6 +96,13 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         }
 
         return organizationUser;
+    }
+
+    private bool ValidateOrgUserInviteToken(string orgUserInviteToken, OrganizationUser orgUser)
+    {
+        return _orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
+               && decryptedToken.Valid
+               && decryptedToken.TokenIsValid(orgUser);
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByOrgSsoIdAsync(string orgSsoIdentifier, User user, IUserService userService)
