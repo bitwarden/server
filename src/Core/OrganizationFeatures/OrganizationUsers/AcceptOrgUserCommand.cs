@@ -1,10 +1,12 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.DataProtection;
 
@@ -19,6 +21,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     private readonly IPolicyService _policyService;
     private readonly IMailService _mailService;
     private readonly IUserRepository _userRepository;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public AcceptOrgUserCommand(
         IDataProtectionProvider dataProtectionProvider,
@@ -27,10 +30,11 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         IOrganizationRepository organizationRepository,
         IPolicyService policyService,
         IMailService mailService,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
     {
 
-        // TODO: Not going to be able to remove this for 1 releases for backwards compatibility reasons
+        // TODO: remove data protector when old token validation removed
         _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
@@ -38,6 +42,14 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _policyService = policyService;
         _mailService = mailService;
         _userRepository = userRepository;
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+    }
+
+    private bool ValidateOrgUserInviteToken(string orgUserInviteToken, OrganizationUser orgUser)
+    {
+        return _orgUserInviteTokenDataFactory.TryUnprotect(orgUserInviteToken, out var decryptedToken)
+               && decryptedToken.Valid
+               && decryptedToken.TokenIsValid(orgUser);
     }
 
     public async Task<OrganizationUser> AcceptOrgUserByTokenAsync(Guid organizationUserId, User user, string token,
@@ -49,12 +61,17 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             throw new BadRequestException("User invalid.");
         }
 
-        // TODO: For backwards compatibility, going to have to try and convert token into OrgUserInviteTokenable first
-        // and then fallback to CoreHelpers.UserInviteTokenIsValid otherwise we will break all existing invites
-        // probably will need try catch b/c old tokens aren't valid JSON
-        // As tokens only are valid for 5 days, only need this code for 1 release.
+        // Tokens will have been created in two ways in the OrganizationService invite methods:
+        // 1. New way - via OrgUserInviteTokenable
+        // 2. Old way - via manual process using data protector initialized with purpose: "OrganizationServiceDataProtector"
 
-        if (!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
+        // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
+        // TODO: remove old token validation logic after 1 release as token are only valid for 5 days
+
+        var isNewTokenInvalid = !ValidateOrgUserInviteToken(token, orgUser);
+        var isOldTokenInvalid = !CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings);
+
+        if (isNewTokenInvalid && isOldTokenInvalid)
         {
             throw new BadRequestException("Invalid token.");
         }
@@ -199,4 +216,5 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         return orgUser;
     }
+
 }
