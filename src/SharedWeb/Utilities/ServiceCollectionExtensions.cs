@@ -124,9 +124,6 @@ public static class ServiceCollectionExtensions
 
     public static void AddBaseServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
-        // TODO: ask if this is the correct place for this.
-        services.AddSingleton<OrgUserInviteTokenableFactory>();
-
         services.AddScoped<ICipherService, CipherService>();
         services.AddUserServices(globalSettings);
         services.AddOrganizationServices(globalSettings);
@@ -176,6 +173,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoEmail2faSessionTokenable>>>()));
 
+        services.AddSingleton<OrgUserInviteTokenableFactory>();
         services.AddSingleton<IDataProtectorTokenFactory<OrgUserInviteTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<OrgUserInviteTokenable>(
                 OrgUserInviteTokenable.ClearTextPrefix,
