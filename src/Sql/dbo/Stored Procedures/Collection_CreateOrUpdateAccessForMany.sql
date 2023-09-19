@@ -17,7 +17,7 @@ BEGIN
 			cg.[Manage]
 		FROM
 			@Groups AS cg
-		CROSS JOIN
+		CROSS JOIN -- Create a CollectionGroup record for every CollectionId
 			@CollectionIds cId
 		INNER JOIN
 			[dbo].[Group] g ON cg.[Id] = g.[Id]
@@ -31,6 +31,7 @@ BEGIN
 	ON
 		[Target].[CollectionId] = [Source].[CollectionId]
 		AND [Target].[GroupId] = [Source].[GroupId]
+    -- Update the target if any values are different from the source
 	WHEN MATCHED AND EXISTS(
 		SELECT [Source].[ReadOnly], [Source].[HidePasswords], [Source].[Manage]
 		EXCEPT
@@ -59,7 +60,7 @@ BEGIN
 			cu.[Manage]
 		FROM
 			@Users AS cu
-		CROSS JOIN
+		CROSS JOIN -- Create a CollectionUser record for every CollectionId
 			@CollectionIds cId
 		INNER JOIN
 			[dbo].[OrganizationUser] u ON cu.[Id] = u.[Id]
@@ -73,6 +74,7 @@ BEGIN
 	ON
 		[Target].[CollectionId] = [Source].[CollectionId]
 		AND [Target].[OrganizationUserId] = [Source].[OrganizationUserId]
+    -- Update the target if any values are different from the source
 	WHEN MATCHED AND EXISTS(
 		SELECT [Source].[ReadOnly], [Source].[HidePasswords], [Source].[Manage]
 		EXCEPT
