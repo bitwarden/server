@@ -173,7 +173,7 @@ public static class ServiceCollectionExtensions
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoEmail2faSessionTokenable>>>()));
 
-        services.AddSingleton<OrgUserInviteTokenableFactory>();
+        services.AddSingleton<IOrgUserInviteTokenableFactory>();
         services.AddSingleton<IDataProtectorTokenFactory<OrgUserInviteTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<OrgUserInviteTokenable>(
                 OrgUserInviteTokenable.ClearTextPrefix,

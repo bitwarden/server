@@ -3,7 +3,7 @@ using Bit.Core.Settings;
 
 namespace Bit.Core.Auth.Models.Business.Tokenables;
 
-public class OrgUserInviteTokenableFactory
+public class OrgUserInviteTokenableFactory : IOrgUserInviteTokenableFactory
 {
     private readonly IGlobalSettings _globalSettings;
 
