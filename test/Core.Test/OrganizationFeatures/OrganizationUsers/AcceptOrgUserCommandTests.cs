@@ -175,19 +175,17 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [EphemeralDataProtectionAutoData]
-    public async Task AcceptOrgUserByToken_OldToken_Success(SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Guid organizationUserId, OrganizationUser orgUser)
+    public async Task AcceptOrgUserByToken_OldToken_AcceptsUserAndVerifiesEmail(SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
         // Arrange
-        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
         user.EmailVerified = false;
 
-        orgUser.Status = OrganizationUserStatusType.Invited;
-        orgUser.Email = user.Email;
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(organizationUserId)
+            .GetByIdAsync(orgUser.Id)
             .Returns(Task.FromResult(orgUser));
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -196,14 +194,8 @@ public class AcceptOrgUserCommandTests
 
         var oldToken = CreateOldToken(sutProvider, orgUser);
 
-        // Mock successful call to AcceptOrgUserAsync (will be tested separately)
-        var orgUserJson = JsonSerializer.Serialize(orgUser);
-        var acceptedOrgUser = JsonSerializer.Deserialize<OrganizationUser>(orgUserJson);
-        acceptedOrgUser.Status = OrganizationUserStatusType.Accepted;
-
-
         // Act
-        var result = await sutProvider.Sut.AcceptOrgUserByTokenAsync(organizationUserId, user, oldToken, _userService);
+        var result = await sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, oldToken, _userService);
 
         // Assert
         Assert.NotNull(result);
@@ -211,9 +203,24 @@ public class AcceptOrgUserCommandTests
         Assert.Equal(orgUser.Id, result.Id);
         Assert.Null(result.Email);
         Assert.Equal(user.Id, result.UserId);
-        Assert.True(user.EmailVerified); // Verifying the EmailVerified flag.
+
+        // Verify user email verified logic
+        Assert.True(user.EmailVerified);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
     }
 
+    /// <summary>
+    /// Sets up common mock behavior for the AcceptOrgUserAsync tests.
+    /// This method initializes:
+    /// - The invited user's email, status, type, and organization ID.
+    /// - Ensures the user is not part of any other organizations.
+    /// - Confirms the target organization doesn't have a single org policy.
+    /// - Ensures the user doesn't belong to an organization with a single org policy.
+    /// - Assumes the user doesn't have 2FA enabled and the organization doesn't require it.
+    /// - Provides mock data for an admin to validate email functionality.
+    /// - Returns the corresponding organization for the given org ID.
+    /// </summary>
     private void SetupCommonAcceptOrgUserMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, Organization org,
         OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -281,39 +288,3 @@ public class AcceptOrgUserCommandTests
     }
 }
 
-// Tests from OrganizationServiceTests.cs
-// [Theory]
-// [EphemeralDataProtectionAutoData]
-// public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
-//     User user, SutProvider<OrganizationService> sutProvider)
-// {
-//     var token = SetupAcceptUserAsyncTest(sutProvider, user, organizationUser);
-//     var userService = Substitute.For<IUserService>();
-//
-//     await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService);
-//
-//     await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
-//         Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
-//     await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
-//         Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
-// }
-//
-// private string SetupAcceptUserAsyncTest(SutProvider<OrganizationService> sutProvider, User user,
-//     OrganizationUser organizationUser)
-// {
-//     user.Email = organizationUser.Email;
-//     user.EmailVerified = false;
-//
-//     var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
-//         .CreateProtector("OrganizationServiceDataProtector");
-//     // Token matching the format used in OrganizationService.InviteUserAsync
-//     var token = dataProtector.Protect(
-//         $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
-//
-//     sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
-//
-//     sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
-//         .Returns(organizationUser);
-//
-//     return token;
-// }
