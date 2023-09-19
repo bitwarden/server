@@ -321,27 +321,16 @@ public class CurrentContext : ICurrentContext
                     && (o.Permissions?.AccessReports ?? false)) ?? false);
     }
 
-    public async Task<bool> CreateNewCollections(Guid orgId)
-    {
-        return await OrganizationManager(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.CreateNewCollections ?? false)) ?? false);
-    }
-
     public async Task<bool> EditAnyCollection(Guid orgId)
     {
         return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
                     && (o.Permissions?.EditAnyCollection ?? false)) ?? false);
     }
 
-    public async Task<bool> DeleteAnyCollection(Guid orgId)
-    {
-        return await OrganizationAdmin(orgId) || (Organizations?.Any(o => o.Id == orgId
-                    && (o.Permissions?.DeleteAnyCollection ?? false)) ?? false);
-    }
-
     public async Task<bool> ViewAllCollections(Guid orgId)
     {
-        return await EditAnyCollection(orgId) || await DeleteAnyCollection(orgId);
+        var org = GetOrganization(orgId);
+        return await EditAnyCollection(orgId) || (org != null && org.Permissions.DeleteAnyCollection);
     }
 
     public async Task<bool> EditAssignedCollections(Guid orgId)
@@ -358,7 +347,20 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewAssignedCollections(Guid orgId)
     {
-        return await EditAssignedCollections(orgId) || await DeleteAssignedCollections(orgId);
+        /*
+         * Required to display the existing collections under which the new collection can be nested.
+         * Owner, Admin, Manager, and Provider checks are handled via the EditAssigned/DeleteAssigned context calls.
+         * This entire method will be moved to the CollectionAuthorizationHandler in the future
+         */
+        var canCreateNewCollections = false;
+        var org = GetOrganization(orgId);
+        if (org != null)
+        {
+            canCreateNewCollections = !org.LimitCollectionCdOwnerAdmin || org.Permissions.CreateNewCollections;
+        }
+        return await EditAssignedCollections(orgId)
+               || await DeleteAssignedCollections(orgId)
+               || canCreateNewCollections;
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
@@ -505,6 +507,11 @@ public class CurrentContext : ICurrentContext
                 .Select(ou => new CurrentContextProvider(ou)).ToList();
         }
         return Providers;
+    }
+
+    public CurrentContextOrganization GetOrganization(Guid orgId)
+    {
+        return Organizations?.Find(o => o.Id == orgId);
     }
 
     private string GetClaimValue(Dictionary<string, IEnumerable<Claim>> claims, string type)

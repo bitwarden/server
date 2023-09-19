@@ -34,7 +34,8 @@ public class CollectionRequestModel
 public class CollectionBulkDeleteRequestModel
 {
     [Required]
-    public IEnumerable<string> Ids { get; set; }
+    public IEnumerable<Guid> Ids { get; set; }
+    [Obsolete("OrganizationId is no longer required and will be removed in a future release")]
     public string OrganizationId { get; set; }
 }
 

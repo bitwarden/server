@@ -773,6 +773,11 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
+        if (!await _currentContext.OrganizationOwner(id))
+        {
+            throw new NotFoundException();
+        }
+
         await _organizationService.UpdateAsync(model.ToOrganization(organization));
         return new OrganizationResponseModel(organization);
     }
