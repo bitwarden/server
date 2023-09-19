@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -8,20 +9,75 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
+using Xunit.Sdk;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
+
+
+public class FakeDataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where T : Tokenable, new()
+{
+    // Instead of real encryption, use a simple Dictionary to emulate protection/unprotection
+    private readonly Dictionary<string, T> _tokenDatabase = new Dictionary<string, T>();
+
+    public string Protect(T data)
+    {
+        // Generate a simple token representation
+        var token = Guid.NewGuid().ToString();
+
+        // Store the data against the token
+        _tokenDatabase[token] = data;
+
+        return token;
+    }
+
+    public T Unprotect(string token)
+    {
+        // If the token exists in the dictionary, return the corresponding data
+        if (_tokenDatabase.TryGetValue(token, out var data))
+        {
+            return data;
+        }
+
+        // If the token doesn't exist, throw an exception similar to a decryption failure.
+        throw new Exception("Failed to unprotect token.");
+    }
+
+    public bool TryUnprotect(string token, out T data)
+    {
+        try
+        {
+            data = Unprotect(token);
+            return true;
+        }
+        catch
+        {
+            data = default;
+            return false;
+        }
+    }
+
+    public bool TokenValid(string token)
+    {
+        return _tokenDatabase.ContainsKey(token);
+    }
+}
 
 // Note: test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
 [SutProviderCustomize]
 public class AcceptOrgUserCommandTests
 {
     private readonly IUserService _userService = Substitute.For<IUserService>();
+    private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory = Substitute.For<IOrgUserInviteTokenableFactory>();
+
+    // private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
     [Theory]
     [BitAutoData]
@@ -68,10 +124,10 @@ public class AcceptOrgUserCommandTests
         orgUser.Status = OrganizationUserStatusType.Revoked;
 
         // Act & Assert
-         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
-             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-         Assert.Equal("Your organization access has been revoked.", exception.Message);
+        Assert.Equal("Your organization access has been revoked.", exception.Message);
     }
 
     [Theory]
@@ -121,7 +177,8 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You may not join this organization until you leave or remove all other organizations.", exception.Message);
+        Assert.Equal("You may not join this organization until you leave or remove all other organizations.",
+            exception.Message);
     }
 
     [Theory]
@@ -142,7 +199,9 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You cannot join this organization because you are a member of another organization which forbids it", exception.Message);
+        Assert.Equal(
+            "You cannot join this organization because you are a member of another organization which forbids it",
+            exception.Message);
     }
 
 
@@ -161,7 +220,8 @@ public class AcceptOrgUserCommandTests
         // Organization they are trying to join requires 2FA
         var twoFactorPolicy = new OrganizationUserPolicyDetails { OrganizationId = orgUser.OrganizationId };
         sutProvider.GetDependency<IPolicyService>()
-            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited)
+            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication,
+                OrganizationUserStatusType.Invited)
             .Returns(Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
                 new List<OrganizationUserPolicyDetails> { twoFactorPolicy }));
 
@@ -169,28 +229,20 @@ public class AcceptOrgUserCommandTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
 
-        Assert.Equal("You cannot join this organization until you enable two-step login on your user account.", exception.Message);
+        Assert.Equal("You cannot join this organization until you enable two-step login on your user account.",
+            exception.Message);
     }
 
 
     [Theory]
     [EphemeralDataProtectionAutoData]
-    public async Task AcceptOrgUserByToken_OldToken_AcceptsUserAndVerifiesEmail(SutProvider<AcceptOrgUserCommand> sutProvider,
+    public async Task AcceptOrgUserByToken_OldToken_AcceptsUserAndVerifiesEmail(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
         // Arrange
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
-
-        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
-        user.EmailVerified = false;
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetByIdAsync(orgUser.Id)
-            .Returns(Task.FromResult(orgUser));
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetCountByOrganizationAsync(orgUser.OrganizationId, user.Email, true)
-            .Returns(0);
+        SetupCommonAcceptOrgUserByTokenMocks(sutProvider, user, orgUser);
 
         var oldToken = CreateOldToken(sutProvider, orgUser);
 
@@ -210,6 +262,60 @@ public class AcceptOrgUserCommandTests
             Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByToken_NewToken_AcceptsUserAndVerifiesEmail(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserByTokenMocks(sutProvider, user, orgUser);
+
+        // Mock tokenable factory to return a token that expires in 5 days
+        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
+        {
+            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+        });
+
+        // TODO: figure out how to do this. Either have to instantiate the command with the fake data protection token factory
+        // in constructor or maybe create a CustomizedBitAutoDataAttribute
+        // Command must use fake data protection token factory for token validation so that our created tokens in
+        // CreateNewToken are seen as valid in the command.
+        // sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>().Returns(_orgUserInviteTokenDataFactory);
+
+        var newToken = CreateNewToken(orgUser);
+
+        // Act
+        var result = await sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal(OrganizationUserStatusType.Accepted, result.Status);
+        Assert.Equal(orgUser.Id, result.Id);
+        Assert.Null(result.Email);
+        Assert.Equal(user.Id, result.UserId);
+
+        // Verify user email verified logic
+        Assert.True(user.EmailVerified);
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
+    }
+
+    private void SetupCommonAcceptOrgUserByTokenMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, OrganizationUser orgUser)
+    {
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
+        user.EmailVerified = false;
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(Task.FromResult(orgUser));
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOrganizationAsync(orgUser.OrganizationId, user.Email, true)
+            .Returns(0);
+    }
+
     /// <summary>
     /// Sets up common mock behavior for the AcceptOrgUserAsync tests.
     /// This method initializes:
@@ -221,7 +327,8 @@ public class AcceptOrgUserCommandTests
     /// - Provides mock data for an admin to validate email functionality.
     /// - Returns the corresponding organization for the given org ID.
     /// </summary>
-    private void SetupCommonAcceptOrgUserMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, Organization org,
+    private void SetupCommonAcceptOrgUserMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user,
+        Organization org,
         OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
         // Arrange
@@ -286,5 +393,12 @@ public class AcceptOrgUserCommandTests
 
         return oldToken;
     }
-}
 
+    private string CreateNewToken(OrganizationUser orgUser)
+    {
+        var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
+        var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+
+        return protectedToken;
+    }
+}
