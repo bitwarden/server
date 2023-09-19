@@ -557,7 +557,7 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
                     }
                 }
             }
-
+            // Need to save the new collection users/groups before running the bump revision code
             await dbContext.SaveChangesAsync();
             await dbContext.UserBumpAccountRevisionDateByCollectionIdsAsync(collectionIdsList, organizationId);
             await dbContext.SaveChangesAsync();
