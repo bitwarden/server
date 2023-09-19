@@ -48,16 +48,16 @@ BEGIN
 	;WITH [NewCollectionGroups] AS (
 		SELECT
 			cId.[Id] AS [CollectionId],
-			gu.[Id] AS [GroupId],
-			gu.[ReadOnly],
-			gu.[HidePasswords],
-			gu.[Manage]
+			cg.[Id] AS [GroupId],
+			cg.[ReadOnly],
+			cg.[HidePasswords],
+			cg.[Manage]
 		FROM
-			@Groups AS gu
+			@Groups AS cg
 		CROSS JOIN
 			@CollectionIds cId
 		INNER JOIN
-			[dbo].[Group] g ON gu.[Id] = g.[Id]
+			[dbo].[Group] g ON cg.[Id] = g.[Id]
 		WHERE
 			g.[OrganizationId] = @OrganizationId
 	)
