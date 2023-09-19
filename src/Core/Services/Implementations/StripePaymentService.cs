@@ -793,7 +793,6 @@ public class StripePaymentService : IPaymentService
         try
         {
             var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
-
             var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
             if (invoice == null)
             {
@@ -806,8 +805,15 @@ public class StripePaymentService : IPaymentService
                 {
                     if (chargeNow)
                     {
-                        paymentIntentClientSecret = await PayInvoiceAfterSubscriptionChangeAsync(
-                            storableSubscriber, invoice);
+                        var subItemOptions = subscriptionUpdate.UpgradeItemsOptions(subResponse)
+                             .Select(item => new Stripe.InvoiceSubscriptionItemOptions
+                             {
+                                 Id = item.Id,
+                                 Plan = item.Plan,
+                                 Quantity = item.Quantity,
+                             }).ToList();
+
+                        (_, paymentIntentClientSecret) = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
                     }
                     else
                     {
@@ -1096,6 +1102,219 @@ public class StripePaymentService : IPaymentService
             throw;
         }
         return paymentIntentClientSecret;
+    }
+
+    internal async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber,
+        List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 1000)
+    {
+        var customerOptions = new Stripe.CustomerGetOptions();
+        customerOptions.AddExpand("default_source");
+        customerOptions.AddExpand("invoice_settings.default_payment_method");
+        var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
+        var usingInAppPaymentMethod = customer.Metadata.ContainsKey("appleReceipt");
+        if (usingInAppPaymentMethod)
+        {
+            throw new BadRequestException("Cannot perform this action with in-app purchase payment method. " +
+                                          "Contact support.");
+        }
+
+        string paymentIntentClientSecret = null;
+
+        var pendingInvoiceItems = _stripeAdapter.InvoiceItemListAsync(new Stripe.InvoiceItemListOptions
+        {
+            Customer = subscriber.GatewayCustomerId
+        }).ToList().Where(i => i.InvoiceId == null);
+        var pendingInvoiceItemsDict = pendingInvoiceItems.ToDictionary(pii => pii.Id);
+
+        var upcomingPreview = await _stripeAdapter.InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
+        {
+            Customer = subscriber.GatewayCustomerId,
+            Subscription = subscriber.GatewaySubscriptionId,
+            SubscriptionItems = subItemOptions
+        });
+
+        var itemsForInvoice = upcomingPreview.Lines?.Data?
+            .Where(i => pendingInvoiceItemsDict.ContainsKey(i.Id) || (i.Plan.Id == subItemOptions[0]?.Plan && i.Proration));
+        var invoiceAmount = itemsForInvoice?.Sum(i => i.Amount) ?? 0;
+        var invoiceNow = invoiceAmount >= prorateThreshold;
+        if (invoiceNow)
+        {
+            // Owes more than prorateThreshold on next invoice.
+            // Invoice them and pay now instead of waiting until next billing cycle.
+
+            string cardPaymentMethodId = null;
+            var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
+            if (invoiceAmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
+            {
+                var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
+                var hasDefaultValidSource = customer.DefaultSource != null &&
+                                            (customer.DefaultSource is Stripe.Card ||
+                                             customer.DefaultSource is Stripe.BankAccount);
+                if (!hasDefaultCardPaymentMethod && !hasDefaultValidSource)
+                {
+                    cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
+                    if (cardPaymentMethodId == null)
+                    {
+                        throw new BadRequestException("No payment method is available.");
+                    }
+                }
+            }
+
+            Stripe.Invoice invoice = null;
+            var createdInvoiceItems = new List<Stripe.InvoiceItem>();
+            Braintree.Transaction braintreeTransaction = null;
+            try
+            {
+                foreach (var invoiceLineItem in itemsForInvoice)
+                {
+                    if (pendingInvoiceItemsDict.ContainsKey(invoiceLineItem.Id))
+                    {
+                        continue;
+                    }
+
+                    var invoiceItem = await _stripeAdapter.InvoiceItemCreateAsync(new Stripe.InvoiceItemCreateOptions
+                    {
+                        Currency = invoiceLineItem.Currency,
+                        Description = invoiceLineItem.Description,
+                        Customer = subscriber.GatewayCustomerId,
+                        Subscription = invoiceLineItem.Subscription,
+                        Discountable = invoiceLineItem.Discountable,
+                        Amount = invoiceLineItem.Amount
+                    });
+                    createdInvoiceItems.Add(invoiceItem);
+                }
+
+                invoice = await _stripeAdapter.InvoiceCreateAsync(new Stripe.InvoiceCreateOptions
+                {
+                    CollectionMethod = "send_invoice",
+                    DaysUntilDue = 1,
+                    Customer = subscriber.GatewayCustomerId,
+                    Subscription = subscriber.GatewaySubscriptionId,
+                    DefaultPaymentMethod = cardPaymentMethodId
+                });
+
+                var invoicePayOptions = new Stripe.InvoicePayOptions();
+                if (invoice.AmountDue > 0)
+                {
+                    if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
+                    {
+                        invoicePayOptions.PaidOutOfBand = true;
+                        var btInvoiceAmount = (invoice.AmountDue / 100M);
+                        var transactionResult = await _btGateway.Transaction.SaleAsync(
+                            new Braintree.TransactionRequest
+                            {
+                                Amount = btInvoiceAmount,
+                                CustomerId = customer.Metadata["btCustomerId"],
+                                Options = new Braintree.TransactionOptionsRequest
+                                {
+                                    SubmitForSettlement = true,
+                                    PayPal = new Braintree.TransactionOptionsPayPalRequest
+                                    {
+                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
+                                    }
+                                },
+                                CustomFields = new Dictionary<string, string>
+                                {
+                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                                }
+                            });
+
+                        if (!transactionResult.IsSuccess())
+                        {
+                            throw new GatewayException("Failed to charge PayPal customer.");
+                        }
+
+                        braintreeTransaction = transactionResult.Target;
+                        await _stripeAdapter.InvoiceUpdateAsync(invoice.Id, new Stripe.InvoiceUpdateOptions
+                        {
+                            Metadata = new Dictionary<string, string>
+                            {
+                                ["btTransactionId"] = braintreeTransaction.Id,
+                                ["btPayPalTransactionId"] =
+                                    braintreeTransaction.PayPalDetails.AuthorizationId
+                            }
+                        });
+                    }
+                    else
+                    {
+                        invoicePayOptions.OffSession = true;
+                        invoicePayOptions.PaymentMethod = cardPaymentMethodId;
+                    }
+                }
+
+                try
+                {
+                    await _stripeAdapter.InvoicePayAsync(invoice.Id, invoicePayOptions);
+                }
+                catch (Stripe.StripeException e)
+                {
+                    if (e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired &&
+                        e.StripeError?.Code == "invoice_payment_intent_requires_action")
+                    {
+                        // SCA required, get intent client secret
+                        var invoiceGetOptions = new Stripe.InvoiceGetOptions();
+                        invoiceGetOptions.AddExpand("payment_intent");
+                        invoice = await _stripeAdapter.InvoiceGetAsync(invoice.Id, invoiceGetOptions);
+                        paymentIntentClientSecret = invoice?.PaymentIntent?.ClientSecret;
+                    }
+                    else
+                    {
+                        throw new GatewayException("Unable to pay invoice.");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (braintreeTransaction != null)
+                {
+                    await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
+                }
+
+                if (invoice != null)
+                {
+                    invoice = await _stripeAdapter.InvoiceVoidInvoiceAsync(invoice.Id, new Stripe.InvoiceVoidOptions());
+                    if (invoice.StartingBalance != 0)
+                    {
+                        await _stripeAdapter.CustomerUpdateAsync(customer.Id,
+                            new Stripe.CustomerUpdateOptions { Balance = customer.Balance });
+                    }
+
+                    // Restore invoice items that were brought in
+                    foreach (var item in pendingInvoiceItems)
+                    {
+                        var i = new Stripe.InvoiceItemCreateOptions
+                        {
+                            Currency = item.Currency,
+                            Description = item.Description,
+                            Customer = item.CustomerId,
+                            Subscription = item.SubscriptionId,
+                            Discountable = item.Discountable,
+                            Metadata = item.Metadata,
+                            Quantity = item.Proration ? 1 : item.Quantity,
+                            UnitAmount = item.UnitAmount
+                        };
+                        await _stripeAdapter.InvoiceItemCreateAsync(i);
+                    }
+                }
+                else
+                {
+                    foreach (var ii in createdInvoiceItems)
+                    {
+                        await _stripeAdapter.InvoiceDeleteAsync(ii.Id);
+                    }
+                }
+
+                if (e is Stripe.StripeException strEx &&
+                    (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
+                {
+                    throw new GatewayException("Bank account is not yet verified.");
+                }
+
+                throw;
+            }
+        }
+
+        return new Tuple<bool, string>(invoiceNow, paymentIntentClientSecret);
     }
 
     public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
