@@ -163,7 +163,8 @@ public abstract class BaseRequestValidator<T> where T : class
                 }
                 return;
             }
-            if (twoFactorProviderType != TwoFactorProviderType.Remember)
+            // We only want to track TOTPs in the chache to enforce one time use.
+            if (twoFactorProviderType == TwoFactorProviderType.Authenticator || twoFactorProviderType == TwoFactorProviderType.Email)
             {
                 await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
             }
