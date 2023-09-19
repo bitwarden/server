@@ -57,7 +57,7 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUser_WhenUserStatusIsRevoked_ReturnsBadRequest(
+    public async Task AcceptOrgUser_OrgUserStatusIsRevoked_ReturnsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -77,7 +77,7 @@ public class AcceptOrgUserCommandTests
     [Theory]
     [BitAutoData(OrganizationUserStatusType.Accepted)]
     [BitAutoData(OrganizationUserStatusType.Confirmed)]
-    public async Task AcceptOrgUser_WhenUserStatusIsNotInvited_ThrowsBadRequest(
+    public async Task AcceptOrgUser_OrgUserStatusIsNotInvited_ThrowsBadRequest(
         OrganizationUserStatusType orgUserStatus,
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
