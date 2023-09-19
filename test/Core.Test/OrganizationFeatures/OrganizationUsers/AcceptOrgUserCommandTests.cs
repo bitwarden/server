@@ -1,5 +1,8 @@
-﻿using Bit.Core.Entities;
+﻿using System.Text.Json;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
+using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -14,17 +17,161 @@ using Xunit;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
 
-
 // Note: test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
 [SutProviderCustomize]
 public class AcceptOrgUserCommandTests
 {
-    private readonly IUserService _userService;
+    private readonly IUserService _userService = Substitute.For<IUserService>();
 
-    public AcceptOrgUserCommandTests()
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUser_InvitedUserToSingleOrg_Success(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
-        _userService = Substitute.For<IUserService>();
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        // Act
+        var orgUserResult = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
+
+        // Assert
+
+        // Verify returned org user details
+        Assert.NotNull(orgUserResult);
+        Assert.Equal(OrganizationUserStatusType.Accepted, orgUserResult.Status);
+        Assert.Equal(orgUser.Id, orgUserResult.Id);
+        Assert.Null(orgUserResult.Email);
+
+        // Verify org repository called with updated orgUser
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Id == orgUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
+
+        // Verify emails sent to admin
+        await sutProvider.GetDependency<IMailService>().Received(1).SendOrganizationAcceptedEmailAsync(
+            Arg.Is<Organization>(o => o.Id == org.Id),
+            Arg.Is<string>(e => e == user.Email),
+            Arg.Is<IEnumerable<string>>(a => a.Contains(adminUserDetails.Email))
+        );
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUser_WhenUserStatusIsRevoked_ReturnsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Common setup
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        // Revoke user status
+        orgUser.Status = OrganizationUserStatusType.Revoked;
+
+        // Act & Assert
+         var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+             sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+
+         Assert.Equal("Your organization access has been revoked.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Accepted)]
+    [BitAutoData(OrganizationUserStatusType.Confirmed)]
+    public async Task AcceptOrgUser_WhenUserStatusIsNotInvited_ThrowsBadRequest(
+        OrganizationUserStatusType orgUserStatus,
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        // Set status to something other than invited
+        orgUser.Status = orgUserStatus;
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+
+        Assert.Equal("Already accepted.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUser_UserJoiningOrgWithSingleOrgPolicyWhileInAnotherOrg_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        //  Make user part of another org
+        var otherOrgUser = new OrganizationUser { UserId = user.Id, OrganizationId = Guid.NewGuid() }; // random org ID
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(Task.FromResult<ICollection<OrganizationUser>>(new List<OrganizationUser> { otherOrgUser }));
+
+        // Make organization they are trying to join have the single org policy
+        var singleOrgPolicy = new OrganizationUserPolicyDetails { OrganizationId = orgUser.OrganizationId };
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg, OrganizationUserStatusType.Invited)
+            .Returns(Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
+                new List<OrganizationUserPolicyDetails> { singleOrgPolicy }));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+
+        Assert.Equal("You may not join this organization until you leave or remove all other organizations.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserAsync_UserInOrgWithSingleOrgPolicyAlready_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        // Mock that user is part of an org that has the single org policy
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
+            .Returns(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+
+        Assert.Equal("You cannot join this organization because you are a member of another organization which forbids it", exception.Message);
+    }
+
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserAsync_UserWithout2FAJoining2FARequiredOrg_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        // User doesn't have 2FA enabled
+        _userService.TwoFactorIsEnabledAsync(user).Returns(false);
+
+        // Organization they are trying to join requires 2FA
+        var twoFactorPolicy = new OrganizationUserPolicyDetails { OrganizationId = orgUser.OrganizationId };
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited)
+            .Returns(Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
+                new List<OrganizationUserPolicyDetails> { twoFactorPolicy }));
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
+            sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService));
+
+        Assert.Equal("You cannot join this organization until you enable two-step login on your user account.", exception.Message);
+    }
+
 
     [Theory]
     [EphemeralDataProtectionAutoData]
@@ -39,12 +186,21 @@ public class AcceptOrgUserCommandTests
         orgUser.Status = OrganizationUserStatusType.Invited;
         orgUser.Email = user.Email;
 
-
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUserId)
-            .Returns(orgUser);
+            .Returns(Task.FromResult(orgUser));
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOrganizationAsync(orgUser.OrganizationId, user.Email, true)
+            .Returns(0);
 
         var oldToken = CreateOldToken(sutProvider, orgUser);
+
+        // Mock successful call to AcceptOrgUserAsync (will be tested separately)
+        var orgUserJson = JsonSerializer.Serialize(orgUser);
+        var acceptedOrgUser = JsonSerializer.Deserialize<OrganizationUser>(orgUserJson);
+        acceptedOrgUser.Status = OrganizationUserStatusType.Accepted;
+
 
         // Act
         var result = await sutProvider.Sut.AcceptOrgUserByTokenAsync(organizationUserId, user, oldToken, _userService);
@@ -55,15 +211,65 @@ public class AcceptOrgUserCommandTests
         Assert.Equal(orgUser.Id, result.Id);
         Assert.Null(result.Email);
         Assert.Equal(user.Id, result.UserId);
-        Assert.True(user.EmailVerified);  // Verifying the EmailVerified flag.
+        Assert.True(user.EmailVerified); // Verifying the EmailVerified flag.
     }
 
+    private void SetupCommonAcceptOrgUserMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, Organization org,
+        OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        orgUser.Email = user.Email;
+        orgUser.Status = OrganizationUserStatusType.Invited;
+        orgUser.Type = OrganizationUserType.User;
+        orgUser.OrganizationId = org.Id;
+
+        // User is not part of any other orgs
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(
+                Task.FromResult<ICollection<OrganizationUser>>(new List<OrganizationUser>())
+            );
+
+        // Org they are trying to join does not have single org policy
+        sutProvider.GetDependency<IPolicyService>()
+            .GetPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg, OrganizationUserStatusType.Invited)
+            .Returns(
+                Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
+                    new List<OrganizationUserPolicyDetails>()
+                )
+            );
+
+        // User is not part of any organization that applies the single org policy
+        sutProvider.GetDependency<IPolicyService>()
+            .AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.SingleOrg)
+            .Returns(false);
+
+        // User doesn't have 2FA enabled
+        _userService.TwoFactorIsEnabledAsync(user).Returns(false);
+
+        // Org does not require 2FA
+        sutProvider.GetDependency<IPolicyService>().GetPoliciesApplicableToUserAsync(user.Id,
+                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited)
+            .Returns(Task.FromResult<ICollection<OrganizationUserPolicyDetails>>(
+                new List<OrganizationUserPolicyDetails>()));
+
+        // Provide at least 1 admin to test email functionality
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin)
+            .Returns(Task.FromResult<IEnumerable<OrganizationUserUserDetails>>(
+                new List<OrganizationUserUserDetails>() { adminUserDetails }
+            ));
+
+        // Return org
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(org.Id)
+            .Returns(Task.FromResult(org));
+    }
 
 
     private string CreateOldToken(SutProvider<AcceptOrgUserCommand> sutProvider,
         OrganizationUser organizationUser)
     {
-
         var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
             .CreateProtector("OrganizationServiceDataProtector");
 
@@ -74,3 +280,40 @@ public class AcceptOrgUserCommandTests
         return oldToken;
     }
 }
+
+// Tests from OrganizationServiceTests.cs
+// [Theory]
+// [EphemeralDataProtectionAutoData]
+// public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
+//     User user, SutProvider<OrganizationService> sutProvider)
+// {
+//     var token = SetupAcceptUserAsyncTest(sutProvider, user, organizationUser);
+//     var userService = Substitute.For<IUserService>();
+//
+//     await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService);
+//
+//     await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+//         Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
+//     await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
+//         Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
+// }
+//
+// private string SetupAcceptUserAsyncTest(SutProvider<OrganizationService> sutProvider, User user,
+//     OrganizationUser organizationUser)
+// {
+//     user.Email = organizationUser.Email;
+//     user.EmailVerified = false;
+//
+//     var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
+//         .CreateProtector("OrganizationServiceDataProtector");
+//     // Token matching the format used in OrganizationService.InviteUserAsync
+//     var token = dataProtector.Protect(
+//         $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+//
+//     sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
+//
+//     sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+//         .Returns(organizationUser);
+//
+//     return token;
+// }
