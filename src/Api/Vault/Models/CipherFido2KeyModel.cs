@@ -57,7 +57,7 @@ public class CipherFido2KeyModel
     [EncryptedStringLength(1000)]
     public string Discoverable { get; set; }
 
-    public DateTime? CreationDate { get; set; }
+    public DateTime CreationDate { get; set; }
 
     public CipherLoginFido2KeyData ToCipherLoginFido2KeyData()
     {
@@ -74,7 +74,7 @@ public class CipherFido2KeyModel
             UserDisplayName = UserDisplayName,
             Counter = Counter,
             Discoverable = Discoverable,
-            CreationDate = CreationDate.Value
+            CreationDate = CreationDate
         };
     }
 }
