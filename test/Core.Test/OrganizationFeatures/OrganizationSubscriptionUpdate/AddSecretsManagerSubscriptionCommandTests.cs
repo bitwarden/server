@@ -95,6 +95,38 @@ public class AddSecretsManagerSubscriptionCommandTests
         await VerifyDependencyNotCalledAsync(sutProvider);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_ThrowsException_WhenOrganizationEnrolledInSmBeta(
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization)
+    {
+        organization.UseSecretsManager = true;
+        organization.SecretsManagerBeta = true;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
+
+        Assert.Contains("Organization is enrolled in Secrets Manager Beta", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task SignUpAsync_ThrowsException_WhenOrganizationAlreadyHasSecretsManager(
+        SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider,
+        Organization organization)
+    {
+        organization.UseSecretsManager = true;
+        organization.SecretsManagerBeta = false;
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SignUpAsync(organization, 10, 10));
+
+        Assert.Contains("Organization already uses Secrets Manager", exception.Message);
+        await VerifyDependencyNotCalledAsync(sutProvider);
+    }
+
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<AddSecretsManagerSubscriptionCommand> sutProvider)
     {
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()

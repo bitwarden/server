@@ -273,8 +273,8 @@ public class CoreHelpersTests
             { "sstamp", user.SecurityStamp },
         }.ToList();
 
-        var actual = CoreHelpers.BuildIdentityClaims(user, Array.Empty<CurrentContentOrganization>(),
-            Array.Empty<CurrentContentProvider>(), isPremium);
+        var actual = CoreHelpers.BuildIdentityClaims(user, Array.Empty<CurrentContextOrganization>(),
+            Array.Empty<CurrentContextProvider>(), isPremium);
 
         foreach (var claim in expected)
         {
@@ -289,23 +289,23 @@ public class CoreHelpersTests
         var fixture = new Fixture().WithAutoNSubstitutions();
         foreach (var organizationUserType in Enum.GetValues<OrganizationUserType>().Except(new[] { OrganizationUserType.Custom }))
         {
-            var org = fixture.Create<CurrentContentOrganization>();
+            var org = fixture.Create<CurrentContextOrganization>();
             org.Type = organizationUserType;
 
             var expected = new KeyValuePair<string, string>($"org{organizationUserType.ToString().ToLower()}", org.Id.ToString());
-            var actual = CoreHelpers.BuildIdentityClaims(user, new[] { org }, Array.Empty<CurrentContentProvider>(), false);
+            var actual = CoreHelpers.BuildIdentityClaims(user, new[] { org }, Array.Empty<CurrentContextProvider>(), false);
 
             Assert.Contains(expected, actual);
         }
     }
 
     [Theory, BitAutoData, UserCustomize]
-    public void BuildIdentityClaims_CustomOrganizationUserClaims_Success(User user, CurrentContentOrganization org)
+    public void BuildIdentityClaims_CustomOrganizationUserClaims_Success(User user, CurrentContextOrganization org)
     {
         var fixture = new Fixture().WithAutoNSubstitutions();
         org.Type = OrganizationUserType.Custom;
 
-        var actual = CoreHelpers.BuildIdentityClaims(user, new[] { org }, Array.Empty<CurrentContentProvider>(), false);
+        var actual = CoreHelpers.BuildIdentityClaims(user, new[] { org }, Array.Empty<CurrentContextProvider>(), false);
         foreach (var (permitted, claimName) in org.Permissions.ClaimsMap)
         {
             var claim = new KeyValuePair<string, string>(claimName, org.Id.ToString());
@@ -325,10 +325,10 @@ public class CoreHelpersTests
     public void BuildIdentityClaims_ProviderClaims_Success(User user)
     {
         var fixture = new Fixture().WithAutoNSubstitutions();
-        var providers = new List<CurrentContentProvider>();
+        var providers = new List<CurrentContextProvider>();
         foreach (var providerUserType in Enum.GetValues<ProviderUserType>())
         {
-            var provider = fixture.Create<CurrentContentProvider>();
+            var provider = fixture.Create<CurrentContextProvider>();
             provider.Type = providerUserType;
             providers.Add(provider);
         }
@@ -357,7 +357,7 @@ public class CoreHelpersTests
             }
         }
 
-        var actual = CoreHelpers.BuildIdentityClaims(user, Array.Empty<CurrentContentOrganization>(), providers, false);
+        var actual = CoreHelpers.BuildIdentityClaims(user, Array.Empty<CurrentContextOrganization>(), providers, false);
         foreach (var claim in claims)
         {
             Assert.Contains(claim, actual);
@@ -415,5 +415,26 @@ public class CoreHelpersTests
     public void ObfuscateEmail_Success(string input, string expected)
     {
         Assert.Equal(expected, CoreHelpers.ObfuscateEmail(input));
+    }
+
+    [Theory]
+    [InlineData("user@example.com")]
+    [InlineData("user@example.com ")]
+    [InlineData("user.name@example.com")]
+    public void GetEmailDomain_Success(string email)
+    {
+        Assert.Equal("example.com", CoreHelpers.GetEmailDomain(email));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(null)]
+    [InlineData("userexample.com")]
+    [InlineData("user@")]
+    [InlineData("@example.com")]
+    [InlineData("user@ex@ample.com")]
+    public void GetEmailDomain_ReturnsNull(string wrongEmail)
+    {
+        Assert.Null(CoreHelpers.GetEmailDomain(wrongEmail));
     }
 }

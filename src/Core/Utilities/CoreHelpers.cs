@@ -29,7 +29,7 @@ public static class CoreHelpers
     private static readonly DateTime _epoc = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly DateTime _max = new DateTime(9999, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private static readonly Random _random = new Random();
-    private static readonly string CloudFlareConnectingIp = "CF-Connecting-IP";
+    private static readonly string RealConnectingIp = "X-Connecting-IP";
 
     /// <summary>
     /// Generate sequential Guid for Sql Server.
@@ -50,20 +50,20 @@ public static class CoreHelpers
     {
         var guidArray = startingGuid.ToByteArray();
 
-        // Get the days and milliseconds which will be used to build the byte string 
+        // Get the days and milliseconds which will be used to build the byte string
         var days = new TimeSpan(time.Ticks - _baseDateTicks);
         var msecs = time.TimeOfDay;
 
-        // Convert to a byte array 
-        // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333 
+        // Convert to a byte array
+        // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333
         var daysArray = BitConverter.GetBytes(days.Days);
         var msecsArray = BitConverter.GetBytes((long)(msecs.TotalMilliseconds / 3.333333));
 
-        // Reverse the bytes to match SQL Servers ordering 
+        // Reverse the bytes to match SQL Servers ordering
         Array.Reverse(daysArray);
         Array.Reverse(msecsArray);
 
-        // Copy the bytes into the guid 
+        // Copy the bytes into the guid
         Array.Copy(daysArray, daysArray.Length - 2, guidArray, guidArray.Length - 6, 2);
         Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
 
@@ -557,9 +557,9 @@ public static class CoreHelpers
             return null;
         }
 
-        if (!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(CloudFlareConnectingIp))
+        if (!globalSettings.SelfHosted && httpContext.Request.Headers.ContainsKey(RealConnectingIp))
         {
-            return httpContext.Request.Headers[CloudFlareConnectingIp].ToString();
+            return httpContext.Request.Headers[RealConnectingIp].ToString();
         }
 
         return httpContext.Connection?.RemoteIpAddress?.ToString();
@@ -624,8 +624,8 @@ public static class CoreHelpers
         return configDict;
     }
 
-    public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContentOrganization> orgs,
-        ICollection<CurrentContentProvider> providers, bool isPremium)
+    public static List<KeyValuePair<string, string>> BuildIdentityClaims(User user, ICollection<CurrentContextOrganization> orgs,
+        ICollection<CurrentContextProvider> providers, bool isPremium)
     {
         var claims = new List<KeyValuePair<string, string>>()
         {
@@ -816,5 +816,20 @@ public static class CoreHelpers
             .Append(emailParts[1])
             .ToString();
 
+    }
+
+    public static string GetEmailDomain(string email)
+    {
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var emailParts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+
+            if (emailParts.Length == 2)
+            {
+                return emailParts[1].Trim();
+            }
+        }
+
+        return null;
     }
 }

@@ -10,4 +10,5 @@ public static class HandledStripeWebhook
     public const string PaymentSucceeded = "invoice.payment_succeeded";
     public const string PaymentFailed = "invoice.payment_failed";
     public const string InvoiceCreated = "invoice.created";
+    public const string PaymentMethodAttached = "payment_method.attached";
 }

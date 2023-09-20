@@ -530,6 +530,7 @@ public class IdentityServerSsoTests
         var organization = await organizationRepository.CreateAsync(new Organization
         {
             Name = "Test Org",
+            UsePolicies = true
         });
 
         var organizationUserRepository = factory.Services.GetRequiredService<IOrganizationUserRepository>();
