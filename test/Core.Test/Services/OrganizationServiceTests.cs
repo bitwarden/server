@@ -385,9 +385,9 @@ public class OrganizationServiceTests
             .CreateToken(Arg.Any<OrganizationUser>())
             .Returns(
                 info => new OrgUserInviteTokenable(info.Arg<OrganizationUser>())
-                        {
-                            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
-                        }
+                {
+                    ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+                }
                 );
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
