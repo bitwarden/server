@@ -8,6 +8,7 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
+using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,6 +16,7 @@ namespace Bit.Api.Auth.Controllers;
 
 [Route("webauthn")]
 [Authorize("Web")]
+[RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
 public class WebAuthnController : Controller
 {
     private readonly IUserService _userService;
