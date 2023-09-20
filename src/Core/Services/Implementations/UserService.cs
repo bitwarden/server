@@ -530,7 +530,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var authenticatorSelection = new AuthenticatorSelection
         {
             AuthenticatorAttachment = null,
-            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred 
+            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred
             UserVerification = UserVerificationRequirement.Preferred
         };
 
@@ -542,7 +542,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return options;
     }
 
-    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name,
+    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, string userKey, string prfPublicKey, string prfPrivateKey, bool supportsPrf,
         CredentialCreateOptions options,
         AuthenticatorAttestationRawResponse attestationResponse)
     {
@@ -565,7 +565,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             Type = success.Result.CredType,
             AaGuid = success.Result.Aaguid,
             Counter = (int)success.Result.Counter,
-            UserId = user.Id
+            UserId = user.Id,
+            UserKey = userKey,
+            SupportsPrf = supportsPrf,
+            PrfPublicKey = prfPublicKey,
+            PrfPrivateKey = prfPrivateKey
         };
 
         await _webAuthnCredentialRepository.CreateAsync(credential);
@@ -574,47 +578,40 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
     {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var existingCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
-            .ToList();
+        List<PublicKeyCredentialDescriptor> existingCredentials;
 
-        if (existingCredentials.Count == 0)
+        if (user != null)
         {
-            return null;
+            var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+            existingCredentials = existingKeys
+                .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
+                .ToList();
+        }
+        else
+        {
+            existingCredentials = new List<PublicKeyCredentialDescriptor>();
         }
 
-        // TODO: PRF?
-        var exts = new AuthenticationExtensionsClientInputs
-        {
-            UserVerificationMethod = true
-        };
+        var exts = new AuthenticationExtensionsClientInputs();
         var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Preferred, exts);
-
-        // TODO: temp save options to user record somehow
-
         return options;
     }
 
-    public async Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user)
+    public async Task<string> CompleteWebAuthLoginAssertionAsync(Guid? nonDiscoverableUserId, AssertionOptions options, AuthenticatorAssertionRawResponse deviceResponse)
     {
-        // TODO: Get options from user record somehow, then clear them
-        var options = AssertionOptions.FromJson("");
-
-        var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
-        var credential = userCredentials.FirstOrDefault(c => c.DescriptorId == assertionId);
+        var userId = nonDiscoverableUserId ?? new Guid(deviceResponse.Response.UserHandle);
+        var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(userId);
+        var credentialId = CoreHelpers.Base64UrlEncode(deviceResponse.Id);
+        var credential = userCredentials.FirstOrDefault(c => c.DescriptorId == credentialId);
         if (credential == null)
         {
             return null;
         }
 
-        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
-        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
+        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(credential.UserId == userId);
         var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
         var assertionVerificationResult = await _fido2.MakeAssertionAsync(
-            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+            deviceResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
 
         // Update SignatureCounter
         credential.Counter = (int)assertionVerificationResult.Counter;
@@ -622,7 +619,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (assertionVerificationResult.Status == "ok")
         {
-            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user));
+            var user = await GetUserByIdAsync(userId);
+            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user, credential));
             return token;
         }
         else

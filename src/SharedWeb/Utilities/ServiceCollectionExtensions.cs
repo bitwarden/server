@@ -174,6 +174,12 @@ public static class ServiceCollectionExtensions
                 WebAuthnCredentialCreateOptionsTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>>()));
+        services.AddSingleton<IDataProtectorTokenFactory<WebAuthnCredentialAssertionOptionsTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<WebAuthnCredentialAssertionOptionsTokenable>(
+                WebAuthnCredentialAssertionOptionsTokenable.ClearTextPrefix,
+                WebAuthnCredentialAssertionOptionsTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<WebAuthnCredentialAssertionOptionsTokenable>>>()));
         services.AddSingleton<IDataProtectorTokenFactory<SsoEmail2faSessionTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<SsoEmail2faSessionTokenable>(
                 SsoEmail2faSessionTokenable.ClearTextPrefix,
