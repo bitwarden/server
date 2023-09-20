@@ -25,7 +25,6 @@ public class AcceptOrgUserCommandTests
 {
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory = Substitute.For<IOrgUserInviteTokenableFactory>();
-
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
     // Base AcceptOrgUserAsync method tests ----------------------------------------------------------------------------
