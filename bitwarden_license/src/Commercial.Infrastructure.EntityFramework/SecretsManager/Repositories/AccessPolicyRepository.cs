@@ -1,8 +1,10 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Discriminators;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -238,6 +240,93 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         return entities.Select(MapToCore);
     }
 
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
+        GetPeoplePoliciesByGrantedProjectIdAsync(Guid id, Guid userId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var entities = await dbContext.AccessPolicies.Where(ap =>
+                ap.Discriminator != AccessPolicyDiscriminator.ServiceAccountProject &&
+                (((UserProjectAccessPolicy)ap).GrantedProjectId == id ||
+                 ((GroupProjectAccessPolicy)ap).GrantedProjectId == id))
+            .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
+            .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
+            .Select(ap => new
+            {
+                ap,
+                CurrentUserInGroup = ap is GroupProjectAccessPolicy &&
+                                     ((GroupProjectAccessPolicy)ap).Group.GroupUsers.Any(g =>
+                                         g.OrganizationUser.User.Id == userId)
+            })
+            .ToListAsync();
+
+        return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
+    }
+
+    public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> ReplaceProjectPeopleAsync(
+        PeopleAccessPolicies peopleAccessPolicies)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var peoplePolicyEntities = await dbContext.AccessPolicies.Where(ap =>
+            ((UserProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id ||
+            ((GroupProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id).ToListAsync();
+
+        var userPolicyEntities =
+            peoplePolicyEntities.Where(ap => ap.GetType() == typeof(UserProjectAccessPolicy)).ToList();
+        var groupPolicyEntities =
+            peoplePolicyEntities.Where(ap => ap.GetType() == typeof(GroupProjectAccessPolicy)).ToList();
+
+        foreach (var userPolicy in userPolicyEntities.Where(entity =>
+                     peopleAccessPolicies.UserAccessPolicies.All(ap =>
+                         ((Core.SecretsManager.Entities.UserProjectAccessPolicy)ap).OrganizationUserId !=
+                         ((UserProjectAccessPolicy)entity).OrganizationUserId)))
+        {
+            dbContext.Remove(userPolicy);
+        }
+
+        foreach (var groupPolicy in groupPolicyEntities.Where(entity =>
+                     peopleAccessPolicies.GroupAccessPolicies.All(ap =>
+                         ((Core.SecretsManager.Entities.GroupProjectAccessPolicy)ap).GroupId !=
+                         ((GroupProjectAccessPolicy)entity).GroupId)))
+        {
+            dbContext.Remove(groupPolicy);
+        }
+
+        var results = new List<BaseAccessPolicy>();
+        var currentDate = DateTime.UtcNow;
+        foreach (var updatedEntity in peopleAccessPolicies.ToBaseAccessPolicies().Select(MapToEntity).ToList())
+        {
+            var currentEntity = updatedEntity switch
+            {
+                UserProjectAccessPolicy ap => userPolicyEntities.FirstOrDefault(e =>
+                    ((UserProjectAccessPolicy)e).OrganizationUserId == ap.OrganizationUserId),
+                GroupProjectAccessPolicy ap => groupPolicyEntities.FirstOrDefault(e =>
+                    ((GroupProjectAccessPolicy)e).GroupId == ap.GroupId),
+                _ => null
+            };
+
+            if (currentEntity != null)
+            {
+                dbContext.AccessPolicies.Attach(currentEntity);
+                currentEntity.Read = updatedEntity.Read;
+                currentEntity.Write = updatedEntity.Write;
+                currentEntity.RevisionDate = currentDate;
+                results.Add(currentEntity);
+            }
+            else
+            {
+                updatedEntity.SetNewId();
+                await dbContext.AddAsync(updatedEntity);
+                results.Add(updatedEntity);
+            }
+        }
+
+        await dbContext.SaveChangesAsync();
+        return results.Select(MapToCore);
+    }
+
     private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(
         BaseAccessPolicy baseAccessPolicyEntity) =>
         baseAccessPolicyEntity switch
@@ -250,8 +339,26 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 Mapper.Map<Core.SecretsManager.Entities.UserServiceAccountAccessPolicy>(ap),
             GroupServiceAccountAccessPolicy ap => Mapper
                 .Map<Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy>(ap),
-            _ => throw new ArgumentException("Unsupported access policy type"),
+            _ => throw new ArgumentException("Unsupported access policy type")
         };
+
+    private BaseAccessPolicy MapToEntity(Core.SecretsManager.Entities.BaseAccessPolicy baseAccessPolicy)
+    {
+        return baseAccessPolicy switch
+        {
+            Core.SecretsManager.Entities.UserProjectAccessPolicy accessPolicy => Mapper.Map<UserProjectAccessPolicy>(
+                accessPolicy),
+            Core.SecretsManager.Entities.UserServiceAccountAccessPolicy accessPolicy => Mapper
+                .Map<UserServiceAccountAccessPolicy>(accessPolicy),
+            Core.SecretsManager.Entities.GroupProjectAccessPolicy accessPolicy => Mapper.Map<GroupProjectAccessPolicy>(
+                accessPolicy),
+            Core.SecretsManager.Entities.GroupServiceAccountAccessPolicy accessPolicy => Mapper
+                .Map<GroupServiceAccountAccessPolicy>(accessPolicy),
+            Core.SecretsManager.Entities.ServiceAccountProjectAccessPolicy accessPolicy => Mapper
+                .Map<ServiceAccountProjectAccessPolicy>(accessPolicy),
+            _ => throw new ArgumentException("Unsupported access policy type")
+        };
+    }
 
     private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(
       BaseAccessPolicy baseAccessPolicyEntity, bool currentUserInGroup)
