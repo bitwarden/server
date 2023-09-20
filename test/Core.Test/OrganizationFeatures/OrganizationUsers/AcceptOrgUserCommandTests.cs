@@ -251,6 +251,177 @@ public class AcceptOrgUserCommandTests
             Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByToken_NullOrgUser_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Guid orgUserId)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUserId).Returns((OrganizationUser)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUserId, user, "token", _userService));
+
+        Assert.Equal("User invalid.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByToken_GenericInvalidToken_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, OrganizationUser orgUser)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(Task.FromResult(orgUser));
+
+        var invalidToken = "invalidToken";
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, invalidToken, _userService));
+
+        Assert.Equal("Invalid token.", exception.Message);
+    }
+
+    [Theory]
+    [EphemeralDataProtectionAutoData]
+    public async Task AcceptOrgUserByToken_ExpiredOldToken_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+        SetupCommonAcceptOrgUserByTokenMocks(sutProvider, user, orgUser);
+
+        // As the old token simply set a timestamp which was later compared against the
+        // OrganizationInviteExpirationHours global setting to determine if it was expired or not,
+        // we can simply set the expiration to 24 hours ago to simulate an expired token.
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(-24);
+
+        var oldToken = CreateOldToken(sutProvider, orgUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, oldToken, _userService));
+
+        Assert.Equal("Invalid token.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByToken_ExpiredNewToken_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, OrganizationUser orgUser)
+    {
+        // Arrange
+        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order
+        // to avoid resetting mocks
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(Task.FromResult(orgUser));
+
+        // Must come after common mocks as they mutate the org user.
+        // Mock tokenable factory to return a token that expired yesterday
+        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
+        {
+            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(-1))
+        });
+
+        var newToken = CreateNewToken(orgUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService));
+
+        Assert.Equal("Invalid token.", exception.Message);
+
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserStatusType.Accepted,
+        "Invitation already accepted. You will receive an email when your organization membership is confirmed.")]
+    [BitAutoData(OrganizationUserStatusType.Confirmed,
+        "You are already part of this organization.")]
+    public async Task AcceptOrgUserByToken_UserAlreadyInOrg_ThrowsBadRequest(
+        OrganizationUserStatusType statusType,
+        string expectedErrorMessage,
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, OrganizationUser orgUser)
+    {
+        // Arrange
+        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order
+        // to avoid resetting mocks
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(orgUser.Id)
+            .Returns(Task.FromResult(orgUser));
+
+        // Indicate that a user with the given email already exists in the organization
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetCountByOrganizationAsync(orgUser.OrganizationId, user.Email, true)
+            .Returns(1);
+
+        orgUser.Status = statusType;
+
+        // Must come after common mocks as they mutate the org user.
+        // Mock tokenable factory to return valid, new token that expires in 5 days
+        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
+        {
+            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+        });
+
+        var newToken = CreateNewToken(orgUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService));
+
+        Assert.Equal(expectedErrorMessage, exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByToken_EmailMismatch_ThrowsBadRequest(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order
+        // to avoid resetting mocks
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        SetupCommonAcceptOrgUserByTokenMocks(sutProvider, user, orgUser);
+
+        // Modify the orgUser's email to be different from the user's email to simulate the mismatch
+        orgUser.Email = "mismatchedEmail@example.com";
+
+        // Must come after common mocks as they mutate the org user.
+        // Mock tokenable factory to return a token that expires in 5 days
+        _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
+        {
+            ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
+        });
+
+        var newToken = CreateNewToken(orgUser);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService));
+
+        Assert.Equal("User email does not match invite.", exception.Message);
+    }
+
     private void SetupCommonAcceptOrgUserByTokenMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, OrganizationUser orgUser)
     {
         sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
