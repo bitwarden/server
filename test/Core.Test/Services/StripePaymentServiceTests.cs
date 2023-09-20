@@ -813,7 +813,7 @@ public class StripePaymentServiceTests
     public async void PreviewUpcomingInvoiceAndPayAsync_NoPaymentMethod_ThrowsBadRequestException(SutProvider<StripePaymentService> sutProvider,
        Organization subscriber, List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, string planId)
     {
-        var prorateThreshold = 500;
+        var prorateThreshold = 1200;
         var invoiceAmountBelowThreshold = prorateThreshold;
         var customer = new Stripe.Customer
         {
