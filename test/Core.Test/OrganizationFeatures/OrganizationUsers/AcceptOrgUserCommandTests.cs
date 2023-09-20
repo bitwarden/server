@@ -200,14 +200,10 @@ public class AcceptOrgUserCommandTests
         var oldToken = CreateOldToken(sutProvider, orgUser);
 
         // Act
-        var result = await sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, oldToken, _userService);
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, oldToken, _userService);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(OrganizationUserStatusType.Accepted, result.Status);
-        Assert.Equal(orgUser.Id, result.Id);
-        Assert.Null(result.Email);
-        Assert.Equal(user.Id, result.UserId);
+        AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
 
         // Verify user email verified logic
         Assert.True(user.EmailVerified);
@@ -240,14 +236,10 @@ public class AcceptOrgUserCommandTests
         var newToken = CreateNewToken(orgUser);
 
         // Act
-        var result = await sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService);
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService);
 
         // Assert
-        Assert.NotNull(result);
-        Assert.Equal(OrganizationUserStatusType.Accepted, result.Status);
-        Assert.Equal(orgUser.Id, result.Id);
-        Assert.Null(result.Email);
-        Assert.Equal(user.Id, result.UserId);
+        AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
 
         // Verify user email verified logic
         Assert.True(user.EmailVerified);
@@ -426,7 +418,87 @@ public class AcceptOrgUserCommandTests
         Assert.Equal("User email does not match invite.", exception.Message);
     }
 
+
+    // AcceptOrgUserByOrgSsoIdAsync -----------------------------------------------------------------------------------
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByOrgSsoIdAsync_ValidOrgAndUser_AcceptsOrgUser(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(org.Identifier)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+
+        // Act
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByOrgSsoIdAsync(org.Identifier, user, _userService);
+
+        // Assert
+        AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByOrgSsoIdAsync_InvalidOrg_ThrowsBadRequest(SutProvider<AcceptOrgUserCommand> sutProvider,
+        string orgSsoIdentifier, User user)
+    {
+        // Arrange
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(orgSsoIdentifier)
+            .Returns((Organization)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByOrgSsoIdAsync(orgSsoIdentifier, user, _userService));
+
+        Assert.Equal("Organization invalid.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByOrgSsoIdAsync_UserNotInOrg_ThrowsBadRequest(SutProvider<AcceptOrgUserCommand> sutProvider,
+        Organization org, User user)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(org.Identifier)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns((OrganizationUser)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByOrgSsoIdAsync(org.Identifier, user, _userService));
+
+        Assert.Equal("User not found within organization.", exception.Message);
+    }
+
     // Private helpers -------------------------------------------------------------------------------------------------
+
+    /// <summary>
+    ///  Asserts that the given org user is in the expected state after a successful AcceptOrgUserAsync call.
+    ///  For use in happy path tests.
+    /// </summary>
+    private void AssertValidAcceptedOrgUser(OrganizationUser resultOrgUser, OrganizationUser expectedOrgUser, User user)
+    {
+        Assert.NotNull(resultOrgUser);
+        Assert.Equal(OrganizationUserStatusType.Accepted, resultOrgUser.Status);
+        Assert.Equal(expectedOrgUser, resultOrgUser);
+        Assert.Equal(expectedOrgUser.Id, resultOrgUser.Id);
+        Assert.Null(resultOrgUser.Email);
+        Assert.Equal(user.Id, resultOrgUser.UserId);
+    }
 
     private void SetupCommonAcceptOrgUserByTokenMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, OrganizationUser orgUser)
     {
