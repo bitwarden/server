@@ -749,7 +749,6 @@ public class StripePaymentService : IPaymentService
         prorationDate ??= DateTime.UtcNow;
         var collectionMethod = sub.CollectionMethod;
         var daysUntilDue = sub.DaysUntilDue;
-        var chargeNow = collectionMethod == "charge_automatically";
         var updatedItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub);
 
         var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
@@ -792,61 +791,42 @@ public class StripePaymentService : IPaymentService
         string paymentIntentClientSecret = null;
         try
         {
-            var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
-            var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
-            if (invoice == null)
+            try
             {
-                throw new BadRequestException("Unable to locate draft invoice for subscription update.");
-            }
+                var subItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub)
+                    .Select(item => new Stripe.InvoiceSubscriptionItemOptions
+                    {
+                        Id = item.Id,
+                        Plan = item.Plan,
+                        Quantity = item.Quantity,
+                    }).ToList();
 
-            if (invoice.AmountDue > 0 && updatedItemOptions.Any(i => i.Quantity > 0))
-            {
-                try
+                var reviewInvoiceResponse = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
+                paymentIntentClientSecret = reviewInvoiceResponse.Item2;
+                if (reviewInvoiceResponse.Item1)
                 {
-                    if (chargeNow)
+                    var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
+                    var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
+                    if (invoice == null)
                     {
-                        var subItemOptions = subscriptionUpdate.UpgradeItemsOptions(subResponse)
-                             .Select(item => new Stripe.InvoiceSubscriptionItemOptions
-                             {
-                                 Id = item.Id,
-                                 Plan = item.Plan,
-                                 Quantity = item.Quantity,
-                             }).ToList();
-
-                        (_, paymentIntentClientSecret) = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
-                    }
-                    else
-                    {
-                        invoice = await _stripeAdapter.InvoiceFinalizeInvoiceAsync(subResponse.LatestInvoiceId, new Stripe.InvoiceFinalizeOptions
-                        {
-                            AutoAdvance = false,
-                        });
-                        await _stripeAdapter.InvoiceSendInvoiceAsync(invoice.Id, new Stripe.InvoiceSendOptions());
-                        paymentIntentClientSecret = null;
+                        throw new BadRequestException("Unable to locate draft invoice for subscription update.");
                     }
                 }
-                catch
-                {
-                    // Need to revert the subscription
-                    await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
-                    {
-                        Items = subscriptionUpdate.RevertItemsOptions(sub),
-                        // This proration behavior prevents a false "credit" from
-                        //  being applied forward to the next month's invoice
-                        ProrationBehavior = "none",
-                        CollectionMethod = collectionMethod,
-                        DaysUntilDue = daysUntilDue,
-                    });
-                    throw;
-                }
             }
-            else if (!invoice.Paid)
+            catch (Exception e)
             {
-                // Pay invoice with no charge to customer this completes the invoice immediately without waiting the scheduled 1h
-                invoice = await _stripeAdapter.InvoicePayAsync(subResponse.LatestInvoiceId);
-                paymentIntentClientSecret = null;
+                // Need to revert the subscription
+                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
+                {
+                    Items = subscriptionUpdate.RevertItemsOptions(sub),
+                    // This proration behavior prevents a false "credit" from
+                    //  being applied forward to the next month's invoice
+                    ProrationBehavior = "none",
+                    CollectionMethod = collectionMethod,
+                    DaysUntilDue = daysUntilDue,
+                });
+                throw;
             }
-
         }
         finally
         {
@@ -1272,6 +1252,12 @@ public class StripePaymentService : IPaymentService
 
                 if (invoice != null)
                 {
+                    if (invoice.Status == "paid")
+                    {
+                        // It's apparently paid, so we need to return w/o throwing an exception
+                        return new Tuple<bool, string>(false, paymentIntentClientSecret);
+                    }
+
                     invoice = await _stripeAdapter.InvoiceVoidInvoiceAsync(invoice.Id, new Stripe.InvoiceVoidOptions());
                     if (invoice.StartingBalance != 0)
                     {
