@@ -397,7 +397,7 @@ public class AcceptOrgUserCommandTests
     [BitAutoData]
     public async Task AcceptOrgUserByToken_EmailMismatch_ThrowsBadRequest(
         SutProvider<AcceptOrgUserCommand> sutProvider,
-        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+        User user, OrganizationUser orgUser)
     {
         // Arrange
         // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order
