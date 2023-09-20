@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Bit.Core.Auth.Models.Business.Tokenables;
+﻿using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -13,61 +12,12 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Fakes;
 using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationUsers;
-
-
-public class FakeDataProtectorTokenFactory<T> : IDataProtectorTokenFactory<T> where T : Tokenable, new()
-{
-    // Instead of real encryption, use a simple Dictionary to emulate protection/unprotection
-    private readonly Dictionary<string, T> _tokenDatabase = new Dictionary<string, T>();
-
-    public string Protect(T data)
-    {
-        // Generate a simple token representation
-        var token = Guid.NewGuid().ToString();
-
-        // Store the data against the token
-        _tokenDatabase[token] = data;
-
-        return token;
-    }
-
-    public T Unprotect(string token)
-    {
-        // If the token exists in the dictionary, return the corresponding data
-        if (_tokenDatabase.TryGetValue(token, out var data))
-        {
-            return data;
-        }
-
-        // If the token doesn't exist, throw an exception similar to a decryption failure.
-        throw new Exception("Failed to unprotect token.");
-    }
-
-    public bool TryUnprotect(string token, out T data)
-    {
-        try
-        {
-            data = Unprotect(token);
-            return true;
-        }
-        catch
-        {
-            data = default;
-            return false;
-        }
-    }
-
-    public bool TokenValid(string token)
-    {
-        return _tokenDatabase.ContainsKey(token);
-    }
-}
 
 // Note: test names follow MethodName_StateUnderTest_ExpectedBehavior pattern.
 [SutProviderCustomize]
@@ -76,7 +26,6 @@ public class AcceptOrgUserCommandTests
     private readonly IUserService _userService = Substitute.For<IUserService>();
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory = Substitute.For<IOrgUserInviteTokenableFactory>();
 
-    // private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = Substitute.For<IDataProtectorTokenFactory<OrgUserInviteTokenable>>();
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
     [Theory]
@@ -269,20 +218,20 @@ public class AcceptOrgUserCommandTests
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
         // Arrange
+        // Setup FakeDataProtectorTokenFactory for creating new tokens - this must come first in order
+        // to avoid resetting mocks
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
         SetupCommonAcceptOrgUserByTokenMocks(sutProvider, user, orgUser);
 
+        // Must come after common mocks as they mutate the org user.
         // Mock tokenable factory to return a token that expires in 5 days
         _orgUserInviteTokenableFactory.CreateToken(orgUser).Returns(new OrgUserInviteTokenable(orgUser)
         {
             ExpirationDate = DateTime.UtcNow.Add(TimeSpan.FromDays(5))
         });
-
-        // TODO: figure out how to do this. Either have to instantiate the command with the fake data protection token factory
-        // in constructor or maybe create a CustomizedBitAutoDataAttribute
-        // Command must use fake data protection token factory for token validation so that our created tokens in
-        // CreateNewToken are seen as valid in the command.
-        // sutProvider.GetDependency<IDataProtectorTokenFactory<OrgUserInviteTokenable>>().Returns(_orgUserInviteTokenDataFactory);
 
         var newToken = CreateNewToken(orgUser);
 
