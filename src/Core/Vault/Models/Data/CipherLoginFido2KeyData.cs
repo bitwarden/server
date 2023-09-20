@@ -15,4 +15,5 @@ public class CipherLoginFido2KeyData
     public string UserDisplayName { get; set; }
     public string Counter { get; set; }
     public string Discoverable { get; set; }
+    public DateTime CreationDate { get; set; }
 }
