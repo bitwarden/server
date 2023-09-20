@@ -28,6 +28,8 @@ public class AcceptOrgUserCommandTests
 
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory = new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>();
 
+    // Base AcceptOrgUserAsync method tests ----------------------------------------------------------------------------
+
     [Theory]
     [BitAutoData]
     public async Task AcceptOrgUser_InvitedUserToSingleOrg_Success(
@@ -182,6 +184,8 @@ public class AcceptOrgUserCommandTests
             exception.Message);
     }
 
+
+    // AcceptOrgUserByOrgIdAsync tests --------------------------------------------------------------------------------
 
     [Theory]
     [EphemeralDataProtectionAutoData]
@@ -421,6 +425,8 @@ public class AcceptOrgUserCommandTests
 
         Assert.Equal("User email does not match invite.", exception.Message);
     }
+
+    // Private helpers -------------------------------------------------------------------------------------------------
 
     private void SetupCommonAcceptOrgUserByTokenMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, OrganizationUser orgUser)
     {
