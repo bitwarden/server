@@ -423,7 +423,7 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUserByOrgSsoIdAsync_ValidOrgAndUser_AcceptsOrgUser(
+    public async Task AcceptOrgUserByOrgSsoIdAsync_ValidData_AcceptsOrgUser(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -480,6 +480,71 @@ public class AcceptOrgUserCommandTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AcceptOrgUserByOrgSsoIdAsync(org.Identifier, user, _userService));
+
+        Assert.Equal("User not found within organization.", exception.Message);
+    }
+
+    // AcceptOrgUserByOrgIdAsync ---------------------------------------------------------------------------------------
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByOrgId_ValidData_AcceptsOrgUser(
+        SutProvider<AcceptOrgUserCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
+    {
+        // Arrange
+        SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(org.Id)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+
+        // Act
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByOrgIdAsync(org.Id, user, _userService);
+
+        // Assert
+        AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByOrgId_InvalidOrg_ThrowsBadRequest(SutProvider<AcceptOrgUserCommand> sutProvider,
+        Guid orgId, User user)
+    {
+        // Arrange
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(orgId)
+            .Returns((Organization)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByOrgIdAsync(orgId, user, _userService));
+
+        Assert.Equal("Organization invalid.", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task AcceptOrgUserByOrgId_UserNotInOrg_ThrowsBadRequest(SutProvider<AcceptOrgUserCommand> sutProvider,
+        Organization org, User user)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(org.Id)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns((OrganizationUser)null);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.AcceptOrgUserByOrgIdAsync(org.Id, user, _userService));
 
         Assert.Equal("User not found within organization.", exception.Message);
     }
