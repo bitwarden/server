@@ -32,7 +32,7 @@ public class AcceptOrgUserCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task AcceptOrgUser_InvitedUserToSingleOrg_Success(
+    public async Task AcceptOrgUser_InvitedUserToSingleOrg_AcceptsOrgUser(
         SutProvider<AcceptOrgUserCommand> sutProvider,
         User user, Organization org, OrganizationUser orgUser, OrganizationUserUserDetails adminUserDetails)
     {
@@ -40,15 +40,11 @@ public class AcceptOrgUserCommandTests
         SetupCommonAcceptOrgUserMocks(sutProvider, user, org, orgUser, adminUserDetails);
 
         // Act
-        var orgUserResult = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserAsync(orgUser, user, _userService);
 
         // Assert
-
         // Verify returned org user details
-        Assert.NotNull(orgUserResult);
-        Assert.Equal(OrganizationUserStatusType.Accepted, orgUserResult.Status);
-        Assert.Equal(orgUser.Id, orgUserResult.Id);
-        Assert.Null(orgUserResult.Email);
+        AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
 
         // Verify org repository called with updated orgUser
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
@@ -563,6 +559,8 @@ public class AcceptOrgUserCommandTests
         Assert.Equal(expectedOrgUser.Id, resultOrgUser.Id);
         Assert.Null(resultOrgUser.Email);
         Assert.Equal(user.Id, resultOrgUser.UserId);
+
+
     }
 
     private void SetupCommonAcceptOrgUserByTokenMocks(SutProvider<AcceptOrgUserCommand> sutProvider, User user, OrganizationUser orgUser)
