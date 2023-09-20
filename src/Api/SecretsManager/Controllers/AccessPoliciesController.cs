@@ -288,6 +288,40 @@ public class AccessPoliciesController : Controller
         return new ListResponseModel<PotentialGranteeResponseModel>(projectResponses);
     }
 
+    [HttpGet("/projects/{id}/access-policies/people")]
+    public async Task<PeopleAccessPoliciesResponseModel> GetProjectPeopleAccessPoliciesAsync([FromRoute] Guid id)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        var (_, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
+        var results = await _accessPolicyRepository.GetPeoplePoliciesByGrantedProjectIdAsync(id, userId);
+        return new PeopleAccessPoliciesResponseModel(results);
+    }
+
+    [HttpPost("/projects/{id}/access-policies/people")]
+    [HttpPut("/projects/{id}/access-policies/people")]
+    public async Task<PeopleAccessPoliciesResponseModel> PutProjectPeopleAccessPoliciesAsync([FromRoute] Guid id,
+        [FromBody] PeopleAccessPoliciesRequestModel request)
+    {
+        var project = await _projectRepository.GetByIdAsync(id);
+        if (project == null)
+        {
+            throw new NotFoundException();
+        }
+
+        var peopleAccessPolicies = request.ToProjectPeopleAccessPolicies(id, project.OrganizationId);
+
+        var authorizationResult = await _authorizationService.AuthorizeAsync(User, peopleAccessPolicies,
+            PeopleAccessPoliciesOperations.UpsertProjectPeople);
+        if (!authorizationResult.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        var results = await _accessPolicyRepository.ReplaceProjectPeopleAsync(peopleAccessPolicies);
+        return new PeopleAccessPoliciesResponseModel(results);
+    }
+
+
     private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)
     {
         if (project == null)
