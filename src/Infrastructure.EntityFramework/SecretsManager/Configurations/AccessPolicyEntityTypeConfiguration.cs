@@ -1,4 +1,5 @@
-﻿using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
+﻿using Bit.Infrastructure.EntityFramework.SecretsManager.Discriminators;
+using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,11 +11,11 @@ public class AccessPolicyEntityTypeConfiguration : IEntityTypeConfiguration<Acce
     {
         builder
             .HasDiscriminator<string>("Discriminator")
-            .HasValue<UserProjectAccessPolicy>("user_project")
-            .HasValue<UserServiceAccountAccessPolicy>("user_service_account")
-            .HasValue<GroupProjectAccessPolicy>("group_project")
-            .HasValue<GroupServiceAccountAccessPolicy>("group_service_account")
-            .HasValue<ServiceAccountProjectAccessPolicy>("service_account_project");
+            .HasValue<UserProjectAccessPolicy>(AccessPolicyDiscriminator.UserProject)
+            .HasValue<UserServiceAccountAccessPolicy>(AccessPolicyDiscriminator.UserServiceAccount)
+            .HasValue<GroupProjectAccessPolicy>(AccessPolicyDiscriminator.GroupProject)
+            .HasValue<GroupServiceAccountAccessPolicy>(AccessPolicyDiscriminator.GroupServiceAccount)
+            .HasValue<ServiceAccountProjectAccessPolicy>(AccessPolicyDiscriminator.ServiceAccountProject);
 
         builder
             .Property(s => s.Id)
