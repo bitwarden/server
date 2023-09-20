@@ -1,4 +1,5 @@
-﻿using Bit.Core.Utilities;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models;
@@ -56,7 +57,7 @@ public class CipherFido2KeyModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Discoverable { get; set; }
-
+    [Required]
     public DateTime CreationDate { get; set; }
 
     public CipherLoginFido2KeyData ToCipherLoginFido2KeyData()
