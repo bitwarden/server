@@ -11,6 +11,7 @@ using Bit.Core.Tokens;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -38,11 +39,13 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IDistributedCache distributedCache
+        )
         : base(userManager, deviceRepository, deviceService, userService, eventService,
             organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
-            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository)
+            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, distributedCache)
     {
         _userManager = userManager;
         _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
