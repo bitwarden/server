@@ -115,4 +115,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool AccessSecretsManager { get; set; }
     public bool LimitCollectionCdOwnerAdmin { get; set; }
+    public bool CanCreateNewCollections => !LimitCollectionCdOwnerAdmin
+                                           || Type is OrganizationUserType.Owner or OrganizationUserType.Admin
+                                           || Permissions is { CreateNewCollections: true }
+                                           || ProviderId is not null;
 }
