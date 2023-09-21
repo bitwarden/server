@@ -2,5 +2,5 @@
 
 public interface IMaxProjectsQuery
 {
-    Task<(short? max, bool? atMax)> GetByOrgIdAsync(Guid organizationId);
+    Task<(short? max, bool? overMax)> GetByOrgIdAsync(Guid organizationId, int projectsToAdd);
 }

@@ -28,6 +28,7 @@ using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using Xunit;
@@ -641,11 +642,10 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, EventSystemUser, DateTime?)>>());
     }
 
-    [Theory, BitAutoData]
+    [Theory, BitAutoData, OrganizationInviteCustomize]
     public async Task InviteUser_WithSecretsManager_Passes(Organization organization,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
-        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        SutProvider<OrganizationService> sutProvider)
+        OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
     {
         organization.PlanType = PlanType.EnterpriseAnnually;
         InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
@@ -653,6 +653,10 @@ public class OrganizationServiceTests
         // Set up some invites to grant access to SM
         invites.First().invite.AccessSecretsManager = true;
         var invitedSmUsers = invites.First().invite.Emails.Count();
+        foreach (var (invite, externalId) in invites.Skip(1))
+        {
+            invite.AccessSecretsManager = false;
+        }
 
         // Assume we need to add seats for all invited SM users
         sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
@@ -668,11 +672,10 @@ public class OrganizationServiceTests
                 !update.MaxAutoscaleSmSeatsChanged));
     }
 
-    [Theory, BitAutoData]
+    [Theory, BitAutoData, OrganizationInviteCustomize]
     public async Task InviteUser_WithSecretsManager_WhenErrorIsThrown_RevertsAutoscaling(Organization organization,
         IEnumerable<(OrganizationUserInvite invite, string externalId)> invites,
-        [OrganizationUser(type: OrganizationUserType.Owner, status: OrganizationUserStatusType.Confirmed)] OrganizationUser savingUser,
-        SutProvider<OrganizationService> sutProvider)
+        OrganizationUser savingUser, SutProvider<OrganizationService> sutProvider)
     {
         var initialSmSeats = organization.SmSeats;
         InviteUserHelper_ArrangeValidPermissions(organization, savingUser, sutProvider);
@@ -680,6 +683,10 @@ public class OrganizationServiceTests
         // Set up some invites to grant access to SM
         invites.First().invite.AccessSecretsManager = true;
         var invitedSmUsers = invites.First().invite.Emails.Count();
+        foreach (var (invite, externalId) in invites.Skip(1))
+        {
+            invite.AccessSecretsManager = false;
+        }
 
         // Assume we need to add seats for all invited SM users
         sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
@@ -724,13 +731,9 @@ public class OrganizationServiceTests
     private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
     SutProvider<OrganizationService> sutProvider)
     {
-        savingUser.OrganizationId = organization.Id;
-        organization.UseCustomPermissions = true;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new List<OrganizationUser> { savingUser });
     }
 
     [Theory, BitAutoData]
@@ -1830,6 +1833,42 @@ public class OrganizationServiceTests
         };
 
         sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup);
+    }
+
+    [Theory]
+    [EphemeralDataProtectionAutoData]
+    public async Task AcceptUserAsync_Success([OrganizationUser(OrganizationUserStatusType.Invited)] OrganizationUser organizationUser,
+        User user, SutProvider<OrganizationService> sutProvider)
+    {
+        var token = SetupAcceptUserAsyncTest(sutProvider, user, organizationUser);
+        var userService = Substitute.For<IUserService>();
+
+        await sutProvider.Sut.AcceptUserAsync(organizationUser.Id, user, token, userService);
+
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<OrganizationUser>(ou => ou.Id == organizationUser.Id && ou.Status == OrganizationUserStatusType.Accepted));
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(
+            Arg.Is<User>(u => u.Id == user.Id && u.Email == user.Email && user.EmailVerified == true));
+    }
+
+    private string SetupAcceptUserAsyncTest(SutProvider<OrganizationService> sutProvider, User user,
+        OrganizationUser organizationUser)
+    {
+        user.Email = organizationUser.Email;
+        user.EmailVerified = false;
+
+        var dataProtector = sutProvider.GetDependency<IDataProtectionProvider>()
+            .CreateProtector("OrganizationServiceDataProtector");
+        // Token matching the format used in OrganizationService.InviteUserAsync
+        var token = dataProtector.Protect(
+            $"OrganizationUserInvite {organizationUser.Id} {organizationUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+
+        sutProvider.GetDependency<IGlobalSettings>().OrganizationInviteExpirationHours.Returns(24);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id)
+            .Returns(organizationUser);
+
+        return token;
     }
 
     [Theory]

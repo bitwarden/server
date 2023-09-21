@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
 
@@ -186,4 +187,32 @@ internal class SecretsManagerOrganizationCustomizeAttribute : BitCustomizeAttrib
 {
     public override ICustomization GetCustomization() =>
         new SecretsManagerOrganizationCustomization();
+}
+
+internal class EphemeralDataProtectionCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        fixture.Customizations.Add(new EphemeralDataProtectionProviderBuilder());
+    }
+
+    private class EphemeralDataProtectionProviderBuilder : ISpecimenBuilder
+    {
+        public object Create(object request, ISpecimenContext context)
+        {
+            var type = request as Type;
+            if (type == null || type != typeof(IDataProtectionProvider))
+            {
+                return new NoSpecimen();
+            }
+
+            return new EphemeralDataProtectionProvider();
+        }
+    }
+}
+
+internal class EphemeralDataProtectionAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EphemeralDataProtectionAutoDataAttribute() : base(new SutProviderCustomization(), new EphemeralDataProtectionCustomization())
+    { }
 }
