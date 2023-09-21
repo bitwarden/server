@@ -137,8 +137,8 @@ public class PoliciesController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
 
-        var orgUsersByUserId = await _organizationUserRepository.GetManyByUserAsync(userId);
-        var orgUser = orgUsersByUserId.SingleOrDefault(u => u.OrganizationId == orgId);
+        var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, userId);
+
         if (orgUser == null)
         {
             throw new NotFoundException();
@@ -146,7 +146,7 @@ public class PoliciesController : Controller
 
         var policy = await _policyRepository.GetByOrganizationIdTypeAsync(orgId, PolicyType.MasterPassword);
 
-        if (!policy.Enabled)
+        if (policy == null || !policy.Enabled)
         {
             throw new NotFoundException();
         }
