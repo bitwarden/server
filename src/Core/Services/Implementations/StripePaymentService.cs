@@ -754,10 +754,10 @@ public class StripePaymentService : IPaymentService
         var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
-            ProrationBehavior = "always_invoice",
+            ProrationBehavior = "none",
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice",
-            ProrationDate = prorationDate,
+            ProrationDate = null,
         };
 
         if (!subscriptionUpdate.UpdateNeeded(sub))
@@ -803,14 +803,12 @@ public class StripePaymentService : IPaymentService
 
                 var reviewInvoiceResponse = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
                 paymentIntentClientSecret = reviewInvoiceResponse.Item2;
-                if (reviewInvoiceResponse.Item1)
+
+                var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
+                var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
+                if (invoice == null)
                 {
-                    var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
-                    var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
-                    if (invoice == null)
-                    {
-                        throw new BadRequestException("Unable to locate draft invoice for subscription update.");
-                    }
+                    throw new BadRequestException("Unable to locate draft invoice for subscription update.");
                 }
             }
             catch (Exception e)
