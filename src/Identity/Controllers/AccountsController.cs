@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
@@ -7,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Mvc;
@@ -75,6 +77,7 @@ public class AccountsController : Controller
 
     [HttpPost("webauthn-assertion-options")]
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
+    [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
     // TODO: Create proper models for this call
     public async Task<AssertionOptions> PostWebAuthnAssertionOptions([FromBody] PreloginRequestModel model)
     {
@@ -90,6 +93,7 @@ public class AccountsController : Controller
     }
 
     [HttpPost("webauthn-assertion")]
+    [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
     // TODO: Create proper models for this call
     public async Task<string> PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
     {
