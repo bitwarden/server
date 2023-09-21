@@ -17,14 +17,11 @@
       },
       "Sustainsys.Saml2.AspNetCore2": {
         "type": "Direct",
-        "requested": "[2.9.0, )",
-        "resolved": "2.9.0",
-        "contentHash": "R1E9du8rYeswB94vn6Tj8S1Y9+ZG7D+S02f7+lRt6CeiWV7AQxVKYR8pUlCc7Io1U+t+aTg7+L7JvmKhnDDdzA==",
+        "requested": "[2.9.2, )",
+        "resolved": "2.9.2",
+        "contentHash": "855WDFGcFrXdAAmu/8gWDg4387+p++WDgow2KWDowN0IVDR7iGGXBtZ7vF+eh4dY9KnrHau983UmQB3yN5VYog==",
         "dependencies": {
-          "Microsoft.AspNetCore.Authentication": "2.1.2",
-          "Microsoft.AspNetCore.Authentication.Cookies": "2.1.2",
-          "Microsoft.AspNetCore.Http": "2.1.1",
-          "Sustainsys.Saml2": "2.9.0"
+          "Sustainsys.Saml2": "2.9.2"
         }
       },
       "AspNetCoreRateLimit": {
@@ -363,48 +360,6 @@
           "MimeKit": "3.2.0"
         }
       },
-      "Microsoft.AspNetCore.Authentication": {
-        "type": "Transitive",
-        "resolved": "2.1.2",
-        "contentHash": "RYM3HHMm/MNwsbUh1xnrhosAGNeZV2Q/FmNQrblgytIK1HIZ6UqNMorFI+kz2MW7gNKHKn6TBLTUXPRmqC6iRQ==",
-        "dependencies": {
-          "Microsoft.AspNetCore.Authentication.Core": "2.1.1",
-          "Microsoft.AspNetCore.DataProtection": "2.1.1",
-          "Microsoft.AspNetCore.Http": "2.1.1",
-          "Microsoft.AspNetCore.Http.Extensions": "2.1.1",
-          "Microsoft.Extensions.Logging.Abstractions": "2.1.1",
-          "Microsoft.Extensions.Options": "2.1.1",
-          "Microsoft.Extensions.WebEncoders": "2.1.1"
-        }
-      },
-      "Microsoft.AspNetCore.Authentication.Abstractions": {
-        "type": "Transitive",
-        "resolved": "2.1.1",
-        "contentHash": "Smj5TGeE9629+hGHPk/DZUfCMYGvQwCajAsU/OVExRb8JXfeua4uXZFzT9Kh3pJY2MThPSt1lbDnkL2KaDyw/A==",
-        "dependencies": {
-          "Microsoft.AspNetCore.Http.Abstractions": "2.1.1",
-          "Microsoft.Extensions.Logging.Abstractions": "2.1.1",
-          "Microsoft.Extensions.Options": "2.1.1"
-        }
-      },
-      "Microsoft.AspNetCore.Authentication.Cookies": {
-        "type": "Transitive",
-        "resolved": "2.1.2",
-        "contentHash": "XwE4/p9QHJOkoSWYdgx3u3Jhx6+NQZuRWGJT7jsdlpfDJeS3gJWEqIM9pBmrdt803sX2WZDpgm8hxGIAtiJcQQ==",
-        "dependencies": {
-          "Microsoft.AspNetCore.Authentication": "2.1.2"
-        }
-      },
-      "Microsoft.AspNetCore.Authentication.Core": {
-        "type": "Transitive",
-        "resolved": "2.1.1",
-        "contentHash": "Zo6SLzqxrW0PFg1AB0xSb+Rta4hCuX8hgOY425ldhFq4kKcmw45oJQ2zOIeeW/6EuBtEy+hwDB96baxTmXtfeA==",
-        "dependencies": {
-          "Microsoft.AspNetCore.Authentication.Abstractions": "2.1.1",
-          "Microsoft.AspNetCore.Http": "2.1.1",
-          "Microsoft.AspNetCore.Http.Extensions": "2.1.1"
-        }
-      },
       "Microsoft.AspNetCore.Authentication.JwtBearer": {
         "type": "Transitive",
         "resolved": "6.0.4",
@@ -461,17 +416,6 @@
         "dependencies": {
           "Microsoft.AspNetCore.Http.Features": "2.1.1",
           "System.Text.Encodings.Web": "4.5.0"
-        }
-      },
-      "Microsoft.AspNetCore.Http.Extensions": {
-        "type": "Transitive",
-        "resolved": "2.1.1",
-        "contentHash": "ncAgV+cqsWSqjLXFUTyObGh4Tr7ShYYs3uW8Q/YpRwZn7eLV7dux5Z6GLY+rsdzmIHiia3Q2NWbLULQi7aziHw==",
-        "dependencies": {
-          "Microsoft.AspNetCore.Http.Abstractions": "2.1.1",
-          "Microsoft.Extensions.FileProviders.Abstractions": "2.1.1",
-          "Microsoft.Net.Http.Headers": "2.1.1",
-          "System.Buffers": "4.5.0"
         }
       },
       "Microsoft.AspNetCore.Http.Features": {
@@ -901,16 +845,6 @@
         "contentHash": "um1KU5kxcRp3CNuI8o/GrZtD4AIOXDk+RLsytjZ9QPok3ttLUelLKpilVPuaFT3TFjOhSibUAso0odbOaCDj3Q==",
         "dependencies": {
           "System.Runtime.CompilerServices.Unsafe": "6.0.0"
-        }
-      },
-      "Microsoft.Extensions.WebEncoders": {
-        "type": "Transitive",
-        "resolved": "2.1.1",
-        "contentHash": "XIuJXPNUAX/ZV/onarixNoq3kO7Q9/RXXOY8hhYydsDwHI9PqPeJH6WE3LmPJJDmB+7y3+MT6ZmW78gZZDApBA==",
-        "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.1.1",
-          "Microsoft.Extensions.Options": "2.1.1",
-          "System.Text.Encodings.Web": "4.5.0"
         }
       },
       "Microsoft.Identity.Client": {
@@ -1542,8 +1476,8 @@
       },
       "Sustainsys.Saml2": {
         "type": "Transitive",
-        "resolved": "2.9.0",
-        "contentHash": "dcAGeL36EkIfxuC794TzM3xYGEJiFmeBiwkDUTaHVGyu9/A3WuV5AbqZ0eWmwLco+tZJI9cbLaxeOd2oyhAARg==",
+        "resolved": "2.9.2",
+        "contentHash": "D3EGtf91PctIkCosXDYyEwk0KLlnNyyr1gIwLRHqhYV3kLS4Nk9R4m7MhZWYi8fncsJEgTkfJVHSnTZIzDr/2g==",
         "dependencies": {
           "Microsoft.Extensions.Caching.Memory": "2.1.2",
           "Microsoft.IdentityModel.Protocols": "5.2.4",
