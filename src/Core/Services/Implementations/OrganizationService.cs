@@ -403,11 +403,11 @@ public class OrganizationService : IOrganizationService
     public async Task<Tuple<Organization, OrganizationUser>> SignUpAsync(OrganizationSignup signup,
         bool provider = false)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == signup.Plan);
+        var plan = StaticStore.GetPlan(signup.Plan);
 
         ValidatePasswordManagerPlan(plan, signup);
 
-        if (signup.UseSecretsManager && plan.SupportsSecretsManager)
+        if (signup.UseSecretsManager)
         {
             ValidateSecretsManagerPlan(plan, signup);
         }
@@ -456,7 +456,7 @@ public class OrganizationService : IOrganizationService
             UseSecretsManager = signup.UseSecretsManager,
         };
 
-        if (signup.UseSecretsManager && plan.SupportsSecretsManager)
+        if (signup.UseSecretsManager)
         {
             organization.SmSeats = plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
             organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount.GetValueOrDefault() +
@@ -1956,11 +1956,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException($"You do not have any Password Manager seats!");
         }
 
-        if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
-        {
-            throw new BadRequestException($"You do not have any Password Manager seats!");
-        }
-
         if (upgrade.AdditionalSeats < 0)
         {
             throw new BadRequestException($"You can't subtract Password Manager seats!");
@@ -1996,6 +1991,11 @@ public class OrganizationService : IOrganizationService
 
     public void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
+        if (plan.SupportsSecretsManager == false)
+        {
+            throw new BadRequestException("plan does not support secrets manager.");
+        }
+
         if (plan == null)
         {
             throw new BadRequestException("plan not found.");

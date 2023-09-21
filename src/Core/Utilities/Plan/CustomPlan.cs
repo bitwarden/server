@@ -14,7 +14,7 @@ public record CustomPlan : Models.StaticStore.Plan
     {
         public CustomPasswordManagerFeatures()
         {
-            AllowSeatAutoscale = false;
+            AllowSeatAutoscale = true;
         }
     }
 }
