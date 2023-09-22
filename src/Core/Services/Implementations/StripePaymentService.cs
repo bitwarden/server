@@ -804,18 +804,6 @@ public class StripePaymentService : IPaymentService
                 var reviewInvoiceResponse = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
                 paymentIntentClientSecret = reviewInvoiceResponse.Item2;
 
-                if (sub.BillingThresholds == null)
-                {
-                    await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
-                    {
-                        BillingThresholds = new Stripe.SubscriptionBillingThresholdsOptions()
-                        {
-                            AmountGte = 500,
-                            ResetBillingCycleAnchor = true
-                        }
-                    });
-                }
-
                 var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
                 var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
                 if (invoice == null)
