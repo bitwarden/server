@@ -22,8 +22,6 @@ public record Families2019Plan : Models.StaticStore.Plan
         DisplaySortOrder = 1;
         LegacyYear = 2020;
 
-        SupportsSecretsManager = false;
-
         PasswordManager = new Families2019PasswordManagerFeatures();
     }
 

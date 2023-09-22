@@ -22,8 +22,6 @@ public record Teams2019Plan : Models.StaticStore.Plan
         DisplaySortOrder = 2;
         LegacyYear = 2020;
 
-        SupportsSecretsManager = false;
-
         PasswordManager = new Teams2019PasswordManagerFeatures(isAnnual);
     }
 

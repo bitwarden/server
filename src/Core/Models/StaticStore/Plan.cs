@@ -30,9 +30,9 @@ public abstract record Plan
     public int DisplaySortOrder { get; protected init; }
     public int? LegacyYear { get; protected init; }
     public bool Disabled { get; protected init; }
-    public bool SupportsSecretsManager { get; protected init; }
     public PasswordManagerPlanFeatures PasswordManager { get; protected init; }
     public SecretsManagerPlanFeatures SecretsManager { get; protected init; }
+    public bool SupportsSecretsManager => SecretsManager != null;
 
     public record SecretsManagerPlanFeatures
     {

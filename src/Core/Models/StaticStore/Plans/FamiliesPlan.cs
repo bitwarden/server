@@ -22,8 +22,6 @@ public record FamiliesPlan : Models.StaticStore.Plan
         UpgradeSortOrder = 1;
         DisplaySortOrder = 1;
 
-        SupportsSecretsManager = false;
-
         PasswordManager = new TeamsPasswordManagerFeatures();
     }
 

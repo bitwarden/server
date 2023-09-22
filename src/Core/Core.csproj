@@ -62,5 +62,6 @@
   <ItemGroup>
     <Folder Include="Resources\" />
     <Folder Include="Properties\" />
+    <Folder Include="Utilities\Plan\" />
   </ItemGroup>
 </Project>

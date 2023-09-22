@@ -201,9 +201,8 @@ public class OrganizationsController : Controller
         var organization = await GetOrganization(id, model);
 
         if (organization.UseSecretsManager &&
-            !organization.SecretsManagerBeta
-            && StaticStore.Plans.FirstOrDefault(p => p.Type == organization.PlanType && p.SupportsSecretsManager) == null
-            )
+            !organization.SecretsManagerBeta &&
+            !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
         {
             throw new BadRequestException("Plan does not support Secrets Manager");
         }

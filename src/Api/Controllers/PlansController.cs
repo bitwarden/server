@@ -25,15 +25,6 @@ public class PlansController : Controller
         return new ListResponseModel<PlanResponseModel>(responses);
     }
 
-    [HttpGet("all")]
-    [AllowAnonymous]
-    public ListResponseModel<PlanResponseModel> GetAllPlans()
-    {
-        var data = StaticStore.Plans;
-        var responses = data.Select(plan => new PlanResponseModel(plan));
-        return new ListResponseModel<PlanResponseModel>(responses);
-    }
-
     [HttpGet("sales-tax-rates")]
     public async Task<ListResponseModel<TaxRateResponseModel>> GetTaxRates()
     {

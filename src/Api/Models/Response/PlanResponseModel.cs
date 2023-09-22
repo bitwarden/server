@@ -36,7 +36,6 @@ public class PlanResponseModel : ResponseModel
         DisplaySortOrder = plan.DisplaySortOrder;
         LegacyYear = plan.LegacyYear;
         Disabled = plan.Disabled;
-        SupportsSecretsManager = plan.SupportsSecretsManager;
         SecretsManager = plan.SecretsManager;
         PasswordManager = plan.PasswordManager;
     }
@@ -66,7 +65,6 @@ public class PlanResponseModel : ResponseModel
     public int DisplaySortOrder { get; set; }
     public int? LegacyYear { get; set; }
     public bool Disabled { get; set; }
-    public bool SupportsSecretsManager { get; set; }
     public Plan.PasswordManagerPlanFeatures PasswordManager { get; protected init; }
     public Plan.SecretsManagerPlanFeatures SecretsManager { get; protected init; }
 }

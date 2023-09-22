@@ -2,7 +2,7 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Utilities.Plan;
+using Bit.Core.Models.StaticStore.Plans;
 
 namespace Bit.Core.Utilities;
 
@@ -106,8 +106,6 @@ public class StaticStore
         GlobalDomains.Add(GlobalEquivalentDomainsType.Pinterest, new List<string> { "pinterest.com", "pinterest.com.au", "pinterest.cl", "pinterest.de", "pinterest.dk", "pinterest.es", "pinterest.fr", "pinterest.co.uk", "pinterest.jp", "pinterest.co.kr", "pinterest.nz", "pinterest.pt", "pinterest.se" });
         #endregion
 
-        #region Plans
-
         Plans = new List<Models.StaticStore.Plan>
         {
             new EnterprisePlan(true),
@@ -115,16 +113,15 @@ public class StaticStore
             new TeamsPlan(true),
             new TeamsPlan(false),
             new FamiliesPlan(),
-            new Families2019Plan(),
+            new FreePlan(),
+            new CustomPlan(),
+
             new Enterprise2019Plan(true),
             new Enterprise2019Plan(false),
             new Teams2019Plan(true),
             new Teams2019Plan(false),
-            new FreePlan(),
-            new CustomPlan()
+            new Families2019Plan(),
         }.ToImmutableList();
-
-        #endregion
     }
 
     public static IDictionary<GlobalEquivalentDomainsType, IEnumerable<string>> GlobalDomains { get; set; }
@@ -151,7 +148,7 @@ public class StaticStore
 
     /// <summary>
     /// Determines if the stripe plan id is an addon item by checking if the provided stripe plan id
-    /// matches either the <see cref="Plan.StripeStoragePlanId"/> or <see cref="Plan.StripeServiceAccountPlanId"/>
+    /// matches either the <see cref="Plan.PasswordManager.StripeStoragePlanId"/> or <see cref="Plan.SecretsManager.StripeServiceAccountPlanId"/>
     /// in any <see cref="Plans"/>.
     /// </summary>
     /// <param name="stripePlanId"></param>
@@ -160,42 +157,13 @@ public class StaticStore
     /// </returns>
     public static bool IsAddonSubscriptionItem(string stripePlanId)
     {
-        if (Plans.Select(p => p.PasswordManager.StripeStoragePlanId).Contains(stripePlanId))
-        {
-            return true;
-        }
-
-        if (Plans.Select(p => p.SecretsManager?.StripeServiceAccountPlanId).Contains(stripePlanId))
+        if (Plans.Any(p =>
+                p.PasswordManager.StripeStoragePlanId == stripePlanId ||
+                (p.SecretsManager?.StripeServiceAccountPlanId == stripePlanId)))
         {
             return true;
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Get a <see cref="Plan"/> by comparing the provided stripeId to the various
-    /// Stripe plan ids within a <see cref="Plan"/>.
-    /// The following <see cref="Plan"/> properties are checked:
-    /// <list type="bullet">
-    ///     <item><see cref="Plan.StripePlanId"/></item>
-    ///     <item><see cref="Plan.StripeSeatPlanId"/></item>
-    ///     <item><see cref="Plan.StripeStoragePlanId"/></item>
-    ///     <item><see cref="Plan.StripeServiceAccountPlanId"/></item>
-    ///     <item><see cref="Plan.StripePremiumAccessPlanId"/></item>
-    /// </list>
-    /// </summary>
-    /// <param name="stripeId"></param>
-    /// <returns>The plan if a matching stripeId was found, null otherwise</returns>
-    public static Models.StaticStore.Plan GetPlanByStripeId(string stripeId)
-    {
-        return Plans.FirstOrDefault(p =>
-            p.PasswordManager.StripePlanId == stripeId ||
-            p.PasswordManager.StripeSeatPlanId == stripeId ||
-            p.PasswordManager.StripeStoragePlanId == stripeId ||
-            p.SecretsManager.StripeSeatPlanId == stripeId ||
-            p.SecretsManager.StripeServiceAccountPlanId == stripeId ||
-            p.PasswordManager.StripePremiumAccessPlanId == stripeId
-        );
     }
 }

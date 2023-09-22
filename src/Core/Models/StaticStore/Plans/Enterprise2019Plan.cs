@@ -31,8 +31,6 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
         DisplaySortOrder = 3;
         LegacyYear = 2020;
 
-        SupportsSecretsManager = false;
-
         PasswordManager = new Enterprise2019PasswordManagerFeatures(isAnnual);
     }
 

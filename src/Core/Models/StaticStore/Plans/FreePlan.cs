@@ -15,8 +15,6 @@ public record FreePlan : Models.StaticStore.Plan
         UpgradeSortOrder = -1; // Always the lowest plan, cannot be upgraded to
         DisplaySortOrder = -1;
 
-        SupportsSecretsManager = true;
-
         PasswordManager = new FreePasswordManagerFeatures();
         SecretsManager = new FreeSecretsManagerFeatures();
     }
