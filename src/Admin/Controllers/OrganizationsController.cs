@@ -215,19 +215,20 @@ public class OrganizationsController : Controller
         try
         {
             await _stripeSyncService.UpdateCustomerEmailAddress(organization.GatewayCustomerId, organization.BillingEmail);
-            await _organizationRepository.ReplaceAsync(organization);
-            await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
-            await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
-            {
-                EventRaisedByUser = _userService.GetUserName(User),
-                SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
-            });
         }
         catch (StripeException stripeException)
         {
             _logger.LogError(stripeException, "Failed to update billing email address in Stripe for Organization with ID '{organizationId}'", organization.Id);
             throw;
         }
+
+        await _organizationRepository.ReplaceAsync(organization);
+        await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
+        await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
+        {
+            EventRaisedByUser = _userService.GetUserName(User),
+            SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
+        });
 
         return RedirectToAction("Edit", new { id });
     }
