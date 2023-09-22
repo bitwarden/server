@@ -181,15 +181,17 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
+        var anotherOrg = await _organizationHelper.CreateSmOrganizationAsync();
 
-        var project = await _projectRepository.CreateAsync(new Project { Name = "123" });
+        var project =
+            await _projectRepository.CreateAsync(new Project { Name = "123", OrganizationId = anotherOrg.Id });
 
         var request = new SecretCreateRequestModel
         {
-            ProjectIds = new Guid[] { project.Id },
+            ProjectIds = new[] { project.Id },
             Key = _mockEncryptedString,
             Value = _mockEncryptedString,
-            Note = _mockEncryptedString,
+            Note = _mockEncryptedString
         };
 
         var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/secrets", request);
@@ -574,8 +576,9 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
+        var anotherOrg = await _organizationHelper.CreateSmOrganizationAsync();
 
-        var project = await _projectRepository.CreateAsync(new Project { Name = "123" });
+        var project = await _projectRepository.CreateAsync(new Project { Name = "123", OrganizationId = anotherOrg.Id });
 
         var secret = await _secretRepository.CreateAsync(new Secret
         {
@@ -674,7 +677,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (org, _) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
 
-        var (project, secretIds) = await CreateSecretsAsync(org.Id, 3);
+        var (project, secretIds) = await CreateSecretsAsync(org.Id);
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
@@ -685,24 +688,22 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
             {
                 new UserProjectAccessPolicy
                 {
-                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
-                },
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true
+                }
             };
             await _accessPolicyRepository.CreateManyAsync(accessPolicies);
         }
 
-        var response = await _client.PostAsJsonAsync($"/secrets/delete", secretIds);
+        var response = await _client.PostAsJsonAsync("/secrets/delete", secretIds);
         response.EnsureSuccessStatusCode();
 
         var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
-        Assert.NotNull(results);
-
-        var index = 0;
+        Assert.NotNull(results?.Data);
+        Assert.Equal(secretIds.Count, results!.Data.Count());
         foreach (var result in results!.Data)
         {
-            Assert.Equal(secretIds[index], result.Id);
+            Assert.Contains(result.Id, secretIds);
             Assert.Null(result.Error);
-            index++;
         }
 
         var secrets = await _secretRepository.GetManyByIds(secretIds);

@@ -5,6 +5,7 @@ using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -629,16 +630,15 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     {
         var (org, orgUser) = await _organizationHelper.Initialize(true, true);
         await LoginAsync(_email);
-        var ownerOrgUserId = orgUser.Id;
+        var anotherOrg = await _organizationHelper.CreateSmOrganizationAsync();
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
-            OrganizationId = Guid.NewGuid(),
+            OrganizationId = anotherOrg.Id,
             Name = _mockEncryptedString,
         });
         var request =
-            await SetupUserServiceAccountAccessPolicyRequestAsync(permissionType, org.Id, orgUser.Id,
-                serviceAccount.Id);
+            await SetupUserServiceAccountAccessPolicyRequestAsync(permissionType, orgUser.Id, serviceAccount.Id);
 
         var response =
             await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-policies", request);
@@ -660,8 +660,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             Name = _mockEncryptedString,
         });
         var request =
-            await SetupUserServiceAccountAccessPolicyRequestAsync(permissionType, org.Id, orgUser.Id,
-                serviceAccount.Id);
+            await SetupUserServiceAccountAccessPolicyRequestAsync(permissionType, orgUser.Id, serviceAccount.Id);
 
         var response =
             await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-policies", request);
@@ -1042,9 +1041,15 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     private async Task<(Guid ProjectId, Guid ServiceAccountId)> CreateProjectAndServiceAccountAsync(Guid organizationId,
         bool misMatchOrganization = false)
     {
+        var newOrg = new Organization();
+        if (misMatchOrganization)
+        {
+            newOrg = await _organizationHelper.CreateSmOrganizationAsync();
+        }
+
         var project = await _projectRepository.CreateAsync(new Project
         {
-            OrganizationId = misMatchOrganization ? Guid.NewGuid() : organizationId,
+            OrganizationId = misMatchOrganization ? newOrg.Id : organizationId,
             Name = _mockEncryptedString,
         });
 
@@ -1083,7 +1088,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     }
 
     private async Task<AccessPoliciesCreateRequest> SetupUserServiceAccountAccessPolicyRequestAsync(
-        PermissionType permissionType, Guid organizationId, Guid userId, Guid serviceAccountId)
+        PermissionType permissionType, Guid userId, Guid serviceAccountId)
     {
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
