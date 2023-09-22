@@ -754,7 +754,7 @@ public class StripePaymentService : IPaymentService
         var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
-            ProrationBehavior = "none",
+            ProrationBehavior = "create_prorations",
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice",
             ProrationDate = null,
@@ -803,6 +803,18 @@ public class StripePaymentService : IPaymentService
 
                 var reviewInvoiceResponse = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
                 paymentIntentClientSecret = reviewInvoiceResponse.Item2;
+
+                if (sub.BillingThresholds == null)
+                {
+                    await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
+                    {
+                        BillingThresholds = new Stripe.SubscriptionBillingThresholdsOptions()
+                        {
+                            AmountGte = 500,
+                            ResetBillingCycleAnchor = true
+                        }
+                    });
+                }
 
                 var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
                 var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
@@ -1083,7 +1095,7 @@ public class StripePaymentService : IPaymentService
     }
 
     internal async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber,
-        List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 1000)
+        List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
     {
         var customerOptions = new Stripe.CustomerGetOptions();
         customerOptions.AddExpand("default_source");
