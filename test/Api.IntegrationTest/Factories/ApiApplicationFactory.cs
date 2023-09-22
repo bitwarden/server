@@ -30,7 +30,7 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
             var jobService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Jobs.JobsHostedService));
             services.Remove(jobService);
 
-            services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
+            services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.BackchannelHttpHandler = _identityApplicationFactory.Server.CreateHandler();
             });
