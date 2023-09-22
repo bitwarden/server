@@ -1,3 +1,4 @@
+@inject IWebHostEnvironment HostingEnvironment
 @model OrganizationEditModel
 
 <script>
@@ -15,10 +16,15 @@
                 return;
             }
             if (gateway.value === '@((byte)GatewayType.Stripe)') {
-                window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
+                const url = '@(HostingEnvironment.IsDevelopment()
+                                 ? "https://dashboard.stripe.com/test"
+                                 : "https://dashboard.stripe.com")';
+                window.open(`${url}/customers/${customerId.value}/`, '_blank');
             } else if (gateway.value === '@((byte)GatewayType.Braintree)') {
-                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/'
-                    + customerId.value, '_blank');
+                const url = '@(HostingEnvironment.IsDevelopment()
+                                 ? $"https://www.sandbox.braintreegateway.com/merchants/{Model.BraintreeMerchantId}"
+                                 : $"https://www.braintreegateway.com/merchants/{Model.BraintreeMerchantId}")';
+                window.open(`${url}/${customerId.value}`, '_blank');
             }
         });
         document.getElementById('gateway-subscription-link')?.addEventListener('click', () => {
@@ -28,10 +34,15 @@
                 return;
             }
             if (gateway.value === '@((byte)GatewayType.Stripe)') {
-                window.open('https://dashboard.stripe.com/subscriptions/' + subId.value, '_blank');
+                const url = '@(HostingEnvironment.IsDevelopment() || HostingEnvironment.IsEnvironment("QA")
+                                 ? "https://dashboard.stripe.com/test"
+                                 : "https://dashboard.stripe.com")'
+                window.open(`${url}/subscriptions/${subId.value}`, '_blank');
             } else if (gateway.value === '@((byte)GatewayType.Braintree)') {
-                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
-                    'subscriptions/' + subId.value, '_blank');
+                const url = '@(HostingEnvironment.IsDevelopment() || HostingEnvironment.IsEnvironment("QA")
+                                 ? $"https://www.sandbox.braintreegateway.com/merchants/{Model.BraintreeMerchantId}"
+                                 : $"https://www.braintreegateway.com/merchants/{Model.BraintreeMerchantId}")';
+                window.open(`${url}/subscriptions/${subId.value}`, '_blank');
             }
         });
         document.getElementById('@(nameof(Model.UseSecretsManager))').addEventListener('change', (event) => {
