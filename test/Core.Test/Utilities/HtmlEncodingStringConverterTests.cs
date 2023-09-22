@@ -16,6 +16,7 @@ public class HtmlEncodingStringConverterTests
             EncodedValue = "This is &lt;b&gt;bold&lt;/b&gt;",
             NonEncodedValue = "This is <b>bold</b>"
         };
+        const string expectedJsonString = "{\"EncodedValue\":\"This is <b>bold</b>\",\"NonEncodedValue\":\"This is <b>bold</b>\"}";
 
         // This is necessary to prevent the serializer from double encoding the string
         var serializerOptions = new JsonSerializerOptions
@@ -27,8 +28,7 @@ public class HtmlEncodingStringConverterTests
         var jsonString = JsonSerializer.Serialize(obj, serializerOptions);
 
         // Assert
-        const string expected = "{\"EncodedValue\":\"This is <b>bold</b>\",\"NonEncodedValue\":\"This is <b>bold</b>\"}";
-        Assert.Equal(expected, jsonString);
+        Assert.Equal(expectedJsonString, jsonString);
     }
 
     [Fact]
@@ -40,13 +40,13 @@ public class HtmlEncodingStringConverterTests
             EncodedValue = null,
             NonEncodedValue = null
         };
+        const string expectedJsonString = "{\"EncodedValue\":null,\"NonEncodedValue\":null}";
 
         // Act
         var jsonString = JsonSerializer.Serialize(obj);
 
         // Assert
-        const string expected = "{\"EncodedValue\":null,\"NonEncodedValue\":null}";
-        Assert.Equal(expected, jsonString);
+        Assert.Equal(expectedJsonString, jsonString);
     }
 
     [Fact]
@@ -54,13 +54,13 @@ public class HtmlEncodingStringConverterTests
     {
         // Arrange
         const string json = "{\"EncodedValue\":\"This is <b>bold</b>\",\"NonEncodedValue\":\"This is <b>bold</b>\"}";
+        const string expectedEncodedValue = "This is &lt;b&gt;bold&lt;/b&gt;";
+        const string expectedNonEncodedValue = "This is <b>bold</b>";
 
         // Act
         var obj = JsonSerializer.Deserialize<HtmlEncodedString>(json);
 
         // Assert
-        const string expectedEncodedValue = "This is &lt;b&gt;bold&lt;/b&gt;";
-        const string expectedNonEncodedValue = "This is <b>bold</b>";
         Assert.Equal(expectedEncodedValue, obj.EncodedValue);
         Assert.Equal(expectedNonEncodedValue, obj.NonEncodedValue);
     }
