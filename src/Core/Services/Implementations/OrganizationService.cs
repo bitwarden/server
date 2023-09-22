@@ -459,7 +459,7 @@ public class OrganizationService : IOrganizationService
         if (signup.UseSecretsManager)
         {
             organization.SmSeats = plan.SecretsManager.BaseSeats + signup.AdditionalSmSeats.GetValueOrDefault();
-            organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount.GetValueOrDefault() +
+            organization.SmServiceAccounts = plan.SecretsManager.BaseServiceAccount +
                                              signup.AdditionalServiceAccounts.GetValueOrDefault();
         }
 
@@ -1994,11 +1994,6 @@ public class OrganizationService : IOrganizationService
         if (plan.SupportsSecretsManager == false)
         {
             throw new BadRequestException("plan does not support secrets manager.");
-        }
-
-        if (plan == null)
-        {
-            throw new BadRequestException("plan not found.");
         }
 
         ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");

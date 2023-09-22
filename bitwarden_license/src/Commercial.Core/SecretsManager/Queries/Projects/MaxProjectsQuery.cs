@@ -29,7 +29,7 @@ public class MaxProjectsQuery : IMaxProjectsQuery
         }
 
         var plan = StaticStore.GetPlan(org.PlanType);
-        if (plan == null)
+        if (plan?.SecretsManager == null)
         {
             throw new BadRequestException("Existing plan not found.");
         }

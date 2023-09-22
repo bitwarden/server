@@ -41,7 +41,7 @@ public abstract record Plan
         public bool AllowServiceAccountsAutoscale { get; init; }
         public string StripeServiceAccountPlanId { get; init; }
         public decimal? AdditionalPricePerServiceAccount { get; init; }
-        public short? BaseServiceAccount { get; init; }
+        public short BaseServiceAccount { get; init; }
         public short? MaxAdditionalServiceAccount { get; init; }
         public bool HasAdditionalServiceAccountOption { get; init; }
         // Seats
