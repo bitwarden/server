@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Enums;
 
-namespace Bit.Core.Utilities.Plan;
+namespace Bit.Core.Models.StaticStore.Plans;
 
 public record EnterprisePlan : Models.StaticStore.Plan
 {
