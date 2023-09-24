@@ -265,7 +265,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         if (!plan.SecretsManager.HasAdditionalServiceAccountOption ||
             (plan.SecretsManager.MaxAdditionalServiceAccount.HasValue && update.SmServiceAccountsExcludingBase > plan.SecretsManager.MaxAdditionalServiceAccount.Value))
         {
-            var planMaxServiceAccounts = plan.SecretsManager.BaseServiceAccount.GetValueOrDefault() +
+            var planMaxServiceAccounts = plan.SecretsManager.BaseServiceAccount +
                                          plan.SecretsManager.MaxAdditionalServiceAccount.GetValueOrDefault();
             throw new BadRequestException($"You have reached the maximum number of service accounts ({planMaxServiceAccounts}) for this plan.");
         }
@@ -281,7 +281,7 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
 
         // Check minimum service accounts included with plan
-        if (plan.SecretsManager.BaseServiceAccount.HasValue && plan.SecretsManager.BaseServiceAccount.Value > update.SmServiceAccounts.Value)
+        if (plan.SecretsManager.BaseServiceAccount > update.SmServiceAccounts.Value)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseServiceAccount} service accounts.");
         }

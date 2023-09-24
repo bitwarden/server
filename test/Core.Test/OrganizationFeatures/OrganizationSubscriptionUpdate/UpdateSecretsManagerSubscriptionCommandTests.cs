@@ -52,7 +52,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType && x.SupportsSecretsManager);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
@@ -96,7 +96,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var plan = StaticStore.Plans.FirstOrDefault(x => x.Type == organization.PlanType && x.SupportsSecretsManager);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
@@ -213,11 +213,11 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     public async Task AdjustServiceAccountsAsync_WithEnterpriseOrTeamsPlans_Success(PlanType planType, Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == planType && p.SupportsSecretsManager);
+        var plan = StaticStore.GetPlan(planType);
 
         var organizationSeats = plan.SecretsManager.BaseSeats + 10;
         var organizationMaxAutoscaleSeats = 20;
-        var organizationServiceAccounts = plan.SecretsManager.BaseServiceAccount.GetValueOrDefault() + 10;
+        var organizationServiceAccounts = plan.SecretsManager.BaseServiceAccount + 10;
         var organizationMaxAutoscaleServiceAccounts = 300;
 
         var organization = new Organization
@@ -235,7 +235,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var smServiceAccountsAdjustment = 10;
         var expectedSmServiceAccounts = organizationServiceAccounts + smServiceAccountsAdjustment;
-        var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.SecretsManager.BaseServiceAccount.GetValueOrDefault();
+        var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.SecretsManager.BaseServiceAccount;
 
         var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(10);
 
