@@ -263,7 +263,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         organization.UsePasswordManager = true;
         organization.UseSecretsManager = upgrade.UseSecretsManager;
 
-        if (upgrade.UseSecretsManager && newPlan.SupportsSecretsManager)
+        if (upgrade.UseSecretsManager)
         {
             organization.SmSeats = newPlan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats.GetValueOrDefault();
             organization.SmServiceAccounts = newPlan.SecretsManager.BaseServiceAccount +
@@ -293,7 +293,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private async Task ValidateSecretsManagerSeatsAndServiceAccountAsync(OrganizationUpgrade upgrade, Organization organization,
         Models.StaticStore.Plan newSecretsManagerPlan)
     {
-        var newPlanSmSeats = (short)(newSecretsManagerPlan.SecretsManager?.BaseSeats +
+        var newPlanSmSeats = (short)(newSecretsManagerPlan.SecretsManager.BaseSeats +
                                      (newSecretsManagerPlan.SecretsManager.HasAdditionalSeatsOption
                                          ? upgrade.AdditionalSmSeats
                                          : 0));

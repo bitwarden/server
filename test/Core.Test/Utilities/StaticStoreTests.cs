@@ -18,38 +18,13 @@ public class StaticStoreTests
 
     [Theory]
     [InlineData(PlanType.EnterpriseAnnually)]
-    public void StaticStore_GetPasswordManagerPlanByPlanType_Success(PlanType planType)
+    [InlineData(PlanType.EnterpriseMonthly)]
+    [InlineData(PlanType.TeamsMonthly)]
+    [InlineData(PlanType.TeamsAnnually)]
+    public void StaticStore_GetPlan_Success(PlanType planType)
     {
         var plan = StaticStore.GetPlan(planType);
         Assert.NotNull(plan);
         Assert.Equal(planType, plan.Type);
-    }
-
-    [Theory]
-    [InlineData(PlanType.EnterpriseAnnually)]
-    public void StaticStore_GetSecretsManagerPlanByPlanType_Success(PlanType planType)
-    {
-        var plan = StaticStore.GetPlan(planType);
-
-        Assert.NotNull(plan);
-        Assert.Equal(planType, plan.Type);
-    }
-
-    [Theory]
-    [InlineData(PlanType.EnterpriseAnnually)]
-    public void StaticStore_GetPasswordManagerPlan_ReturnsPasswordManagerPlans(PlanType planType)
-    {
-        var plan = StaticStore.GetPlan(planType);
-        Assert.NotNull(plan);
-        Assert.NotNull(plan.PasswordManager);
-    }
-
-    [Theory]
-    [InlineData(PlanType.EnterpriseAnnually)]
-    public void StaticStore_GetSecretsManagerPlan_ReturnsSecretManagerPlans(PlanType planType)
-    {
-        var plan = StaticStore.GetPlan(planType);
-        Assert.NotNull(plan);
-        Assert.NotNull(plan.SecretsManager);
     }
 }

@@ -40,7 +40,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == PlanType.EnterpriseAnnually);
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -95,7 +95,7 @@ public class StripePaymentServiceTests
     public async void PurchaseOrganizationAsync_SM_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization,
         string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == PlanType.EnterpriseAnnually);
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -151,7 +151,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plan = StaticStore.Plans.FirstOrDefault(p => p.Type == PlanType.EnterpriseAnnually);
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -167,7 +167,7 @@ public class StripePaymentServiceTests
             .BaseServiceUri.CloudRegion
             .Returns("US");
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 1, 2
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0
             , false, taxInfo, false, 8, 10);
 
         Assert.Null(result);

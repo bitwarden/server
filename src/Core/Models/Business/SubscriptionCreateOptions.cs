@@ -17,7 +17,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
 
         AddPlanIdToSubscription(plan);
 
-        if (org.UseSecretsManager && plan.SupportsSecretsManager)
+        if (org.UseSecretsManager)
         {
             AddSecretsManagerSeat(plan, additionalSmSeats);
             AddServiceAccount(plan, additionalServiceAccounts);
