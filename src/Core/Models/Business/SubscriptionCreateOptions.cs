@@ -20,12 +20,12 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         if (org.UseSecretsManager && plan.SupportsSecretsManager)
         {
             AddSecretsManagerSeat(plan, additionalSmSeats);
-            AddServiceAccount(additionalServiceAccounts, plan);
+            AddServiceAccount(plan, additionalServiceAccounts);
         }
 
-        AddPremiumAccessAddon(premiumAccessAddon, plan);
+        AddPremiumAccessAddon(plan, premiumAccessAddon);
         AddPasswordManagerSeat(plan, additionalSeats);
-        AddAdditionalStorage(additionalStorageGb, plan);
+        AddAdditionalStorage(plan, additionalStorageGb);
 
         if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
         {
@@ -51,7 +51,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         }
     }
 
-    private void AddServiceAccount(int additionalServiceAccounts, StaticStore.Plan plan)
+    private void AddServiceAccount(StaticStore.Plan plan, int additionalServiceAccounts)
     {
         if (additionalServiceAccounts > 0 && plan.SecretsManager.StripeServiceAccountPlanId != null)
         {
@@ -63,7 +63,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         }
     }
 
-    private void AddAdditionalStorage(int additionalStorageGb, StaticStore.Plan plan)
+    private void AddAdditionalStorage(StaticStore.Plan plan, int additionalStorageGb)
     {
         if (additionalStorageGb > 0)
         {
@@ -75,7 +75,7 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
         }
     }
 
-    private void AddPremiumAccessAddon(bool premiumAccessAddon, StaticStore.Plan plan)
+    private void AddPremiumAccessAddon(StaticStore.Plan plan, bool premiumAccessAddon)
     {
         if (premiumAccessAddon && plan.PasswordManager.StripePremiumAccessPlanId != null)
         {

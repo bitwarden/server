@@ -107,16 +107,16 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             _organizationService.ValidateSecretsManagerPlan(newPlan, upgrade);
         }
 
-        var newPasswordManagerPlanSeats = (short)(newPlan.PasswordManager.BaseSeats +
+        var updatedPasswordManagerSeats = (short)(newPlan.PasswordManager.BaseSeats +
                                                   (newPlan.PasswordManager.HasAdditionalSeatsOption ? upgrade.AdditionalSeats : 0));
-        if (!organization.Seats.HasValue || organization.Seats.Value > newPasswordManagerPlanSeats)
+        if (!organization.Seats.HasValue || organization.Seats.Value > updatedPasswordManagerSeats)
         {
             var occupiedSeats =
                 await _organizationUserRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id);
-            if (occupiedSeats > newPasswordManagerPlanSeats)
+            if (occupiedSeats > updatedPasswordManagerSeats)
             {
                 throw new BadRequestException($"Your organization currently has {occupiedSeats} seats filled. " +
-                                              $"Your new plan only has ({newPasswordManagerPlanSeats}) seats. Remove some users.");
+                                              $"Your new plan only has ({updatedPasswordManagerSeats}) seats. Remove some users.");
             }
         }
 
@@ -207,7 +207,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
             }
         }
 
-        if (upgrade.UseSecretsManager && newPlan.SupportsSecretsManager)
+        if (upgrade.UseSecretsManager)
         {
             await ValidateSecretsManagerSeatsAndServiceAccountAsync(upgrade, organization, newPlan);
         }
@@ -218,12 +218,8 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
 
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId))
         {
-            // var organizationUpgradePlan = upgrade.UseSecretsManager
-            //     ? StaticStore.Plans.Where(p => p.Type == upgrade.Plan).ToList()
-            //     : StaticStore.Plans.Where(p => p.Type == upgrade.Plan && p.BitwardenProduct == BitwardenProductType.PasswordManager).ToList();
-            var organizationUpgradePlan = StaticStore.Plans.FirstOrDefault(p => p.Type == upgrade.Plan);
             paymentIntentClientSecret = await _paymentService.UpgradeFreeOrganizationAsync(organization,
-                organizationUpgradePlan, upgrade);
+                newPlan, upgrade);
             success = string.IsNullOrWhiteSpace(paymentIntentClientSecret);
         }
         else
