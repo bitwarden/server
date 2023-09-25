@@ -37,6 +37,7 @@ public static class FeatureFlagKeys
     public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
     public const string AutofillV2 = "autofill-v2";
+    public const string BrowserFilelessImport = "browser-fileless-import";
 
     public static List<string> GetAllKeys()
     {
