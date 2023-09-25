@@ -69,7 +69,7 @@ public class CollectionAuthorizationHandlerTests
 
         organization.Type = userType;
         organization.Permissions.CreateNewCollections = createNewCollection;
-        organization.LimitCollectionCdOwnerAdmin = limitCollectionCreateDelete;
+        organization.LimitCollectionCreationDeletion = limitCollectionCreateDelete;
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Create },
@@ -104,7 +104,7 @@ public class CollectionAuthorizationHandlerTests
 
         organization.Type = userType;
         organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
-        organization.LimitCollectionCdOwnerAdmin = limitCollectionCreateDelete;
+        organization.LimitCollectionCreationDeletion = limitCollectionCreateDelete;
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Delete },

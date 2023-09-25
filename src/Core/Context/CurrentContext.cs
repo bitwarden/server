@@ -356,7 +356,7 @@ public class CurrentContext : ICurrentContext
         var org = GetOrganization(orgId);
         if (org != null)
         {
-            canCreateNewCollections = !org.LimitCollectionCdOwnerAdmin || org.Permissions.CreateNewCollections;
+            canCreateNewCollections = !org.LimitCollectionCreationDeletion || org.Permissions.CreateNewCollections;
         }
         return await EditAssignedCollections(orgId)
                || await DeleteAssignedCollections(orgId)

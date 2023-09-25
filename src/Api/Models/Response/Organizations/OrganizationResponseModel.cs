@@ -58,7 +58,7 @@ public class OrganizationResponseModel : ResponseModel
         SmServiceAccounts = organization.SmServiceAccounts;
         MaxAutoscaleSmSeats = organization.MaxAutoscaleSmSeats;
         MaxAutoscaleSmServiceAccounts = organization.MaxAutoscaleSmServiceAccounts;
-        LimitCollectionCdOwnerAdmin = organization.LimitCollectionCdOwnerAdmin;
+        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
     }
 
     public Guid Id { get; set; }
@@ -98,7 +98,7 @@ public class OrganizationResponseModel : ResponseModel
     public int? SmServiceAccounts { get; set; }
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
-    public bool LimitCollectionCdOwnerAdmin { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; }
 }
 
 public class OrganizationSubscriptionResponseModel : OrganizationResponseModel

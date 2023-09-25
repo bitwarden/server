@@ -60,7 +60,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         FamilySponsorshipToDelete = organization.FamilySponsorshipToDelete;
         FamilySponsorshipValidUntil = organization.FamilySponsorshipValidUntil;
         AccessSecretsManager = organization.AccessSecretsManager;
-        LimitCollectionCdOwnerAdmin = organization.LimitCollectionCdOwnerAdmin;
+        LimitCollectionCreationDeletion = organization.LimitCollectionCreationDeletion;
 
         if (organization.SsoConfig != null)
         {
@@ -114,5 +114,5 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public DateTime? FamilySponsorshipValidUntil { get; set; }
     public bool? FamilySponsorshipToDelete { get; set; }
     public bool AccessSecretsManager { get; set; }
-    public bool LimitCollectionCdOwnerAdmin { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; }
 }

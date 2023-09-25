@@ -81,7 +81,7 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     /// <summary>
     /// Refers to the ability for an organization to limit collection creation and deletion to owners and admins only
     /// </summary>
-    public bool LimitCollectionCdOwnerAdmin { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; }
 
     public void SetNewId()
     {

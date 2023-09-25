@@ -8,7 +8,7 @@ public class OrganizationCollectionManagementUpdateRequestModel
 
     public virtual Organization ToOrganization(Organization existingOrganization)
     {
-        existingOrganization.LimitCollectionCdOwnerAdmin = LimitCreateDeleteOwnerAdmin;
+        existingOrganization.LimitCollectionCreationDeletion = LimitCreateDeleteOwnerAdmin;
         return existingOrganization;
     }
 }

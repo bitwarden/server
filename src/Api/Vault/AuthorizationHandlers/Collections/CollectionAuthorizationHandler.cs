@@ -71,7 +71,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         CurrentContextOrganization org)
     {
         // If false, all organization members are allowed to create collections
-        if (!org.LimitCollectionCdOwnerAdmin)
+        if (!org.LimitCollectionCreationDeletion)
         {
             context.Succeed(requirement);
             return;
@@ -104,7 +104,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         }
 
         // The limit collection management setting is enabled and we are not an Admin (above condition), fail
-        if (org.LimitCollectionCdOwnerAdmin)
+        if (org.LimitCollectionCreationDeletion)
         {
             context.Fail();
             return;
