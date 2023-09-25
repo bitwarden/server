@@ -445,7 +445,7 @@ public class ProviderServiceTests
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.AddOrganization(provider.Id, organization.Id, key));
-        Assert.Equal("Organizations with a Managed Service Provider do not support Secrets Manager.", exception.Message);
+        Assert.Equal("The organization is subscribed to Secrets Manager. Please contact Customer Support to manage the subscription.", exception.Message);
     }
 
     [Theory, BitAutoData]

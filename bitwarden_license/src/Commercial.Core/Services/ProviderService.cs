@@ -357,7 +357,7 @@ public class ProviderService : IProviderService
         if (organization.UseSecretsManager)
         {
             throw new BadRequestException(
-                "Organizations with a Managed Service Provider do not support Secrets Manager.");
+                "The organization is subscribed to Secrets Manager. Please contact Customer Support to manage the subscription.");
         }
 
         var providerOrganization = new ProviderOrganization
