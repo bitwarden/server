@@ -70,7 +70,7 @@ public class SecretsManagerSubscriptionUpdate
 
         Organization = organization;
 
-        if (Plan == null)
+        if (!Plan.SupportsSecretsManager)
         {
             throw new NotFoundException("Invalid Secrets Manager plan.");
         }

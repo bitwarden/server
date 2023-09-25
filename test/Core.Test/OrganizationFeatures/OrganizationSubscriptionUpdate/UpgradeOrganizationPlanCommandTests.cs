@@ -94,6 +94,7 @@ public class UpgradeOrganizationPlanCommandTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         upgrade.AdditionalSmSeats = 10;
         upgrade.AdditionalSeats = 10;
+        upgrade.Plan = PlanType.TeamsAnnually;
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
     }

@@ -1993,7 +1993,7 @@ public class OrganizationService : IOrganizationService
     {
         if (plan.SupportsSecretsManager == false)
         {
-            throw new BadRequestException("plan does not support secrets manager.");
+            throw new BadRequestException("Invalid Secrets Manager plan selected.");
         }
 
         ValidatePlan(plan, upgrade.AdditionalSmSeats.GetValueOrDefault(), "Secrets Manager");
