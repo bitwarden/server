@@ -507,7 +507,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                                 [Data] = TC.[Data],
                                 [Attachments] = TC.[Attachments],
                                 [RevisionDate] = TC.[RevisionDate],
-                                [DeletedDate] = TC.[DeletedDate]
+                                [DeletedDate] = TC.[DeletedDate],
+                                [Key] = TC.[Key]
                             FROM
                                 [dbo].[Cipher] C
                             INNER JOIN
