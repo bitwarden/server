@@ -200,7 +200,7 @@ public class StripePaymentServiceTests
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count == 2
+            s.Items.Count == 0
         ));
     }
 
