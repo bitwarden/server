@@ -20,7 +20,7 @@ public class MaxProjectsQuery : IMaxProjectsQuery
         _projectRepository = projectRepository;
     }
 
-    public async Task<(short? max, bool? atMax)> GetByOrgIdAsync(Guid organizationId)
+    public async Task<(short? max, bool? overMax)> GetByOrgIdAsync(Guid organizationId, int projectsToAdd)
     {
         var org = await _organizationRepository.GetByIdAsync(organizationId);
         if (org == null)
@@ -37,7 +37,7 @@ public class MaxProjectsQuery : IMaxProjectsQuery
         if (plan.Type == PlanType.Free)
         {
             var projects = await _projectRepository.GetProjectCountByOrganizationIdAsync(organizationId);
-            return projects >= plan.MaxProjects ? (plan.MaxProjects, true) : (plan.MaxProjects, false);
+            return projects + projectsToAdd > plan.MaxProjects ? (plan.MaxProjects, true) : (plan.MaxProjects, false);
         }
 
         return (null, null);

@@ -6,14 +6,6 @@ The final migration is in util/Migrator/DbScripts/2023-08-10_01_RemoveClientSecr
 IF COL_LENGTH('[dbo].[ApiKey]', 'ClientSecretHash') IS NOT NULL AND COL_LENGTH('[dbo].[ApiKey]', 'ClientSecret')  IS NOT NULL
 BEGIN
 
-  -- Add index
-  IF NOT EXISTS(SELECT name FROM sys.indexes WHERE name = 'IX_ApiKey_ClientSecretHash')
-  BEGIN
-   CREATE NONCLUSTERED INDEX [IX_ApiKey_ClientSecretHash]
-   ON [dbo].[ApiKey]([ClientSecretHash] ASC)
-   WITH (ONLINE = ON)
-  END
-
   -- Data Migration
   DECLARE @BatchSize INT = 10000
   WHILE @BatchSize > 0
@@ -33,10 +25,6 @@ BEGIN
 
     COMMIT TRANSACTION Migrate_ClientSecretHash
   END
-
-  -- Drop index
-  DROP INDEX IF EXISTS [IX_ApiKey_ClientSecretHash]
-      ON [dbo].[ApiKey];
 
 END
 GO
