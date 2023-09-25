@@ -104,9 +104,8 @@ public class PoliciesController : Controller
         return new ListResponseModel<PolicyResponseModel>(responses);
     }
 
-    // TODO: remove GetByInvitedUser once all clients are updated to use the GetMasterPasswordPolicy endpoint below
-    // TODO: create PM-??? tech debt item to track this work. In theory, target release for removal should be 2024.01.0
-    // TODO: figure out how to mark this as deprecated.  [Obsolete("Deprecated API", false)]?
+    // TODO: PM-4097 - remove GetByInvitedUser once all clients are updated to use the GetMasterPasswordPolicy endpoint below
+    [Obsolete("Deprecated API", false)]
     [AllowAnonymous]
     [HttpGet("invited-user")]
     public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(Guid orgId, [FromQuery] string userId)
