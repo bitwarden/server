@@ -13,7 +13,7 @@ public class ProfileResponseModel : ResponseModel
         IEnumerable<ProviderUserProviderDetails> providerUserDetails,
         IEnumerable<ProviderUserOrganizationDetails> providerUserOrganizationDetails,
         bool twoFactorEnabled,
-        bool premiumFromOrganization) : base("profile")
+        bool premiumFromOrganization, bool? hasManageResetPasswordPermission = null) : base("profile")
     {
         if (user == null)
         {
@@ -33,6 +33,7 @@ public class ProfileResponseModel : ResponseModel
         PrivateKey = user.PrivateKey;
         SecurityStamp = user.SecurityStamp;
         ForcePasswordReset = user.ForcePasswordReset;
+        HasManageResetPasswordPermission = hasManageResetPasswordPermission;
         UsesKeyConnector = user.UsesKeyConnector;
         AvatarColor = user.AvatarColor;
         Organizations = organizationsUserDetails?.Select(o => new ProfileOrganizationResponseModel(o));
@@ -58,6 +59,7 @@ public class ProfileResponseModel : ResponseModel
     public string PrivateKey { get; set; }
     public string SecurityStamp { get; set; }
     public bool ForcePasswordReset { get; set; }
+    public bool? HasManageResetPasswordPermission { get; set; }
     public bool UsesKeyConnector { get; set; }
     public string AvatarColor { get; set; }
     public IEnumerable<ProfileOrganizationResponseModel> Organizations { get; set; }

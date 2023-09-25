@@ -9,6 +9,7 @@ using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
@@ -48,6 +49,8 @@ public class AccountsController : Controller
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
 
+    protected ICurrentContext CurrentContext { get; }
+
     public AccountsController(
         GlobalSettings globalSettings,
         ICipherRepository cipherRepository,
@@ -62,7 +65,8 @@ public class AccountsController : Controller
         ISendService sendService,
         ICaptchaValidationService captchaValidationService,
         IPolicyService policyService,
-        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand
+        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
+        ICurrentContext currentContext
         )
     {
         _cipherRepository = cipherRepository;
@@ -79,6 +83,7 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
+        CurrentContext = currentContext;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -459,8 +464,12 @@ public class AccountsController : Controller
         var providerUserOrganizationDetails =
             await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
+
+        var hasManageResetPasswordPermission = await CurrentContext.AnyOrgUserHasManageResetPasswordPermission(organizationUserDetails);
+
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, await _userService.TwoFactorIsEnabledAsync(user), await _userService.HasPremiumFromOrganization(user));
+            providerUserOrganizationDetails, await _userService.TwoFactorIsEnabledAsync(user),
+            await _userService.HasPremiumFromOrganization(user), hasManageResetPasswordPermission);
         return response;
     }
 

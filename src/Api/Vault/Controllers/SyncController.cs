@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Vault.Models.Response;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -29,6 +30,8 @@ public class SyncController : Controller
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
 
+    protected ICurrentContext CurrentContext { get; }
+
     public SyncController(
         IUserService userService,
         IFolderRepository folderRepository,
@@ -39,7 +42,8 @@ public class SyncController : Controller
         IProviderUserRepository providerUserRepository,
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        ICurrentContext currentContext)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -51,6 +55,7 @@ public class SyncController : Controller
         _policyRepository = policyRepository;
         _sendRepository = sendRepository;
         _globalSettings = globalSettings;
+        CurrentContext = currentContext;
     }
 
     [HttpGet("")]
@@ -70,6 +75,9 @@ public class SyncController : Controller
             await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
+
+        var hasManageResetPasswordPermission = await CurrentContext.AnyOrgUserHasManageResetPasswordPermission(organizationUserDetails);
+
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
         var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
@@ -89,7 +97,7 @@ public class SyncController : Controller
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
         var response = new SyncResponseModel(_globalSettings, user, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationUserDetails,
             providerUserDetails, providerUserOrganizationDetails, folders, collections, ciphers,
-            collectionCiphersGroupDict, excludeDomains, policies, sends);
+            collectionCiphersGroupDict, excludeDomains, policies, sends, hasManageResetPasswordPermission);
         return response;
     }
 }
