@@ -277,7 +277,13 @@
                     }
                     else
                     {
-                        <input type="email" class="form-control" asp-for="BillingEmail" readonly='@(!canEditBilling)'>
+                        <input
+                            type="text"
+                            class="form-control"
+                            asp-for="BillingEmail"
+                            readonly='@(!canEditBilling)'
+                            pattern="@(@"[^@\s]+@[^@\s]+\.[^@\s]+")"
+                            title="Email address must be in the format 'address@domain.com'.">
                     }
                 </div>
             </div>
