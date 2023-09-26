@@ -98,6 +98,7 @@ public static class OrganizationServiceCollectionExtensions
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
     {
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
+        services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)

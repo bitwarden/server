@@ -20,23 +20,26 @@ public class CollectionsController : Controller
     private readonly ICollectionService _collectionService;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
-    private readonly ICurrentContext _currentContext;
     private readonly IAuthorizationService _authorizationService;
+    private readonly ICurrentContext _currentContext;
+    private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
         ICollectionService collectionService,
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
+        IAuthorizationService authorizationService,
         ICurrentContext currentContext,
-        IAuthorizationService authorizationService)
+        IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
         _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
-        _currentContext = currentContext;
         _authorizationService = authorizationService;
+        _currentContext = currentContext;
+        _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
     }
 
     [HttpGet("{id}")]
@@ -188,6 +191,29 @@ public class CollectionsController : Controller
 
         var collection = await GetCollectionAsync(id, orgId);
         await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
+    }
+
+    [HttpPost("bulk-access")]
+    public async Task PostBulkCollectionAccess([FromBody] BulkCollectionAccessRequestModel model)
+    {
+        var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
+
+        if (collections.Count != model.CollectionIds.Count())
+        {
+            throw new NotFoundException("One or more collections not found.");
+        }
+
+        var result = await _authorizationService.AuthorizeAsync(User, collections, CollectionOperations.ModifyAccess);
+
+        if (!result.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
+        await _bulkAddCollectionAccessCommand.AddAccessAsync(
+            collections,
+            model.Users?.Select(u => u.ToSelectionReadOnly()).ToList(),
+            model.Groups?.Select(g => g.ToSelectionReadOnly()).ToList());
     }
 
     [HttpDelete("{id}")]
