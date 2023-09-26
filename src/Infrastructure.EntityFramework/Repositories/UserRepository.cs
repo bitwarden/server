@@ -167,6 +167,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                              where ou.UserId == user.Id
                              select gu;
             dbContext.GroupUsers.RemoveRange(groupUsers);
+            dbContext.UserProjectAccessPolicy.RemoveRange(
+                dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUser.UserId == user.Id));
+            dbContext.UserServiceAccountAccessPolicy.RemoveRange(
+                dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUser.UserId == user.Id));
             dbContext.OrganizationUsers.RemoveRange(dbContext.OrganizationUsers.Where(ou => ou.UserId == user.Id));
             dbContext.ProviderUsers.RemoveRange(dbContext.ProviderUsers.Where(pu => pu.UserId == user.Id));
             dbContext.SsoUsers.RemoveRange(dbContext.SsoUsers.Where(su => su.UserId == user.Id));
