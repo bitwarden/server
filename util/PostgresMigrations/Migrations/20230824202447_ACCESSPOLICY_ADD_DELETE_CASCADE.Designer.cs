@@ -3,6 +3,7 @@ using System;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Bit.PostgresMigrations.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20230824202447_ACCESSPOLICY_ADD_DELETE_CASCADE")]
+    partial class ACCESSPOLICY_ADD_DELETE_CASCADE
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -293,9 +296,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("HidePasswords")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("Manage")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("ReadOnly")
                         .HasColumnType("boolean");
 
@@ -315,9 +315,6 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<bool>("HidePasswords")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("Manage")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("ReadOnly")
@@ -579,10 +576,6 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
-
-                    b.Property<bool>("LimitCollectionCdOwnerAdmin")
-                        .HasColumnType("boolean")
-                        .HasDefaultValue(true);
 
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
