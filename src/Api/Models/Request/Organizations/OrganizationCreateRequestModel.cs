@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
@@ -10,8 +11,10 @@ public class OrganizationCreateRequestModel : IValidatableObject
 {
     [Required]
     [StringLength(50)]
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     [StringLength(50)]
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     [Required]
     [StringLength(256)]

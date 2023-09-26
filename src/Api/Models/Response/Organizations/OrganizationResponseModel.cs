@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
@@ -61,7 +62,9 @@ public class OrganizationResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     public string BusinessAddress1 { get; set; }
     public string BusinessAddress2 { get; set; }

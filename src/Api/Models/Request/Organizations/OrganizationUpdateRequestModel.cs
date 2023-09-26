@@ -1,7 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Organizations;
 
@@ -9,8 +11,10 @@ public class OrganizationUpdateRequestModel
 {
     [Required]
     [StringLength(50)]
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     [StringLength(50)]
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     [EmailAddress]
     [Required]

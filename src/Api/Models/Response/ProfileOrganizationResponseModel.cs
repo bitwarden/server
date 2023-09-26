@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
@@ -70,6 +71,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
