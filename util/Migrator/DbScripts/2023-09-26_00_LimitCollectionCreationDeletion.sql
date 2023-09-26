@@ -1,10 +1,10 @@
---Add column 'LimitCollectionCdOwnerAdmin' to 'Organization' table
-IF COL_LENGTH('[dbo].[Organization]', 'LimitCollectionCdOwnerAdmin') IS NULL
+--Add column 'LimitCollectionCreationDeletion' to 'Organization' table
+IF COL_LENGTH('[dbo].[Organization]', 'LimitCollectionCreationDeletion') IS NULL
 BEGIN
     ALTER TABLE
         [dbo].[Organization]
     ADD
-        [LimitCollectionCdOwnerAdmin] BIT NOT NULL CONSTRAINT [DF_Organization_LimitCollectionCdOwnerAdmin] DEFAULT (1)
+        [LimitCollectionCreationDeletion] BIT NOT NULL CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion] DEFAULT (1)
 END
 GO
 
@@ -12,8 +12,8 @@ GO
 /**
   ORGANIZATION STORED PROCEDURES
  */
- 
---Alter `Organization_Create` sproc to include `LimitCollectionCdOwnerAdmin` column and default value
+
+--Alter `Organization_Create` sproc to include `LimitCollectionCreationDeletion` column and default value
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @Identifier NVARCHAR(50),
@@ -67,7 +67,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @MaxAutoscaleSmSeats INT= null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCdOwnerAdmin BIT = 0
+    @LimitCollectionCreationDeletion BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON
@@ -126,7 +126,7 @@ BEGIN
         [MaxAutoscaleSmSeats],
         [MaxAutoscaleSmServiceAccounts],
         [SecretsManagerBeta],
-        [LimitCollectionCdOwnerAdmin]
+        [LimitCollectionCreationDeletion]
     )
     VALUES
         (
@@ -182,12 +182,12 @@ BEGIN
             @MaxAutoscaleSmSeats,
             @MaxAutoscaleSmServiceAccounts,
             @SecretsManagerBeta,
-            @LimitCollectionCdOwnerAdmin
+            @LimitCollectionCreationDeletion
         )
 END
 GO
 
---Alter `Organization_Update` sproc to include `LimitCollectionCdOwnerAdmin` column 
+--Alter `Organization_Update` sproc to include `LimitCollectionCreationDeletion` column
 CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @Id UNIQUEIDENTIFIER,
     @Identifier NVARCHAR(50),
@@ -241,7 +241,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Update]
     @MaxAutoscaleSmSeats INT = null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCdOwnerAdmin BIT = 1
+    @LimitCollectionCreationDeletion BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -300,7 +300,7 @@ BEGIN
         [MaxAutoscaleSmSeats] = @MaxAutoscaleSmSeats,
         [MaxAutoscaleSmServiceAccounts] = @MaxAutoscaleSmServiceAccounts,
         [SecretsManagerBeta] = @SecretsManagerBeta,
-        [LimitCollectionCdOwnerAdmin] = @LimitCollectionCdOwnerAdmin
+        [LimitCollectionCreationDeletion] = @LimitCollectionCreationDeletion
     WHERE
             [Id] = @Id
 END
@@ -310,8 +310,8 @@ GO
 /**
   ORGANIZATION VIEWS
  */
- 
---Add 'LimitCollectionCdOwnerAdmin` to OrganizationUserOrganizationDetailsView
+
+--Add 'LimitCollectionCreationDeletion` to OrganizationUserOrganizationDetailsView
 CREATE OR ALTER VIEW [dbo].[OrganizationUserOrganizationDetailsView]
 AS
 SELECT
@@ -359,7 +359,7 @@ SELECT
     O.[UsePasswordManager],
     O.[SmSeats],
     O.[SmServiceAccounts],
-    O.[LimitCollectionCdOwnerAdmin]
+    O.[LimitCollectionCreationDeletion]
 FROM
     [dbo].[OrganizationUser] OU
         LEFT JOIN
@@ -386,7 +386,7 @@ GO
 /**
   PROVIDER VIEWS - not directly modified, but access Organization table
  */
- 
+
 --Manually refresh ProviderOrganizationOrganizationDetailsView
 IF OBJECT_ID('[dbo].[ProviderOrganizationOrganizationDetailsView]') IS NOT NULL
     BEGIN

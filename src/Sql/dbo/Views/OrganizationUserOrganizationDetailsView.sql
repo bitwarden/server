@@ -45,7 +45,7 @@ SELECT
     O.[UsePasswordManager],
     O.[SmSeats],
     O.[SmServiceAccounts],
-    O.[LimitCollectionCdOwnerAdmin]
+    O.[LimitCollectionCreationDeletion]
 FROM
     [dbo].[OrganizationUser] OU
 LEFT JOIN

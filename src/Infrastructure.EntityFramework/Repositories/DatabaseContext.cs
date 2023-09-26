@@ -107,7 +107,7 @@ public class DatabaseContext : DbContext
         eGroup.Property(c => c.Id).ValueGeneratedNever();
         eInstallation.Property(c => c.Id).ValueGeneratedNever();
         eOrganization.Property(c => c.Id).ValueGeneratedNever();
-        eOrganization.Property(c => c.LimitCollectionCdOwnerAdmin)
+        eOrganization.Property(c => c.LimitCollectionCreationDeletion)
             .ValueGeneratedNever()
             .HasDefaultValue(true);
         eOrganizationSponsorship.Property(c => c.Id).ValueGeneratedNever();

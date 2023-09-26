@@ -577,7 +577,7 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<bool>("LimitCollectionCdOwnerAdmin")
+                    b.Property<bool>("LimitCollectionCreationDeletion")
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 

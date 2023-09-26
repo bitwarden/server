@@ -51,7 +51,7 @@
     @MaxAutoscaleSmSeats INT = null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCdOwnerAdmin BIT = 1
+    @LimitCollectionCreationDeletion BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -110,7 +110,7 @@ BEGIN
         [MaxAutoscaleSmSeats] = @MaxAutoscaleSmSeats,
         [MaxAutoscaleSmServiceAccounts] = @MaxAutoscaleSmServiceAccounts,
         [SecretsManagerBeta] = @SecretsManagerBeta,
-        [LimitCollectionCdOwnerAdmin] = @LimitCollectionCdOwnerAdmin
+        [LimitCollectionCreationDeletion] = @LimitCollectionCreationDeletion
     WHERE
         [Id] = @Id
 END

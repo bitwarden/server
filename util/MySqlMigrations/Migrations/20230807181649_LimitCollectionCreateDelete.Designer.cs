@@ -567,7 +567,7 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
 
-                    b.Property<bool>("LimitCollectionCdOwnerAdmin")
+                    b.Property<bool>("LimitCollectionCreationDeletion")
                         .HasColumnType("tinyint(1)")
                         .HasDefaultValue(true);
 

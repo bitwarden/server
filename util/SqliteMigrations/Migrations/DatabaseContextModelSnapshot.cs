@@ -568,7 +568,7 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<bool>("LimitCollectionCdOwnerAdmin")
+                    b.Property<bool>("LimitCollectionCreationDeletion")
                         .HasColumnType("INTEGER")
                         .HasDefaultValue(true);
 

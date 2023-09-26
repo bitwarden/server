@@ -11,7 +11,7 @@ public partial class LimitCollectionCreateDelete : Migration
     protected override void Up(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.AddColumn<bool>(
-            name: "LimitCollectionCdOwnerAdmin",
+            name: "LimitCollectionCreationDeletion",
             table: "Organization",
             type: "tinyint(1)",
             nullable: false,
@@ -22,7 +22,7 @@ public partial class LimitCollectionCreateDelete : Migration
     protected override void Down(MigrationBuilder migrationBuilder)
     {
         migrationBuilder.DropColumn(
-            name: "LimitCollectionCdOwnerAdmin",
+            name: "LimitCollectionCreationDeletion",
             table: "Organization");
     }
 }
