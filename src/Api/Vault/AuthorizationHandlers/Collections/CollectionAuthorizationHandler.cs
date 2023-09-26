@@ -80,7 +80,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         // Owners, Admins, Providers, and users with CreateNewCollections or EditAnyCollection permission can always create collections
         if (
             org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions.CreateNewCollections || org.Permissions.EditAnyCollection ||
+            org.Permissions is { CreateNewCollections: true } ||
             await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
             context.Succeed(requirement);
@@ -96,7 +96,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         // Owners, Admins, Providers, and users with DeleteAnyCollection or EditAnyCollection permission can always delete collections
         if (
             org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions.DeleteAnyCollection || org.Permissions.EditAnyCollection ||
+            org.Permissions is { DeleteAnyCollection: true } ||
             await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
             context.Succeed(requirement);
