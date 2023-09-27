@@ -20,12 +20,20 @@ public enum PlanType : byte
     Custom = 6,
     [Display(Name = "Families")]
     FamiliesAnnually = 7,
+    [Display(Name = "Teams (Monthly) 2023")]
+    TeamsMonthly2023 = 8,
+    [Display(Name = "Teams (Annually) 2023")]
+    TeamsAnnually2023 = 9,
+    [Display(Name = "Enterprise (Monthly) 2023")]
+    EnterpriseMonthly2023 = 10,
+    [Display(Name = "Enterprise (Annually) 2023")]
+    EnterpriseAnnually2023 = 11,
     [Display(Name = "Teams (Monthly)")]
-    TeamsMonthly = 8,
+    TeamsMonthly = 12,
     [Display(Name = "Teams (Annually)")]
-    TeamsAnnually = 9,
+    TeamsAnnually = 13,
     [Display(Name = "Enterprise (Monthly)")]
-    EnterpriseMonthly = 10,
+    EnterpriseMonthly = 14,
     [Display(Name = "Enterprise (Annually)")]
-    EnterpriseAnnually = 11,
+    EnterpriseAnnually = 15,
 }

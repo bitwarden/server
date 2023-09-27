@@ -61,150 +61,6 @@ public static class PasswordManagerPlanStore
             },
             new Plan
             {
-                Type = PlanType.TeamsAnnually2019,
-                Product = ProductType.Teams,
-                BitwardenProduct = BitwardenProductType.PasswordManager,
-                Name = "Teams (Annually) 2019",
-                IsAnnual = true,
-                NameLocalizationKey = "planNameTeams",
-                DescriptionLocalizationKey = "planDescTeams",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 5,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasTotp = true,
-
-                UpgradeSortOrder = 2,
-                DisplaySortOrder = 2,
-                LegacyYear = 2020,
-
-                StripePlanId = "teams-org-annually",
-                StripeSeatPlanId = "teams-org-seat-annually",
-                StripeStoragePlanId = "storage-gb-annually",
-                BasePrice = 60,
-                SeatPrice = 24,
-                AdditionalStoragePricePerGb = 4,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.TeamsMonthly2019,
-                Product = ProductType.Teams,
-                BitwardenProduct = BitwardenProductType.PasswordManager,
-                Name = "Teams (Monthly) 2019",
-                NameLocalizationKey = "planNameTeams",
-                DescriptionLocalizationKey = "planDescTeams",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 5,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasTotp = true,
-
-                UpgradeSortOrder = 2,
-                DisplaySortOrder = 2,
-                LegacyYear = 2020,
-
-                StripePlanId = "teams-org-monthly",
-                StripeSeatPlanId = "teams-org-seat-monthly",
-                StripeStoragePlanId = "storage-gb-monthly",
-                BasePrice = 8,
-                SeatPrice = 2.5M,
-                AdditionalStoragePricePerGb = 0.5M,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.EnterpriseAnnually2019,
-                Name = "Enterprise (Annually) 2019",
-                IsAnnual = true,
-                Product = ProductType.Enterprise,
-                BitwardenProduct = BitwardenProductType.PasswordManager,
-                NameLocalizationKey = "planNameEnterprise",
-                DescriptionLocalizationKey = "planDescEnterprise",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 0,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasPolicies = true,
-                HasSelfHost = true,
-                HasGroups = true,
-                HasDirectory = true,
-                HasEvents = true,
-                HasTotp = true,
-                Has2fa = true,
-                HasApi = true,
-                UsersGetPremium = true,
-                HasCustomPermissions = true,
-
-                UpgradeSortOrder = 3,
-                DisplaySortOrder = 3,
-                LegacyYear = 2020,
-
-                StripePlanId = null,
-                StripeSeatPlanId = "enterprise-org-seat-annually",
-                StripeStoragePlanId = "storage-gb-annually",
-                BasePrice = 0,
-                SeatPrice = 36,
-                AdditionalStoragePricePerGb = 4,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
-                Type = PlanType.EnterpriseMonthly2019,
-                Product = ProductType.Enterprise,
-                BitwardenProduct = BitwardenProductType.PasswordManager,
-                Name = "Enterprise (Monthly) 2019",
-                NameLocalizationKey = "planNameEnterprise",
-                DescriptionLocalizationKey = "planDescEnterprise",
-                CanBeUsedByBusiness = true,
-                BaseSeats = 0,
-                BaseStorageGb = 1,
-
-                HasAdditionalSeatsOption = true,
-                HasAdditionalStorageOption = true,
-                TrialPeriodDays = 7,
-
-                HasPolicies = true,
-                HasGroups = true,
-                HasDirectory = true,
-                HasEvents = true,
-                HasTotp = true,
-                Has2fa = true,
-                HasApi = true,
-                HasSelfHost = true,
-                UsersGetPremium = true,
-                HasCustomPermissions = true,
-
-                UpgradeSortOrder = 3,
-                DisplaySortOrder = 3,
-                LegacyYear = 2020,
-
-                StripePlanId = null,
-                StripeSeatPlanId = "enterprise-org-seat-monthly",
-                StripeStoragePlanId = "storage-gb-monthly",
-                BasePrice = 0,
-                SeatPrice = 4M,
-                AdditionalStoragePricePerGb = 0.5M,
-
-                AllowSeatAutoscale = true,
-            },
-            new Plan
-            {
                 Type = PlanType.FamiliesAnnually,
                 Product = ProductType.Families,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
@@ -235,10 +91,48 @@ public static class PasswordManagerPlanStore
             },
             new Plan
             {
-                Type = PlanType.TeamsAnnually,
+                Type = PlanType.TeamsAnnually2019,
                 Product = ProductType.Teams,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
-                Name = "Teams (Annually)",
+                Name = "Teams (Annually) 2019",
+                IsAnnual = true,
+                NameLocalizationKey = "planNameTeams",
+                DescriptionLocalizationKey = "planDescTeams",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 5,
+                BaseStorageGb = 1,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalStorageOption = true,
+                TrialPeriodDays = 7,
+
+                Has2fa = true,
+                HasApi = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasGroups = true,
+                HasTotp = true,
+                UsersGetPremium = true,
+
+                UpgradeSortOrder = 2,
+                DisplaySortOrder = 2,
+                LegacyYear = 2020,
+
+                StripePlanId = "teams-org-annually",
+                StripeSeatPlanId = "teams-org-seat-annually",
+                StripeStoragePlanId = "storage-gb-annually",
+                BasePrice = 60,
+                SeatPrice = 24,
+                AdditionalStoragePricePerGb = 4,
+
+                AllowSeatAutoscale = true,
+            },
+            new Plan
+            {
+                Type = PlanType.TeamsAnnually2023,
+                Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
+                Name = "Teams (Annually) 2023",
                 IsAnnual = true,
                 NameLocalizationKey = "planNameTeams",
                 DescriptionLocalizationKey = "planDescTeams",
@@ -267,6 +161,114 @@ public static class PasswordManagerPlanStore
                 AdditionalStoragePricePerGb = 4,
 
                 AllowSeatAutoscale = true,
+                LegacyYear = 2023
+            },
+            new Plan
+            {
+                Type = PlanType.TeamsAnnually,
+                Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
+                Name = "Teams (Annually)",
+                IsAnnual = true,
+                NameLocalizationKey = "planNameTeams",
+                DescriptionLocalizationKey = "planDescTeams",
+                CanBeUsedByBusiness = true,
+                BaseStorageGb = 1,
+                BaseSeats = 0,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalStorageOption = true,
+                TrialPeriodDays = 7,
+
+                Has2fa = true,
+                HasApi = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasGroups = true,
+                HasTotp = true,
+                UsersGetPremium = true,
+
+                UpgradeSortOrder = 2,
+                DisplaySortOrder = 2,
+
+                StripeSeatPlanId = "2023-teams-org-seat-annually",
+                StripeStoragePlanId = "storage-gb-annually",
+                SeatPrice = 36,
+                AdditionalStoragePricePerGb = 4,
+
+                AllowSeatAutoscale = true,
+            },
+            new Plan
+            {
+                Type = PlanType.TeamsMonthly2019,
+                Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
+                Name = "Teams (Monthly) 2019",
+                NameLocalizationKey = "planNameTeams",
+                DescriptionLocalizationKey = "planDescTeams",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 5,
+                BaseStorageGb = 1,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalStorageOption = true,
+                TrialPeriodDays = 7,
+
+                Has2fa = true,
+                HasApi = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasGroups = true,
+                HasTotp = true,
+                UsersGetPremium = true,
+
+                UpgradeSortOrder = 2,
+                DisplaySortOrder = 2,
+                LegacyYear = 2020,
+
+                StripePlanId = "teams-org-monthly",
+                StripeSeatPlanId = "teams-org-seat-monthly",
+                StripeStoragePlanId = "storage-gb-monthly",
+                BasePrice = 8,
+                SeatPrice = 2.5M,
+                AdditionalStoragePricePerGb = 0.5M,
+
+                AllowSeatAutoscale = true,
+            },
+            new Plan
+            {
+                Type = PlanType.TeamsMonthly2023,
+                Product = ProductType.Teams,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
+                Name = "Teams (Monthly) 2023",
+                NameLocalizationKey = "planNameTeams",
+                DescriptionLocalizationKey = "planDescTeams",
+                CanBeUsedByBusiness = true,
+                BaseStorageGb = 1,
+                BaseSeats = 0,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalStorageOption = true,
+                TrialPeriodDays = 7,
+
+                Has2fa = true,
+                HasApi = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasGroups = true,
+                HasTotp = true,
+                UsersGetPremium = true,
+
+                UpgradeSortOrder = 2,
+                DisplaySortOrder = 2,
+
+                StripeSeatPlanId = "2020-teams-org-seat-monthly",
+                StripeStoragePlanId = "storage-gb-monthly",
+                SeatPrice = 4,
+                AdditionalStoragePricePerGb = 0.5M,
+
+                AllowSeatAutoscale = true,
+                LegacyYear = 2023
             },
             new Plan
             {
@@ -295,7 +297,7 @@ public static class PasswordManagerPlanStore
                 UpgradeSortOrder = 2,
                 DisplaySortOrder = 2,
 
-                StripeSeatPlanId = "2020-teams-org-seat-monthly",
+                StripeSeatPlanId = "2023-teams-org-seat-monthly",
                 StripeStoragePlanId = "storage-gb-monthly",
                 SeatPrice = 4,
                 AdditionalStoragePricePerGb = 0.5M,
@@ -304,8 +306,53 @@ public static class PasswordManagerPlanStore
             },
             new Plan
             {
-                Type = PlanType.EnterpriseAnnually,
-                Name = "Enterprise (Annually)",
+                Type = PlanType.EnterpriseAnnually2019,
+                Name = "Enterprise (Annually) 2019",
+                IsAnnual = true,
+                Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
+                NameLocalizationKey = "planNameEnterprise",
+                DescriptionLocalizationKey = "planDescEnterprise",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 0,
+                BaseStorageGb = 1,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalStorageOption = true,
+                TrialPeriodDays = 7,
+
+                HasPolicies = true,
+                HasSelfHost = true,
+                HasGroups = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasTotp = true,
+                Has2fa = true,
+                HasApi = true,
+                HasSso = true,
+                HasKeyConnector = true,
+                HasScim = true,
+                HasResetPassword = true,
+                UsersGetPremium = true,
+                HasCustomPermissions = true,
+
+                UpgradeSortOrder = 3,
+                DisplaySortOrder = 3,
+                LegacyYear = 2020,
+
+                StripePlanId = null,
+                StripeSeatPlanId = "enterprise-org-seat-annually",
+                StripeStoragePlanId = "storage-gb-annually",
+                BasePrice = 0,
+                SeatPrice = 36,
+                AdditionalStoragePricePerGb = 4,
+
+                AllowSeatAutoscale = true,
+            },
+            new Plan
+            {
+                Type = PlanType.EnterpriseAnnually2023,
+                Name = "Enterprise (Annually) 2023",
                 Product = ProductType.Enterprise,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
                 IsAnnual = true,
@@ -344,6 +391,137 @@ public static class PasswordManagerPlanStore
                 AdditionalStoragePricePerGb = 4,
 
                 AllowSeatAutoscale = true,
+                LegacyYear = 2023
+            },
+            new Plan
+            {
+                Type = PlanType.EnterpriseAnnually,
+                Name = "Enterprise (Annually)",
+                Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
+                IsAnnual = true,
+                NameLocalizationKey = "planNameEnterprise",
+                DescriptionLocalizationKey = "planDescEnterprise",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 0,
+                BaseStorageGb = 1,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalStorageOption = true,
+                TrialPeriodDays = 7,
+
+                HasPolicies = true,
+                HasSelfHost = true,
+                HasGroups = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasTotp = true,
+                Has2fa = true,
+                HasApi = true,
+                HasSso = true,
+                HasKeyConnector = true,
+                HasScim = true,
+                HasResetPassword = true,
+                UsersGetPremium = true,
+                HasCustomPermissions = true,
+
+                UpgradeSortOrder = 3,
+                DisplaySortOrder = 3,
+
+                StripeSeatPlanId = "2023-enterprise-org-seat-annually",
+                StripeStoragePlanId = "storage-gb-annually",
+                BasePrice = 0,
+                SeatPrice = 60,
+                AdditionalStoragePricePerGb = 4,
+
+                AllowSeatAutoscale = true,
+            },
+            new Plan
+            {
+                Type = PlanType.EnterpriseMonthly2019,
+                Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
+                Name = "Enterprise (Monthly) 2019",
+                NameLocalizationKey = "planNameEnterprise",
+                DescriptionLocalizationKey = "planDescEnterprise",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 0,
+                BaseStorageGb = 1,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalStorageOption = true,
+                TrialPeriodDays = 7,
+
+                HasPolicies = true,
+                HasGroups = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasTotp = true,
+                Has2fa = true,
+                HasApi = true,
+                HasSelfHost = true,
+                HasSso = true,
+                HasKeyConnector = true,
+                HasScim = true,
+                HasResetPassword = true,
+                UsersGetPremium = true,
+                HasCustomPermissions = true,
+
+                UpgradeSortOrder = 3,
+                DisplaySortOrder = 3,
+                LegacyYear = 2020,
+
+                StripePlanId = null,
+                StripeSeatPlanId = "enterprise-org-seat-monthly",
+                StripeStoragePlanId = "storage-gb-monthly",
+                BasePrice = 0,
+                SeatPrice = 4M,
+                AdditionalStoragePricePerGb = 0.5M,
+
+                AllowSeatAutoscale = true,
+            },
+            new Plan
+            {
+                Type = PlanType.EnterpriseMonthly2023,
+                Product = ProductType.Enterprise,
+                BitwardenProduct = BitwardenProductType.PasswordManager,
+                Name = "Enterprise (Monthly) 2023",
+                NameLocalizationKey = "planNameEnterprise",
+                DescriptionLocalizationKey = "planDescEnterprise",
+                CanBeUsedByBusiness = true,
+                BaseSeats = 0,
+                BaseStorageGb = 1,
+
+                HasAdditionalSeatsOption = true,
+                HasAdditionalStorageOption = true,
+                TrialPeriodDays = 7,
+
+                HasPolicies = true,
+                HasGroups = true,
+                HasDirectory = true,
+                HasEvents = true,
+                HasTotp = true,
+                Has2fa = true,
+                HasApi = true,
+                HasSelfHost = true,
+                HasSso = true,
+                HasKeyConnector = true,
+                HasScim = true,
+                HasResetPassword = true,
+                UsersGetPremium = true,
+                HasCustomPermissions = true,
+
+                UpgradeSortOrder = 3,
+                DisplaySortOrder = 3,
+
+                StripeSeatPlanId = "2020-enterprise-seat-monthly",
+                StripeStoragePlanId = "storage-gb-monthly",
+                BasePrice = 0,
+                SeatPrice = 6,
+                AdditionalStoragePricePerGb = 0.5M,
+
+                AllowSeatAutoscale = true,
+                LegacyYear = 2023
             },
             new Plan
             {
@@ -379,7 +557,7 @@ public static class PasswordManagerPlanStore
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
 
-                StripeSeatPlanId = "2020-enterprise-seat-monthly",
+                StripeSeatPlanId = "2023-enterprise-seat-monthly",
                 StripeStoragePlanId = "storage-gb-monthly",
                 BasePrice = 0,
                 SeatPrice = 6,

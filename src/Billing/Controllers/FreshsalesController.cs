@@ -159,14 +159,18 @@ public class FreshsalesController : Controller
                 planName = "Families";
                 return true;
             case PlanType.TeamsAnnually:
+            case PlanType.TeamsAnnually2023:
             case PlanType.TeamsAnnually2019:
             case PlanType.TeamsMonthly:
+            case PlanType.TeamsMonthly2023:
             case PlanType.TeamsMonthly2019:
                 planName = "Teams";
                 return true;
             case PlanType.EnterpriseAnnually:
+            case PlanType.EnterpriseAnnually2023:
             case PlanType.EnterpriseAnnually2019:
             case PlanType.EnterpriseMonthly:
+            case PlanType.EnterpriseMonthly2023:
             case PlanType.EnterpriseMonthly2019:
                 planName = "Enterprise";
                 return true;

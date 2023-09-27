@@ -1936,11 +1936,6 @@ public class OrganizationService : IOrganizationService
 
     private static void ValidatePlan(Models.StaticStore.Plan plan, int additionalSeats, string productType)
     {
-        if (plan is not { LegacyYear: null })
-        {
-            throw new BadRequestException($"Invalid {productType} plan selected.");
-        }
-
         if (plan.Disabled)
         {
             throw new BadRequestException($"{productType} Plan not found.");

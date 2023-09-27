@@ -710,17 +710,15 @@ public class StripeController : Controller
         return new Tuple<Guid?, Guid?>(orgId, userId);
     }
 
-    private bool OrgPlanForInvoiceNotifications(Organization org)
+    private static bool OrgPlanForInvoiceNotifications(Organization org)
     {
-        switch (org.PlanType)
-        {
-            case PlanType.FamiliesAnnually:
-            case PlanType.TeamsAnnually:
-            case PlanType.EnterpriseAnnually:
-                return true;
-            default:
-                return false;
-        }
+        return org.PlanType is PlanType.FamiliesAnnually or
+            PlanType.TeamsAnnually2019 or
+            PlanType.EnterpriseAnnually2019 or
+            PlanType.TeamsAnnually2023 or
+            PlanType.EnterpriseAnnually2023 or
+            PlanType.TeamsAnnually or
+            PlanType.EnterpriseAnnually;
     }
 
     private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false)
