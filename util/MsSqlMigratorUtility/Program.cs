@@ -71,24 +71,4 @@ internal class Program
         var logger = loggerFactory.CreateLogger<DbMigrator>();
         return logger;
     }
-
-    private static void ParseParameters(string[] args)
-    {
-        Parameters = new Dictionary<string, string>();
-        for (var i = 0; i < args.Length; i += 2)
-        {
-            if (!args[i].StartsWith("-"))
-            {
-                continue;
-            }
-            if (i + 1 <= args.Length && !args[i + 1].StartsWith("-"))
-            {
-                Parameters.Add(args[i].Substring(1), args[i + 1]);
-            }
-            else
-            {
-                Parameters.Add(args[i].Substring(1), null);
-            }
-        }
-    }
 }
