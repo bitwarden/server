@@ -191,7 +191,7 @@ public class Program
             "globalSettings__sqlServer__connectionString");
         var migrator = new DbMigrator(vaultConnectionString, null);
 
-        var log = false;
+        var log = true;
 
         migrator.MigrateMsSqlDatabaseWithRetries(log);
 
