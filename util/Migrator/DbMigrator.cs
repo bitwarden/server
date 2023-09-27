@@ -26,7 +26,7 @@ public class DbMigrator
 
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         bool repeatable = false,
-        string folderName = "DbScripts",
+        string folderName = MigratorConstants.DefaultMigrationsFolderName,
         CancellationToken cancellationToken = default(CancellationToken))
     {
         var attempt = 1;
@@ -58,7 +58,7 @@ public class DbMigrator
 
     public bool MigrateDatabase(bool enableLogging = true,
         bool repeatable = false,
-        string folderName = "DbScripts",
+        string folderName = MigratorConstants.DefaultMigrationsFolderName,
         CancellationToken cancellationToken = default(CancellationToken))
     {
         if (_logger != null)
@@ -114,7 +114,7 @@ public class DbMigrator
         }
         else
         {
-            builder.JournalToSqlTable("dbo", "Migration");
+            builder.JournalToSqlTable("dbo", MigratorConstants.SqlTableJournalName);
         }
 
         if (enableLogging)

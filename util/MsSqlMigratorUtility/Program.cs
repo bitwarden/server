@@ -20,7 +20,7 @@ internal class Program
         [Option('r', "repeatable", Description = "Mark scripts as repeatable")]
         bool repeatable = false,
         [Option('f', "folder", Description = "Folder name of database scripts")]
-        string folderName = "DbScripts") => MigrateDatabase(databaseConnectionString, verbose, repeatable, folderName);
+        string folderName = MigratorConstants.DefaultMigrationsFolderName) => MigrateDatabase(databaseConnectionString, verbose, repeatable, folderName);
 
     private static void WriteUsageToConsole()
     {
@@ -32,9 +32,10 @@ internal class Program
 
     private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, bool repeatable = false, string folderName = "")
     {
-        Console.WriteLine($"repeatable: {repeatable}");
-        Console.WriteLine($"folderName: {folderName}");
         var logger = CreateLogger(verbose);
+
+        logger.LogInformation($"repeatable: {repeatable}");
+        logger.LogInformation($"folderName: {folderName}");
 
         var migrator = new DbMigrator(databaseConnectionString, logger);
         bool success = false;
