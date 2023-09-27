@@ -806,14 +806,13 @@ public class AccessPoliciesControllerTests
         Guid id)
     {
         SetupPermission(sutProvider, permissionType, id);
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(default, default)
+            .ReturnsForAnyArgs(new PeopleGrantees{ UserGrantees = new List<UserGrantee>(), GroupGrantees = new List<GroupGrantee>()});
+
         var result = await sutProvider.Sut.GetPeoplePotentialGranteesAsync(id);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .GetManyDetailsByOrganizationAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
-
+        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
+            .GetPeopleGranteesAsync(id, Arg.Any<Guid>());
         Assert.Empty(result.Data);
     }
 
@@ -826,17 +825,14 @@ public class AccessPoliciesControllerTests
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(id).Returns(false);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(default, default)
+            .ReturnsForAnyArgs(new PeopleGrantees{ UserGrantees = new List<UserGrantee>(), GroupGrantees = new List<GroupGrantee>()});
+
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetPeoplePotentialGranteesAsync(id));
 
-        await sutProvider.GetDependency<IGroupRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByOrganizationIdAsync(Arg.Any<Guid>());
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyDetailsByOrganizationAsync(Arg.Any<Guid>());
-
-        await sutProvider.GetDependency<IServiceAccountRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyByOrganizationIdWriteAccessAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<AccessClientType>());
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
+            .GetPeopleGranteesAsync(id, Arg.Any<Guid>());
     }
 
     [Theory]
@@ -846,19 +842,16 @@ public class AccessPoliciesControllerTests
         PermissionType permissionType,
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id,
-        Group mockGroup)
+        GroupGrantee groupGrantee)
     {
         SetupPermission(sutProvider, permissionType, id);
-        sutProvider.GetDependency<IGroupRepository>().GetManyByOrganizationIdAsync(default)
-            .ReturnsForAnyArgs(new List<Group> { mockGroup });
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(default, default)
+            .ReturnsForAnyArgs(new PeopleGrantees{ UserGrantees = new List<UserGrantee>(), GroupGrantees = new List<GroupGrantee>{groupGrantee}});
 
         var result = await sutProvider.Sut.GetPeoplePotentialGranteesAsync(id);
 
-        await sutProvider.GetDependency<IGroupRepository>().Received(1)
-            .GetManyByOrganizationIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
-            .GetManyDetailsByOrganizationAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
+            .GetPeopleGranteesAsync(id, Arg.Any<Guid>());
 
         Assert.NotEmpty(result.Data);
     }

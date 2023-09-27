@@ -1094,7 +1094,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var (project, request) = await SetupProjectPeopleRequestAsync(PermissionType.RunAsAdmin, organizationUser);
 
-        var response = await _client.PostAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -1119,7 +1119,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             }
         };
 
-        var response = await _client.PostAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -1143,7 +1143,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             new() { GranteeId = group.Id, Read = true, Write = true }
         };
 
-        var response = await _client.PostAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -1158,7 +1158,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
 
-        var response = await _client.PostAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
         response.EnsureSuccessStatusCode();
 
         var result = await response.Content.ReadFromJsonAsync<PeopleAccessPoliciesResponseModel>();
