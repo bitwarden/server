@@ -1093,7 +1093,15 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("User email does not match invite.");
         }
 
-        return await AcceptUserAsync(orgUser, user, userService);
+        var organizationUser = await AcceptUserAsync(orgUser, user, userService);
+
+        if (user.EmailVerified == false)
+        {
+            user.EmailVerified = true;
+            await _userRepository.ReplaceAsync(user);
+        }
+
+        return organizationUser;
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)

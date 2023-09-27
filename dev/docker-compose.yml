@@ -68,7 +68,7 @@ services:
       - mysql
 
   idp:
-    image: kenchan0130/simplesamlphp:1.19.3
+    image: kenchan0130/simplesamlphp:1.19.8
     container_name: idp
     ports:
       - "8090:8080"
