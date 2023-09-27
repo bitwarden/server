@@ -240,6 +240,40 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         return entities.Select(MapToCore);
     }
 
+    public async Task<PeopleGrantees> GetPeopleGranteesAsync(Guid organizationId, Guid currentUserId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var userGrantees = await dbContext.OrganizationUsers
+            .Where(ou =>
+                ou.OrganizationId == organizationId &&
+                ou.AccessSecretsManager &&
+                ou.Status == OrganizationUserStatusType.Confirmed)
+            .Include(ou => ou.User)
+            .Select(ou => new
+                UserGrantee
+            {
+                OrganizationUserId = ou.Id,
+                Name = ou.User.Name,
+                Email = ou.User.Email,
+                CurrentUser = ou.UserId == currentUserId
+            }).ToListAsync();
+
+        var groupGrantees = await dbContext.Groups
+            .Where(g => g.OrganizationId == organizationId)
+            .Include(g => g.GroupUsers)
+            .Select(g => new GroupGrantee
+            {
+                GroupId = g.Id,
+                Name = g.Name,
+                CurrentUserInGroup = g.GroupUsers.Any(gu =>
+                    gu.OrganizationUser.User.Id == currentUserId)
+            }).ToListAsync();
+
+        return new PeopleGrantees { UserGrantees = userGrantees, GroupGrantees = groupGrantees };
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
         GetPeoplePoliciesByGrantedProjectIdAsync(Guid id, Guid userId)
     {
@@ -278,20 +312,41 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         var groupPolicyEntities =
             peoplePolicyEntities.Where(ap => ap.GetType() == typeof(GroupProjectAccessPolicy)).ToList();
 
-        foreach (var userPolicy in userPolicyEntities.Where(entity =>
-                     peopleAccessPolicies.UserAccessPolicies.All(ap =>
-                         ((Core.SecretsManager.Entities.UserProjectAccessPolicy)ap).OrganizationUserId !=
-                         ((UserProjectAccessPolicy)entity).OrganizationUserId)))
+
+        if (peopleAccessPolicies.UserAccessPolicies == null || !peopleAccessPolicies.UserAccessPolicies.Any())
         {
-            dbContext.Remove(userPolicy);
+            foreach (var userPolicy in userPolicyEntities)
+            {
+                dbContext.Remove(userPolicy);
+            }
+        }
+        else
+        {
+            foreach (var userPolicy in userPolicyEntities.Where(entity =>
+                         peopleAccessPolicies.UserAccessPolicies.All(ap =>
+                             ((Core.SecretsManager.Entities.UserProjectAccessPolicy)ap).OrganizationUserId !=
+                             ((UserProjectAccessPolicy)entity).OrganizationUserId)))
+            {
+                dbContext.Remove(userPolicy);
+            }
         }
 
-        foreach (var groupPolicy in groupPolicyEntities.Where(entity =>
-                     peopleAccessPolicies.GroupAccessPolicies.All(ap =>
-                         ((Core.SecretsManager.Entities.GroupProjectAccessPolicy)ap).GroupId !=
-                         ((GroupProjectAccessPolicy)entity).GroupId)))
+        if (peopleAccessPolicies.GroupAccessPolicies == null || !peopleAccessPolicies.GroupAccessPolicies.Any())
         {
-            dbContext.Remove(groupPolicy);
+            foreach (var groupPolicy in groupPolicyEntities)
+            {
+                dbContext.Remove(groupPolicy);
+            }
+        }
+        else
+        {
+            foreach (var groupPolicy in groupPolicyEntities.Where(entity =>
+                         peopleAccessPolicies.GroupAccessPolicies.All(ap =>
+                             ((Core.SecretsManager.Entities.GroupProjectAccessPolicy)ap).GroupId !=
+                             ((GroupProjectAccessPolicy)entity).GroupId)))
+            {
+                dbContext.Remove(groupPolicy);
+            }
         }
 
         var results = new List<BaseAccessPolicy>();

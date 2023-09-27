@@ -18,4 +18,5 @@ public interface IAccessPolicyRepository
     Task DeleteAsync(Guid id);
     Task<IEnumerable<BaseAccessPolicy>> GetPeoplePoliciesByGrantedProjectIdAsync(Guid id, Guid userId);
     Task<IEnumerable<BaseAccessPolicy>> ReplaceProjectPeopleAsync(PeopleAccessPolicies peopleAccessPolicies);
+    Task<PeopleGrantees> GetPeopleGranteesAsync(Guid organizationId, Guid currentUserId);
 }

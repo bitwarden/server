@@ -6,8 +6,8 @@ public class PeopleAccessPolicies
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }
-    public List<UserProjectAccessPolicy> UserAccessPolicies { get; set; }
-    public List<GroupProjectAccessPolicy> GroupAccessPolicies { get; set; }
+    public IEnumerable<UserProjectAccessPolicy> UserAccessPolicies { get; set; }
+    public IEnumerable<GroupProjectAccessPolicy> GroupAccessPolicies { get; set; }
 
     public IEnumerable<BaseAccessPolicy> ToBaseAccessPolicies()
     {

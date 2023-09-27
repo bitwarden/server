@@ -26,8 +26,6 @@ public class AccessPoliciesController : Controller
     private readonly ICreateAccessPoliciesCommand _createAccessPoliciesCommand;
     private readonly ICurrentContext _currentContext;
     private readonly IDeleteAccessPolicyCommand _deleteAccessPolicyCommand;
-    private readonly IGroupRepository _groupRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IUpdateAccessPolicyCommand _updateAccessPolicyCommand;
@@ -52,8 +50,6 @@ public class AccessPoliciesController : Controller
         _currentContext = currentContext;
         _serviceAccountRepository = serviceAccountRepository;
         _projectRepository = projectRepository;
-        _groupRepository = groupRepository;
-        _organizationUserRepository = organizationUserRepository;
         _accessPolicyRepository = accessPolicyRepository;
         _createAccessPoliciesCommand = createAccessPoliciesCommand;
         _deleteAccessPolicyCommand = deleteAccessPolicyCommand;
@@ -244,15 +240,11 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var groups = await _groupRepository.GetManyByOrganizationIdAsync(id);
-        var groupResponses = groups.Select(g => new PotentialGranteeResponseModel(g));
+        var userId = _userService.GetProperUserId(User).Value;
+        var peopleGrantees = await _accessPolicyRepository.GetPeopleGranteesAsync(id, userId);
 
-        var organizationUsers =
-            await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
-        var userResponses = organizationUsers
-            .Where(user => user.AccessSecretsManager && user.Status == OrganizationUserStatusType.Confirmed)
-            .Select(userDetails => new PotentialGranteeResponseModel(userDetails));
-
+        var userResponses = peopleGrantees.UserGrantees.Select(ug => new PotentialGranteeResponseModel(ug));
+        var groupResponses = peopleGrantees.GroupGrantees.Select(g => new PotentialGranteeResponseModel(g));
         return new ListResponseModel<PotentialGranteeResponseModel>(userResponses.Concat(groupResponses));
     }
 
@@ -297,7 +289,6 @@ public class AccessPoliciesController : Controller
         return new PeopleAccessPoliciesResponseModel(results);
     }
 
-    [HttpPost("/projects/{id}/access-policies/people")]
     [HttpPut("/projects/{id}/access-policies/people")]
     public async Task<PeopleAccessPoliciesResponseModel> PutProjectPeopleAccessPoliciesAsync([FromRoute] Guid id,
         [FromBody] PeopleAccessPoliciesRequestModel request)
