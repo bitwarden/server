@@ -38,8 +38,8 @@ GO
 CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateOrUpdateAccessForMany]
 	@OrganizationId UNIQUEIDENTIFIER,
 	@CollectionIds AS [dbo].[GuidIdArray] READONLY,
-    @Groups AS [dbo].[SelectionReadOnlyArray] READONLY,
-    @Users AS [dbo].[SelectionReadOnlyArray] READONLY
+    @Groups AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
+    @Users AS [dbo].[SelectionReadOnlyArray_V2] READONLY
 AS
 BEGIN
 	SET NOCOUNT ON
@@ -78,7 +78,15 @@ BEGIN
 		[Target].[HidePasswords] = [Source].[HidePasswords],
 		[Target].[Manage] = [Source].[Manage]
 	WHEN NOT MATCHED BY TARGET
-		THEN INSERT VALUES
+		THEN INSERT
+	    (
+	        [CollectionId],
+	        [GroupId],
+	        [ReadOnly],
+	        [HidePasswords],
+	        [Manage]
+        )
+	    VALUES
 		(
 			[Source].[CollectionId],
 			[Source].[GroupId],
@@ -121,7 +129,15 @@ BEGIN
 		[Target].[HidePasswords] = [Source].[HidePasswords],
 		[Target].[Manage] = [Source].[Manage]
 	WHEN NOT MATCHED BY TARGET
-		THEN INSERT VALUES
+	    THEN INSERT
+	    (
+	        [CollectionId],
+	        [OrganizationUserId],
+	        [ReadOnly],
+	        [HidePasswords],
+	        [Manage]
+        )
+	    VALUES
 		(
 			[Source].[CollectionId],
 			[Source].[OrganizationUserId],
