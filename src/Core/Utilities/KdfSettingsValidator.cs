@@ -24,9 +24,9 @@ public static class KdfSettingsValidator
                 {
                     yield return new ValidationResult($"Argon2 memory must be between {AuthConstants.ARGON2_MEMORY.Min}mb and {AuthConstants.ARGON2_MEMORY.Max}mb.");
                 }
-                else if (!kdfParallelism.HasValue || !AuthConstants.ARGON_PARALLELISM.IsInsideRange(kdfParallelism.Value))
+                else if (!kdfParallelism.HasValue || !AuthConstants.ARGON2_PARALLELISM.IsInsideRange(kdfParallelism.Value))
                 {
-                    yield return new ValidationResult($"Argon2 parallelism must be between {AuthConstants.ARGON_PARALLELISM.Min} and {AuthConstants.ARGON_PARALLELISM.Max}.");
+                    yield return new ValidationResult($"Argon2 parallelism must be between {AuthConstants.ARGON2_PARALLELISM.Min} and {AuthConstants.ARGON2_PARALLELISM.Max}.");
                 }
                 break;
 

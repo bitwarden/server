@@ -29,7 +29,7 @@ public static class AuthConstants
 
     public static readonly RangeConstant ARGON2_ITERATIONS = new(1, 10, 3);
     public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
-    public static readonly RangeConstant ARGON_PARALLELISM = new(1, 16, 4);
+    public static readonly RangeConstant ARGON2_PARALLELISM = new(1, 16, 4);
 
 }
 
