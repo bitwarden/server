@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections]
+﻿CREATE PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections_V2]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
@@ -12,7 +12,7 @@
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
-    @Collections AS [dbo].[SelectionReadOnlyArray] READONLY,
+    @Collections AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
     @AccessSecretsManager BIT = 0
 AS
 BEGIN
@@ -24,7 +24,8 @@ BEGIN
         [Target]
     SET
         [Target].[ReadOnly] = [Source].[ReadOnly],
-        [Target].[HidePasswords] = [Source].[HidePasswords]
+        [Target].[HidePasswords] = [Source].[HidePasswords],
+        [Target].[Manage] = [Source].[Manage]
     FROM
         [dbo].[CollectionUser] AS [Target]
     INNER JOIN
@@ -34,6 +35,7 @@ BEGIN
         AND (
             [Target].[ReadOnly] != [Source].[ReadOnly]
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
+            OR [Target].[Manage] != [Source].[Manage]
         )
 
     -- Insert
@@ -42,13 +44,15 @@ BEGIN
         [CollectionId],
         [OrganizationUserId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         [Source].[Id],
         @Id,
         [Source].[ReadOnly],
-        [Source].[HidePasswords]
+        [Source].[HidePasswords],
+        [Source].[Manage]
     FROM
         @Collections AS [Source]
     INNER JOIN

@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Group_UpdateWithCollections]
+﻿CREATE PROCEDURE [dbo].[Group_UpdateWithCollections_V2]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(100),
@@ -6,7 +6,7 @@
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
+    @Collections AS [dbo].[SelectionReadOnlyArray_V2] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -30,26 +30,30 @@ BEGIN
         AND [Target].[GroupId] = @Id
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
-        INSERT -- Add explicit column list
+        INSERT
         (
         	[CollectionId],
         	[GroupId],
         	[ReadOnly],
-        	[HidePasswords]
+        	[HidePasswords],
+            [Manage]
     	)
         VALUES
         (
             [Source].[Id],
             @Id,
             [Source].[ReadOnly],
-            [Source].[HidePasswords]
+            [Source].[HidePasswords],
+            [Source].[Manage]
         )
     WHEN MATCHED AND (
         [Target].[ReadOnly] != [Source].[ReadOnly]
         OR [Target].[HidePasswords] != [Source].[HidePasswords]
+        OR [Target].[Manage] != [Source].[Manage]
     ) THEN
         UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly],
-                   [Target].[HidePasswords] = [Source].[HidePasswords]
+                   [Target].[HidePasswords] = [Source].[HidePasswords],
+                   [Target].[Manage] = [Source].[Manage]
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[GroupId] = @Id THEN
         DELETE

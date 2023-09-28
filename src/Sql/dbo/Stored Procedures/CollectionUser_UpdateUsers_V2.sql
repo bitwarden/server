@@ -1,6 +1,6 @@
-﻿CREATE PROCEDURE [dbo].[CollectionUser_UpdateUsers]
+﻿CREATE PROCEDURE [dbo].[CollectionUser_UpdateUsers_V2]
     @CollectionId UNIQUEIDENTIFIER,
-    @Users AS [dbo].[SelectionReadOnlyArray] READONLY
+    @Users AS [dbo].[SelectionReadOnlyArray_V2] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -19,7 +19,8 @@ BEGIN
         [Target]
     SET
         [Target].[ReadOnly] = [Source].[ReadOnly],
-        [Target].[HidePasswords] = [Source].[HidePasswords]
+        [Target].[HidePasswords] = [Source].[HidePasswords],
+        [Target].[Manage] = [Source].[Manage]
     FROM
         [dbo].[CollectionUser] [Target]
     INNER JOIN
@@ -29,21 +30,24 @@ BEGIN
         AND (
             [Target].[ReadOnly] != [Source].[ReadOnly]
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
+            OR [Target].[Manage] != [Source].[Manage]
         )
 
-    -- Insert (now with column list)
+    -- Insert
     INSERT INTO [dbo].[CollectionUser]
     (
         [CollectionId],
         [OrganizationUserId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         @CollectionId,
         [Source].[Id],
         [Source].[ReadOnly],
-        [Source].[HidePasswords]
+        [Source].[HidePasswords],
+        [Source].[Manage]
     FROM
         @Users [Source]
     INNER JOIN
