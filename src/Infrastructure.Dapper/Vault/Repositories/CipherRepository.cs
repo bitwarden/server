@@ -392,7 +392,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                                 SET
                                     [Data] = TC.[Data],
                                     [Attachments] = TC.[Attachments],
-                                    [RevisionDate] = TC.[RevisionDate]
+                                    [RevisionDate] = TC.[RevisionDate],
+                                    [Key] = TC.[Key]
                                 FROM
                                     [dbo].[Cipher] C
                                 INNER JOIN
@@ -506,7 +507,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                                 [Data] = TC.[Data],
                                 [Attachments] = TC.[Attachments],
                                 [RevisionDate] = TC.[RevisionDate],
-                                [DeletedDate] = TC.[DeletedDate]
+                                [DeletedDate] = TC.[DeletedDate],
+                                [Key] = TC.[Key]
                             FROM
                                 [dbo].[Cipher] C
                             INNER JOIN
@@ -728,6 +730,8 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         ciphersTable.Columns.Add(deletedDateColumn);
         var repromptColumn = new DataColumn(nameof(c.Reprompt), typeof(short));
         ciphersTable.Columns.Add(repromptColumn);
+        var keyColummn = new DataColumn(nameof(c.Key), typeof(string));
+        ciphersTable.Columns.Add(keyColummn);
 
         foreach (DataColumn col in ciphersTable.Columns)
         {
@@ -754,6 +758,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
             row[revisionDateColumn] = cipher.RevisionDate;
             row[deletedDateColumn] = cipher.DeletedDate.HasValue ? (object)cipher.DeletedDate : DBNull.Value;
             row[repromptColumn] = cipher.Reprompt;
+            row[keyColummn] = cipher.Key;
 
             ciphersTable.Rows.Add(row);
         }
