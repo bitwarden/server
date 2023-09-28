@@ -36,8 +36,8 @@ public static class AuthConstants
 public class RangeConstant
 {
     public int Default { get; }
-    public int Min;
-    public int Max;
+    public int Min { get; }
+    public int Max { get; }
 
     public RangeConstant(int min, int max, int def)
     {
