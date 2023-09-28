@@ -193,7 +193,7 @@ public static class PasswordManagerPlanStore
 
                 StripeSeatPlanId = "2023-teams-org-seat-annually",
                 StripeStoragePlanId = "storage-gb-annually",
-                SeatPrice = 36,
+                SeatPrice = 48,
                 AdditionalStoragePricePerGb = 4,
 
                 AllowSeatAutoscale = true,
@@ -299,7 +299,7 @@ public static class PasswordManagerPlanStore
 
                 StripeSeatPlanId = "2023-teams-org-seat-monthly",
                 StripeStoragePlanId = "storage-gb-monthly",
-                SeatPrice = 4,
+                SeatPrice = 5,
                 AdditionalStoragePricePerGb = 0.5M,
 
                 AllowSeatAutoscale = true,
@@ -431,7 +431,7 @@ public static class PasswordManagerPlanStore
                 StripeSeatPlanId = "2023-enterprise-org-seat-annually",
                 StripeStoragePlanId = "storage-gb-annually",
                 BasePrice = 0,
-                SeatPrice = 60,
+                SeatPrice = 72,
                 AdditionalStoragePricePerGb = 4,
 
                 AllowSeatAutoscale = true,
@@ -560,7 +560,7 @@ public static class PasswordManagerPlanStore
                 StripeSeatPlanId = "2023-enterprise-seat-monthly",
                 StripeStoragePlanId = "storage-gb-monthly",
                 BasePrice = 0,
-                SeatPrice = 6,
+                SeatPrice = 7,
                 AdditionalStoragePricePerGb = 0.5M,
 
                 AllowSeatAutoscale = true,
