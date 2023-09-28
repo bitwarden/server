@@ -3,10 +3,8 @@ using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.Test.SecretsManager.Enums;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
@@ -807,7 +805,11 @@ public class AccessPoliciesControllerTests
     {
         SetupPermission(sutProvider, permissionType, id);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(default, default)
-            .ReturnsForAnyArgs(new PeopleGrantees{ UserGrantees = new List<UserGrantee>(), GroupGrantees = new List<GroupGrantee>()});
+            .ReturnsForAnyArgs(new PeopleGrantees
+            {
+                UserGrantees = new List<UserGrantee>(),
+                GroupGrantees = new List<GroupGrantee>()
+            });
 
         var result = await sutProvider.Sut.GetPeoplePotentialGranteesAsync(id);
 
@@ -826,8 +828,11 @@ public class AccessPoliciesControllerTests
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(default, default)
-            .ReturnsForAnyArgs(new PeopleGrantees{ UserGrantees = new List<UserGrantee>(), GroupGrantees = new List<GroupGrantee>()});
-
+            .ReturnsForAnyArgs(new PeopleGrantees
+            {
+                UserGrantees = new List<UserGrantee>(),
+                GroupGrantees = new List<GroupGrantee>()
+            });
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetPeoplePotentialGranteesAsync(id));
 
@@ -846,7 +851,11 @@ public class AccessPoliciesControllerTests
     {
         SetupPermission(sutProvider, permissionType, id);
         sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(default, default)
-            .ReturnsForAnyArgs(new PeopleGrantees{ UserGrantees = new List<UserGrantee>(), GroupGrantees = new List<GroupGrantee>{groupGrantee}});
+            .ReturnsForAnyArgs(new PeopleGrantees
+            {
+                UserGrantees = new List<UserGrantee>(),
+                GroupGrantees = new List<GroupGrantee> { groupGrantee }
+            });
 
         var result = await sutProvider.Sut.GetPeoplePotentialGranteesAsync(id);
 
