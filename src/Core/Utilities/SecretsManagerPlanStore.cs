@@ -207,7 +207,7 @@ public static class SecretsManagerPlanStore
             },
             new Plan
             {
-                Type = PlanType.EnterpriseAnnually2023,
+                Type = PlanType.EnterpriseAnnually,
                 Name = "Enterprise (Annually)",
                 Product = ProductType.Enterprise,
                 BitwardenProduct = BitwardenProductType.SecretsManager,
