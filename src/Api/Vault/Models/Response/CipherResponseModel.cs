@@ -76,7 +76,6 @@ public class CipherMiniResponseModel : ResponseModel
     public CipherCardModel Card { get; set; }
     public CipherIdentityModel Identity { get; set; }
     public CipherSecureNoteModel SecureNote { get; set; }
-    public CipherFido2KeyModel Fido2Key { get; set; }
     public IEnumerable<CipherFieldModel> Fields { get; set; }
     public IEnumerable<CipherPasswordHistoryModel> PasswordHistory { get; set; }
     public IEnumerable<AttachmentResponseModel> Attachments { get; set; }

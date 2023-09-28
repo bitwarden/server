@@ -1,8 +1,8 @@
 ﻿namespace Bit.Core.Vault.Models.Data;
 
-public class CipherLoginFido2KeyData
+public class CipherLoginFido2CredentialData
 {
-    public CipherLoginFido2KeyData() { }
+    public CipherLoginFido2CredentialData() { }
 
     public string CredentialId { get; set; }
     public string KeyType { get; set; }
