@@ -892,7 +892,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
                 await _userRepository.ReplaceAsync(user);
             }
 
-            await _pushService.PushLogOutAsync(user.Id);
+            await _pushService.PushLogOutAsync(user.Id, excludeCurrentContextFromPush: true);
             return IdentityResult.Success;
         }
 
@@ -1455,26 +1455,35 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("No user email.");
         }
 
-        if (!user.UsesKeyConnector)
-        {
-            throw new BadRequestException("Not using Key Connector.");
-        }
-
         var token = await base.GenerateUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
             "otp:" + user.Email);
         await _mailService.SendOTPEmailAsync(user.Email, token);
     }
 
-    public Task<bool> VerifyOTPAsync(User user, string token)
+    public async Task<bool> VerifyOTPAsync(User user, string token)
     {
-        return base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
+        return await base.VerifyUserTokenAsync(user, TokenOptions.DefaultEmailProvider,
             "otp:" + user.Email, token);
     }
 
     public async Task<bool> VerifySecretAsync(User user, string secret)
     {
-        return user.UsesKeyConnector
-            ? await VerifyOTPAsync(user, secret)
-            : await CheckPasswordAsync(user, secret);
+        bool isVerified;
+        if (user.HasMasterPassword())
+        {
+            // If the user has a master password the secret is most likely going to be a hash
+            // of their password, but in certain scenarios, like when the user has logged into their
+            // device without a password (trusted device encryption) but the account
+            // does still have a password we will allow the use of OTP.
+            isVerified = await CheckPasswordAsync(user, secret) ||
+                await VerifyOTPAsync(user, secret);
+        }
+        else
+        {
+            // If they don't have a password at all they can only do OTP
+            isVerified = await VerifyOTPAsync(user, secret);
+        }
+
+        return isVerified;
     }
 }

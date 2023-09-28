@@ -709,6 +709,69 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         Assert.Empty(secrets);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task GetSecretsByIds_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        await LoginAsync(_email);
+
+        var secret = await _secretRepository.CreateAsync(new Secret
+        {
+            OrganizationId = org.Id,
+            Key = _mockEncryptedString,
+            Value = _mockEncryptedString,
+            Note = _mockEncryptedString,
+        });
+
+        var request = new GetSecretsRequestModel { Ids = new[] { secret.Id } };
+
+        var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task GetSecretsByIds_Success(PermissionType permissionType)
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        await LoginAsync(_email);
+
+        var (project, secretIds) = await CreateSecretsAsync(org.Id);
+
+        if (permissionType == PermissionType.RunAsUserWithPermission)
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await LoginAsync(email);
+
+            var accessPolicies = new List<BaseAccessPolicy>
+            {
+                new UserProjectAccessPolicy
+                {
+                    GrantedProjectId = project.Id, OrganizationUserId = orgUser.Id, Read = true, Write = true,
+                },
+            };
+            await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+        }
+        else
+        {
+            var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.Admin, true);
+            await LoginAsync(email);
+        }
+
+        var request = new GetSecretsRequestModel { Ids = secretIds };
+
+        var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ListResponseModel<BaseSecretResponseModel>>();
+        Assert.NotNull(result);
+        Assert.NotEmpty(result!.Data);
+        Assert.Equal(secretIds.Count, result!.Data.Count());
+    }
+
     private async Task<(Project Project, List<Guid> secretIds)> CreateSecretsAsync(Guid orgId, int numberToCreate = 3)
     {
         var project = await _projectRepository.CreateAsync(new Project

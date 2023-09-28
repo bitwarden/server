@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -108,7 +107,7 @@ public class OrganizationUserUpdateGroupsRequestModel
     public IEnumerable<string> GroupIds { get; set; }
 }
 
-public class OrganizationUserResetPasswordEnrollmentRequestModel : SecretVerificationRequestModel
+public class OrganizationUserResetPasswordEnrollmentRequestModel
 {
     public string ResetPasswordKey { get; set; }
 }

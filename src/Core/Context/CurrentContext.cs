@@ -26,8 +26,8 @@ public class CurrentContext : ICurrentContext
     public virtual string DeviceIdentifier { get; set; }
     public virtual DeviceType? DeviceType { get; set; }
     public virtual string IpAddress { get; set; }
-    public virtual List<CurrentContentOrganization> Organizations { get; set; }
-    public virtual List<CurrentContentProvider> Providers { get; set; }
+    public virtual List<CurrentContextOrganization> Organizations { get; set; }
+    public virtual List<CurrentContextProvider> Providers { get; set; }
     public virtual Guid? InstallationId { get; set; }
     public virtual Guid? OrganizationId { get; set; }
     public virtual bool CloudflareWorkerProxied { get; set; }
@@ -166,17 +166,17 @@ public class CurrentContext : ICurrentContext
         return Task.FromResult(0);
     }
 
-    private List<CurrentContentOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
+    private List<CurrentContextOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
     {
         var accessSecretsManager = claimsDict.ContainsKey(Claims.SecretsManagerAccess)
             ? claimsDict[Claims.SecretsManagerAccess].ToDictionary(s => s.Value, _ => true)
             : new Dictionary<string, bool>();
 
-        var organizations = new List<CurrentContentOrganization>();
+        var organizations = new List<CurrentContextOrganization>();
         if (claimsDict.ContainsKey(Claims.OrganizationOwner))
         {
             organizations.AddRange(claimsDict[Claims.OrganizationOwner].Select(c =>
-                new CurrentContentOrganization
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Owner,
@@ -185,7 +185,7 @@ public class CurrentContext : ICurrentContext
         }
         else if (orgApi && OrganizationId.HasValue)
         {
-            organizations.Add(new CurrentContentOrganization
+            organizations.Add(new CurrentContextOrganization
             {
                 Id = OrganizationId.Value,
                 Type = OrganizationUserType.Owner,
@@ -195,7 +195,7 @@ public class CurrentContext : ICurrentContext
         if (claimsDict.ContainsKey(Claims.OrganizationAdmin))
         {
             organizations.AddRange(claimsDict[Claims.OrganizationAdmin].Select(c =>
-                new CurrentContentOrganization
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Admin,
@@ -206,7 +206,7 @@ public class CurrentContext : ICurrentContext
         if (claimsDict.ContainsKey(Claims.OrganizationUser))
         {
             organizations.AddRange(claimsDict[Claims.OrganizationUser].Select(c =>
-                new CurrentContentOrganization
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.User,
@@ -217,7 +217,7 @@ public class CurrentContext : ICurrentContext
         if (claimsDict.ContainsKey(Claims.OrganizationManager))
         {
             organizations.AddRange(claimsDict[Claims.OrganizationManager].Select(c =>
-                new CurrentContentOrganization
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Manager,
@@ -228,7 +228,7 @@ public class CurrentContext : ICurrentContext
         if (claimsDict.ContainsKey(Claims.OrganizationCustom))
         {
             organizations.AddRange(claimsDict[Claims.OrganizationCustom].Select(c =>
-                new CurrentContentOrganization
+                new CurrentContextOrganization
                 {
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Custom,
@@ -240,13 +240,13 @@ public class CurrentContext : ICurrentContext
         return organizations;
     }
 
-    private List<CurrentContentProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
+    private List<CurrentContextProvider> GetProviders(Dictionary<string, IEnumerable<Claim>> claimsDict)
     {
-        var providers = new List<CurrentContentProvider>();
+        var providers = new List<CurrentContextProvider>();
         if (claimsDict.ContainsKey(Claims.ProviderAdmin))
         {
             providers.AddRange(claimsDict[Claims.ProviderAdmin].Select(c =>
-                new CurrentContentProvider
+                new CurrentContextProvider
                 {
                     Id = new Guid(c.Value),
                     Type = ProviderUserType.ProviderAdmin
@@ -256,7 +256,7 @@ public class CurrentContext : ICurrentContext
         if (claimsDict.ContainsKey(Claims.ProviderServiceUser))
         {
             providers.AddRange(claimsDict[Claims.ProviderServiceUser].Select(c =>
-                new CurrentContentProvider
+                new CurrentContextProvider
                 {
                     Id = new Guid(c.Value),
                     Type = ProviderUserType.ServiceUser
@@ -358,7 +358,9 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> ViewAssignedCollections(Guid orgId)
     {
-        return await EditAssignedCollections(orgId) || await DeleteAssignedCollections(orgId);
+        return await CreateNewCollections(orgId) // Required to display the existing collections under which the new collection can be nested
+               || await EditAssignedCollections(orgId)
+               || await DeleteAssignedCollections(orgId);
     }
 
     public async Task<bool> ManageGroups(Guid orgId)
@@ -483,26 +485,26 @@ public class CurrentContext : ICurrentContext
         return Organizations?.Any(o => o.Id == orgId && o.AccessSecretsManager) ?? false;
     }
 
-    public async Task<ICollection<CurrentContentOrganization>> OrganizationMembershipAsync(
+    public async Task<ICollection<CurrentContextOrganization>> OrganizationMembershipAsync(
         IOrganizationUserRepository organizationUserRepository, Guid userId)
     {
         if (Organizations == null)
         {
             var userOrgs = await organizationUserRepository.GetManyDetailsByUserAsync(userId);
             Organizations = userOrgs.Where(ou => ou.Status == OrganizationUserStatusType.Confirmed)
-                .Select(ou => new CurrentContentOrganization(ou)).ToList();
+                .Select(ou => new CurrentContextOrganization(ou)).ToList();
         }
         return Organizations;
     }
 
-    public async Task<ICollection<CurrentContentProvider>> ProviderMembershipAsync(
+    public async Task<ICollection<CurrentContextProvider>> ProviderMembershipAsync(
         IProviderUserRepository providerUserRepository, Guid userId)
     {
         if (Providers == null)
         {
             var userProviders = await providerUserRepository.GetManyByUserAsync(userId);
             Providers = userProviders.Where(ou => ou.Status == ProviderUserStatusType.Confirmed)
-                .Select(ou => new CurrentContentProvider(ou)).ToList();
+                .Select(ou => new CurrentContextProvider(ou)).ToList();
         }
         return Providers;
     }
