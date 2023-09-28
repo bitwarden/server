@@ -1,4 +1,4 @@
-namespace Bit.Migrator;
+﻿namespace Bit.Migrator;
 
 public static class MigratorConstants
 {
