@@ -45,13 +45,13 @@ public class RangeConstant
         Min = min;
         Max = max;
 
-        if (!IsInsideRange(def))
+        if (!InsideRange(def))
         {
             throw new ArgumentOutOfRangeException($"{Default} is outside allowed range of {Min}-{Max}.");
         }
     }
 
-    public bool IsInsideRange(int number)
+    public bool InsideRange(int number)
     {
         return Min <= number && number <= Max;
     }
