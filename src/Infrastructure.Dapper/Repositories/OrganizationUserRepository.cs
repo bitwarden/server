@@ -325,7 +325,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationUser_CreateWithCollections]",
+                $"[{Schema}].[OrganizationUser_CreateWithCollections_V2]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -342,7 +342,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationUser_UpdateWithCollections]",
+                $"[{Schema}].[OrganizationUser_UpdateWithCollections_V2]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
