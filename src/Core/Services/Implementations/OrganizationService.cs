@@ -1093,7 +1093,15 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("User email does not match invite.");
         }
 
-        return await AcceptUserAsync(orgUser, user, userService);
+        var organizationUser = await AcceptUserAsync(orgUser, user, userService);
+
+        if (user.EmailVerified == false)
+        {
+            user.EmailVerified = true;
+            await _userRepository.ReplaceAsync(user);
+        }
+
+        return organizationUser;
     }
 
     public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)
@@ -1582,17 +1590,6 @@ public class OrganizationService : IOrganizationService
         return hasOtherOwner;
     }
 
-    public async Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId)
-    {
-        if (loggedInUserId.HasValue)
-        {
-            await ValidateOrganizationUserUpdatePermissions(organizationUser.OrganizationId, organizationUser.Type, null, organizationUser.GetPermissions());
-        }
-        await _organizationUserRepository.UpdateGroupsAsync(organizationUser.Id, groupIds);
-        await _eventService.LogOrganizationUserEventAsync(organizationUser,
-            EventType.OrganizationUser_UpdatedGroups);
-    }
-
     public async Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId)
     {
         // Org User must be the same as the calling user and the organization ID associated with the user must match passed org ID
@@ -2032,7 +2029,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
+    public async Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType, OrganizationUserType? oldType, Permissions permissions)
     {
         if (await _currentContext.OrganizationOwner(organizationId))
         {
