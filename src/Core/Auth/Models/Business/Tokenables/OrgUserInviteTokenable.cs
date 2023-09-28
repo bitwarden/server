@@ -7,6 +7,7 @@ namespace Bit.Core.Auth.Models.Business.Tokenables;
 public class OrgUserInviteTokenable : ExpiringTokenable
 {
     // TODO: Ideally this would be internal and only visible to the test project.
+    // but configuring that is out of scope for these changes.
     public static TimeSpan GetTokenLifetime() => TimeSpan.FromDays(5);
 
     public const string ClearTextPrefix = "BwOrgUserInviteToken_";
