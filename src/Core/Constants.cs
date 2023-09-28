@@ -23,6 +23,35 @@ public static class Constants
     public const string CipherKeyEncryptionMinimumVersion = "2023.9.1";
 }
 
+public static class AuthConstants
+{
+    public static readonly RangeConstant PBKDF2_ITERATIONS = new(600_000, 2_000_000, 100_000);
+
+    public static readonly RangeConstant ARGON2_ITERATIONS = new(1, 10, 3);
+    public static readonly RangeConstant ARGON2_MEMORY = new(15, 1024, 64);
+    public static readonly RangeConstant ARGON_PARALLELISM = new(1, 16, 4);
+
+}
+
+public class RangeConstant
+{
+    public int Default { get; }
+    public int Min;
+    public int Max;
+
+    public RangeConstant(int min, int max, int def)
+    {
+        Default = def;
+        Min = min;
+        Max = max;
+    }
+
+    public bool IsInsideRange(int number)
+    {
+        return Min <= number && number <= Max;
+    }
+}
+
 public static class TokenPurposes
 {
     public const string LinkSso = "LinkSso";

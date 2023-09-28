@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+﻿using Bit.Core;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
@@ -66,7 +67,7 @@ public class AccountsController : Controller
             kdfInformation = new UserKdfInformation
             {
                 Kdf = KdfType.PBKDF2_SHA256,
-                KdfIterations = 100000,
+                KdfIterations = AuthConstants.PBKDF2_ITERATIONS.Default,
             };
         }
         return new PreloginResponseModel(kdfInformation);
