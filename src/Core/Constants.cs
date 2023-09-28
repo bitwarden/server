@@ -39,13 +39,18 @@ public class RangeConstant
     public int Min { get; }
     public int Max { get; }
 
-    public RangeConstant(int min, int max, int def)
+    public RangeConstant(int min, int max, int defaultValue)
     {
-        Default = def;
+        Default = defaultValue;
         Min = min;
         Max = max;
 
-        if (!InsideRange(def))
+        if (Min > Max)
+        {
+            throw new ArgumentOutOfRangeException($"{Min} is larger than {Max}.");
+        }
+
+        if (!InsideRange(defaultValue))
         {
             throw new ArgumentOutOfRangeException($"{Default} is outside allowed range of {Min}-{Max}.");
         }
