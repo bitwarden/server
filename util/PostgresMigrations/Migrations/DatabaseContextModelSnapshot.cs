@@ -1509,6 +1509,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("Folders")
                         .HasColumnType("text");
+                    
+                    b.Property<string>("Key")
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("uuid");
