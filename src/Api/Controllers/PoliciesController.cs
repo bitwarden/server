@@ -1,12 +1,15 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
@@ -26,6 +29,7 @@ public class PoliciesController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IDataProtector _organizationServiceDataProtector;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public PoliciesController(
         IPolicyRepository policyRepository,
@@ -35,7 +39,8 @@ public class PoliciesController : Controller
         IUserService userService,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
     {
         _policyRepository = policyRepository;
         _policyService = policyService;
@@ -46,6 +51,8 @@ public class PoliciesController : Controller
         _globalSettings = globalSettings;
         _organizationServiceDataProtector = dataProtectionProvider.CreateProtector(
             "OrganizationServiceDataProtector");
+
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
     }
 
     [HttpGet("{type}")]
@@ -81,25 +88,29 @@ public class PoliciesController : Controller
 
     [AllowAnonymous]
     [HttpGet("token")]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(string orgId, [FromQuery] string email,
-        [FromQuery] string token, [FromQuery] string organizationUserId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetByToken(Guid orgId, [FromQuery] string email,
+        [FromQuery] string token, [FromQuery] Guid organizationUserId)
     {
-        var orgUserId = new Guid(organizationUserId);
-        var tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
-            email, orgUserId, _globalSettings);
+        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+            _orgUserInviteTokenDataFactory, token, organizationUserId, email);
+
+        var tokenValid = newTokenValid || CoreHelpers.UserInviteTokenIsValid(
+            _organizationServiceDataProtector, token, email, organizationUserId, _globalSettings
+        );
+
         if (!tokenValid)
         {
             throw new NotFoundException();
         }
 
-        var orgIdGuid = new Guid(orgId);
-        var orgUser = await _organizationUserRepository.GetByIdAsync(orgUserId);
-        if (orgUser == null || orgUser.OrganizationId != orgIdGuid)
+        var orgUser = await _organizationUserRepository.GetByIdAsync(orgId);
+        if (orgUser == null || orgUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgIdGuid);
+        var policies = await _policyRepository.GetManyByOrganizationIdAsync(orgId);
         var responses = policies.Where(p => p.Enabled).Select(p => new PolicyResponseModel(p));
         return new ListResponseModel<PolicyResponseModel>(responses);
     }

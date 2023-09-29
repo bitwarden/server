@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
@@ -13,6 +14,7 @@ using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Fakes;
 using Bit.Test.Common.Helpers;
 using Fido2NetLib;
 using Microsoft.AspNetCore.DataProtection;
@@ -254,7 +256,8 @@ public class UserServiceTests
             sutProvider.GetDependency<IGlobalSettings>(),
             sutProvider.GetDependency<IAcceptOrgUserCommand>(),
             sutProvider.GetDependency<IProviderUserRepository>(),
-            sutProvider.GetDependency<IStripeSyncService>());
+            sutProvider.GetDependency<IStripeSyncService>(),
+            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>());
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
 

@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -10,6 +11,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -56,6 +58,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public UserService(
         IUserRepository userRepository,
@@ -86,7 +89,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IGlobalSettings globalSettings,
         IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
-        IStripeSyncService stripeSyncService)
+        IStripeSyncService stripeSyncService,
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory)
         : base(
               store,
               optionsAccessor,
@@ -123,6 +127,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _acceptOrgUserCommand = acceptOrgUserCommand;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -288,8 +293,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var tokenValid = false;
         if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
         {
-            tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
-                user.Email, orgUserId.Value, _globalSettings);
+            // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+            var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+                _orgUserInviteTokenDataFactory, token, orgUserId.Value, user.Email);
+
+            tokenValid =  newTokenValid ||
+                          CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
+                              user.Email, orgUserId.Value, _globalSettings);
         }
 
         if (_globalSettings.DisableUserRegistration && !tokenValid)
