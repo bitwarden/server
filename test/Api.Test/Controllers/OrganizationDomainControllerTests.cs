@@ -4,6 +4,7 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
@@ -13,8 +14,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using Organization = Bit.Core.Entities.Organization;
-using OrganizationDomain = Bit.Core.Entities.OrganizationDomain;
 
 namespace Bit.Api.Test.Controllers;
 
@@ -28,7 +27,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
 
-        var requestAction = async () => await sutProvider.Sut.Get(orgId.ToString());
+        var requestAction = async () => await sutProvider.Sut.Get(orgId);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(requestAction);
     }
@@ -40,7 +39,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.Get(orgId.ToString());
+        var requestAction = async () => await sutProvider.Sut.Get(orgId);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
@@ -52,7 +51,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
         sutProvider.GetDependency<IGetOrganizationDomainByOrganizationIdQuery>()
-            .GetDomainsByOrganizationId(orgId).Returns(new List<OrganizationDomain>
+            .GetDomainsByOrganizationIdAsync(orgId).Returns(new List<OrganizationDomain>
             {
                 new()
                 {
@@ -64,7 +63,7 @@ public class OrganizationDomainControllerTests
                 }
             });
 
-        var result = await sutProvider.Sut.Get(orgId.ToString());
+        var result = await sutProvider.Sut.Get(orgId);
 
         Assert.IsType<ListResponseModel<OrganizationDomainResponseModel>>(result);
         Assert.Equal(orgId, result.Data.Select(x => x.OrganizationId).FirstOrDefault());
@@ -76,7 +75,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
 
-        var requestAction = async () => await sutProvider.Sut.Get(orgId.ToString(), id.ToString());
+        var requestAction = async () => await sutProvider.Sut.Get(orgId, id);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(requestAction);
     }
@@ -88,7 +87,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.Get(orgId.ToString(), id.ToString());
+        var requestAction = async () => await sutProvider.Sut.Get(orgId, id);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
@@ -99,9 +98,24 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
-        sutProvider.GetDependency<IGetOrganizationDomainByIdQuery>().GetOrganizationDomainById(id).ReturnsNull();
+        sutProvider.GetDependency<IGetOrganizationDomainByIdAndOrganizationIdQuery>().GetOrganizationDomainByIdAndOrganizationIdAsync(id, orgId).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.Get(orgId.ToString(), id.ToString());
+        var requestAction = async () => await sutProvider.Sut.Get(orgId, id);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetByOrgIdAndId_ShouldThrowNotFound_WhenOrgIdDoesNotMatch(OrganizationDomain organizationDomain,
+        SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.Get(organizationDomain.OrganizationId, organizationDomain.Id);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
@@ -112,7 +126,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
-        sutProvider.GetDependency<IGetOrganizationDomainByIdQuery>().GetOrganizationDomainById(id)
+        sutProvider.GetDependency<IGetOrganizationDomainByIdAndOrganizationIdQuery>().GetOrganizationDomainByIdAndOrganizationIdAsync(id, orgId)
             .Returns(new OrganizationDomain
             {
                 Id = Guid.NewGuid(),
@@ -122,7 +136,7 @@ public class OrganizationDomainControllerTests
                 Txt = "btw+12342"
             });
 
-        var result = await sutProvider.Sut.Get(orgId.ToString(), id.ToString());
+        var result = await sutProvider.Sut.Get(orgId, id);
 
         Assert.IsType<OrganizationDomainResponseModel>(result);
         Assert.Equal(orgId, result.OrganizationId);
@@ -134,7 +148,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
 
-        var requestAction = async () => await sutProvider.Sut.Post(orgId.ToString(), model);
+        var requestAction = async () => await sutProvider.Sut.Post(orgId, model);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(requestAction);
     }
@@ -146,7 +160,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.Post(orgId.ToString(), model);
+        var requestAction = async () => await sutProvider.Sut.Post(orgId, model);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
@@ -160,7 +174,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICreateOrganizationDomainCommand>().CreateAsync(Arg.Any<OrganizationDomain>())
             .Returns(new OrganizationDomain());
 
-        var result = await sutProvider.Sut.Post(orgId.ToString(), model);
+        var result = await sutProvider.Sut.Post(orgId, model);
 
         await sutProvider.GetDependency<ICreateOrganizationDomainCommand>().ReceivedWithAnyArgs(1)
             .CreateAsync(Arg.Any<OrganizationDomain>());
@@ -173,7 +187,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
 
-        var requestAction = async () => await sutProvider.Sut.Verify(orgId.ToString(), id.ToString());
+        var requestAction = async () => await sutProvider.Sut.Verify(orgId, id);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(requestAction);
     }
@@ -185,24 +199,42 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.Verify(orgId.ToString(), id.ToString());
+        var requestAction = async () => await sutProvider.Sut.Verify(orgId, id);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
 
     [Theory, BitAutoData]
-    public async Task Verify_WhenRequestIsValid(Guid orgId, Guid id,
+    public async Task VerifyOrganizationDomain_ShouldThrowNotFound_WhenOrgIdDoesNotMatch(OrganizationDomain organizationDomain,
         SutProvider<OrganizationDomainController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
-        sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().VerifyOrganizationDomain(id)
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .ReturnsNull();
+
+        var requestAction = async () => await sutProvider.Sut.Verify(organizationDomain.OrganizationId, organizationDomain.Id);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Verify_WhenRequestIsValid(OrganizationDomain organizationDomain,
+        SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .Returns(organizationDomain);
+        sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().VerifyOrganizationDomainAsync(organizationDomain)
             .Returns(new OrganizationDomain());
 
-        var result = await sutProvider.Sut.Verify(orgId.ToString(), id.ToString());
+        var result = await sutProvider.Sut.Verify(organizationDomain.OrganizationId, organizationDomain.Id);
 
         await sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().Received(1)
-            .VerifyOrganizationDomain(id);
+            .VerifyOrganizationDomainAsync(organizationDomain);
         Assert.IsType<OrganizationDomainResponseModel>(result);
     }
 
@@ -212,7 +244,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(false);
 
-        var requestAction = async () => await sutProvider.Sut.RemoveDomain(orgId.ToString(), id.ToString());
+        var requestAction = async () => await sutProvider.Sut.RemoveDomain(orgId, id);
 
         await Assert.ThrowsAsync<UnauthorizedAccessException>(requestAction);
     }
@@ -224,22 +256,40 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).ReturnsNull();
 
-        var requestAction = async () => await sutProvider.Sut.RemoveDomain(orgId.ToString(), id.ToString());
+        var requestAction = async () => await sutProvider.Sut.RemoveDomain(orgId, id);
 
         await Assert.ThrowsAsync<NotFoundException>(requestAction);
     }
 
     [Theory, BitAutoData]
-    public async Task RemoveDomain_WhenRequestIsValid(Guid orgId, Guid id,
+    public async Task RemoveDomain_ShouldThrowNotFound_WhenOrgIdDoesNotMatch(OrganizationDomain organizationDomain,
         SutProvider<OrganizationDomainController> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .ReturnsNull();
 
-        await sutProvider.Sut.RemoveDomain(orgId.ToString(), id.ToString());
+        var requestAction = async () => await sutProvider.Sut.RemoveDomain(organizationDomain.OrganizationId, organizationDomain.Id);
+
+        await Assert.ThrowsAsync<NotFoundException>(requestAction);
+    }
+
+    [Theory, BitAutoData]
+    public async Task RemoveDomain_WhenRequestIsValid(OrganizationDomain organizationDomain,
+        SutProvider<OrganizationDomainController> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
+        sutProvider.GetDependency<IOrganizationDomainRepository>()
+            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .Returns(organizationDomain);
+
+        await sutProvider.Sut.RemoveDomain(organizationDomain.OrganizationId, organizationDomain.Id);
 
         await sutProvider.GetDependency<IDeleteOrganizationDomainCommand>().Received(1)
-            .DeleteAsync(id);
+            .DeleteAsync(organizationDomain);
     }
 
     [Theory, BitAutoData]

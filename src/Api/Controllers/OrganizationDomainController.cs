@@ -19,7 +19,7 @@ public class OrganizationDomainController : Controller
     private readonly ICreateOrganizationDomainCommand _createOrganizationDomainCommand;
     private readonly IVerifyOrganizationDomainCommand _verifyOrganizationDomainCommand;
     private readonly IDeleteOrganizationDomainCommand _deleteOrganizationDomainCommand;
-    private readonly IGetOrganizationDomainByIdQuery _getOrganizationDomainByIdQuery;
+    private readonly IGetOrganizationDomainByIdAndOrganizationIdQuery _getOrganizationDomainByIdAndOrganizationIdQuery;
     private readonly IGetOrganizationDomainByOrganizationIdQuery _getOrganizationDomainByOrganizationIdQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
@@ -29,7 +29,7 @@ public class OrganizationDomainController : Controller
         ICreateOrganizationDomainCommand createOrganizationDomainCommand,
         IVerifyOrganizationDomainCommand verifyOrganizationDomainCommand,
         IDeleteOrganizationDomainCommand deleteOrganizationDomainCommand,
-        IGetOrganizationDomainByIdQuery getOrganizationDomainByIdQuery,
+        IGetOrganizationDomainByIdAndOrganizationIdQuery getOrganizationDomainByIdAndOrganizationIdQuery,
         IGetOrganizationDomainByOrganizationIdQuery getOrganizationDomainByOrganizationIdQuery,
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
@@ -38,79 +38,86 @@ public class OrganizationDomainController : Controller
         _createOrganizationDomainCommand = createOrganizationDomainCommand;
         _verifyOrganizationDomainCommand = verifyOrganizationDomainCommand;
         _deleteOrganizationDomainCommand = deleteOrganizationDomainCommand;
-        _getOrganizationDomainByIdQuery = getOrganizationDomainByIdQuery;
+        _getOrganizationDomainByIdAndOrganizationIdQuery = getOrganizationDomainByIdAndOrganizationIdQuery;
         _getOrganizationDomainByOrganizationIdQuery = getOrganizationDomainByOrganizationIdQuery;
         _currentContext = currentContext;
         _organizationRepository = organizationRepository;
         _organizationDomainRepository = organizationDomainRepository;
     }
 
-    [HttpGet("{orgId}/domain")]
-    public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(string orgId)
+    [HttpGet("{orgId:guid}/domain")]
+    public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(Guid orgId)
     {
-        var orgIdGuid = new Guid(orgId);
-        await ValidateOrganizationAccessAsync(orgIdGuid);
+        await ValidateOrganizationAccessAsync(orgId);
 
         var domains = await _getOrganizationDomainByOrganizationIdQuery
-            .GetDomainsByOrganizationId(orgIdGuid);
+            .GetDomainsByOrganizationIdAsync(orgId);
         var response = domains.Select(x => new OrganizationDomainResponseModel(x)).ToList();
         return new ListResponseModel<OrganizationDomainResponseModel>(response);
     }
 
-    [HttpGet("{orgId}/domain/{id}")]
-    public async Task<OrganizationDomainResponseModel> Get(string orgId, string id)
+    [HttpGet("{orgId:guid}/domain/{id:guid}")]
+    public async Task<OrganizationDomainResponseModel> Get(Guid orgId, Guid id)
     {
-        var orgIdGuid = new Guid(orgId);
-        var IdGuid = new Guid(id);
-        await ValidateOrganizationAccessAsync(orgIdGuid);
+        await ValidateOrganizationAccessAsync(orgId);
 
-        var domain = await _getOrganizationDomainByIdQuery.GetOrganizationDomainById(IdGuid);
+        var organizationDomain = await _getOrganizationDomainByIdAndOrganizationIdQuery
+            .GetOrganizationDomainByIdAndOrganizationIdAsync(id, orgId);
+        if (organizationDomain is null)
+        {
+            throw new NotFoundException();
+        }
+
+        return new OrganizationDomainResponseModel(organizationDomain);
+    }
+
+    [HttpPost("{orgId:guid}/domain")]
+    public async Task<OrganizationDomainResponseModel> Post(Guid orgId,
+        [FromBody] OrganizationDomainRequestModel model)
+    {
+        await ValidateOrganizationAccessAsync(orgId);
+
+        var organizationDomain = new OrganizationDomain
+        {
+            OrganizationId = orgId,
+            Txt = model.Txt,
+            DomainName = model.DomainName.ToLower()
+        };
+
+        organizationDomain = await _createOrganizationDomainCommand.CreateAsync(organizationDomain);
+
+        return new OrganizationDomainResponseModel(organizationDomain);
+    }
+
+    [HttpPost("{orgId:guid}/domain/{id:guid}/verify")]
+    public async Task<OrganizationDomainResponseModel> Verify(Guid orgId, Guid id)
+    {
+        await ValidateOrganizationAccessAsync(orgId);
+
+        var organizationDomain = await _organizationDomainRepository.GetDomainByIdAndOrganizationIdAsync(id, orgId);
+        if (organizationDomain is null)
+        {
+            throw new NotFoundException();
+        }
+
+        organizationDomain = await _verifyOrganizationDomainCommand.VerifyOrganizationDomainAsync(organizationDomain);
+
+        return new OrganizationDomainResponseModel(organizationDomain);
+    }
+
+    [HttpDelete("{orgId:guid}/domain/{id:guid}")]
+    [HttpPost("{orgId:guid}/domain/{id:guid}/remove")]
+    public async Task RemoveDomain(Guid orgId, Guid id)
+    {
+        await ValidateOrganizationAccessAsync(orgId);
+
+        var domain = await _organizationDomainRepository.GetDomainByIdAndOrganizationIdAsync(id, orgId);
         if (domain is null)
         {
             throw new NotFoundException();
         }
 
-        return new OrganizationDomainResponseModel(domain);
-    }
-
-    [HttpPost("{orgId}/domain")]
-    public async Task<OrganizationDomainResponseModel> Post(string orgId,
-        [FromBody] OrganizationDomainRequestModel model)
-    {
-        var orgIdGuid = new Guid(orgId);
-        await ValidateOrganizationAccessAsync(orgIdGuid);
-
-        var organizationDomain = new OrganizationDomain
-        {
-            OrganizationId = orgIdGuid,
-            Txt = model.Txt,
-            DomainName = model.DomainName.ToLower()
-        };
-
-        var domain = await _createOrganizationDomainCommand.CreateAsync(organizationDomain);
-        return new OrganizationDomainResponseModel(domain);
-    }
-
-    [HttpPost("{orgId}/domain/{id}/verify")]
-    public async Task<OrganizationDomainResponseModel> Verify(string orgId, string id)
-    {
-        var orgIdGuid = new Guid(orgId);
-        var idGuid = new Guid(id);
-        await ValidateOrganizationAccessAsync(orgIdGuid);
-
-        var domain = await _verifyOrganizationDomainCommand.VerifyOrganizationDomain(idGuid);
-        return new OrganizationDomainResponseModel(domain);
-    }
-
-    [HttpDelete("{orgId}/domain/{id}")]
-    [HttpPost("{orgId}/domain/{id}/remove")]
-    public async Task RemoveDomain(string orgId, string id)
-    {
-        var orgIdGuid = new Guid(orgId);
-        var idGuid = new Guid(id);
-        await ValidateOrganizationAccessAsync(orgIdGuid);
-
-        await _deleteOrganizationDomainCommand.DeleteAsync(idGuid);
+        await _deleteOrganizationDomainCommand.DeleteAsync(domain);
     }
 
     [AllowAnonymous]

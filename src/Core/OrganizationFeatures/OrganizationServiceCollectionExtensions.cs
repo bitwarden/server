@@ -118,7 +118,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
         services.AddScoped<IVerifyOrganizationDomainCommand, VerifyOrganizationDomainCommand>();
-        services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
+        services.AddScoped<IGetOrganizationDomainByIdAndOrganizationIdQuery, GetOrganizationDomainByIdAndOrganizationIdQuery>();
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
     }

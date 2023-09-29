@@ -2,7 +2,7 @@
 
 namespace Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 
-public interface IGetOrganizationDomainByIdQuery
+public interface IGetOrganizationDomainByIdAndOrganizationIdQuery
 {
-    Task<OrganizationDomain> GetOrganizationDomainById(Guid id);
+    Task<OrganizationDomain> GetOrganizationDomainByIdAndOrganizationIdAsync(Guid id, Guid organizationId);
 }
