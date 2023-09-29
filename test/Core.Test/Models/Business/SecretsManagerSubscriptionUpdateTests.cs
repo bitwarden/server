@@ -15,10 +15,6 @@ public class SecretsManagerSubscriptionUpdateTests
     [BitAutoData(PlanType.Custom)]
     [BitAutoData(PlanType.FamiliesAnnually)]
     [BitAutoData(PlanType.FamiliesAnnually2019)]
-    [BitAutoData(PlanType.EnterpriseMonthly2019)]
-    [BitAutoData(PlanType.EnterpriseAnnually2019)]
-    [BitAutoData(PlanType.TeamsMonthly2019)]
-    [BitAutoData(PlanType.TeamsAnnually2019)]
     public async Task UpdateSubscriptionAsync_WithNonSecretsManagerPlanType_ThrowsBadRequestException(
         PlanType planType,
         Organization organization)

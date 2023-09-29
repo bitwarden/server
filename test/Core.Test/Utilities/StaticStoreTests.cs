@@ -14,7 +14,7 @@ public class StaticStoreTests
         var plans = StaticStore.Plans;
         Assert.NotNull(plans);
         Assert.NotEmpty(plans);
-        Assert.Equal(17, plans.Count());
+        Assert.Equal(29, plans.Count());
     }
 
     [Theory]
