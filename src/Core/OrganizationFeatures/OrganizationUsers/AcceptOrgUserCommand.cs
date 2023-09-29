@@ -57,14 +57,18 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         // Tokens will have been created in two ways in the OrganizationService invite methods:
         // 1. New way - via OrgUserInviteTokenable
         // 2. Old way - via manual process using data protector initialized with purpose: "OrganizationServiceDataProtector"
-
         // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
-        // TODO: remove old token validation logic after 1 release as token are only valid for 5 days
 
-        var isNewTokenInvalid = !ValidateOrgUserInviteToken(token, orgUser);
-        var isOldTokenInvalid = !CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings);
+        // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+        // TODO: update this code to only run old token validation if new token validation fails
+        var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+            _orgUserInviteTokenDataFactory, token, orgUser);
 
-        if (isNewTokenInvalid && isOldTokenInvalid)
+        var tokenValid = newTokenValid ||
+                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id,
+                             _globalSettings);
+
+        if (!tokenValid)
         {
             throw new BadRequestException("Invalid token.");
         }
