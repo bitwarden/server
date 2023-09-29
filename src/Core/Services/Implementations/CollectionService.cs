@@ -41,7 +41,7 @@ public class CollectionService : ICollectionService
     }
 
     public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
-        IEnumerable<CollectionAccessSelection> users = null, Guid? assignUserId = null)
+        IEnumerable<CollectionAccessSelection> users = null)
     {
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
@@ -62,19 +62,6 @@ public class CollectionService : ICollectionService
             }
 
             await _collectionRepository.CreateAsync(collection, org.UseGroups ? groups : null, users);
-
-            // Assign a user to the newly created collection.
-            if (assignUserId.HasValue)
-            {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, assignUserId.Value);
-                if (orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
-                {
-                    await _collectionRepository.UpdateUsersAsync(collection.Id,
-                        new List<CollectionAccessSelection> {
-                            new CollectionAccessSelection { Id = orgUser.Id, Manage = true} });
-                }
-            }
-
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.CollectionCreated, org, _currentContext));
         }

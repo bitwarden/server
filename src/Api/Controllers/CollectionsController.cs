@@ -161,7 +161,7 @@ public class CollectionsController : Controller
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
         var users = model.Users?.Select(g => g.ToSelectionReadOnly());
 
-        await _collectionService.SaveAsync(collection, groups, users, _currentContext.UserId);
+        await _collectionService.SaveAsync(collection, groups, users);
         return new CollectionResponseModel(collection);
     }
 
