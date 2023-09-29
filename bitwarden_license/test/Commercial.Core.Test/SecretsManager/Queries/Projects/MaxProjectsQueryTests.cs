@@ -30,12 +30,8 @@ public class MaxProjectsQueryTests
 
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually2019)]
-    [BitAutoData(PlanType.TeamsMonthly2019)]
-    [BitAutoData(PlanType.TeamsAnnually2019)]
-    [BitAutoData(PlanType.EnterpriseMonthly2019)]
-    [BitAutoData(PlanType.EnterpriseAnnually2019)]
-    [BitAutoData(PlanType.Custom)]
     [BitAutoData(PlanType.FamiliesAnnually)]
+    [BitAutoData(PlanType.Custom)]
     public async Task GetByOrgIdAsync_SmPlanIsNull_ThrowsBadRequest(PlanType planType,
         SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
