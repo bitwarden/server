@@ -45,7 +45,7 @@ public class OrganizationDomainController : Controller
         _organizationDomainRepository = organizationDomainRepository;
     }
 
-    [HttpGet("{orgId:guid}/domain")]
+    [HttpGet("{orgId}/domain")]
     public async Task<ListResponseModel<OrganizationDomainResponseModel>> Get(Guid orgId)
     {
         await ValidateOrganizationAccessAsync(orgId);
@@ -56,7 +56,7 @@ public class OrganizationDomainController : Controller
         return new ListResponseModel<OrganizationDomainResponseModel>(response);
     }
 
-    [HttpGet("{orgId:guid}/domain/{id:guid}")]
+    [HttpGet("{orgId}/domain/{id}")]
     public async Task<OrganizationDomainResponseModel> Get(Guid orgId, Guid id)
     {
         await ValidateOrganizationAccessAsync(orgId);
@@ -71,7 +71,7 @@ public class OrganizationDomainController : Controller
         return new OrganizationDomainResponseModel(organizationDomain);
     }
 
-    [HttpPost("{orgId:guid}/domain")]
+    [HttpPost("{orgId}/domain")]
     public async Task<OrganizationDomainResponseModel> Post(Guid orgId,
         [FromBody] OrganizationDomainRequestModel model)
     {
@@ -89,7 +89,7 @@ public class OrganizationDomainController : Controller
         return new OrganizationDomainResponseModel(organizationDomain);
     }
 
-    [HttpPost("{orgId:guid}/domain/{id:guid}/verify")]
+    [HttpPost("{orgId}/domain/{id}/verify")]
     public async Task<OrganizationDomainResponseModel> Verify(Guid orgId, Guid id)
     {
         await ValidateOrganizationAccessAsync(orgId);
@@ -105,8 +105,8 @@ public class OrganizationDomainController : Controller
         return new OrganizationDomainResponseModel(organizationDomain);
     }
 
-    [HttpDelete("{orgId:guid}/domain/{id:guid}")]
-    [HttpPost("{orgId:guid}/domain/{id:guid}/remove")]
+    [HttpDelete("{orgId}/domain/{id}")]
+    [HttpPost("{orgId}/domain/{id}/remove")]
     public async Task RemoveDomain(Guid orgId, Guid id)
     {
         await ValidateOrganizationAccessAsync(orgId);
