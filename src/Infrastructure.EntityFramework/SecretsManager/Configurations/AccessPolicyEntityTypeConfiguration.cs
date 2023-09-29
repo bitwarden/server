@@ -40,6 +40,12 @@ public class UserProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfigu
         builder
             .Property(e => e.GrantedProjectId)
             .HasColumnName(nameof(UserProjectAccessPolicy.GrantedProjectId));
+
+        builder
+            .HasOne(e => e.GrantedProject)
+            .WithMany(e => e.UserAccessPolicies)
+            .HasForeignKey(nameof(UserProjectAccessPolicy.GrantedProjectId))
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -68,6 +74,18 @@ public class GroupProjectAccessPolicyEntityTypeConfiguration : IEntityTypeConfig
         builder
             .Property(e => e.GrantedProjectId)
             .HasColumnName(nameof(GroupProjectAccessPolicy.GrantedProjectId));
+
+        builder
+            .HasOne(e => e.GrantedProject)
+            .WithMany(e => e.GroupAccessPolicies)
+            .HasForeignKey(nameof(GroupProjectAccessPolicy.GrantedProjectId))
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder
+            .HasOne(e => e.Group)
+            .WithMany()
+            .HasForeignKey(nameof(GroupProjectAccessPolicy.GroupId))
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -82,6 +100,12 @@ public class GroupServiceAccountAccessPolicyEntityTypeConfiguration : IEntityTyp
         builder
             .Property(e => e.GrantedServiceAccountId)
             .HasColumnName(nameof(GroupServiceAccountAccessPolicy.GrantedServiceAccountId));
+
+        builder
+            .HasOne(e => e.Group)
+            .WithMany()
+            .HasForeignKey(nameof(GroupProjectAccessPolicy.GroupId))
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
 
@@ -96,5 +120,11 @@ public class ServiceAccountProjectAccessPolicyEntityTypeConfiguration : IEntityT
         builder
             .Property(e => e.GrantedProjectId)
             .HasColumnName(nameof(ServiceAccountProjectAccessPolicy.GrantedProjectId));
+
+        builder
+            .HasOne(e => e.GrantedProject)
+            .WithMany(e => e.ServiceAccountAccessPolicies)
+            .HasForeignKey(nameof(ServiceAccountProjectAccessPolicy.GrantedProjectId))
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
