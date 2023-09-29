@@ -715,8 +715,8 @@ public class StripeController : Controller
         return org.PlanType is PlanType.FamiliesAnnually or
             PlanType.TeamsAnnually2019 or
             PlanType.EnterpriseAnnually2019 or
-            PlanType.TeamsAnnually2023 or
-            PlanType.EnterpriseAnnually2023 or
+            PlanType.TeamsAnnually2020 or
+            PlanType.EnterpriseAnnually2020 or
             PlanType.TeamsAnnually or
             PlanType.EnterpriseAnnually;
     }

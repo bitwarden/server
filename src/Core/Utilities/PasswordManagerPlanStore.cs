@@ -129,7 +129,7 @@ public static class PasswordManagerPlanStore
             },
             new Plan
             {
-                Type = PlanType.TeamsAnnually2023,
+                Type = PlanType.TeamsAnnually2020,
                 Product = ProductType.Teams,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Teams (Annually) 2023",
@@ -237,7 +237,7 @@ public static class PasswordManagerPlanStore
             },
             new Plan
             {
-                Type = PlanType.TeamsMonthly2023,
+                Type = PlanType.TeamsMonthly2020,
                 Product = ProductType.Teams,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Teams (Monthly) 2023",
@@ -351,7 +351,7 @@ public static class PasswordManagerPlanStore
             },
             new Plan
             {
-                Type = PlanType.EnterpriseAnnually2023,
+                Type = PlanType.EnterpriseAnnually2020,
                 Name = "Enterprise (Annually) 2023",
                 Product = ProductType.Enterprise,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
@@ -482,7 +482,7 @@ public static class PasswordManagerPlanStore
             },
             new Plan
             {
-                Type = PlanType.EnterpriseMonthly2023,
+                Type = PlanType.EnterpriseMonthly2020,
                 Product = ProductType.Enterprise,
                 BitwardenProduct = BitwardenProductType.PasswordManager,
                 Name = "Enterprise (Monthly) 2023",
