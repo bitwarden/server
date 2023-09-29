@@ -191,7 +191,7 @@ public static class PasswordManagerPlanStore
                 UpgradeSortOrder = 2,
                 DisplaySortOrder = 2,
 
-                StripeSeatPlanId = "2023-teams-org-seat-annually",
+                StripeSeatPlanId = "2024-teams-org-seat-annually",
                 StripeStoragePlanId = "storage-gb-annually",
                 SeatPrice = 48,
                 AdditionalStoragePricePerGb = 4,
@@ -297,7 +297,7 @@ public static class PasswordManagerPlanStore
                 UpgradeSortOrder = 2,
                 DisplaySortOrder = 2,
 
-                StripeSeatPlanId = "2023-teams-org-seat-monthly",
+                StripeSeatPlanId = "2024-teams-org-seat-monthly",
                 StripeStoragePlanId = "storage-gb-monthly",
                 SeatPrice = 5,
                 AdditionalStoragePricePerGb = 0.5M,
@@ -428,7 +428,7 @@ public static class PasswordManagerPlanStore
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
 
-                StripeSeatPlanId = "2023-enterprise-org-seat-annually",
+                StripeSeatPlanId = "2024-enterprise-org-seat-annually",
                 StripeStoragePlanId = "storage-gb-annually",
                 BasePrice = 0,
                 SeatPrice = 72,
@@ -557,7 +557,7 @@ public static class PasswordManagerPlanStore
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
 
-                StripeSeatPlanId = "2023-enterprise-seat-monthly",
+                StripeSeatPlanId = "2024-enterprise-seat-monthly",
                 StripeStoragePlanId = "storage-gb-monthly",
                 BasePrice = 0,
                 SeatPrice = 7,
