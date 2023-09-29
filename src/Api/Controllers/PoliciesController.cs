@@ -2,7 +2,6 @@
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;

@@ -297,7 +297,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
                 _orgUserInviteTokenDataFactory, token, orgUserId.Value, user.Email);
 
-            tokenValid =  newTokenValid ||
+            tokenValid = newTokenValid ||
                           CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
                               user.Email, orgUserId.Value, _globalSettings);
         }
