@@ -1,22 +1,54 @@
-﻿using System.Text.Json.Serialization;
+﻿#nullable enable
+
+using System.Text.Json.Serialization;
+using static System.Text.Json.Serialization.JsonNumberHandling;
 
 namespace Bit.Core.Tools.Models.Data;
 
+/// <summary>
+/// A file secret being sent.
+/// </summary>
 public class SendFileData : SendData
 {
+    /// <summary>
+    /// Instantiates a <see cref="SendFileData"/>.
+    /// </summary>
     public SendFileData() { }
 
-    public SendFileData(string name, string notes, string fileName)
+    /// <inheritdoc cref="SendFileData()"/>
+    /// <param name="name">Attached file name.</param>
+    /// <param name="notes">User-provided private notes of the send.</param>
+    /// <param name="fileName">Attached file name.</param>
+    public SendFileData(string name, string? notes, string fileName)
         : base(name, notes)
     {
         FileName = fileName;
     }
 
-    // We serialize Size as a string since JSON (or Javascript) doesn't support full precision for long numbers
-    [JsonNumberHandling(JsonNumberHandling.WriteAsString | JsonNumberHandling.AllowReadingFromString)]
+    /// <summary>
+    /// Size of the attached file in bytes.
+    /// </summary>
+    /// <remarks>
+    /// Serialized as a string since JSON (or Javascript)  doesn't support 
+    /// full precision for long numbers
+    /// </remarks>
+    [JsonNumberHandling(WriteAsString | AllowReadingFromString)]
     public long Size { get; set; }
 
-    public string Id { get; set; }
-    public string FileName { get; set; }
+    /// <summary>
+    /// Uniquely identifies the file.
+    /// </summary>
+    public string? Id { get; set; }
+
+    /// <summary>
+    /// Attached file name.
+    /// </summary>
+    public string FileName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// When true the uploaded file's length was confirmed within
+    /// the expected tolerance and below the maximum supported
+    /// file size.
+    /// </summary>
     public bool Validated { get; set; } = true;
 }
