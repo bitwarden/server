@@ -765,6 +765,7 @@ public class OrganizationsController : Controller
     }
 
     [HttpPut("{id}/collection-management")]
+    [RequireFeature(FeatureFlagKeys.CollectionManagement)]
     public async Task<OrganizationResponseModel> PutCollectionManagement(Guid id, [FromBody] OrganizationCollectionManagementUpdateRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);

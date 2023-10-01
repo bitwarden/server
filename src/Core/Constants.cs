@@ -40,6 +40,8 @@ public static class FeatureFlagKeys
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
     public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
+    public const string CollectionManagement = "collection-management";
+    public const string CanManageCollectionPermission = "can-manage-collection-permission";
 
     public static List<string> GetAllKeys()
     {
