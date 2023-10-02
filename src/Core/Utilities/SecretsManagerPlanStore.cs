@@ -53,7 +53,7 @@ public static class SecretsManagerPlanStore
                 Type = PlanType.EnterpriseMonthly2020,
                 Product = ProductType.Enterprise,
                 BitwardenProduct = BitwardenProductType.SecretsManager,
-                Name = "Enterprise (Monthly) 2023",
+                Name = "Enterprise (Monthly) 2020",
                 NameLocalizationKey = "planNameEnterprise",
                 DescriptionLocalizationKey = "planDescEnterprise",
                 CanBeUsedByBusiness = true,
@@ -168,7 +168,7 @@ public static class SecretsManagerPlanStore
             new Plan
             {
                 Type = PlanType.EnterpriseAnnually2020,
-                Name = "Enterprise (Annually) 2023",
+                Name = "Enterprise (Annually) 2020",
                 Product = ProductType.Enterprise,
                 BitwardenProduct = BitwardenProductType.SecretsManager,
                 IsAnnual = true,
@@ -279,7 +279,7 @@ public static class SecretsManagerPlanStore
             new Plan
             {
                 Type = PlanType.TeamsMonthly2020,
-                Name = "Teams (Monthly) 2023",
+                Name = "Teams (Monthly) 2020",
                 Product = ProductType.Teams,
                 BitwardenProduct = BitwardenProductType.SecretsManager,
                 NameLocalizationKey = "planNameTeams",
@@ -376,7 +376,7 @@ public static class SecretsManagerPlanStore
             new Plan
             {
                 Type = PlanType.TeamsAnnually2020,
-                Name = "Teams (Annually) 2023",
+                Name = "Teams (Annually) 2020",
                 Product = ProductType.Teams,
                 BitwardenProduct = BitwardenProductType.SecretsManager,
                 IsAnnual = true,
