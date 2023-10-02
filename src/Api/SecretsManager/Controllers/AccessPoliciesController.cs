@@ -4,7 +4,6 @@ using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -38,9 +37,7 @@ public class AccessPoliciesController : Controller
         ICurrentContext currentContext,
         IAccessPolicyRepository accessPolicyRepository,
         IServiceAccountRepository serviceAccountRepository,
-        IGroupRepository groupRepository,
         IProjectRepository projectRepository,
-        IOrganizationUserRepository organizationUserRepository,
         ICreateAccessPoliciesCommand createAccessPoliciesCommand,
         IDeleteAccessPolicyCommand deleteAccessPolicyCommand,
         IUpdateAccessPolicyCommand updateAccessPolicyCommand)

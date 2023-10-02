@@ -29,6 +29,7 @@ public class PotentialGranteeResponseModel : ResponseModel
         {
             throw new ArgumentNullException(nameof(grantee));
         }
+
         Type = "user";
         Id = grantee.OrganizationUserId;
         Name = grantee.Name;
@@ -67,9 +68,7 @@ public class PotentialGranteeResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
-
     public string Name { get; set; }
-
     public string Type { get; set; }
     public string Email { get; set; }
     public bool CurrentUserInGroup { get; set; }

@@ -12,12 +12,12 @@ public class PeopleAccessPolicies
     public IEnumerable<BaseAccessPolicy> ToBaseAccessPolicies()
     {
         var policies = new List<BaseAccessPolicy>();
-        if (UserAccessPolicies != null)
+        if (UserAccessPolicies != null && UserAccessPolicies.Any())
         {
             policies.AddRange(UserAccessPolicies);
         }
 
-        if (GroupAccessPolicies != null)
+        if (GroupAccessPolicies != null && GroupAccessPolicies.Any())
         {
             policies.AddRange(GroupAccessPolicies);
         }

@@ -6,6 +6,10 @@ namespace Bit.Api.SecretsManager.Models.Request;
 
 public class PeopleAccessPoliciesRequestModel
 {
+    public IEnumerable<AccessPolicyRequest> UserAccessPolicyRequests { get; set; }
+
+    public IEnumerable<AccessPolicyRequest> GroupAccessPolicyRequests { get; set; }
+
     private static void CheckForDistinctAccessPolicies(IReadOnlyCollection<BaseAccessPolicy> accessPolicies)
     {
         var distinctAccessPolicies = accessPolicies.DistinctBy(baseAccessPolicy =>
@@ -19,7 +23,7 @@ public class PeopleAccessPoliciesRequestModel
                 UserServiceAccountAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.OrganizationUserId,
                     ap.GrantedServiceAccountId),
                 GroupServiceAccountAccessPolicy ap => new Tuple<Guid?, Guid?>(ap.GroupId, ap.GrantedServiceAccountId),
-                _ => throw new ArgumentException("Unsupported access policy type provided.", nameof(baseAccessPolicy)),
+                _ => throw new ArgumentException("Unsupported access policy type provided.", nameof(baseAccessPolicy))
             };
         }).ToList();
 
@@ -28,10 +32,6 @@ public class PeopleAccessPoliciesRequestModel
             throw new BadRequestException("Resources must be unique");
         }
     }
-
-    public IEnumerable<AccessPolicyRequest> UserAccessPolicyRequests { get; set; }
-
-    public IEnumerable<AccessPolicyRequest> GroupAccessPolicyRequests { get; set; }
 
     public PeopleAccessPolicies ToProjectPeopleAccessPolicies(Guid grantedProjectId, Guid organizationId)
     {

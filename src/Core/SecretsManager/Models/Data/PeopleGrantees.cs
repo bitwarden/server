@@ -6,7 +6,6 @@ public class PeopleGrantees
     public IEnumerable<GroupGrantee> GroupGrantees { get; set; }
 }
 
-
 public class UserGrantee
 {
     public Guid OrganizationUserId { get; set; }

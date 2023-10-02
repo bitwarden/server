@@ -286,16 +286,9 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                  ((GroupProjectAccessPolicy)ap).GrantedProjectId == id))
             .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
             .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
-            .Select(ap => new
-            {
-                ap,
-                CurrentUserInGroup = ap is GroupProjectAccessPolicy &&
-                                     ((GroupProjectAccessPolicy)ap).Group.GroupUsers.Any(g =>
-                                         g.OrganizationUser.User.Id == userId)
-            })
             .ToListAsync();
 
-        return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
+        return entities.Select(MapToCore);
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> ReplaceProjectPeopleAsync(
@@ -304,8 +297,9 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
         var peoplePolicyEntities = await dbContext.AccessPolicies.Where(ap =>
-            ((UserProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id ||
-            ((GroupProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id).ToListAsync();
+            ap.Discriminator != AccessPolicyDiscriminator.ServiceAccountProject &&
+            (((UserProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id ||
+             ((GroupProjectAccessPolicy)ap).GrantedProjectId == peopleAccessPolicies.Id)).ToListAsync();
 
         var userPolicyEntities =
             peoplePolicyEntities.Where(ap => ap.GetType() == typeof(UserProjectAccessPolicy)).ToList();
@@ -315,37 +309,37 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         if (peopleAccessPolicies.UserAccessPolicies == null || !peopleAccessPolicies.UserAccessPolicies.Any())
         {
-            foreach (var userPolicy in userPolicyEntities)
+            foreach (var userPolicyEntity in userPolicyEntities)
             {
-                dbContext.Remove(userPolicy);
+                dbContext.Remove(userPolicyEntity);
             }
         }
         else
         {
-            foreach (var userPolicy in userPolicyEntities.Where(entity =>
+            foreach (var userPolicyEntity in userPolicyEntities.Where(entity =>
                          peopleAccessPolicies.UserAccessPolicies.All(ap =>
                              ((Core.SecretsManager.Entities.UserProjectAccessPolicy)ap).OrganizationUserId !=
                              ((UserProjectAccessPolicy)entity).OrganizationUserId)))
             {
-                dbContext.Remove(userPolicy);
+                dbContext.Remove(userPolicyEntity);
             }
         }
 
         if (peopleAccessPolicies.GroupAccessPolicies == null || !peopleAccessPolicies.GroupAccessPolicies.Any())
         {
-            foreach (var groupPolicy in groupPolicyEntities)
+            foreach (var groupPolicyEntity in groupPolicyEntities)
             {
-                dbContext.Remove(groupPolicy);
+                dbContext.Remove(groupPolicyEntity);
             }
         }
         else
         {
-            foreach (var groupPolicy in groupPolicyEntities.Where(entity =>
+            foreach (var groupPolicyEntity in groupPolicyEntities.Where(entity =>
                          peopleAccessPolicies.GroupAccessPolicies.All(ap =>
                              ((Core.SecretsManager.Entities.GroupProjectAccessPolicy)ap).GroupId !=
                              ((GroupProjectAccessPolicy)entity).GroupId)))
             {
-                dbContext.Remove(groupPolicy);
+                dbContext.Remove(groupPolicyEntity);
             }
         }
 
