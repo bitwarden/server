@@ -292,18 +292,18 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     {
         var updatedItems = new List<SubscriptionItemOptions>();
 
-        AddNewSecretsManagerItems(updatedItems);
+        AddNewSecretsManagerItems(updatedItems, subscription);
 
         return updatedItems;
     }
 
-    private void AddNewSecretsManagerItems(List<SubscriptionItemOptions> updatedItems)
+    private void AddNewSecretsManagerItems(List<SubscriptionItemOptions> updatedItems, Subscription subscription)
     {
         if (_additionalSeats > 0)
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Price = _plan.StripeSeatPlanId,
+                Plan = _plan.StripeSeatPlanId,
                 Quantity = _additionalSeats
             });
         }
@@ -312,8 +312,9 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Price = _plan.StripeServiceAccountPlanId,
-                Quantity = _additionalServiceAccounts
+                Plan = _plan.StripeServiceAccountPlanId,
+                Quantity = _additionalServiceAccounts,
+
             });
         }
     }

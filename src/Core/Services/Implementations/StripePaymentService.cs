@@ -793,8 +793,8 @@ public class StripePaymentService : IPaymentService
         {
             try
             {
-                var subItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub)
-                    .Select(item => new Stripe.InvoiceSubscriptionItemOptions
+                var subItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub).Select(item =>
+                    new Stripe.InvoiceSubscriptionItemOptions
                     {
                         Id = item.Id,
                         Plan = item.Plan,
