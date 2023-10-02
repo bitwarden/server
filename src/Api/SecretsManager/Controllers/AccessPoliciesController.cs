@@ -299,7 +299,7 @@ public class AccessPoliciesController : Controller
         var peopleAccessPolicies = request.ToProjectPeopleAccessPolicies(id, project.OrganizationId);
 
         var authorizationResult = await _authorizationService.AuthorizeAsync(User, peopleAccessPolicies,
-            PeopleAccessPoliciesOperations.UpsertProjectPeople);
+            PeopleAccessPoliciesOperations.ReplaceProjectPeople);
         if (!authorizationResult.Succeeded)
         {
             throw new NotFoundException();

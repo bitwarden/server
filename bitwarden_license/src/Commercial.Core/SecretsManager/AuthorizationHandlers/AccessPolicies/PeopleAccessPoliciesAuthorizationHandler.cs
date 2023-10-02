@@ -51,8 +51,8 @@ public class
 
         switch (requirement)
         {
-            case not null when requirement == PeopleAccessPoliciesOperations.UpsertProjectPeople:
-                await CanUpsertProjectPeopleAsync(context, requirement, resource, accessClient, userId);
+            case not null when requirement == PeopleAccessPoliciesOperations.ReplaceProjectPeople:
+                await CanReplaceProjectPeopleAsync(context, requirement, resource, accessClient, userId);
                 break;
             default:
                 throw new ArgumentException("Unsupported operation requirement type provided.",
@@ -60,7 +60,7 @@ public class
         }
     }
 
-    private async Task CanUpsertProjectPeopleAsync(AuthorizationHandlerContext context,
+    private async Task CanReplaceProjectPeopleAsync(AuthorizationHandlerContext context,
         PeopleAccessPoliciesOperationRequirement requirement, PeopleAccessPolicies resource,
         AccessClientType accessClient, Guid userId)
     {

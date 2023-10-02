@@ -8,5 +8,5 @@ public class PeopleAccessPoliciesOperationRequirement : OperationAuthorizationRe
 
 public static class PeopleAccessPoliciesOperations
 {
-    public static readonly PeopleAccessPoliciesOperationRequirement UpsertProjectPeople = new() { Name = nameof(UpsertProjectPeople) };
+    public static readonly PeopleAccessPoliciesOperationRequirement ReplaceProjectPeople = new() { Name = nameof(ReplaceProjectPeople) };
 }
