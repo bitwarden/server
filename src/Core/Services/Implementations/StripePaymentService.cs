@@ -913,6 +913,7 @@ public class StripePaymentService : IPaymentService
         await _stripeAdapter.CustomerDeleteAsync(subscriber.GatewayCustomerId);
     }
 
+    //This method is no-longer is use because we return the dollar threshold feature on invoice will be generated. but we dont want to lose this implementation.
     public async Task<string> PayInvoiceAfterSubscriptionChangeAsync(ISubscriber subscriber, Stripe.Invoice invoice)
     {
         var customerOptions = new Stripe.CustomerGetOptions();
