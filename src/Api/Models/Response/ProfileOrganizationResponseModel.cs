@@ -32,12 +32,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UsePasswordManager = organization.UsePasswordManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
-        UseActivateAutofillPolicy = organization.PlanType is PlanType.EnterpriseAnnually2019 or
-            PlanType.EnterpriseMonthly2019 or
-            PlanType.EnterpriseAnnually2020 or
-            PlanType.EnterpriseMonthly2020 or
-            PlanType.EnterpriseAnnually or
-            PlanType.EnterpriseMonthly;
+        UseActivateAutofillPolicy =
+            StaticStore.GetPasswordManagerPlan(organization.PlanType).Product == ProductType.Enterprise;
         SelfHost = organization.SelfHost;
         Seats = organization.Seats;
         MaxCollections = organization.MaxCollections;
