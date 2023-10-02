@@ -25,6 +25,7 @@ public class CipherLoginData : CipherData
         public CipherLoginUriData() { }
 
         public string Uri { get; set; }
+        public string UriChecksum { get; set; }
         public UriMatchType? Match { get; set; } = null;
     }
 }
