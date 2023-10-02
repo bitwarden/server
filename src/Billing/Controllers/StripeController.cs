@@ -226,7 +226,7 @@ public class StripeController : Controller
                 }
 
                 var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
-                if (org != null && OrgPlanForInvoiceNotifications(org))
+                if (org != null && OrgPlanShouldSendUpcomingInvoiceNotificationEmail(org))
                 {
                     email = org.BillingEmail;
                 }
@@ -710,7 +710,7 @@ public class StripeController : Controller
         return new Tuple<Guid?, Guid?>(orgId, userId);
     }
 
-    private static bool OrgPlanForInvoiceNotifications(Organization org) =>
+    private static bool OrgPlanShouldSendUpcomingInvoiceNotificationEmail(Organization org) =>
         StaticStore.GetPasswordManagerPlan(org.PlanType)
             .IsAnnual;
 
