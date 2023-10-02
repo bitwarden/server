@@ -1797,14 +1797,23 @@ public class OrganizationServiceTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.TeamsAnnually)]
-    [BitAutoData(PlanType.TeamsMonthly)]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
+    [BitAutoData(PlanType.TeamsAnnually)]
     public void ValidateSecretsManagerPlan_ValidPlan_NoExceptionThrown(
         PlanType planType,
         SutProvider<OrganizationService> sutProvider)
     {
+        // Arrange
         var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == planType);
         var signup = new OrganizationUpgrade
         {
@@ -1814,7 +1823,11 @@ public class OrganizationServiceTests
             AdditionalSeats = 4
         };
 
-        sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup);
+        // Act
+        var ex = Record.Exception(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
+
+        // Assert
+        Assert.Null(ex);
     }
 
     [Theory]
