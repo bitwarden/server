@@ -49,6 +49,16 @@ public class CollectionService : ICollectionService
             throw new BadRequestException("Organization not found");
         }
 
+        var groupsList = groups?.ToList();
+        var usersList = users?.ToList();
+        var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
+        var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
+        if (!groupHasManageAccess && !userHasManageAccess)
+        {
+            throw new BadRequestException(
+                "At least one User or Group must have Manage access to the newly created collection.");
+        }
+
         if (collection.Id == default(Guid))
         {
             if (org.MaxCollections.HasValue)
@@ -61,23 +71,13 @@ public class CollectionService : ICollectionService
                 }
             }
 
-            var groupsList = groups?.ToList();
-            var usersList = users?.ToList();
-            var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
-            var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
-            if (!groupHasManageAccess && !userHasManageAccess)
-            {
-                throw new BadRequestException(
-                    "At least one User or Group must have Manage access to the newly created collection.");
-            }
-
             await _collectionRepository.CreateAsync(collection, org.UseGroups ? groupsList : null, usersList);
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.CollectionCreated, org, _currentContext));
         }
         else
         {
-            await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groups : null, users);
+            await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groupsList : null, usersList);
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
         }
     }
