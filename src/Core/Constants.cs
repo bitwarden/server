@@ -20,6 +20,8 @@ public static class Constants
     /// </summary>
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 
+    public const string Fido2KeyCipherMinimumVersion = "2023.9.0";
+
     public const string CipherKeyEncryptionMinimumVersion = "2023.9.1";
 }
 

@@ -194,7 +194,7 @@ public class CiphersController : Controller
         // Temporary protection against old clients overwriting and deleting Fido2Keys
         // Response model used to re-use logic for parsing 'data' property
         var cipherModel = new CipherResponseModel(cipher, _globalSettings);
-        if (cipherModel.Login?.Fido2Key != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
+        if (cipherModel.Login?.Fido2Keys != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
         {
             throw new BadRequestException("Please update your client to edit this item.");
         }
