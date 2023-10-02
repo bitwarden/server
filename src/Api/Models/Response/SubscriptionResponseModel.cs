@@ -13,6 +13,7 @@ public class SubscriptionResponseModel : ResponseModel
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         UpcomingInvoice = subscription.UpcomingInvoice != null ?
             new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
+        Discount = subscription.Discount != null ? new BillingCustomerDiscount(subscription.Discount) : null;
         StorageName = user.Storage.HasValue ? CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
         StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
         MaxStorageGb = user.MaxStorageGb;
@@ -40,9 +41,22 @@ public class SubscriptionResponseModel : ResponseModel
     public short? MaxStorageGb { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
     public BillingSubscription Subscription { get; set; }
+    public BillingCustomerDiscount Discount { get; set; }
     public UserLicense License { get; set; }
     public DateTime? Expiration { get; set; }
     public bool UsingInAppPurchase { get; set; }
+}
+
+public class BillingCustomerDiscount
+{
+    public BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
+    {
+        Id = discount.Id;
+        Active = discount.Active;
+    }
+
+    public string Id { get; set; }
+    public bool Active { get; set; }
 }
 
 public class BillingSubscription

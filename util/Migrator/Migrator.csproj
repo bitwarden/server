@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="DbScripts\**\*.sql" />
+    <EmbeddedResource Include="DbScripts_data_migration\**\*.sql" />
   </ItemGroup>
 
   <ItemGroup>

@@ -4,9 +4,24 @@ namespace Bit.Core.Models.Business;
 
 public class SubscriptionInfo
 {
+    public BillingCustomerDiscount Discount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingUpcomingInvoice UpcomingInvoice { get; set; }
     public bool UsingInAppPurchase { get; set; }
+
+    public class BillingCustomerDiscount
+    {
+        public BillingCustomerDiscount() { }
+
+        public BillingCustomerDiscount(Discount discount)
+        {
+            Id = discount.Id;
+            Active = discount.Start != null && discount.End == null;
+        }
+
+        public string Id { get; }
+        public bool Active { get; }
+    }
 
     public class BillingSubscription
     {
