@@ -1,4 +1,5 @@
 ﻿using Bit.Migrator;
+using CommandDotNet;
 using Microsoft.Extensions.Logging;
 
 internal class Program
