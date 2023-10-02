@@ -1,4 +1,5 @@
-﻿using Bit.Core.Utilities;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models;
@@ -20,6 +21,7 @@ public class CipherFido2KeyModel
         UserDisplayName = data.UserDisplayName;
         Counter = data.Counter;
         Discoverable = data.Discoverable;
+        CreationDate = data.CreationDate;
     }
 
     [EncryptedString]
@@ -55,6 +57,8 @@ public class CipherFido2KeyModel
     [EncryptedString]
     [EncryptedStringLength(1000)]
     public string Discoverable { get; set; }
+    [Required]
+    public DateTime CreationDate { get; set; }
 
     public CipherLoginFido2KeyData ToCipherLoginFido2KeyData()
     {
@@ -70,7 +74,16 @@ public class CipherFido2KeyModel
             UserHandle = UserHandle,
             UserDisplayName = UserDisplayName,
             Counter = Counter,
-            Discoverable = Discoverable
+            Discoverable = Discoverable,
+            CreationDate = CreationDate
         };
+    }
+}
+
+static class CipherFido2KeyModelExtensions
+{
+    public static CipherLoginFido2KeyData[] ToCipherLoginFido2KeyData(this CipherFido2KeyModel[] models)
+    {
+        return models.Select(m => m.ToCipherLoginFido2KeyData()).ToArray();
     }
 }

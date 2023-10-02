@@ -19,7 +19,8 @@ public static class Constants
     /// their subscription has expired.
     /// </summary>
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
-    public const string Fido2KeyCipherMinimumVersion = "2023.9.0";
+
+    public const string CipherKeyEncryptionMinimumVersion = "2023.9.1";
 }
 
 public static class TokenPurposes
@@ -37,9 +38,9 @@ public static class FeatureFlagKeys
     public const string DisplayEuEnvironment = "display-eu-environment";
     public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
-    public const string SecretsManagerBilling = "sm-ga-billing";
     public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string AutofillV2 = "autofill-v2";
+    public const string BrowserFilelessImport = "browser-fileless-import";
 
     public static List<string> GetAllKeys()
     {
@@ -47,5 +48,14 @@ public static class FeatureFlagKeys
             .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
             .Select(x => (string)x.GetRawConstantValue())
             .ToList();
+    }
+
+    public static Dictionary<string, string> GetLocalOverrideFlagValues()
+    {
+        // place overriding values when needed locally (offline), or return null
+        return new Dictionary<string, string>()
+        {
+            { TrustedDeviceEncryption, "true" }
+        };
     }
 }
