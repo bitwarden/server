@@ -22,7 +22,7 @@ public static class Constants
 
     public const string Fido2KeyCipherMinimumVersion = "2023.9.1";
 
-    public const string CipherKeyEncryptionMinimumVersion = "2023.9.1";
+    public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
 }
 
 public static class TokenPurposes
