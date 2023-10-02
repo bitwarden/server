@@ -2,7 +2,7 @@
 
 namespace Bit.Core.SecretsManager.Models.Data;
 
-public class PeopleAccessPolicies
+public class ProjectPeopleAccessPolicies
 {
     public Guid Id { get; set; }
     public Guid OrganizationId { get; set; }

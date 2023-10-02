@@ -33,7 +33,7 @@ public class PeopleAccessPoliciesRequestModel
         }
     }
 
-    public PeopleAccessPolicies ToProjectPeopleAccessPolicies(Guid grantedProjectId, Guid organizationId)
+    public ProjectPeopleAccessPolicies ToProjectPeopleAccessPolicies(Guid grantedProjectId, Guid organizationId)
     {
         var userAccessPolicies = UserAccessPolicyRequests?
             .Select(x => x.ToUserProjectAccessPolicy(grantedProjectId, organizationId)).ToList();
@@ -53,7 +53,7 @@ public class PeopleAccessPoliciesRequestModel
 
         CheckForDistinctAccessPolicies(policies);
 
-        return new PeopleAccessPolicies
+        return new ProjectPeopleAccessPolicies
         {
             Id = grantedProjectId,
             OrganizationId = organizationId,

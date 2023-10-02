@@ -1039,7 +1039,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/people");
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<PeopleAccessPoliciesResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
         Assert.Empty(result!.UserAccessPolicies);
@@ -1077,7 +1077,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/people");
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<PeopleAccessPoliciesResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
 
         Assert.NotNull(result?.UserAccessPolicies);
         Assert.Single(result!.UserAccessPolicies);
@@ -1161,7 +1161,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
         response.EnsureSuccessStatusCode();
 
-        var result = await response.Content.ReadFromJsonAsync<PeopleAccessPoliciesResponseModel>();
+        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
 
         Assert.NotNull(result);
         Assert.Equal(request.UserAccessPolicyRequests.First().GranteeId,

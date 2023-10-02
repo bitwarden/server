@@ -275,7 +275,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
-        GetPeoplePoliciesByGrantedProjectIdAsync(Guid id, Guid userId)
+        GetPeoplePoliciesByGrantedProjectIdAsync(Guid id)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -292,7 +292,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> ReplaceProjectPeopleAsync(
-        PeopleAccessPolicies peopleAccessPolicies)
+        ProjectPeopleAccessPolicies peopleAccessPolicies)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

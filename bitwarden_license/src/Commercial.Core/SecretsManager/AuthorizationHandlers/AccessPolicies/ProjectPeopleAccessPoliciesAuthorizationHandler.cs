@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Authorization;
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 
 public class
-    PeopleAccessPoliciesAuthorizationHandler : AuthorizationHandler<PeopleAccessPoliciesOperationRequirement,
-        PeopleAccessPolicies>
+    ProjectPeopleAccessPoliciesAuthorizationHandler : AuthorizationHandler<ProjectPeopleAccessPoliciesOperationRequirement,
+        ProjectPeopleAccessPolicies>
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
@@ -19,7 +19,7 @@ public class
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
 
-    public PeopleAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
+    public ProjectPeopleAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
         IGroupRepository groupRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -33,8 +33,8 @@ public class
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        PeopleAccessPoliciesOperationRequirement requirement,
-        PeopleAccessPolicies resource)
+        ProjectPeopleAccessPoliciesOperationRequirement requirement,
+        ProjectPeopleAccessPolicies resource)
     {
         if (!_currentContext.AccessSecretsManager(resource.OrganizationId))
         {
@@ -51,7 +51,7 @@ public class
 
         switch (requirement)
         {
-            case not null when requirement == PeopleAccessPoliciesOperations.ReplaceProjectPeople:
+            case not null when requirement == ProjectPeopleAccessPoliciesOperations.Replace:
                 await CanReplaceProjectPeopleAsync(context, requirement, resource, accessClient, userId);
                 break;
             default:
@@ -61,7 +61,7 @@ public class
     }
 
     private async Task CanReplaceProjectPeopleAsync(AuthorizationHandlerContext context,
-        PeopleAccessPoliciesOperationRequirement requirement, PeopleAccessPolicies resource,
+        ProjectPeopleAccessPoliciesOperationRequirement requirement, ProjectPeopleAccessPolicies resource,
         AccessClientType accessClient, Guid userId)
     {
         var access = await _projectRepository.AccessToProjectAsync(resource.Id, userId, accessClient);

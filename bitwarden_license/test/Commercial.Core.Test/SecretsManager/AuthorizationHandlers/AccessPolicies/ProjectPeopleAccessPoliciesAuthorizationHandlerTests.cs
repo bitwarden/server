@@ -20,10 +20,10 @@ namespace Bit.Commercial.Core.Test.SecretsManager.AuthorizationHandlers.AccessPo
 
 [SutProviderCustomize]
 [ProjectCustomize]
-public class PeopleAccessPoliciesAuthorizationHandlerTests
+public class ProjectPeopleAccessPoliciesAuthorizationHandlerTests
 {
-    private static void SetupUserPermission(SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider,
-        AccessClientType accessClientType, PeopleAccessPolicies resource, Guid userId = new(), bool read = true,
+    private static void SetupUserPermission(SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider,
+        AccessClientType accessClientType, ProjectPeopleAccessPolicies resource, Guid userId = new(), bool read = true,
         bool write = true)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
@@ -35,8 +35,8 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
             .Returns((read, write));
     }
 
-    private static void SetupOrganizationUsers(SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider,
-        PeopleAccessPolicies resource)
+    private static void SetupOrganizationUsers(SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectPeopleAccessPolicies resource)
     {
         var orgUsers = resource.UserAccessPolicies.Select(userPolicy =>
             new OrganizationUser
@@ -48,8 +48,8 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
             .ReturnsForAnyArgs(orgUsers);
     }
 
-    private static void SetupGroups(SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider,
-        PeopleAccessPolicies resource)
+    private static void SetupGroups(SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider,
+        ProjectPeopleAccessPolicies resource)
     {
         var groups = resource.GroupAccessPolicies.Select(groupPolicy =>
             new Group { OrganizationId = resource.OrganizationId, Id = groupPolicy.GroupId!.Value }).ToList();
@@ -61,18 +61,18 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
     public void PeopleAccessPoliciesOperations_OnlyPublicStatic()
     {
         var publicStaticFields =
-            typeof(PeopleAccessPoliciesOperations).GetFields(BindingFlags.Public | BindingFlags.Static);
-        var allFields = typeof(PeopleAccessPoliciesOperations).GetFields();
+            typeof(ProjectPeopleAccessPoliciesOperations).GetFields(BindingFlags.Public | BindingFlags.Static);
+        var allFields = typeof(ProjectPeopleAccessPoliciesOperations).GetFields();
         Assert.Equal(publicStaticFields.Length, allFields.Length);
     }
 
     [Theory]
     [BitAutoData]
-    public async Task Handler_UnsupportedPeopleAccessPoliciesOperationRequirement_Throws(
-        SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider, PeopleAccessPolicies resource,
+    public async Task Handler_UnsupportedProjectPeopleAccessPoliciesOperationRequirement_Throws(
+        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider, ProjectPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = new PeopleAccessPoliciesOperationRequirement();
+        var requirement = new ProjectPeopleAccessPoliciesOperationRequirement();
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
             .Returns(true);
         sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(default, resource.OrganizationId)
@@ -87,10 +87,10 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
     [Theory]
     [BitAutoData]
     public async Task Handler_AccessSecretsManagerFalse_DoesNotSucceed(
-        SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider, PeopleAccessPolicies resource,
+        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider, ProjectPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = new PeopleAccessPoliciesOperationRequirement();
+        var requirement = new ProjectPeopleAccessPoliciesOperationRequirement();
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(resource.OrganizationId)
             .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
@@ -105,10 +105,10 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.ServiceAccount)]
     [BitAutoData(AccessClientType.Organization)]
     public async Task Handler_UnsupportedClientTypes_DoesNotSucceed(AccessClientType clientType,
-        SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider, PeopleAccessPolicies resource,
+        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider, ProjectPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal)
     {
-        var requirement = new PeopleAccessPoliciesOperationRequirement();
+        var requirement = new ProjectPeopleAccessPoliciesOperationRequirement();
         SetupUserPermission(sutProvider, clientType, resource);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
@@ -122,10 +122,10 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     public async Task ReplaceProjectPeople_UserNotInOrg_DoesNotSucceed(AccessClientType accessClient,
-        SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider, PeopleAccessPolicies resource,
+        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider, ProjectPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal, Guid userId)
     {
-        var requirement = PeopleAccessPoliciesOperations.ReplaceProjectPeople;
+        var requirement = ProjectPeopleAccessPoliciesOperations.Replace;
         SetupUserPermission(sutProvider, accessClient, resource, userId);
         var orgUsers = resource.UserAccessPolicies.Select(userPolicy =>
                 new OrganizationUser { OrganizationId = Guid.NewGuid(), Id = userPolicy.OrganizationUserId!.Value })
@@ -144,10 +144,10 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     public async Task ReplaceProjectPeople_UserCountMismatch_DoesNotSucceed(AccessClientType accessClient,
-        SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider, PeopleAccessPolicies resource,
+        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider, ProjectPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal, Guid userId)
     {
-        var requirement = PeopleAccessPoliciesOperations.ReplaceProjectPeople;
+        var requirement = ProjectPeopleAccessPoliciesOperations.Replace;
         SetupUserPermission(sutProvider, accessClient, resource, userId);
         var orgUsers = resource.UserAccessPolicies.Select(userPolicy =>
             new OrganizationUser
@@ -170,10 +170,10 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     public async Task ReplaceProjectPeople_GroupNotInOrg_DoesNotSucceed(AccessClientType accessClient,
-        SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider, PeopleAccessPolicies resource,
+        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider, ProjectPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal, Guid userId)
     {
-        var requirement = PeopleAccessPoliciesOperations.ReplaceProjectPeople;
+        var requirement = ProjectPeopleAccessPoliciesOperations.Replace;
         SetupUserPermission(sutProvider, accessClient, resource, userId);
         SetupOrganizationUsers(sutProvider, resource);
 
@@ -194,10 +194,10 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.User)]
     [BitAutoData(AccessClientType.NoAccessCheck)]
     public async Task ReplaceProjectPeople_GroupCountMismatch_DoesNotSucceed(AccessClientType accessClient,
-        SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider, PeopleAccessPolicies resource,
+        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider, ProjectPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal, Guid userId)
     {
-        var requirement = PeopleAccessPoliciesOperations.ReplaceProjectPeople;
+        var requirement = ProjectPeopleAccessPoliciesOperations.Replace;
         SetupUserPermission(sutProvider, accessClient, resource, userId);
         SetupOrganizationUsers(sutProvider, resource);
 
@@ -226,10 +226,10 @@ public class PeopleAccessPoliciesAuthorizationHandlerTests
     [BitAutoData(AccessClientType.NoAccessCheck, true, true, true)]
     public async Task ReplaceProjectPeople_AccessCheck(AccessClientType accessClient, bool read, bool write,
         bool expected,
-        SutProvider<PeopleAccessPoliciesAuthorizationHandler> sutProvider, PeopleAccessPolicies resource,
+        SutProvider<ProjectPeopleAccessPoliciesAuthorizationHandler> sutProvider, ProjectPeopleAccessPolicies resource,
         ClaimsPrincipal claimsPrincipal, Guid userId)
     {
-        var requirement = PeopleAccessPoliciesOperations.ReplaceProjectPeople;
+        var requirement = ProjectPeopleAccessPoliciesOperations.Replace;
         SetupUserPermission(sutProvider, accessClient, resource, userId, read, write);
         SetupOrganizationUsers(sutProvider, resource);
         SetupGroups(sutProvider, resource);
