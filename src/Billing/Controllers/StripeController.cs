@@ -710,16 +710,9 @@ public class StripeController : Controller
         return new Tuple<Guid?, Guid?>(orgId, userId);
     }
 
-    private static bool OrgPlanForInvoiceNotifications(Organization org)
-    {
-        return org.PlanType is PlanType.FamiliesAnnually or
-            PlanType.TeamsAnnually2019 or
-            PlanType.EnterpriseAnnually2019 or
-            PlanType.TeamsAnnually2020 or
-            PlanType.EnterpriseAnnually2020 or
-            PlanType.TeamsAnnually or
-            PlanType.EnterpriseAnnually;
-    }
+    private static bool OrgPlanForInvoiceNotifications(Organization org) =>
+        StaticStore.GetPasswordManagerPlan(org.PlanType)
+            .IsAnnual;
 
     private async Task<bool> AttemptToPayInvoiceAsync(Invoice invoice, bool attemptToPayWithStripe = false)
     {
