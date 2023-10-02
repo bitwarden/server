@@ -3,53 +3,48 @@ using Microsoft.Extensions.Logging;
 
 internal class Program
 {
+    private static IDictionary<string, string> Parameters { get; set; }
+
     private static int Main(string[] args)
     {
-        if (args.Length == 0)
-        {
-            Console.WriteLine("Please enter a database connection string argument.");
-            WriteUsageToConsole();
-            return 1;
-        }
-
-        if (args.Length == 1 && (args[0] == "--verbose" || args[0] == "-v"))
-        {
-            Console.WriteLine($"Please enter a database connection string argument before {args[0]} option.");
-            WriteUsageToConsole();
-            return 1;
-        }
-
-        var databaseConnectionString = args[0];
-
-        var verbose = false;
-
-        if (args.Length == 2 && (args[1] == "--verbose" || args[1] == "-v"))
-        {
-            verbose = true;
-        }
-
-        var success = MigrateDatabase(databaseConnectionString, verbose);
-
-        if (!success)
-        {
-            return -1;
-        }
-
-        return 0;
+        return new AppRunner<Program>().Run(args);
     }
+
+    [DefaultCommand]
+    public void Execute(
+        [Operand(Description = "Database connection string")]
+        string databaseConnectionString,
+        [Option('v', "verbose", Description = "Enable verbose output of migrator logs")]
+        bool verbose = false,
+        [Option('r', "repeatable", Description = "Mark scripts as repeatable")]
+        bool repeatable = false,
+        [Option('f', "folder", Description = "Folder name of database scripts")]
+        string folderName = MigratorConstants.DefaultMigrationsFolderName) => MigrateDatabase(databaseConnectionString, verbose, repeatable, folderName);
 
     private static void WriteUsageToConsole()
     {
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string>");
         Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs)");
+        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -r|--repeatable (for marking scripts as repeatable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
+        Console.WriteLine("Usage: MsSqlMigratorUtility <database-connection-string> -v|--verbose (for verbose output of migrator logs) -r|--repeatable (for marking scripts as repeatable) -f|--folder <folder-name-in-migrator-project> (for specifying folder name of scripts)");
     }
 
-    private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, int attempt = 1)
+    private static bool MigrateDatabase(string databaseConnectionString, bool verbose = false, bool repeatable = false, string folderName = "")
     {
         var logger = CreateLogger(verbose);
 
+        logger.LogInformation($"Migrating database with repeatable: {repeatable} and folderName: {folderName}.");
+
         var migrator = new DbMigrator(databaseConnectionString, logger);
-        var success = migrator.MigrateMsSqlDatabaseWithRetries(verbose);
+        bool success = false;
+        if (!string.IsNullOrWhiteSpace(folderName))
+        {
+            success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, repeatable, folderName);
+        }
+        else
+        {
+            success = migrator.MigrateMsSqlDatabaseWithRetries(verbose, repeatable);
+        }
 
         return success;
     }
