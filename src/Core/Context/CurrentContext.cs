@@ -345,6 +345,7 @@ public class CurrentContext : ICurrentContext
                     && (o.Permissions?.DeleteAssignedCollections ?? false)) ?? false);
     }
 
+    // TODO: move into the auth handler now so that we can have separate implementations depending on feature flag
     public async Task<bool> ViewAssignedCollections(Guid orgId)
     {
         /*

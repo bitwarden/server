@@ -6,35 +6,36 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
-using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
 
 /// <summary>
 /// Handles authorization logic for Collection objects, including access permissions for users and groups.
-/// This uses new logic implemented in the Flexible Collections initiative.
+/// This uses old pre-Flexible Collections logic and will be removed when that initiative is fully released.
 /// </summary>
-public class CollectionAuthorizationHandler : BulkAuthorizationHandler<CollectionOperationRequirement, Collection>
+public class LegacyCollectionAuthorizationHandler : BulkAuthorizationHandler<CollectionOperationRequirement, Collection>
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
     private readonly IFeatureService _featureService;
+    private readonly ICollectionService _collectionService;
 
-    public CollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository,
-        IFeatureService featureService)
+    public LegacyCollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository,
+        IFeatureService featureService, ICollectionService collectionService)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
         _featureService = featureService;
+        _collectionService = collectionService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         CollectionOperationRequirement requirement, ICollection<Collection> resources)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
         {
-            // Flexible collections is OFF, do not use the new logic in this handler
+            // Flexible collections is ON, do not use the legacy logic in this handler
             return;
         }
 
@@ -59,6 +60,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             throw new BadRequestException("Requested collections must belong to the same organization.");
         }
 
+        // TODO: this will not work for providers (new or legacy implementations)
         // Acting user is not a member of the target organization, fail
         var org = _currentContext.GetOrganization(targetOrganizationId);
         if (org == null)
@@ -86,61 +88,43 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private async Task CanCreateAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         CurrentContextOrganization org)
     {
-        // If false, all organization members are allowed to create collections
-        if (!org.LimitCollectionCreationDeletion)
+        if (await _currentContext.OrganizationManager(org.Id) || (_currentContext.Organizations?.Any(o => o.Id == org.Id
+                && (o.Permissions?.CreateNewCollections ?? false)) ?? false))
         {
             context.Succeed(requirement);
-            return;
         }
-
-        // Owners, Admins, Providers, and users with CreateNewCollections permission can always create collections
-        if (
-            org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions is { CreateNewCollections: true } ||
-            await _currentContext.ProviderUserForOrgAsync(org.Id))
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
-        context.Fail();
     }
 
     private async Task CanDeleteAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         ICollection<Collection> resources, CurrentContextOrganization org)
     {
-        // Owners, Admins, Providers, and users with DeleteAnyCollection permission can always delete collections
-        if (
-            org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions is { DeleteAnyCollection: true } ||
-            await _currentContext.ProviderUserForOrgAsync(org.Id))
+        // Delete any collection - moved from CurrentContext as this was its only use
+        var deleteAnyCollection = await _currentContext.OrganizationAdmin(org.Id) ||
+            (_currentContext.Organizations?.Any(o =>
+                o.Id == org.Id &&
+                (o.Permissions?.DeleteAnyCollection ?? false)) ?? false);
+        if (deleteAnyCollection)
         {
             context.Succeed(requirement);
             return;
         }
 
-        // The limit collection management setting is enabled and we are not an Admin (above condition), fail
-        if (org.LimitCollectionCreationDeletion)
+        // Delete assigned collections
+        var collectionIds = resources.Select(c => c.Id);
+        if (!await _currentContext.DeleteAssignedCollections(org.Id))
         {
             context.Fail();
             return;
         }
 
-        // Other members types should have the Manage capability for all collections being deleted
-        var manageableCollectionIds =
-            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
-            .Where(c => c.Manage && c.OrganizationId == org.Id)
-            .Select(c => c.Id)
-            .ToHashSet();
+        var userCollections = await _collectionService.GetOrganizationCollectionsAsync(org.Id);
+        var filteredCollections = userCollections.Where(c => collectionIds.Contains(c.Id) && c.OrganizationId == org.Id);
 
-        // The acting user does not have permission to manage all target collections, fail
-        if (resources.Any(c => !manageableCollectionIds.Contains(c.Id)))
+        if (filteredCollections.Count() == resources.Count)
         {
-            context.Fail();
-            return;
+            // User is assigned to all collections we're operating on
+            context.Succeed(requirement);
         }
-
-        context.Succeed(requirement);
     }
 
     /// <summary>
@@ -149,6 +133,12 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context,
         IAuthorizationRequirement requirement, ICollection<Collection> targetCollections, CurrentContextOrganization org)
     {
+
+        // TODO: implement old logic
+        // TODO: remove CanEditCollectionAsync from controller
+
+        // new logic follows
+
         // Owners, Admins, Providers, and users with EditAnyCollection permission can always manage collection access
         if (
             org.Permissions is { EditAnyCollection: true } ||
