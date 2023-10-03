@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using Bit.Core.Entities.Provider;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Request.Providers;
 
@@ -7,8 +9,10 @@ public class ProviderSetupRequestModel
 {
     [Required]
     [StringLength(50)]
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     [StringLength(50)]
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string BusinessName { get; set; }
     [Required]
     [StringLength(256)]
