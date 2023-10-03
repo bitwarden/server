@@ -64,7 +64,7 @@ public class Send : ITableObject<Guid>
     public string? Password { get; set; }
 
     /// <summary>
-    /// The send becomes unavailable to API callers when 
+    /// The send becomes unavailable to API callers when
     /// <see cref="AccessCount"/>  &gt;= <see cref="MaxAccessCount"/>.
     /// </summary>
     public int? MaxAccessCount { get; set; }
@@ -107,12 +107,14 @@ public class Send : ITableObject<Guid>
     public bool Disabled { get; set; }
 
     /// <summary>
-    /// When this is false the creator's email address is not shown to the recipient.
+    /// Whether the creator's email address should be shown to the recipient.
     /// </summary>
-    /// <remarks>
-    /// This should is null for compatibility with clients that don't set the field.
-    /// ::ADD TECH DEBT TICKET TO REMOVE NULLABILITY::
-    /// </remarks>
+    /// <value>
+    /// <see langword="false"/> indicates the email may be shown.
+    /// <see langword="true"/> indicates the email should be hidden.
+    /// <see langword="null"/> indicates the client doesn't set the field and
+    /// the email should be hidden.
+    /// </value>
     public bool? HideEmail { get; set; }
 
     /// <summary>

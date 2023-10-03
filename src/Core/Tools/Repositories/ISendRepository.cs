@@ -6,7 +6,7 @@ using Bit.Core.Tools.Entities;
 namespace Bit.Core.Tools.Repositories;
 
 /// <summary>
-/// A repository for loading <see cref="Send"/>s.
+/// Service for saving and loading <see cref="Send"/>s in persistent storage.
 /// </summary>
 public interface ISendRepository : IRepository<Send, Guid>
 {

@@ -9,9 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Infrastructure.EntityFramework.Tools.Repositories;
 
-/// <summary>
-/// A repository for loading and creating <see cref="Send"/>s.
-/// </summary>
+/// <inheritdoc cref="ISendRepository"/>
 public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, ISendRepository
 {
     /// <summary>

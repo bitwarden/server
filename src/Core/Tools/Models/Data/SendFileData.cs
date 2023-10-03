@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using static System.Text.Json.Serialization.JsonNumberHandling;
 
@@ -29,7 +30,7 @@ public class SendFileData : SendData
     /// Size of the attached file in bytes.
     /// </summary>
     /// <remarks>
-    /// Serialized as a string since JSON (or Javascript)  doesn't support 
+    /// Serialized as a string since JSON (or Javascript)  doesn't support
     /// full precision for long numbers
     /// </remarks>
     [JsonNumberHandling(WriteAsString | AllowReadingFromString)]
@@ -38,6 +39,7 @@ public class SendFileData : SendData
     /// <summary>
     /// Uniquely identifies the file.
     /// </summary>
+    [DisallowNull]
     public string? Id { get; set; }
 
     /// <summary>
