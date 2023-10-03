@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
@@ -174,8 +175,8 @@ public class OrganizationEditModel : OrganizationViewModel
 
     public Organization ToOrganization(Organization existingOrganization)
     {
-        existingOrganization.Name = Name;
-        existingOrganization.BusinessName = BusinessName;
+        existingOrganization.Name = WebUtility.HtmlEncode(Name.Trim());
+        existingOrganization.BusinessName = WebUtility.HtmlEncode(BusinessName.Trim());
         existingOrganization.BillingEmail = BillingEmail?.ToLowerInvariant()?.Trim();
         existingOrganization.PlanType = PlanType.Value;
         existingOrganization.Plan = Plan;
