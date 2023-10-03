@@ -224,4 +224,21 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             return selfHostedOrganization;
         }
     }
+
+    public async Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+
+        var dbContext = GetDatabaseContext(scope);
+
+        var query =
+            from o in dbContext.Organizations
+            join ou in dbContext.OrganizationUsers on o.Id equals ou.OrganizationId
+            join u in dbContext.Users on ou.UserId equals u.Id
+            where ou.Type == OrganizationUserType.Owner &&
+                  ou.Status == OrganizationUserStatusType.Confirmed
+            select u.Email;
+
+        return await query.ToListAsync();
+    }
 }
