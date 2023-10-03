@@ -1,4 +1,5 @@
-﻿using Bit.Admin.Enums;
+﻿using System.Net;
+using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
@@ -110,8 +111,9 @@ public class OrganizationsController : Controller
             count = 1;
         }
 
+        var encodedName = WebUtility.HtmlEncode(name);
         var skip = (page - 1) * count;
-        var organizations = await _organizationRepository.SearchAsync(name, userEmail, paid, skip, count);
+        var organizations = await _organizationRepository.SearchAsync(encodedName, userEmail, paid, skip, count);
         return View(new OrganizationsModel
         {
             Items = organizations as List<Organization>,
