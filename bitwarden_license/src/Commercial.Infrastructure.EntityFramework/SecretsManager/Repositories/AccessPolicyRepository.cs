@@ -309,10 +309,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         if (peopleAccessPolicies.UserAccessPolicies == null || !peopleAccessPolicies.UserAccessPolicies.Any())
         {
-            foreach (var userPolicyEntity in userPolicyEntities)
-            {
-                dbContext.Remove(userPolicyEntity);
-            }
+            dbContext.RemoveRange(userPolicyEntities);
         }
         else
         {
@@ -327,10 +324,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         if (peopleAccessPolicies.GroupAccessPolicies == null || !peopleAccessPolicies.GroupAccessPolicies.Any())
         {
-            foreach (var groupPolicyEntity in groupPolicyEntities)
-            {
-                dbContext.Remove(groupPolicyEntity);
-            }
+            dbContext.RemoveRange(groupPolicyEntities);
         }
         else
         {
@@ -343,9 +337,21 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             }
         }
 
+        var results = await UpsertPeoplePoliciesAsync(dbContext,
+            peopleAccessPolicies.ToBaseAccessPolicies().Select(MapToEntity).ToList(), userPolicyEntities,
+            groupPolicyEntities);
+
+        await dbContext.SaveChangesAsync();
+        return results.Select(MapToCore);
+    }
+
+    private static async Task<List<BaseAccessPolicy>> UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
+        List<BaseAccessPolicy> policies, IReadOnlyCollection<AccessPolicy> userPolicyEntities,
+        IReadOnlyCollection<AccessPolicy> groupPolicyEntities)
+    {
         var results = new List<BaseAccessPolicy>();
         var currentDate = DateTime.UtcNow;
-        foreach (var updatedEntity in peopleAccessPolicies.ToBaseAccessPolicies().Select(MapToEntity).ToList())
+        foreach (var updatedEntity in policies)
         {
             var currentEntity = updatedEntity switch
             {
@@ -353,6 +359,10 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                     ((UserProjectAccessPolicy)e).OrganizationUserId == ap.OrganizationUserId),
                 GroupProjectAccessPolicy ap => groupPolicyEntities.FirstOrDefault(e =>
                     ((GroupProjectAccessPolicy)e).GroupId == ap.GroupId),
+                UserServiceAccountAccessPolicy ap => userPolicyEntities.FirstOrDefault(e =>
+                    ((UserServiceAccountAccessPolicy)e).OrganizationUserId == ap.OrganizationUserId),
+                GroupServiceAccountAccessPolicy ap => groupPolicyEntities.FirstOrDefault(e =>
+                    ((GroupServiceAccountAccessPolicy)e).GroupId == ap.GroupId),
                 _ => null
             };
 
@@ -372,8 +382,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             }
         }
 
-        await dbContext.SaveChangesAsync();
-        return results.Select(MapToCore);
+        return results;
     }
 
     private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(
