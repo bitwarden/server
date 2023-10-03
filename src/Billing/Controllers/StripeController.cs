@@ -208,48 +208,63 @@ public class StripeController : Controller
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
         {
-            var invoice = await _stripeEventService.GetInvoice(parsedEvent);
-            var subscriptionService = new SubscriptionService();
-            var subscription = await subscriptionService.GetAsync(invoice.SubscriptionId);
-            if (subscription == null)
+            var invoice = await _stripeEventService.GetInvoice(parsedEvent, true, new List<string> { "subscription" });
+
+            if (invoice.Subscription == null)
             {
-                throw new Exception("Invoice subscription is null. " + invoice.Id);
+                throw new Exception(
+                    $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
             }
 
-            subscription = await VerifyCorrectTaxRateForCharge(invoice, subscription);
+            var updatedSubscription = await VerifyCorrectTaxRateForCharge(invoice, invoice.Subscription);
 
-            string email = null;
-            var ids = GetIdsFromMetaData(subscription.Metadata);
-            // org
-            if (ids.Item1.HasValue)
+            var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
+
+            var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
+
+            async Task SendEmail(IEnumerable<string> emails)
             {
-                // sponsored org
-                if (IsSponsoredSubscription(subscription))
-                {
-                    await _validateSponsorshipCommand.ValidateSponsorshipAsync(ids.Item1.Value);
-                }
+                var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
 
-                var org = await _organizationRepository.GetByIdAsync(ids.Item1.Value);
-                if (org != null && OrgPlanForInvoiceNotifications(org))
+                if (invoice.NextPaymentAttempt.HasValue)
                 {
-                    email = org.BillingEmail;
+                    await _mailService.SendInvoiceUpcoming(
+                        validEmails,
+                        invoice.AmountDue / 100M,
+                        invoice.NextPaymentAttempt.Value,
+                        invoiceLineItemDescriptions,
+                        true);
                 }
             }
-            // user
-            else if (ids.Item2.HasValue)
+
+            if (organizationId.HasValue)
             {
-                var user = await _userService.GetUserByIdAsync(ids.Item2.Value);
+                if (IsSponsoredSubscription(updatedSubscription))
+                {
+                    await _validateSponsorshipCommand.ValidateSponsorshipAsync(organizationId.Value);
+                }
+
+                var organization = await _organizationRepository.GetByIdAsync(organizationId.Value);
+
+                if (organization == null || !OrgPlanForInvoiceNotifications(organization))
+                {
+                    return new OkResult();
+                }
+
+                await SendEmail(new List<string> { organization.BillingEmail });
+
+                var ownerEmails = await _organizationRepository.GetOwnerEmailAddressesById(organization.Id);
+
+                await SendEmail(ownerEmails);
+            }
+            else if (userId.HasValue)
+            {
+                var user = await _userService.GetUserByIdAsync(userId.Value);
+
                 if (user.Premium)
                 {
-                    email = user.Email;
+                    await SendEmail(new List<string> { user.Email });
                 }
-            }
-
-            if (!string.IsNullOrWhiteSpace(email) && invoice.NextPaymentAttempt.HasValue)
-            {
-                var items = invoice.Lines.Select(i => i.Description).ToList();
-                await _mailService.SendInvoiceUpcomingAsync(email, invoice.AmountDue / 100M,
-                    invoice.NextPaymentAttempt.Value, items, true);
             }
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.ChargeSucceeded))
