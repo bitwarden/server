@@ -145,7 +145,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.Name} Seat Count Has Increased", ownerEmails);
+        var message = CreateDefaultMessage($"{WebUtility.HtmlDecode(organization.Name)} Seat Count Has Increased", ownerEmails);
         var model = new OrganizationSeatsAutoscaledViewModel
         {
             OrganizationId = organization.Id,
@@ -160,7 +160,7 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.Name} Seat Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{WebUtility.HtmlDecode(organization.Name)} Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             OrganizationId = organization.Id,
@@ -179,7 +179,7 @@ public class HandlebarsMailService : IMailService
         var model = new OrganizationUserAcceptedViewModel
         {
             OrganizationId = organization.Id,
-            OrganizationName = CoreHelpers.SanitizeForEmail(organization.Name, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(WebUtility.HtmlDecode(organization.Name), false),
             UserIdentifier = userIdentifier,
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
@@ -191,13 +191,14 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationConfirmedEmailAsync(string organizationName, string email)
     {
-        var message = CreateDefaultMessage($"You Have Been Confirmed To {organizationName}", email);
+        var decodedOrganizationName = WebUtility.HtmlDecode(organizationName);
+        var message = CreateDefaultMessage($"You Have Been Confirmed To {decodedOrganizationName}", email);
         var model = new OrganizationUserConfirmedViewModel
         {
             TitleFirst = "You're confirmed as a member of ",
-            TitleSecondBold = CoreHelpers.SanitizeForEmail(organizationName, false),
+            TitleSecondBold = CoreHelpers.SanitizeForEmail(decodedOrganizationName, false),
             TitleThird = "!",
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(decodedOrganizationName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -211,9 +212,10 @@ public class HandlebarsMailService : IMailService
 
     public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg, bool initOrganization = false)
     {
+        var decodedOrganizationName = WebUtility.HtmlDecode(organizationName);
         MailQueueMessage CreateMessage(string email, object model)
         {
-            var message = CreateDefaultMessage($"Join {organizationName}", email);
+            var message = CreateDefaultMessage($"Join {decodedOrganizationName}", email);
             return new MailQueueMessage(message, "OrganizationUserInvited", model);
         }
         var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
@@ -221,15 +223,15 @@ public class HandlebarsMailService : IMailService
             new OrganizationUserInvitedViewModel
             {
                 TitleFirst = isFreeOrg ? freeOrgTitle : "Join ",
-                TitleSecondBold = isFreeOrg ? string.Empty : CoreHelpers.SanitizeForEmail(organizationName, false),
+                TitleSecondBold = isFreeOrg ? string.Empty : CoreHelpers.SanitizeForEmail(decodedOrganizationName, false),
                 TitleThird = isFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false) + invite.orgUser.Status,
+                OrganizationName = CoreHelpers.SanitizeForEmail(decodedOrganizationName, false) + invite.orgUser.Status,
                 Email = WebUtility.UrlEncode(invite.orgUser.Email),
                 OrganizationId = invite.orgUser.OrganizationId.ToString(),
                 OrganizationUserId = invite.orgUser.Id.ToString(),
                 Token = WebUtility.UrlEncode(invite.token.Token),
                 ExpirationDate = $"{invite.token.ExpirationDate.ToLongDateString()} {invite.token.ExpirationDate.ToShortTimeString()} UTC",
-                OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
+                OrganizationNameUrlEncoded = WebUtility.UrlEncode(decodedOrganizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
                 InitOrganization = initOrganization
@@ -241,10 +243,11 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email)
     {
-        var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
+        var decodedOrganizationName = WebUtility.HtmlDecode(organizationName);
+        var message = CreateDefaultMessage($"You have been removed from {decodedOrganizationName}", email);
         var model = new OrganizationUserRemovedForPolicyTwoStepViewModel
         {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(decodedOrganizationName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -334,10 +337,11 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendLicenseExpiredAsync(IEnumerable<string> emails, string organizationName = null)
     {
+        var decodedOrganizationName = WebUtility.HtmlDecode(organizationName);
         var message = CreateDefaultMessage("License Expired", emails);
         var model = new LicenseExpiredViewModel
         {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(WebUtility.HtmlDecode(decodedOrganizationName), false),
         };
         await AddMessageContentAsync(message, "LicenseExpired", model);
         message.Category = "LicenseExpired";
@@ -381,10 +385,11 @@ public class HandlebarsMailService : IMailService
 
     public async Task SendOrganizationUserRemovedForPolicySingleOrgEmailAsync(string organizationName, string email)
     {
-        var message = CreateDefaultMessage($"You have been removed from {organizationName}", email);
+        var decodedOrganizationName = WebUtility.HtmlDecode(organizationName);
+        var message = CreateDefaultMessage($"You have been removed from {decodedOrganizationName}", email);
         var model = new OrganizationUserRemovedForPolicySingleOrgViewModel
         {
-            OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false),
+            OrganizationName = CoreHelpers.SanitizeForEmail(decodedOrganizationName, false),
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
             SiteName = _globalSettings.SiteName
         };
@@ -900,7 +905,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.Name} Secrets Manager Seat Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{WebUtility.HtmlDecode(organization.Name)} Secrets Manager Seat Limit Reached", ownerEmails);
         var model = new OrganizationSeatsMaxReachedViewModel
         {
             OrganizationId = organization.Id,
@@ -915,7 +920,7 @@ public class HandlebarsMailService : IMailService
     public async Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization, int maxSeatCount,
         IEnumerable<string> ownerEmails)
     {
-        var message = CreateDefaultMessage($"{organization.Name} Secrets Manager Service Accounts Limit Reached", ownerEmails);
+        var message = CreateDefaultMessage($"{WebUtility.HtmlDecode(organization.Name)} Secrets Manager Service Accounts Limit Reached", ownerEmails);
         var model = new OrganizationServiceAccountsMaxReachedViewModel
         {
             OrganizationId = organization.Id,
