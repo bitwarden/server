@@ -61,4 +61,34 @@ public class PeopleAccessPoliciesRequestModel
             GroupAccessPolicies = groupAccessPolicies
         };
     }
+
+    public ServiceAccountPeopleAccessPolicies ToServiceAccountPeopleAccessPolicies(Guid grantedServiceAccountId, Guid organizationId)
+    {
+        var userAccessPolicies = UserAccessPolicyRequests?
+            .Select(x => x.ToUserServiceAccountAccessPolicy(grantedServiceAccountId, organizationId)).ToList();
+
+        var groupAccessPolicies = GroupAccessPolicyRequests?
+            .Select(x => x.ToGroupServiceAccountAccessPolicy(grantedServiceAccountId, organizationId)).ToList();
+
+        var policies = new List<BaseAccessPolicy>();
+        if (userAccessPolicies != null)
+        {
+            policies.AddRange(userAccessPolicies);
+        }
+
+        if (groupAccessPolicies != null)
+        {
+            policies.AddRange(groupAccessPolicies);
+        }
+
+        CheckForDistinctAccessPolicies(policies);
+
+        return new ServiceAccountPeopleAccessPolicies
+        {
+            Id = grantedServiceAccountId,
+            OrganizationId = organizationId,
+            UserAccessPolicies = userAccessPolicies,
+            GroupAccessPolicies = groupAccessPolicies
+        };
+    }
 }

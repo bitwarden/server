@@ -3,11 +3,11 @@ using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Api.SecretsManager.Models.Response;
 
-public class ServiceAccountAccessPoliciesResponseModel : ResponseModel
+public class ServiceAccountPeopleAccessPoliciesResponseModel : ResponseModel
 {
     private const string _objectName = "serviceAccountAccessPolicies";
 
-    public ServiceAccountAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies)
+    public ServiceAccountPeopleAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies)
         : base(_objectName)
     {
         if (baseAccessPolicies == null)
@@ -29,7 +29,7 @@ public class ServiceAccountAccessPoliciesResponseModel : ResponseModel
         }
     }
 
-    public ServiceAccountAccessPoliciesResponseModel() : base(_objectName)
+    public ServiceAccountPeopleAccessPoliciesResponseModel() : base(_objectName)
     {
     }
 
