@@ -4,11 +4,11 @@ using Bit.Core.Vault.Models.Data;
 
 namespace Bit.Api.Vault.Models;
 
-public class CipherFido2KeyModel
+public class CipherFido2CredentialModel
 {
-    public CipherFido2KeyModel() { }
+    public CipherFido2CredentialModel() { }
 
-    public CipherFido2KeyModel(CipherLoginFido2KeyData data)
+    public CipherFido2CredentialModel(CipherLoginFido2CredentialData data)
     {
         CredentialId = data.CredentialId;
         KeyType = data.KeyType;
@@ -60,9 +60,9 @@ public class CipherFido2KeyModel
     [Required]
     public DateTime CreationDate { get; set; }
 
-    public CipherLoginFido2KeyData ToCipherLoginFido2KeyData()
+    public CipherLoginFido2CredentialData ToCipherLoginFido2CredentialData()
     {
-        return new CipherLoginFido2KeyData
+        return new CipherLoginFido2CredentialData
         {
             CredentialId = CredentialId,
             KeyType = KeyType,
@@ -80,10 +80,10 @@ public class CipherFido2KeyModel
     }
 }
 
-static class CipherFido2KeyModelExtensions
+static class CipherFido2CredentialModelExtensions
 {
-    public static CipherLoginFido2KeyData[] ToCipherLoginFido2KeyData(this CipherFido2KeyModel[] models)
+    public static CipherLoginFido2CredentialData[] ToCipherLoginFido2CredentialData(this CipherFido2CredentialModel[] models)
     {
-        return models.Select(m => m.ToCipherLoginFido2KeyData()).ToArray();
+        return models.Select(m => m.ToCipherLoginFido2CredentialData()).ToArray();
     }
 }
