@@ -7,7 +7,9 @@
     @Counter INT,
     @Type VARCHAR(20),
     @AaGuid UNIQUEIDENTIFIER,
-    @UserKey VARCHAR (MAX),
+    @EncryptedUserKey VARCHAR (MAX),
+    @EncryptedPrivateKey VARCHAR (MAX),
+    @EncryptedPublicKey VARCHAR (MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -24,7 +26,9 @@ BEGIN
         [Counter],
         [Type],
         [AaGuid],
-        [UserKey],
+        [EncryptedUserKey],
+        [EncryptedPrivateKey],
+        [EncryptedPublicKey],
         [CreationDate],
         [RevisionDate]
     )
@@ -38,7 +42,9 @@ BEGIN
         @Counter,
         @Type,
         @AaGuid,
-        @UserKey,
+        @EncryptedUserKey,
+        @EncryptedPrivateKey,
+        @EncryptedPublicKey,
         @CreationDate,
         @RevisionDate
     )
