@@ -148,7 +148,7 @@ public class StaticStore
 
     /// <summary>
     /// Determines if the stripe plan id is an addon item by checking if the provided stripe plan id
-    /// matches either the <see cref="Plan.PasswordManager.StripeStoragePlanId"/> or <see cref="Plan.SecretsManager.StripeServiceAccountPlanId"/>
+    /// matches either the <see cref="Plan.PasswordManagerPlanFeatures.StripeStoragePlanId"/> or <see cref="Plan.SecretsManagerPlanFeatures.StripeServiceAccountPlanId"/>
     /// in any <see cref="Plans"/>.
     /// </summary>
     /// <param name="stripePlanId"></param>
@@ -157,13 +157,8 @@ public class StaticStore
     /// </returns>
     public static bool IsAddonSubscriptionItem(string stripePlanId)
     {
-        if (Plans.Any(p =>
+        return Plans.Any(p =>
                 p.PasswordManager.StripeStoragePlanId == stripePlanId ||
-                (p.SecretsManager?.StripeServiceAccountPlanId == stripePlanId)))
-        {
-            return true;
-        }
-
-        return false;
+                (p.SecretsManager?.StripeServiceAccountPlanId == stripePlanId));
     }
 }

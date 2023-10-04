@@ -38,48 +38,10 @@ public class PlanResponseModel : ResponseModel
         Disabled = plan.Disabled;
         if (plan.SecretsManager != null)
         {
-            SecretsManager = new SecretsManagerPlanResponseModel
-            {
-                MaxServiceAccounts = plan.SecretsManager.MaxServiceAccounts,
-                AllowServiceAccountsAutoscale = plan.SecretsManager is { AllowServiceAccountsAutoscale: true },
-                StripeServiceAccountPlanId = plan.SecretsManager.StripeServiceAccountPlanId,
-                AdditionalPricePerServiceAccount = plan.SecretsManager.AdditionalPricePerServiceAccount,
-                BaseServiceAccount = plan.SecretsManager.BaseServiceAccount,
-                MaxAdditionalServiceAccount = plan.SecretsManager.MaxAdditionalServiceAccount,
-                HasAdditionalServiceAccountOption = plan.SecretsManager is { HasAdditionalServiceAccountOption: true },
-                StripeSeatPlanId = plan.SecretsManager.StripeSeatPlanId,
-                HasAdditionalSeatsOption = plan.SecretsManager is { HasAdditionalSeatsOption: true },
-                BasePrice = plan.SecretsManager.BasePrice,
-                SeatPrice = plan.SecretsManager.SeatPrice,
-                BaseSeats = plan.SecretsManager.BaseSeats,
-                MaxSeats = plan.SecretsManager.MaxSeats,
-                MaxAdditionalSeats = plan.SecretsManager.MaxAdditionalSeats,
-                AllowSeatAutoscale = plan.SecretsManager.AllowSeatAutoscale,
-                MaxProjects = plan.SecretsManager.MaxProjects
-            };
+            SecretsManager = new SecretsManagerPlanFeaturesResponseModel(plan.SecretsManager);
         }
 
-        PasswordManager = new PasswordManagerPlanResponseModel
-        {
-            StripePlanId = plan.PasswordManager.StripePlanId,
-            StripeSeatPlanId = plan.PasswordManager.StripeSeatPlanId,
-            BasePrice = plan.PasswordManager.BasePrice,
-            SeatPrice = plan.PasswordManager.SeatPrice,
-            AllowSeatAutoscale = plan.PasswordManager.AllowSeatAutoscale,
-            HasAdditionalSeatsOption = plan.PasswordManager.HasAdditionalSeatsOption,
-            MaxAdditionalSeats = plan.PasswordManager.MaxAdditionalSeats,
-            BaseSeats = plan.PasswordManager.BaseSeats,
-            HasPremiumAccessOption = plan.PasswordManager.HasPremiumAccessOption,
-            StripePremiumAccessPlanId = plan.PasswordManager.StripePremiumAccessPlanId,
-            PremiumAccessOptionPrice = plan.PasswordManager.PremiumAccessOptionPrice,
-            MaxSeats = plan.PasswordManager.MaxSeats,
-            BaseStorageGb = plan.PasswordManager.BaseStorageGb,
-            HasAdditionalStorageOption = plan.PasswordManager.HasAdditionalStorageOption,
-            AdditionalStoragePricePerGb = plan.PasswordManager.AdditionalStoragePricePerGb,
-            StripeStoragePlanId = plan.PasswordManager.StripeStoragePlanId,
-            MaxAdditionalStorage = plan.PasswordManager.MaxAdditionalStorage,
-            MaxCollections = plan.PasswordManager.MaxCollections
-        };
+        PasswordManager = new PasswordManagerPlanFeaturesResponseModel(plan.PasswordManager);
     }
 
     public PlanType Type { get; set; }
@@ -107,11 +69,30 @@ public class PlanResponseModel : ResponseModel
     public int DisplaySortOrder { get; set; }
     public int? LegacyYear { get; set; }
     public bool Disabled { get; set; }
-    public SecretsManagerPlanResponseModel SecretsManager { get; protected init; }
-    public PasswordManagerPlanResponseModel PasswordManager { get; protected init; }
+    public SecretsManagerPlanFeaturesResponseModel SecretsManager { get; protected init; }
+    public PasswordManagerPlanFeaturesResponseModel PasswordManager { get; protected init; }
 
-    public class SecretsManagerPlanResponseModel
+    public class SecretsManagerPlanFeaturesResponseModel
     {
+        public SecretsManagerPlanFeaturesResponseModel(Plan.SecretsManagerPlanFeatures plan)
+        {
+            MaxServiceAccounts = plan.MaxServiceAccounts;
+            AllowServiceAccountsAutoscale = plan is { AllowServiceAccountsAutoscale: true };
+            StripeServiceAccountPlanId = plan.StripeServiceAccountPlanId;
+            AdditionalPricePerServiceAccount = plan.AdditionalPricePerServiceAccount;
+            BaseServiceAccount = plan.BaseServiceAccount;
+            MaxAdditionalServiceAccount = plan.MaxAdditionalServiceAccount;
+            HasAdditionalServiceAccountOption = plan is { HasAdditionalServiceAccountOption: true };
+            StripeSeatPlanId = plan.StripeSeatPlanId;
+            HasAdditionalSeatsOption = plan is { HasAdditionalSeatsOption: true };
+            BasePrice = plan.BasePrice;
+            SeatPrice = plan.SeatPrice;
+            BaseSeats = plan.BaseSeats;
+            MaxSeats = plan.MaxSeats;
+            MaxAdditionalSeats = plan.MaxAdditionalSeats;
+            AllowSeatAutoscale = plan.AllowSeatAutoscale;
+            MaxProjects = plan.MaxProjects;
+        }
         // Service accounts
         public short? MaxServiceAccounts { get; init; }
         public bool AllowServiceAccountsAutoscale { get; init; }
@@ -134,8 +115,29 @@ public class PlanResponseModel : ResponseModel
         public int MaxProjects { get; init; }
     }
 
-    public record PasswordManagerPlanResponseModel
+    public record PasswordManagerPlanFeaturesResponseModel
     {
+        public PasswordManagerPlanFeaturesResponseModel(Plan.PasswordManagerPlanFeatures plan)
+        {
+            StripePlanId = plan.StripePlanId;
+            StripeSeatPlanId = plan.StripeSeatPlanId;
+            BasePrice = plan.BasePrice;
+            SeatPrice = plan.SeatPrice;
+            AllowSeatAutoscale = plan.AllowSeatAutoscale;
+            HasAdditionalSeatsOption = plan.HasAdditionalSeatsOption;
+            MaxAdditionalSeats = plan.MaxAdditionalSeats;
+            BaseSeats = plan.BaseSeats;
+            HasPremiumAccessOption = plan.HasPremiumAccessOption;
+            StripePremiumAccessPlanId = plan.StripePremiumAccessPlanId;
+            PremiumAccessOptionPrice = plan.PremiumAccessOptionPrice;
+            MaxSeats = plan.MaxSeats;
+            BaseStorageGb = plan.BaseStorageGb;
+            HasAdditionalStorageOption = plan.HasAdditionalStorageOption;
+            AdditionalStoragePricePerGb = plan.AdditionalStoragePricePerGb;
+            StripeStoragePlanId = plan.StripeStoragePlanId;
+            MaxAdditionalStorage = plan.MaxAdditionalStorage;
+            MaxCollections = plan.MaxCollections;
+        }
         // Seats
         public string StripePlanId { get; init; }
         public string StripeSeatPlanId { get; init; }
