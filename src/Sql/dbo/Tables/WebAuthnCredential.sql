@@ -3,7 +3,7 @@
     [UserId]                UNIQUEIDENTIFIER NOT NULL,
     [Name]                  NVARCHAR (50)    NOT NULL,
     [PublicKey]             VARCHAR (256)    NOT NULL,
-    [DescriptorId]          VARCHAR (256)    NOT NULL,
+    [CredentialId]          VARCHAR (256)    NOT NULL,
     [Counter]               INT              NOT NULL,
     [Type]                  VARCHAR (20)     NULL,
     [AaGuid]                UNIQUEIDENTIFIER NOT NULL,

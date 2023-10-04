@@ -13,7 +13,7 @@ public class WebAuthnCredential : ITableObject<Guid>
     [MaxLength(256)]
     public string PublicKey { get; set; }
     [MaxLength(256)]
-    public string DescriptorId { get; set; }
+    public string CredentialId { get; set; }
     public int Counter { get; set; }
     [MaxLength(20)]
     public string Type { get; set; }
