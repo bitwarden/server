@@ -91,7 +91,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         }
 
         var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
-        if (provider is { Type: ProviderType.Msp })
+        if (provider != null)
         {
             throw new BadRequestException(
                 "Organizations with a Managed Service Provider do not support Secrets Manager.");
