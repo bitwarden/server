@@ -1,5 +1,6 @@
 @using Bit.SharedWeb.Utilities
 @using Bit.Admin.Enums;
+@using System.Net
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
 
 @model ProvidersModel
@@ -52,7 +53,7 @@
                 {
                     <tr>
                         <td>
-                            <a asp-action="@Model.Action" asp-route-id="@provider.Id">@(provider.Name ?? "Pending")</a>
+                            <a asp-action="@Model.Action" asp-route-id="@provider.Id">@(!string.IsNullOrEmpty(provider.Name) ? WebUtility.HtmlDecode(provider.Name) : "Pending")</a>
                         </td>
                         <td>@provider.Type.GetDisplayAttribute()?.GetShortName()</td>
                         <td>@provider.Status</td>
