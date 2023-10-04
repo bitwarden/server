@@ -292,12 +292,12 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     {
         var updatedItems = new List<SubscriptionItemOptions>();
 
-        AddNewSecretsManagerItems(updatedItems, subscription);
+        AddNewSecretsManagerItems(updatedItems);
 
         return updatedItems;
     }
 
-    private void AddNewSecretsManagerItems(List<SubscriptionItemOptions> updatedItems, Subscription subscription)
+    private void AddNewSecretsManagerItems(List<SubscriptionItemOptions> updatedItems)
     {
         if (_additionalSeats > 0)
         {
