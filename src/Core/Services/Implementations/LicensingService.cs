@@ -1,4 +1,5 @@
-﻿using System.Security.Cryptography.X509Certificates;
+﻿using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using Bit.Core.Entities;
@@ -131,7 +132,7 @@ public class LicensingService : ILicensingService
     {
         _logger.LogInformation(Constants.BypassFiltersEventId, null,
             "Organization {0} ({1}) has an invalid license and is being disabled. Reason: {2}",
-            org.Id, org.Name, reason);
+            org.Id, WebUtility.HtmlDecode(org.Name), reason);
         org.Enabled = false;
         org.ExpirationDate = license?.Expires ?? DateTime.UtcNow;
         org.RevisionDate = DateTime.UtcNow;

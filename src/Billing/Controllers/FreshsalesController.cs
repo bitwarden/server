@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Headers;
+﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -95,7 +96,7 @@ public class FreshsalesController : Controller
 
             foreach (var org in orgs)
             {
-                noteItems.Add($"Org, {org.Name}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
+                noteItems.Add($"Org, {WebUtility.HtmlDecode(org.Name)}: {_globalSettings.BaseServiceUri.Admin}/organizations/edit/{org.Id}");
                 if (TryGetPlanName(org.PlanType, out var planName))
                 {
                     newTags.Add($"Org: {planName}");

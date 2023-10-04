@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Enums.Provider;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data;
 
@@ -6,6 +8,7 @@ public class ProviderUserProviderDetails
 {
     public Guid ProviderId { get; set; }
     public Guid? UserId { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public string Key { get; set; }
     public ProviderUserStatusType Status { get; set; }

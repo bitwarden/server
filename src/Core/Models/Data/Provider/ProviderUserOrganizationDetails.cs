@@ -1,4 +1,6 @@
-﻿using Bit.Core.Enums.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Enums.Provider;
+using Bit.Core.Utilities;
 
 namespace Bit.Core.Models.Data;
 
@@ -6,6 +8,7 @@ public class ProviderUserOrganizationDetails
 {
     public Guid OrganizationId { get; set; }
     public Guid? UserId { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
@@ -33,6 +36,7 @@ public class ProviderUserOrganizationDetails
     public string PrivateKey { get; set; }
     public Guid? ProviderId { get; set; }
     public Guid? ProviderUserId { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string ProviderName { get; set; }
     public Enums.PlanType PlanType { get; set; }
 }

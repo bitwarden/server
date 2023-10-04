@@ -786,7 +786,7 @@ public class HandlebarsMailService : IMailService
             message.Category = "FamiliesForEnterpriseOffer";
             var model = new FamiliesForEnterpriseOfferViewModel
             {
-                SponsorOrgName = sponsorOrgName,
+                SponsorOrgName = WebUtility.HtmlDecode(sponsorOrgName),
                 SponsoredEmail = WebUtility.UrlEncode(invite.Email),
                 ExistingAccount = invite.ExistingAccount,
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,

@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -94,12 +95,12 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
 
     public string BillingName()
     {
-        return BusinessName;
+        return WebUtility.HtmlDecode(BusinessName);
     }
 
     public string SubscriberName()
     {
-        return Name;
+        return WebUtility.HtmlDecode(Name);
     }
 
     public string BraintreeCustomerIdPrefix()

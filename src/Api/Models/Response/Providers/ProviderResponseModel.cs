@@ -1,5 +1,7 @@
-﻿using Bit.Core.Entities.Provider;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Api;
+using Bit.Core.Utilities;
 
 namespace Bit.Api.Models.Response.Providers;
 
@@ -24,6 +26,7 @@ public class ProviderResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
+    [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string Name { get; set; }
     public string BusinessName { get; set; }
     public string BusinessAddress1 { get; set; }
