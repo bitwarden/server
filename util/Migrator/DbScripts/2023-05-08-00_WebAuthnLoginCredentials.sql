@@ -10,6 +10,7 @@ CREATE TABLE [dbo].[WebAuthnCredential] (
     [EncryptedUserKey]      VARCHAR (MAX)    NULL,
     [EncryptedPrivateKey]   VARCHAR (MAX)    NULL,
     [EncryptedPublicKey]    VARCHAR (MAX)    NULL,
+    [SupportsPrf]           BIT              NOT NULL,
     [CreationDate]          DATETIME2 (7)    NOT NULL,
     [RevisionDate]          DATETIME2 (7)    NOT NULL,
     CONSTRAINT [PK_WebAuthnCredential] PRIMARY KEY CLUSTERED ([Id] ASC),
@@ -41,6 +42,7 @@ CREATE PROCEDURE [dbo].[WebAuthnCredential_Create]
     @EncryptedUserKey VARCHAR (MAX),
     @EncryptedPrivateKey VARCHAR (MAX),
     @EncryptedPublicKey VARCHAR (MAX),
+    @SupportsPrf BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -60,6 +62,7 @@ BEGIN
         [EncryptedUserKey],
         [EncryptedPrivateKey],
         [EncryptedPublicKey],
+        [SupportsPrf],
         [CreationDate],
         [RevisionDate]
     )
@@ -76,6 +79,7 @@ BEGIN
         @EncryptedUserKey,
         @EncryptedPrivateKey,
         @EncryptedPublicKey,
+        @SupportsPrf,
         @CreationDate,
         @RevisionDate
     )
@@ -138,6 +142,7 @@ CREATE PROCEDURE [dbo].[WebAuthnCredential_Update]
     @EncryptedUserKey VARCHAR (MAX),
     @EncryptedPrivateKey VARCHAR (MAX),
     @EncryptedPublicKey VARCHAR (MAX),
+    @SupportsPrf BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -157,6 +162,7 @@ BEGIN
         [EncryptedUserKey] = @EncryptedUserKey,
         [EncryptedPrivateKey] = @EncryptedPrivateKey,
         [EncryptedPublicKey] = @EncryptedPublicKey,
+        [SupportsPrf] = @SupportsPrf,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

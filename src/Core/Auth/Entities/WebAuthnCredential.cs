@@ -21,6 +21,7 @@ public class WebAuthnCredential : ITableObject<Guid>
     public string EncryptedUserKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
     public string EncryptedPublicKey { get; set; }
+    public bool SupportsPrf { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

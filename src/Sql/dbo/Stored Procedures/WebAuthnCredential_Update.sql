@@ -10,6 +10,7 @@
     @EncryptedUserKey VARCHAR (MAX),
     @EncryptedPrivateKey VARCHAR (MAX),
     @EncryptedPublicKey VARCHAR (MAX),
+    @SupportsPrf BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -29,6 +30,7 @@ BEGIN
         [EncryptedUserKey] = @EncryptedUserKey,
         [EncryptedPrivateKey] = @EncryptedPrivateKey,
         [EncryptedPublicKey] = @EncryptedPublicKey,
+        [SupportsPrf] = @SupportsPrf,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE
