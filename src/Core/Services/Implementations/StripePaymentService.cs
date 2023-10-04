@@ -1104,12 +1104,7 @@ public class StripePaymentService : IPaymentService
         }).ToList().Where(i => i.InvoiceId == null);
         var pendingInvoiceItemsDict = pendingInvoiceItems.ToDictionary(pii => pii.Id);
 
-        var upcomingPreview = await _stripeAdapter.InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
-        {
-            Customer = subscriber.GatewayCustomerId,
-            Subscription = subscriber.GatewaySubscriptionId,
-            SubscriptionItems = subItemOptions
-        });
+        var upcomingPreview = await GetUpcomingInvoiceAsync(subscriber, subItemOptions);
 
         var itemsForInvoice = upcomingPreview.Lines?.Data?
             .Where(i => pendingInvoiceItemsDict.ContainsKey(i.Id) || (i.Plan.Id == subItemOptions[0]?.Plan && i.Proration));
@@ -1122,21 +1117,7 @@ public class StripePaymentService : IPaymentService
 
             string cardPaymentMethodId = null;
             var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
-            if (invoiceAmountDue > 0 && !customer.Metadata.ContainsKey("btCustomerId"))
-            {
-                var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
-                var hasDefaultValidSource = customer.DefaultSource != null &&
-                                            (customer.DefaultSource is Stripe.Card ||
-                                             customer.DefaultSource is Stripe.BankAccount);
-                if (!hasDefaultCardPaymentMethod && !hasDefaultValidSource)
-                {
-                    cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
-                    if (cardPaymentMethodId == null)
-                    {
-                        throw new BadRequestException("No payment method is available.");
-                    }
-                }
-            }
+            cardPaymentMethodId = GetCardPaymentMethodId(invoiceAmountDue, customer, cardPaymentMethodId);
 
             Stripe.Invoice invoice = null;
             var createdInvoiceItems = new List<Stripe.InvoiceItem>();
@@ -1188,6 +1169,34 @@ public class StripePaymentService : IPaymentService
         }
 
         return new Tuple<bool, string>(invoiceNow, paymentIntentClientSecret);
+    }
+
+    private string GetCardPaymentMethodId(long invoiceAmountDue, Customer customer, string cardPaymentMethodId)
+    {
+        if (invoiceAmountDue <= 0 || customer.Metadata.ContainsKey("btCustomerId")) return cardPaymentMethodId;
+        var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
+        var hasDefaultValidSource = customer.DefaultSource != null &&
+                                    (customer.DefaultSource is Stripe.Card ||
+                                     customer.DefaultSource is Stripe.BankAccount);
+        if (hasDefaultCardPaymentMethod || hasDefaultValidSource) return cardPaymentMethodId;
+        cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
+        if (cardPaymentMethodId == null)
+        {
+            throw new BadRequestException("No payment method is available.");
+        }
+
+        return cardPaymentMethodId;
+    }
+
+    private async Task<Invoice> GetUpcomingInvoiceAsync(ISubscriber subscriber, List<InvoiceSubscriptionItemOptions> subItemOptions)
+    {
+        var upcomingPreview = await _stripeAdapter.InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
+        {
+            Customer = subscriber.GatewayCustomerId,
+            Subscription = subscriber.GatewaySubscriptionId,
+            SubscriptionItems = subItemOptions
+        });
+        return upcomingPreview;
     }
 
     private async Task RestoreInvoiceItemsAsync(Invoice invoice, Customer customer, IEnumerable<InvoiceItem> pendingInvoiceItems)
