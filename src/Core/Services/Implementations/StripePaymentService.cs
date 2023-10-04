@@ -1557,10 +1557,19 @@ public class StripePaymentService : IPaymentService
     {
         var subscriptionInfo = new SubscriptionInfo();
 
-        if (subscriber.IsUser() && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
             var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
-            subscriptionInfo.UsingInAppPurchase = customer.Metadata.ContainsKey("appleReceipt");
+
+            if (customer.Discount != null)
+            {
+                subscriptionInfo.Discount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
+            }
+
+            if (subscriber.IsUser())
+            {
+                subscriptionInfo.UsingInAppPurchase = customer.Metadata.ContainsKey("appleReceipt");
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
