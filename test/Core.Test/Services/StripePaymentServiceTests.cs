@@ -152,7 +152,7 @@ public class StripePaymentServiceTests
     public async void PurchaseOrganizationAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
         var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
-
+        organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -200,7 +200,7 @@ public class StripePaymentServiceTests
             s.Customer == "C-1" &&
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
-            s.Items.Count == 0
+            s.Items.Count == 2
         ));
     }
 
