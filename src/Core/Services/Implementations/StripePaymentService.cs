@@ -755,7 +755,7 @@ public class StripePaymentService : IPaymentService
         var subUpdateOptions = new Stripe.SubscriptionUpdateOptions
         {
             Items = updatedItemOptions,
-            ProrationBehavior = "create_prorations",
+            ProrationBehavior = Constants.CreateProrations,
             DaysUntilDue = daysUntilDue ?? 1,
             CollectionMethod = "send_invoice"
         };
