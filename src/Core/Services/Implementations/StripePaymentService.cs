@@ -6,6 +6,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Stripe;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
@@ -1086,9 +1087,7 @@ public class StripePaymentService : IPaymentService
     internal async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber,
         List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
     {
-        var customerOptions = new Stripe.CustomerGetOptions();
-        customerOptions.AddExpand("default_source");
-        customerOptions.AddExpand("invoice_settings.default_payment_method");
+        var customerOptions = GetCustomerPaymentOptions();
         var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
         var usingInAppPaymentMethod = customer.Metadata.ContainsKey("appleReceipt");
         if (usingInAppPaymentMethod)
@@ -1144,103 +1143,14 @@ public class StripePaymentService : IPaymentService
             Braintree.Transaction braintreeTransaction = null;
             try
             {
-                foreach (var invoiceLineItem in itemsForInvoice)
-                {
-                    if (pendingInvoiceItemsDict.ContainsKey(invoiceLineItem.Id))
-                    {
-                        continue;
-                    }
+                await CreateInvoiceItemsAsync(subscriber, itemsForInvoice, pendingInvoiceItemsDict, createdInvoiceItems);
 
-                    var invoiceItem = await _stripeAdapter.InvoiceItemCreateAsync(new Stripe.InvoiceItemCreateOptions
-                    {
-                        Currency = invoiceLineItem.Currency,
-                        Description = invoiceLineItem.Description,
-                        Customer = subscriber.GatewayCustomerId,
-                        Subscription = invoiceLineItem.Subscription,
-                        Discountable = invoiceLineItem.Discountable,
-                        Amount = invoiceLineItem.Amount
-                    });
-                    createdInvoiceItems.Add(invoiceItem);
-                }
-
-                invoice = await _stripeAdapter.InvoiceCreateAsync(new Stripe.InvoiceCreateOptions
-                {
-                    CollectionMethod = "send_invoice",
-                    DaysUntilDue = 1,
-                    Customer = subscriber.GatewayCustomerId,
-                    Subscription = subscriber.GatewaySubscriptionId,
-                    DefaultPaymentMethod = cardPaymentMethodId
-                });
+                invoice = await CreateInvoiceAsync(subscriber, cardPaymentMethodId);
 
                 var invoicePayOptions = new Stripe.InvoicePayOptions();
-                if (invoice.AmountDue > 0)
-                {
-                    if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
-                    {
-                        invoicePayOptions.PaidOutOfBand = true;
-                        var btInvoiceAmount = (invoice.AmountDue / 100M);
-                        var transactionResult = await _btGateway.Transaction.SaleAsync(
-                            new Braintree.TransactionRequest
-                            {
-                                Amount = btInvoiceAmount,
-                                CustomerId = customer.Metadata["btCustomerId"],
-                                Options = new Braintree.TransactionOptionsRequest
-                                {
-                                    SubmitForSettlement = true,
-                                    PayPal = new Braintree.TransactionOptionsPayPalRequest
-                                    {
-                                        CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
-                                    }
-                                },
-                                CustomFields = new Dictionary<string, string>
-                                {
-                                    [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
-                                }
-                            });
+                await CreateBrainTreeTransactionRequestAsync(subscriber, invoice, customer, invoicePayOptions, cardPaymentMethodId, braintreeTransaction);
 
-                        if (!transactionResult.IsSuccess())
-                        {
-                            throw new GatewayException("Failed to charge PayPal customer.");
-                        }
-
-                        braintreeTransaction = transactionResult.Target;
-                        await _stripeAdapter.InvoiceUpdateAsync(invoice.Id, new Stripe.InvoiceUpdateOptions
-                        {
-                            Metadata = new Dictionary<string, string>
-                            {
-                                ["btTransactionId"] = braintreeTransaction.Id,
-                                ["btPayPalTransactionId"] =
-                                    braintreeTransaction.PayPalDetails.AuthorizationId
-                            }
-                        });
-                    }
-                    else
-                    {
-                        invoicePayOptions.OffSession = true;
-                        invoicePayOptions.PaymentMethod = cardPaymentMethodId;
-                    }
-                }
-
-                try
-                {
-                    await _stripeAdapter.InvoicePayAsync(invoice.Id, invoicePayOptions);
-                }
-                catch (Stripe.StripeException e)
-                {
-                    if (e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired &&
-                        e.StripeError?.Code == "invoice_payment_intent_requires_action")
-                    {
-                        // SCA required, get intent client secret
-                        var invoiceGetOptions = new Stripe.InvoiceGetOptions();
-                        invoiceGetOptions.AddExpand("payment_intent");
-                        invoice = await _stripeAdapter.InvoiceGetAsync(invoice.Id, invoiceGetOptions);
-                        paymentIntentClientSecret = invoice?.PaymentIntent?.ClientSecret;
-                    }
-                    else
-                    {
-                        throw new GatewayException("Unable to pay invoice.");
-                    }
-                }
+                await InvoicePayAsync(invoicePayOptions, invoice, paymentIntentClientSecret);
             }
             catch (Exception e)
             {
@@ -1257,29 +1167,7 @@ public class StripePaymentService : IPaymentService
                         return new Tuple<bool, string>(false, paymentIntentClientSecret);
                     }
 
-                    invoice = await _stripeAdapter.InvoiceVoidInvoiceAsync(invoice.Id, new Stripe.InvoiceVoidOptions());
-                    if (invoice.StartingBalance != 0)
-                    {
-                        await _stripeAdapter.CustomerUpdateAsync(customer.Id,
-                            new Stripe.CustomerUpdateOptions { Balance = customer.Balance });
-                    }
-
-                    // Restore invoice items that were brought in
-                    foreach (var item in pendingInvoiceItems)
-                    {
-                        var i = new Stripe.InvoiceItemCreateOptions
-                        {
-                            Currency = item.Currency,
-                            Description = item.Description,
-                            Customer = item.CustomerId,
-                            Subscription = item.SubscriptionId,
-                            Discountable = item.Discountable,
-                            Metadata = item.Metadata,
-                            Quantity = item.Proration ? 1 : item.Quantity,
-                            UnitAmount = item.UnitAmount
-                        };
-                        await _stripeAdapter.InvoiceItemCreateAsync(i);
-                    }
+                    await RestoreInvoiceItemsAsync(invoice, customer, pendingInvoiceItems);
                 }
                 else
                 {
@@ -1300,6 +1188,146 @@ public class StripePaymentService : IPaymentService
         }
 
         return new Tuple<bool, string>(invoiceNow, paymentIntentClientSecret);
+    }
+
+    private async Task RestoreInvoiceItemsAsync(Invoice invoice, Customer customer, IEnumerable<InvoiceItem> pendingInvoiceItems)
+    {
+        invoice = await _stripeAdapter.InvoiceVoidInvoiceAsync(invoice.Id, new Stripe.InvoiceVoidOptions());
+        if (invoice.StartingBalance != 0)
+        {
+            await _stripeAdapter.CustomerUpdateAsync(customer.Id,
+                new Stripe.CustomerUpdateOptions { Balance = customer.Balance });
+        }
+
+        // Restore invoice items that were brought in
+        foreach (var item in pendingInvoiceItems)
+        {
+            var i = new Stripe.InvoiceItemCreateOptions
+            {
+                Currency = item.Currency,
+                Description = item.Description,
+                Customer = item.CustomerId,
+                Subscription = item.SubscriptionId,
+                Discountable = item.Discountable,
+                Metadata = item.Metadata,
+                Quantity = item.Proration ? 1 : item.Quantity,
+                UnitAmount = item.UnitAmount
+            };
+            await _stripeAdapter.InvoiceItemCreateAsync(i);
+        }
+    }
+
+    private async Task InvoicePayAsync(InvoicePayOptions invoicePayOptions, Invoice invoice, string paymentIntentClientSecret)
+    {
+        try
+        {
+            await _stripeAdapter.InvoicePayAsync(invoice.Id, invoicePayOptions);
+        }
+        catch (Stripe.StripeException e)
+        {
+            if (e.HttpStatusCode == System.Net.HttpStatusCode.PaymentRequired &&
+                e.StripeError?.Code == "invoice_payment_intent_requires_action")
+            {
+                // SCA required, get intent client secret
+                var invoiceGetOptions = new Stripe.InvoiceGetOptions();
+                invoiceGetOptions.AddExpand("payment_intent");
+                invoice = await _stripeAdapter.InvoiceGetAsync(invoice.Id, invoiceGetOptions);
+                paymentIntentClientSecret = invoice?.PaymentIntent?.ClientSecret;
+            }
+            else
+            {
+                throw new GatewayException("Unable to pay invoice.");
+            }
+        }
+    }
+
+    private async Task CreateBrainTreeTransactionRequestAsync(ISubscriber subscriber, Invoice invoice, Customer customer,
+        InvoicePayOptions invoicePayOptions, string cardPaymentMethodId, Braintree.Transaction braintreeTransaction)
+    {
+        if (invoice.AmountDue > 0)
+        {
+            if (customer?.Metadata?.ContainsKey("btCustomerId") ?? false)
+            {
+                invoicePayOptions.PaidOutOfBand = true;
+                var btInvoiceAmount = (invoice.AmountDue / 100M);
+                var transactionResult = await _btGateway.Transaction.SaleAsync(
+                    new Braintree.TransactionRequest
+                    {
+                        Amount = btInvoiceAmount,
+                        CustomerId = customer.Metadata["btCustomerId"],
+                        Options = new Braintree.TransactionOptionsRequest
+                        {
+                            SubmitForSettlement = true,
+                            PayPal = new Braintree.TransactionOptionsPayPalRequest
+                            {
+                                CustomField = $"{subscriber.BraintreeIdField()}:{subscriber.Id}"
+                            }
+                        },
+                        CustomFields = new Dictionary<string, string>
+                        {
+                            [subscriber.BraintreeIdField()] = subscriber.Id.ToString()
+                        }
+                    });
+
+                if (!transactionResult.IsSuccess())
+                {
+                    throw new GatewayException("Failed to charge PayPal customer.");
+                }
+
+                braintreeTransaction = transactionResult.Target;
+                await _stripeAdapter.InvoiceUpdateAsync(invoice.Id, new Stripe.InvoiceUpdateOptions
+                {
+                    Metadata = new Dictionary<string, string>
+                    {
+                        ["btTransactionId"] = braintreeTransaction.Id,
+                        ["btPayPalTransactionId"] =
+                            braintreeTransaction.PayPalDetails.AuthorizationId
+                    }
+                });
+            }
+            else
+            {
+                invoicePayOptions.OffSession = true;
+                invoicePayOptions.PaymentMethod = cardPaymentMethodId;
+            }
+        }
+    }
+
+    private async Task<Invoice> CreateInvoiceAsync(ISubscriber subscriber, string cardPaymentMethodId)
+    {
+        Invoice invoice;
+        invoice = await _stripeAdapter.InvoiceCreateAsync(new Stripe.InvoiceCreateOptions
+        {
+            CollectionMethod = "send_invoice",
+            DaysUntilDue = 1,
+            Customer = subscriber.GatewayCustomerId,
+            Subscription = subscriber.GatewaySubscriptionId,
+            DefaultPaymentMethod = cardPaymentMethodId
+        });
+        return invoice;
+    }
+
+    private async Task CreateInvoiceItemsAsync(ISubscriber subscriber, IEnumerable<InvoiceLineItem> itemsForInvoice,
+        Dictionary<string, InvoiceItem> pendingInvoiceItemsDict, List<InvoiceItem> createdInvoiceItems)
+    {
+        foreach (var invoiceLineItem in itemsForInvoice)
+        {
+            if (pendingInvoiceItemsDict.ContainsKey(invoiceLineItem.Id))
+            {
+                continue;
+            }
+
+            var invoiceItem = await _stripeAdapter.InvoiceItemCreateAsync(new Stripe.InvoiceItemCreateOptions
+            {
+                Currency = invoiceLineItem.Currency,
+                Description = invoiceLineItem.Description,
+                Customer = subscriber.GatewayCustomerId,
+                Subscription = invoiceLineItem.Subscription,
+                Discountable = invoiceLineItem.Discountable,
+                Amount = invoiceLineItem.Amount
+            });
+            createdInvoiceItems.Add(invoiceItem);
+        }
     }
 
     public async Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
