@@ -13,5 +13,8 @@ public class WebAuthnCredentialRequestModel
 
     [Required]
     public string Token { get; set; }
+
+    [Required]
+    public bool SupportsPrf { get; set; }
 }
 
