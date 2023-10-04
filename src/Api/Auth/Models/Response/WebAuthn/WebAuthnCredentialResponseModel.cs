@@ -11,10 +11,10 @@ public class WebAuthnCredentialResponseModel : ResponseModel
     {
         Id = credential.Id.ToString();
         Name = credential.Name;
-        PrfSupport = false;
+        SupportsPrf = credential.SupportsPrf;
     }
 
     public string Id { get; set; }
     public string Name { get; set; }
-    public bool PrfSupport { get; set; }
+    public bool SupportsPrf { get; set; }
 }
