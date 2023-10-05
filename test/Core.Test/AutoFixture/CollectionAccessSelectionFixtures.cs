@@ -21,11 +21,11 @@ public class CollectionAccessSelectionCustomization : ICustomization
     }
 }
 
-public class CollectionAccessSelectionAttribute : CustomizeAttribute
+public class CollectionAccessSelectionCustomizeAttribute : CustomizeAttribute
 {
     private readonly bool _manage;
 
-    public CollectionAccessSelectionAttribute(bool manage = false)
+    public CollectionAccessSelectionCustomizeAttribute(bool manage = false)
     {
         _manage = manage;
     }

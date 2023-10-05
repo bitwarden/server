@@ -19,7 +19,7 @@ namespace Bit.Core.Test.Services;
 public class CollectionServiceTest
 {
     [Theory, BitAutoData]
-    public async Task SaveAsync_DefaultIdWithUsers_CreatesCollectionInTheRepository(Collection collection, Organization organization, [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
+    public async Task SaveAsync_DefaultIdWithUsers_CreatesCollectionInTheRepository(Collection collection, Organization organization, [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -38,7 +38,7 @@ public class CollectionServiceTest
 
     [Theory, BitAutoData]
     public async Task SaveAsync_DefaultIdWithGroupsAndUsers_CreateCollectionWithGroupsAndUsersInRepository(Collection collection,
-        [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users, Organization organization, SutProvider<CollectionService> sutProvider)
+        [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users, Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
         organization.UseGroups = true;
@@ -57,7 +57,7 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_NonDefaultId_ReplacesCollectionInRepository(Collection collection, Organization organization, [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
+    public async Task SaveAsync_NonDefaultId_ReplacesCollectionInRepository(Collection collection, Organization organization, [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         var creationDate = collection.CreationDate;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -76,7 +76,7 @@ public class CollectionServiceTest
 
     [Theory, BitAutoData]
     public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection,
-        IEnumerable<CollectionAccessSelection> groups, [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> users,
+        IEnumerable<CollectionAccessSelection> groups, [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users,
         Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
@@ -108,7 +108,7 @@ public class CollectionServiceTest
 
     [Theory, BitAutoData]
     public async Task SaveAsync_NoManageAccess_ThrowsBadRequest(Collection collection, Organization organization,
-        [CollectionAccessSelection] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
+        [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
@@ -123,7 +123,7 @@ public class CollectionServiceTest
 
     [Theory, BitAutoData]
     public async Task SaveAsync_ExceedsOrganizationMaxCollections_ThrowsBadRequest(Collection collection,
-        Organization organization, [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> users,
+        Organization organization, [CollectionAccessSelectionCustomize(true)] IEnumerable<CollectionAccessSelection> users,
         SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
