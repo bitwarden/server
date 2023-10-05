@@ -5,6 +5,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -18,37 +19,13 @@ namespace Bit.Core.Test.Services;
 public class CollectionServiceTest
 {
     [Theory, BitAutoData]
-    public async Task SaveAsync_DefaultId_CreatesCollectionInTheRepository(Collection collection, Organization organization, CollectionAccessSelection userAccess, SutProvider<CollectionService> sutProvider)
+    public async Task SaveAsync_DefaultIdWithUsers_CreatesCollectionInTheRepository(Collection collection, Organization organization, [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var utcNow = DateTime.UtcNow;
-        // Grant the user manage access
-        userAccess.Manage = true;
-        List<CollectionAccessSelection> userList = new() { userAccess };
-
-        await sutProvider.Sut.SaveAsync(collection, users: userList);
-
-        await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .CreateAsync(collection, Arg.Any<List<CollectionAccessSelection>>(),
-                Arg.Is<List<CollectionAccessSelection>>(list => list.Any(item => item.Manage == true)));
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogCollectionEventAsync(collection, EventType.Collection_Created);
-        Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
-        Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveAsync_DefaultIdWithUsers_CreatesCollectionInTheRepository(Collection collection, Organization organization, IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
-    {
-        collection.Id = default;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-        var utcNow = DateTime.UtcNow;
-        // Grant the user manage access
-        var userList = users.ToList();
-        userList.First().Manage = true;
-
-        await sutProvider.Sut.SaveAsync(collection, null, userList);
+        
+        await sutProvider.Sut.SaveAsync(collection, null, users);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received()
             .CreateAsync(collection, Arg.Any<List<CollectionAccessSelection>>(),
@@ -61,22 +38,18 @@ public class CollectionServiceTest
 
     [Theory, BitAutoData]
     public async Task SaveAsync_DefaultIdWithGroupsAndUsers_CreateCollectionWithGroupsAndUsersInRepository(Collection collection,
-        IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users, Organization organization, SutProvider<CollectionService> sutProvider)
+        [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> groups, IEnumerable<CollectionAccessSelection> users, Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
         organization.UseGroups = true;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var utcNow = DateTime.UtcNow;
-        var userList = users.ToList();
-        var groupList = groups.ToList();
-        userList.First().Manage = true;
-
-
-        await sutProvider.Sut.SaveAsync(collection, groupList, userList);
+        
+        await sutProvider.Sut.SaveAsync(collection, groups, users);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .CreateAsync(collection, Arg.Any<List<CollectionAccessSelection>>(),
-                Arg.Is<List<CollectionAccessSelection>>(list => list.Any(item => item.Manage == true)));
+            .CreateAsync(collection, Arg.Is<List<CollectionAccessSelection>>(list => list.Any(item => item.Manage == true)),
+                Arg.Any<List<CollectionAccessSelection>>());
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Created);
         Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
@@ -84,15 +57,13 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_NonDefaultId_ReplacesCollectionInRepository(Collection collection, Organization organization, CollectionAccessSelection userAccess, SutProvider<CollectionService> sutProvider)
+    public async Task SaveAsync_NonDefaultId_ReplacesCollectionInRepository(Collection collection, Organization organization, [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         var creationDate = collection.CreationDate;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var utcNow = DateTime.UtcNow;
-        userAccess.Manage = true;
-        List<CollectionAccessSelection> userList = new() { userAccess };
 
-        await sutProvider.Sut.SaveAsync(collection, null, userList);
+        await sutProvider.Sut.SaveAsync(collection, null, users);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received().ReplaceAsync(collection,
             Arg.Any<List<CollectionAccessSelection>>(),
@@ -104,16 +75,20 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection, IEnumerable<CollectionAccessSelection> groups,
+    public async Task SaveAsync_OrganizationNotUseGroup_CreateCollectionWithoutGroupsInRepository(Collection collection, 
+        IEnumerable<CollectionAccessSelection> groups, [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> users,
         Organization organization, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
+        organization.UseGroups = false;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var utcNow = DateTime.UtcNow;
 
-        await sutProvider.Sut.SaveAsync(collection, groups);
+        await sutProvider.Sut.SaveAsync(collection, groups, users);
 
-        await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(collection, null, null);
+        await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(collection,
+            Arg.Any<List<CollectionAccessSelection>>(),
+            Arg.Is<List<CollectionAccessSelection>>(list => list.Any(item => item.Manage == true)));
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Created);
         Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
@@ -132,15 +107,14 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_NoManageAccess_ThrowsBadRequest(Collection collection, Organization organization, CollectionAccessSelection userAccess, SutProvider<CollectionService> sutProvider)
+    public async Task SaveAsync_NoManageAccess_ThrowsBadRequest(Collection collection, Organization organization, 
+        [CollectionAccessSelection] IEnumerable<CollectionAccessSelection> users, SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
-        userAccess.Manage = false;
-        List<CollectionAccessSelection> userList = new() { userAccess };
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, userList));
-        Assert.Contains("At least one User or Group must have Manage access to the newly created collection", ex.Message);
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, users));
+        Assert.Contains("At least one member or group must have can manage permission.", ex.Message);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default, default);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
@@ -148,16 +122,16 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_ExceedsOrganizationMaxCollections_ThrowsBadRequest(Collection collection, Organization organization, CollectionAccessSelection userAccess, SutProvider<CollectionService> sutProvider)
+    public async Task SaveAsync_ExceedsOrganizationMaxCollections_ThrowsBadRequest(Collection collection, 
+        Organization organization, [CollectionAccessSelection(true)] IEnumerable<CollectionAccessSelection> users,
+        SutProvider<CollectionService> sutProvider)
     {
         collection.Id = default;
-        userAccess.Manage = true;
-        List<CollectionAccessSelection> userList = new() { userAccess };
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         sutProvider.GetDependency<ICollectionRepository>().GetCountByOrganizationIdAsync(organization.Id)
             .Returns(organization.MaxCollections.Value);
 
-        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, userList));
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, users));
         Assert.Equal($@"You have reached the maximum number of collections ({organization.MaxCollections.Value}) for this organization.", ex.Message);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().CreateAsync(default, default, default);

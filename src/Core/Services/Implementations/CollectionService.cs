@@ -56,7 +56,7 @@ public class CollectionService : ICollectionService
         if (!groupHasManageAccess && !userHasManageAccess)
         {
             throw new BadRequestException(
-                "At least one User or Group must have Manage access to the newly created collection.");
+                "At least one member or group must have can manage permission.");
         }
 
         if (collection.Id == default(Guid))
