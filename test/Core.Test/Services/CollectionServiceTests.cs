@@ -28,8 +28,8 @@ public class CollectionServiceTest
         await sutProvider.Sut.SaveAsync(collection, null, users);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .CreateAsync(collection, null,
-                Arg.Is<List<CollectionAccessSelection>>(list => list.Any(item => item.Manage == true)));
+            .CreateAsync(collection, Arg.Is<List<CollectionAccessSelection>>(l => l == null),
+                Arg.Is<List<CollectionAccessSelection>>(l => l.Any(i => i.Manage == true)));
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Created);
         Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
@@ -48,7 +48,7 @@ public class CollectionServiceTest
         await sutProvider.Sut.SaveAsync(collection, groups, users);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .CreateAsync(collection, Arg.Is<List<CollectionAccessSelection>>(list => list.Any(item => item.Manage == true)),
+            .CreateAsync(collection, Arg.Is<List<CollectionAccessSelection>>(l => l.Any(i => i.Manage == true)),
                 Arg.Any<List<CollectionAccessSelection>>());
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Created);
@@ -66,8 +66,8 @@ public class CollectionServiceTest
         await sutProvider.Sut.SaveAsync(collection, null, users);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received().ReplaceAsync(collection,
-            Arg.Any<List<CollectionAccessSelection>>(),
-            Arg.Is<List<CollectionAccessSelection>>(list => list.Any(item => item.Manage == true)));
+            Arg.Is<List<CollectionAccessSelection>>(l => l == null),
+            Arg.Is<List<CollectionAccessSelection>>(l => l.Any(i => i.Manage == true)));
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Updated);
         Assert.Equal(collection.CreationDate, creationDate);
@@ -87,8 +87,8 @@ public class CollectionServiceTest
         await sutProvider.Sut.SaveAsync(collection, groups, users);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received().CreateAsync(collection,
-            Arg.Any<List<CollectionAccessSelection>>(),
-            Arg.Is<List<CollectionAccessSelection>>(list => list.Any(item => item.Manage == true)));
+            Arg.Is<List<CollectionAccessSelection>>(l => l == null),
+            Arg.Is<List<CollectionAccessSelection>>(l => l.Any(i => i.Manage == true)));
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Created);
         Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
