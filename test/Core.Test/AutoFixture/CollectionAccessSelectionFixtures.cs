@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using AutoFixture;
 using AutoFixture.Xunit2;
 using Bit.Core.Models.Data;
