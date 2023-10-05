@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -28,5 +29,20 @@ public class WebAuthnCredential : ITableObject<Guid>
     public void SetNewId()
     {
         Id = CoreHelpers.GenerateComb();
+    }
+
+
+    public WebAuthnPrfStatus GetPrfStatus()
+    {
+        if (SupportsPrf && EncryptedUserKey != null && EncryptedPrivateKey != null && EncryptedPublicKey != null)
+        {
+            return WebAuthnPrfStatus.Enabled;
+        }
+        else if (SupportsPrf)
+        {
+            return WebAuthnPrfStatus.Supported;
+        }
+
+        return WebAuthnPrfStatus.Unsupported;
     }
 }
