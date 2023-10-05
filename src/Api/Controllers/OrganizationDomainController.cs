@@ -19,7 +19,7 @@ public class OrganizationDomainController : Controller
     private readonly ICreateOrganizationDomainCommand _createOrganizationDomainCommand;
     private readonly IVerifyOrganizationDomainCommand _verifyOrganizationDomainCommand;
     private readonly IDeleteOrganizationDomainCommand _deleteOrganizationDomainCommand;
-    private readonly IGetOrganizationDomainByIdAndOrganizationIdQuery _getOrganizationDomainByIdAndOrganizationIdQuery;
+    private readonly IGetOrganizationDomainByIdOrganizationIdQuery _getOrganizationDomainByIdAndOrganizationIdQuery;
     private readonly IGetOrganizationDomainByOrganizationIdQuery _getOrganizationDomainByOrganizationIdQuery;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
@@ -29,7 +29,7 @@ public class OrganizationDomainController : Controller
         ICreateOrganizationDomainCommand createOrganizationDomainCommand,
         IVerifyOrganizationDomainCommand verifyOrganizationDomainCommand,
         IDeleteOrganizationDomainCommand deleteOrganizationDomainCommand,
-        IGetOrganizationDomainByIdAndOrganizationIdQuery getOrganizationDomainByIdAndOrganizationIdQuery,
+        IGetOrganizationDomainByIdOrganizationIdQuery getOrganizationDomainByIdAndOrganizationIdQuery,
         IGetOrganizationDomainByOrganizationIdQuery getOrganizationDomainByOrganizationIdQuery,
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
@@ -62,7 +62,7 @@ public class OrganizationDomainController : Controller
         await ValidateOrganizationAccessAsync(orgId);
 
         var organizationDomain = await _getOrganizationDomainByIdAndOrganizationIdQuery
-            .GetOrganizationDomainByIdAndOrganizationIdAsync(id, orgId);
+            .GetOrganizationDomainByIdOrganizationIdAsync(id, orgId);
         if (organizationDomain is null)
         {
             throw new NotFoundException();
@@ -94,7 +94,7 @@ public class OrganizationDomainController : Controller
     {
         await ValidateOrganizationAccessAsync(orgId);
 
-        var organizationDomain = await _organizationDomainRepository.GetDomainByIdAndOrganizationIdAsync(id, orgId);
+        var organizationDomain = await _organizationDomainRepository.GetDomainByIdOrganizationIdAsync(id, orgId);
         if (organizationDomain is null)
         {
             throw new NotFoundException();
@@ -111,7 +111,7 @@ public class OrganizationDomainController : Controller
     {
         await ValidateOrganizationAccessAsync(orgId);
 
-        var domain = await _organizationDomainRepository.GetDomainByIdAndOrganizationIdAsync(id, orgId);
+        var domain = await _organizationDomainRepository.GetDomainByIdOrganizationIdAsync(id, orgId);
         if (domain is null)
         {
             throw new NotFoundException();

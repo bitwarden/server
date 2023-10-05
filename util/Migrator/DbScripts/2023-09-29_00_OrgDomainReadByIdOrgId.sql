@@ -1,4 +1,4 @@
-CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByIdAndOrganizationId]
+CREATE OR ALTER PROCEDURE [dbo].[OrganizationDomain_ReadByIdOrganizationId]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER
 AS

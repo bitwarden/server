@@ -93,7 +93,7 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return ssoDetails;
     }
 
-    public async Task<Core.Entities.OrganizationDomain> GetDomainByIdAndOrganizationIdAsync(Guid id, Guid orgId)
+    public async Task<Core.Entities.OrganizationDomain> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);

@@ -12,11 +12,11 @@ public class GetOrganizationDomainByIdAndOrganizationIdQueryTests
 {
     [Theory, BitAutoData]
     public async Task GetOrganizationDomainByIdAndOrganizationIdAsync_CallsGetByIdAndOrganizationIdAsync(Guid id, Guid organizationId,
-        SutProvider<GetOrganizationDomainByIdAndOrganizationIdQuery> sutProvider)
+        SutProvider<GetOrganizationDomainByIdOrganizationIdQuery> sutProvider)
     {
-        await sutProvider.Sut.GetOrganizationDomainByIdAndOrganizationIdAsync(id, organizationId);
+        await sutProvider.Sut.GetOrganizationDomainByIdOrganizationIdAsync(id, organizationId);
 
         await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1)
-            .GetDomainByIdAndOrganizationIdAsync(id, organizationId);
+            .GetDomainByIdOrganizationIdAsync(id, organizationId);
     }
 }

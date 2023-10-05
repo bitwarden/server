@@ -98,7 +98,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
-        sutProvider.GetDependency<IGetOrganizationDomainByIdAndOrganizationIdQuery>().GetOrganizationDomainByIdAndOrganizationIdAsync(id, orgId).ReturnsNull();
+        sutProvider.GetDependency<IGetOrganizationDomainByIdOrganizationIdQuery>().GetOrganizationDomainByIdOrganizationIdAsync(id, orgId).ReturnsNull();
 
         var requestAction = async () => await sutProvider.Sut.Get(orgId, id);
 
@@ -112,7 +112,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .GetDomainByIdOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
             .ReturnsNull();
 
         var requestAction = async () => await sutProvider.Sut.Get(organizationDomain.OrganizationId, organizationDomain.Id);
@@ -126,7 +126,7 @@ public class OrganizationDomainControllerTests
     {
         sutProvider.GetDependency<ICurrentContext>().ManageSso(orgId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(orgId).Returns(new Organization());
-        sutProvider.GetDependency<IGetOrganizationDomainByIdAndOrganizationIdQuery>().GetOrganizationDomainByIdAndOrganizationIdAsync(id, orgId)
+        sutProvider.GetDependency<IGetOrganizationDomainByIdOrganizationIdQuery>().GetOrganizationDomainByIdOrganizationIdAsync(id, orgId)
             .Returns(new OrganizationDomain
             {
                 Id = Guid.NewGuid(),
@@ -211,7 +211,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .GetDomainByIdOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
             .ReturnsNull();
 
         var requestAction = async () => await sutProvider.Sut.Verify(organizationDomain.OrganizationId, organizationDomain.Id);
@@ -226,7 +226,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .GetDomainByIdOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
             .Returns(organizationDomain);
         sutProvider.GetDependency<IVerifyOrganizationDomainCommand>().VerifyOrganizationDomainAsync(organizationDomain)
             .Returns(new OrganizationDomain());
@@ -268,7 +268,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .GetDomainByIdOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
             .ReturnsNull();
 
         var requestAction = async () => await sutProvider.Sut.RemoveDomain(organizationDomain.OrganizationId, organizationDomain.Id);
@@ -283,7 +283,7 @@ public class OrganizationDomainControllerTests
         sutProvider.GetDependency<ICurrentContext>().ManageSso(organizationDomain.OrganizationId).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organizationDomain.OrganizationId).Returns(new Organization());
         sutProvider.GetDependency<IOrganizationDomainRepository>()
-            .GetDomainByIdAndOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
+            .GetDomainByIdOrganizationIdAsync(organizationDomain.Id, organizationDomain.OrganizationId)
             .Returns(organizationDomain);
 
         await sutProvider.Sut.RemoveDomain(organizationDomain.OrganizationId, organizationDomain.Id);
