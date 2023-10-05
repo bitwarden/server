@@ -78,7 +78,7 @@ public class OrganizationConnectionsController : Controller
     [HttpPut("{organizationConnectionId}")]
     public async Task<OrganizationConnectionResponseModel> UpdateConnection(Guid organizationConnectionId, [FromBody] OrganizationConnectionRequestModel model)
     {
-        var existingOrganizationConnection = await _organizationConnectionRepository.GetByIdAsync(organizationConnectionId);
+        var existingOrganizationConnection = await _organizationConnectionRepository.GetByIdOrganizationIdAsync(organizationConnectionId, model.OrganizationId);
         if (existingOrganizationConnection == null)
         {
             throw new NotFoundException();
