@@ -232,12 +232,15 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         var dbContext = GetDatabaseContext(scope);
 
         var query =
-            from o in dbContext.Organizations
-            join ou in dbContext.OrganizationUsers on o.Id equals ou.OrganizationId
-            join u in dbContext.Users on ou.UserId equals u.Id
-            where ou.Type == OrganizationUserType.Owner &&
-                  ou.Status == OrganizationUserStatusType.Confirmed
-            select u.Email;
+            from u in dbContext.Users
+            join ou in dbContext.OrganizationUsers on u.Id equals ou.UserId
+            where
+                ou.OrganizationId == organizationId &&
+                ou.Type == OrganizationUserType.Owner &&
+                ou.Status == OrganizationUserStatusType.Confirmed
+            group u by u.Email
+            into grouped
+            select grouped.Key;
 
         return await query.ToListAsync();
     }

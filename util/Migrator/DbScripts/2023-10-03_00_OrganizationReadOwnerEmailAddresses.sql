@@ -3,15 +3,15 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_ReadOwnerEmailAddressesById]
 AS
 BEGIN
     SET NOCOUNT ON
+
     SELECT
-        U.[Email]
-    FROM
-        Organization AS O
-        INNER JOIN OrganizationUser AS OU ON O.[Id] = OU.[OrganizationId]
-        INNER JOIN [User] AS U ON OU.[UserId] = U.[Id]
+        [U].[Email]
+    FROM [User] AS [U]
+    INNER JOIN [OrganizationUser] AS [OU] ON [U].[Id] = [OU].[UserId]
     WHERE
-        O.[Id] = @OrganizationId AND
-        OU.[Type] = 0 AND -- Owner
-        OU.[Status] = 2 -- Confirmed
+        [OU].[OrganizationId] = @OrganizationId AND
+        [OU].[Type] = 0 AND -- Owner
+        [OU].[Status] = 2 -- Confirmed
+    GROUP BY [U].[Email]
 END
 GO
