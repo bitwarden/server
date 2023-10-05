@@ -180,7 +180,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateItemLevelEncryptionIsAvailable(cipher);
+        ValidateClientFeatureSupportForCipherUpdate(cipher);
 
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
@@ -189,14 +189,6 @@ public class CiphersController : Controller
         {
             throw new BadRequestException("Organization mismatch. Re-sync if you recently moved this item, " +
                 "then try again.");
-        }
-
-        // Temporary protection against old clients overwriting and deleting Fido2Keys
-        // Response model used to re-use logic for parsing 'data' property
-        var cipherModel = new CipherResponseModel(cipher, _globalSettings);
-        if (cipherModel.Login?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
-        {
-            throw new BadRequestException("Please update your client to edit this item.");
         }
 
         await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate, collectionIds);
@@ -212,7 +204,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
 
-        ValidateItemLevelEncryptionIsAvailable(cipher);
+        ValidateClientFeatureSupportForCipherUpdate(cipher);
 
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
@@ -276,6 +268,8 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
+
+        ValidateClientFeatureSupportForCipherUpdate(cipher);
 
         var original = cipher.Clone();
         await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
@@ -592,7 +586,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateItemLevelEncryptionIsAvailable(cipher);
+        ValidateClientFeatureSupportForCipherUpdate(cipher);
 
         if (request.FileSize > CipherService.MAX_FILE_SIZE)
         {
@@ -814,11 +808,32 @@ public class CiphersController : Controller
         }
     }
 
-    private void ValidateItemLevelEncryptionIsAvailable(Cipher cipher)
+/// <summary>
+/// Ensure that the old client versions cannot update ciphers that have been updated to use new features
+/// and result in lost data.
+/// </summary>
+/// <param name="existingCipher"></param>
+/// <exception cref="BadRequestException"></exception>
+    private void ValidateClientFeatureSupportForCipherUpdate(Cipher existingCipher)
     {
-        if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
+        var hasFeatureSupport = true;
+        if (existingCipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
         {
-            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
+            hasFeatureSupport = false;
+        } 
+        else if(existingCipher.Type == Core.Vault.Enums.CipherType.Login)
+        {
+            var loginData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);    
+            if (loginData?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
+            {
+                hasFeatureSupport = false;
+            }
         }
+        
+        if(!hasFeatureSupport)
+        {
+            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");  
+        }
+
     }
 }
