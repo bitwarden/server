@@ -537,10 +537,10 @@ public class CiphersController : Controller
             }
 
             var existingCipher = ciphersDict[cipher.Id.Value];
-            
-            ValidateClientVersionForFido2CredentialSupport(existingCipher);
-            ValidateClientVersionForItemLevelEncryptionSupport(existingCipher);
 
+            ValidateClientVersionForItemLevelEncryptionSupport(existingCipher);
+            ValidateClientVersionForFido2CredentialSupport(existingCipher);
+         
             shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
         }
 
