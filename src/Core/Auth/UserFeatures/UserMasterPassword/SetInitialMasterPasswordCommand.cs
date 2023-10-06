@@ -51,7 +51,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
     }
 
     public async Task<IdentityResult> SetInitialMasterPasswordAsync(User user, string masterPassword, string key,
-        string orgIdentifier = null)
+        string orgSsoIdentifier)
     {
         if (user == null)
         {
@@ -76,7 +76,13 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
 
-        var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier);
+
+        if (string.IsNullOrWhiteSpace(orgSsoIdentifier))
+        {
+            throw new BadRequestException("Organization SSO Identifier required.");
+        }
+
+        var org = await _organizationRepository.GetByIdentifierAsync(orgSsoIdentifier);
 
         if (org == null)
         {
@@ -94,7 +100,7 @@ public class SetInitialMasterPasswordCommand : ISetInitialMasterPasswordCommand
         // required to set a MP for the first time and we don't want to re-execute the accept logic
         // as they are already confirmed.
         // TLDR: only accept post SSO user if they are invited
-        if (!string.IsNullOrWhiteSpace(orgIdentifier) && orgUser.Status == OrganizationUserStatusType.Invited)
+        if (orgUser.Status == OrganizationUserStatusType.Invited)
         {
             await _acceptOrgUserCommand.AcceptOrgUserAsync(orgUser, user, _userService);
         }

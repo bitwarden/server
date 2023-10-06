@@ -67,6 +67,25 @@ public class SetInitialMasterPasswordCommandTests
         Assert.False(result.Succeeded);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task SetInitialMasterPassword_NullOrgSsoIdentifier_ThrowsBadRequestException(
+        SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key)
+    {
+        // Arrange
+        user.MasterPassword = null;
+        string orgSsoIdentifier = null;
+
+        sutProvider.GetDependency<IUserService>()
+            .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
+            .Returns(IdentityResult.Success);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.SetInitialMasterPasswordAsync(user, masterPassword, key, orgSsoIdentifier));
+        Assert.Equal("Organization SSO Identifier required.", exception.Message);
+    }
+
 
     [Theory]
     [BitAutoData]
