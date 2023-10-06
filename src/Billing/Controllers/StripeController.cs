@@ -52,6 +52,7 @@ public class StripeController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly GlobalSettings _globalSettings;
     private readonly IStripeEventService _stripeEventService;
+    private readonly IStripeFacade _stripeFacade;
 
     public StripeController(
         GlobalSettings globalSettings,
@@ -70,7 +71,8 @@ public class StripeController : Controller
         ITaxRateRepository taxRateRepository,
         IUserRepository userRepository,
         ICurrentContext currentContext,
-        IStripeEventService stripeEventService)
+        IStripeEventService stripeEventService,
+        IStripeFacade stripeFacade)
     {
         _billingSettings = billingSettings?.Value;
         _hostingEnvironment = hostingEnvironment;
@@ -97,6 +99,7 @@ public class StripeController : Controller
         _currentContext = currentContext;
         _globalSettings = globalSettings;
         _stripeEventService = stripeEventService;
+        _stripeFacade = stripeFacade;
     }
 
     [HttpPost("webhook")]
@@ -208,21 +211,29 @@ public class StripeController : Controller
         }
         else if (parsedEvent.Type.Equals(HandledStripeWebhook.UpcomingInvoice))
         {
-            var invoice = await _stripeEventService.GetInvoice(parsedEvent, true, new List<string> { "subscription" });
+            var invoice = await _stripeEventService.GetInvoice(parsedEvent);
 
-            if (invoice.Subscription == null)
+            if (string.IsNullOrEmpty(invoice.SubscriptionId))
+            {
+                _logger.LogWarning("Received 'invoice.upcoming' Event with ID '{eventId}' that did not include a Subscription ID", parsedEvent.Id);
+                return new OkResult();
+            }
+
+            var subscription = await _stripeFacade.GetSubscription(invoice.SubscriptionId);
+
+            if (subscription == null)
             {
                 throw new Exception(
                     $"Received null Subscription from Stripe for ID '{invoice.SubscriptionId}' while processing Event with ID '{parsedEvent.Id}'");
             }
 
-            var updatedSubscription = await VerifyCorrectTaxRateForCharge(invoice, invoice.Subscription);
+            var updatedSubscription = await VerifyCorrectTaxRateForCharge(invoice, subscription);
 
             var (organizationId, userId) = GetIdsFromMetaData(updatedSubscription.Metadata);
 
             var invoiceLineItemDescriptions = invoice.Lines.Select(i => i.Description).ToList();
 
-            async Task SendEmail(IEnumerable<string> emails)
+            async Task SendEmails(IEnumerable<string> emails)
             {
                 var validEmails = emails.Where(e => !string.IsNullOrEmpty(e));
 
@@ -251,11 +262,11 @@ public class StripeController : Controller
                     return new OkResult();
                 }
 
-                await SendEmail(new List<string> { organization.BillingEmail });
+                await SendEmails(new List<string> { organization.BillingEmail });
 
                 var ownerEmails = await _organizationRepository.GetOwnerEmailAddressesById(organization.Id);
 
-                await SendEmail(ownerEmails);
+                await SendEmails(ownerEmails);
             }
             else if (userId.HasValue)
             {
@@ -263,7 +274,7 @@ public class StripeController : Controller
 
                 if (user.Premium)
                 {
-                    await SendEmail(new List<string> { user.Email });
+                    await SendEmails(new List<string> { user.Email });
                 }
             }
         }
