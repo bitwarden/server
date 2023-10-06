@@ -536,7 +536,12 @@ public class CiphersController : Controller
                 throw new BadRequestException("Trying to move ciphers that you do not own.");
             }
 
-            shareCiphers.Add((cipher.ToCipher(ciphersDict[cipher.Id.Value]), cipher.LastKnownRevisionDate));
+            var existingCipher = ciphersDict[cipher.Id.Value];
+            
+            ValidateClientVersionForFido2CredentialSupport(existingCipher);
+            ValidateClientVersionForItemLevelEncryptionSupport(existingCipher);
+
+            shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
         }
 
         await _cipherService.ShareManyAsync(shareCiphers, organizationId,
