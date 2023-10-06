@@ -37,11 +37,11 @@ jobs:
           fi
 
       - name: Checkout repo
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
       - name: Check Release Version
         id: version
-        uses: bitwarden/gh-actions/release-version-check@f096207b7a2f31723165aee6ad03e91716686e78
+        uses: bitwarden/gh-actions/release-version-check@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
         with:
           release-type: ${{ github.event.inputs.release_type }}
           project-type: dotnet
@@ -89,7 +89,7 @@ jobs:
 
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@bc3bf31f1d9cac9c9d02cae01fc615fa25d38929
+        uses: bitwarden/gh-actions/download-artifacts@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -98,7 +98,7 @@ jobs:
 
       - name: Dry Run - Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@bc3bf31f1d9cac9c9d02cae01fc615fa25d38929
+        uses: bitwarden/gh-actions/download-artifacts@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -136,7 +136,7 @@ jobs:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Deploy App
-        uses: azure/webapps-deploy@85270a1854658d167ab239bce43949edb336fa7c # v2.2.9
+        uses: azure/webapps-deploy@4bca689e4c7129e55923ea9c45401b22dc6aa96f # v2.2.11
         with:
           app-name: ${{ steps.retrieve-secrets.outputs.webapp-name }}
           publish-profile: ${{ steps.retrieve-secrets.outputs.publish-profile }}
@@ -211,7 +211,7 @@ jobs:
           echo "Github Release Option: $RELEASE_OPTION"
 
       - name: Checkout repo
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
 
       - name: Setup project name
         id: setup
@@ -274,7 +274,7 @@ jobs:
     steps:
       - name: Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@bc3bf31f1d9cac9c9d02cae01fc615fa25d38929
+        uses: bitwarden/gh-actions/download-artifacts@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -287,7 +287,7 @@ jobs:
 
       - name: Dry Run - Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@bc3bf31f1d9cac9c9d02cae01fc615fa25d38929
+        uses: bitwarden/gh-actions/download-artifacts@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -300,7 +300,7 @@ jobs:
 
       - name: Create release
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: ncipollo/release-action@a2e71bdd4e7dab70ca26a852f29600c98b33153e # v1.12.0
+        uses: ncipollo/release-action@6c75be85e571768fa31b40abf38de58ba0397db5 # v1.13.0
         with:
           artifacts: "docker-stub-US.zip,
             docker-stub-US-sha256.txt,
