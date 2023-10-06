@@ -25,11 +25,10 @@ public class SetInitialMasterPasswordCommandTests
     {
         // Arrange
         user.MasterPassword = null;
-        var identityResult = IdentityResult.Success;
 
         sutProvider.GetDependency<IUserService>()
             .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(identityResult);
+            .Returns(IdentityResult.Success);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)
@@ -75,11 +74,10 @@ public class SetInitialMasterPasswordCommandTests
     {
         // Arrange
         user.MasterPassword = null;
-        var identityResult = IdentityResult.Success;
 
         sutProvider.GetDependency<IUserService>()
             .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(identityResult);
+            .Returns(IdentityResult.Success);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)
@@ -96,11 +94,10 @@ public class SetInitialMasterPasswordCommandTests
     {
         // Arrange
         user.MasterPassword = null;
-        var identityResult = IdentityResult.Success;
 
         sutProvider.GetDependency<IUserService>()
             .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(identityResult);
+            .Returns(IdentityResult.Success);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(Arg.Any<string>())
@@ -122,11 +119,10 @@ public class SetInitialMasterPasswordCommandTests
     {
         // Arrange
         user.MasterPassword = null;
-        var identityResult = IdentityResult.Success;
 
         sutProvider.GetDependency<IUserService>()
             .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(identityResult);
+            .Returns(IdentityResult.Success);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)
@@ -153,11 +149,10 @@ public class SetInitialMasterPasswordCommandTests
     {
         // Arrange
         user.MasterPassword = null;
-        var identityResult = IdentityResult.Success;
 
         sutProvider.GetDependency<IUserService>()
             .UpdatePasswordHash(Arg.Any<User>(), Arg.Any<string>(), true, false)
-            .Returns(identityResult);
+            .Returns(IdentityResult.Success);
 
         sutProvider.GetDependency<IOrganizationRepository>()
             .GetByIdentifierAsync(orgIdentifier)
