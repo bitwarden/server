@@ -544,6 +544,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     }
 
     public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, bool supportsPrf,
+        string encryptedUserKey, string encryptedPublicKey, string encryptedPrivateKey,
         CredentialCreateOptions options,
         AuthenticatorAttestationRawResponse attestationResponse)
     {
@@ -567,7 +568,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             AaGuid = success.Result.Aaguid,
             Counter = (int)success.Result.Counter,
             UserId = user.Id,
-            SupportsPrf = supportsPrf
+            SupportsPrf = supportsPrf,
+            EncryptedUserKey = encryptedUserKey,
+            EncryptedPublicKey = encryptedPublicKey,
+            EncryptedPrivateKey = encryptedPrivateKey
         };
 
         await _webAuthnCredentialRepository.CreateAsync(credential);

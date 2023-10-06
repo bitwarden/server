@@ -19,8 +19,11 @@ public class WebAuthnCredential : ITableObject<Guid>
     [MaxLength(20)]
     public string Type { get; set; }
     public Guid AaGuid { get; set; }
+    [MaxLength(2000)]
     public string EncryptedUserKey { get; set; }
+    [MaxLength(2000)]
     public string EncryptedPrivateKey { get; set; }
+    [MaxLength(2000)]
     public string EncryptedPublicKey { get; set; }
     public bool SupportsPrf { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;

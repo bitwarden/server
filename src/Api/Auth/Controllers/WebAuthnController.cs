@@ -68,7 +68,7 @@ public class WebAuthnController : Controller
             throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
         }
 
-        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, model.SupportsPrf, tokenable.Options, model.DeviceResponse);
+        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, model.SupportsPrf, model.EncryptedUserKey, model.EncryptedPublicKey, model.EncryptedPrivateKey, tokenable.Options, model.DeviceResponse);
         if (!success)
         {
             throw new BadRequestException("Unable to complete WebAuthn registration.");
