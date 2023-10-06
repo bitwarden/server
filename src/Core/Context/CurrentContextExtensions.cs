@@ -5,8 +5,7 @@ namespace Bit.Core.Context;
 public static class CurrentContextExtensions
 {
     public static async Task<bool> AnyOrgUserHasManageResetPasswordPermission(this ICurrentContext currentContext,
-        ICollection<OrganizationUserOrganizationDetails> organizationUserDetails
-        )
+        ICollection<OrganizationUserOrganizationDetails> organizationUserDetails)
     {
         var hasManageResetPasswordPermission = false;
         // if user has a single org with manage reset password permission, then they have it
