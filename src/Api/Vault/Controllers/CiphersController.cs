@@ -180,7 +180,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateItemLevelEncryptionIsAvailable(cipher);
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
@@ -189,14 +190,6 @@ public class CiphersController : Controller
         {
             throw new BadRequestException("Organization mismatch. Re-sync if you recently moved this item, " +
                 "then try again.");
-        }
-
-        // Temporary protection against old clients overwriting and deleting Fido2Keys
-        // Response model used to re-use logic for parsing 'data' property
-        var cipherModel = new CipherResponseModel(cipher, _globalSettings);
-        if (cipherModel.Login?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
-        {
-            throw new BadRequestException("Please update your client to edit this item.");
         }
 
         await _cipherService.SaveDetailsAsync(model.ToCipherDetails(cipher), userId, model.LastKnownRevisionDate, collectionIds);
@@ -212,7 +205,8 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
 
-        ValidateItemLevelEncryptionIsAvailable(cipher);
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
 
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
@@ -276,6 +270,9 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
+
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
         await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
@@ -539,7 +536,12 @@ public class CiphersController : Controller
                 throw new BadRequestException("Trying to move ciphers that you do not own.");
             }
 
-            shareCiphers.Add((cipher.ToCipher(ciphersDict[cipher.Id.Value]), cipher.LastKnownRevisionDate));
+            var existingCipher = ciphersDict[cipher.Id.Value];
+
+            ValidateClientVersionForItemLevelEncryptionSupport(existingCipher);
+            ValidateClientVersionForFido2CredentialSupport(existingCipher);
+
+            shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
         }
 
         await _cipherService.ShareManyAsync(shareCiphers, organizationId,
@@ -592,7 +594,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateItemLevelEncryptionIsAvailable(cipher);
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
 
         if (request.FileSize > CipherService.MAX_FILE_SIZE)
         {
@@ -814,11 +816,23 @@ public class CiphersController : Controller
         }
     }
 
-    private void ValidateItemLevelEncryptionIsAvailable(Cipher cipher)
+    private void ValidateClientVersionForItemLevelEncryptionSupport(Cipher cipher)
     {
         if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
         {
             throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
+        }
+    }
+
+    private void ValidateClientVersionForFido2CredentialSupport(Cipher cipher)
+    {
+        if (cipher.Type == Core.Vault.Enums.CipherType.Login)
+        {
+            var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+            if (loginData?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
+            {
+                throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
+            }
         }
     }
 }
