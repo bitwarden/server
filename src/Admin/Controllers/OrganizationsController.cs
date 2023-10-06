@@ -5,9 +5,11 @@ using Bit.Admin.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
@@ -17,6 +19,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 
 namespace Bit.Admin.Controllers;
 
@@ -42,6 +45,10 @@ public class OrganizationsController : Controller
     private readonly ILogger<OrganizationsController> _logger;
     private readonly IAccessControlService _accessControlService;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretRepository _secretRepository;
+    private readonly IProjectRepository _projectRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IStripeSyncService _stripeSyncService;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -62,7 +69,11 @@ public class OrganizationsController : Controller
         IProviderRepository providerRepository,
         ILogger<OrganizationsController> logger,
         IAccessControlService accessControlService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ISecretRepository secretRepository,
+        IProjectRepository projectRepository,
+        IServiceAccountRepository serviceAccountRepository,
+        IStripeSyncService stripeSyncService)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -83,6 +94,10 @@ public class OrganizationsController : Controller
         _logger = logger;
         _accessControlService = accessControlService;
         _currentContext = currentContext;
+        _secretRepository = secretRepository;
+        _projectRepository = projectRepository;
+        _serviceAccountRepository = serviceAccountRepository;
+        _stripeSyncService = stripeSyncService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -137,7 +152,14 @@ public class OrganizationsController : Controller
         }
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
-        return View(new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies));
+        var secrets = organization.UseSecretsManager ? await _secretRepository.GetSecretsCountByOrganizationIdAsync(id) : -1;
+        var projects = organization.UseSecretsManager ? await _projectRepository.GetProjectCountByOrganizationIdAsync(id) : -1;
+        var serviceAccounts = organization.UseSecretsManager ? await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(id) : -1;
+        var smSeats = organization.UseSecretsManager
+            ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            : -1;
+        return View(new OrganizationViewModel(organization, provider, billingSyncConnection, users, ciphers, collections, groups, policies,
+            secrets, projects, serviceAccounts, smSeats));
     }
 
     [SelfHosted(NotSelfHostedOnly = true)]
@@ -165,8 +187,14 @@ public class OrganizationsController : Controller
         var users = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(id);
         var billingInfo = await _paymentService.GetBillingAsync(organization);
         var billingSyncConnection = _globalSettings.EnableCloudCommunication ? await _organizationConnectionRepository.GetByOrganizationIdTypeAsync(id, OrganizationConnectionType.CloudBillingSync) : null;
+        var secrets = organization.UseSecretsManager ? await _secretRepository.GetSecretsCountByOrganizationIdAsync(id) : -1;
+        var projects = organization.UseSecretsManager ? await _projectRepository.GetProjectCountByOrganizationIdAsync(id) : -1;
+        var serviceAccounts = organization.UseSecretsManager ? await _serviceAccountRepository.GetServiceAccountCountByOrganizationIdAsync(id) : -1;
+        var smSeats = organization.UseSecretsManager
+            ? await _organizationUserRepository.GetOccupiedSmSeatCountByOrganizationIdAsync(organization.Id)
+            : -1;
         return View(new OrganizationEditModel(organization, provider, users, ciphers, collections, groups, policies,
-            billingInfo, billingSyncConnection, _globalSettings));
+            billingInfo, billingSyncConnection, _globalSettings, secrets, projects, serviceAccounts, smSeats));
     }
 
     [HttpPost]
@@ -176,6 +204,24 @@ public class OrganizationsController : Controller
     {
         var organization = await GetOrganization(id, model);
 
+        if (organization.UseSecretsManager &&
+            !organization.SecretsManagerBeta
+            && StaticStore.GetSecretsManagerPlan(organization.PlanType) == null
+            )
+        {
+            throw new BadRequestException("Plan does not support Secrets Manager");
+        }
+
+        try
+        {
+            await _stripeSyncService.UpdateCustomerEmailAddress(organization.GatewayCustomerId, organization.BillingEmail);
+        }
+        catch (StripeException stripeException)
+        {
+            _logger.LogError(stripeException, "Failed to update billing email address in Stripe for Organization with ID '{organizationId}'", organization.Id);
+            throw;
+        }
+
         await _organizationRepository.ReplaceAsync(organization);
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
@@ -183,6 +229,7 @@ public class OrganizationsController : Controller
             EventRaisedByUser = _userService.GetUserName(User),
             SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
         });
+
         return RedirectToAction("Edit", new { id });
     }
 

@@ -10,7 +10,7 @@ using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Moq;
+using NSubstitute;
 
 namespace Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 
@@ -25,20 +25,16 @@ internal class ServiceScopeFactoryBuilder : ISpecimenBuilder
     public object Create(object request, ISpecimenContext context)
     {
         var fixture = new Fixture();
-        var serviceProvider = new Mock<IServiceProvider>();
+        var serviceProvider = Substitute.For<IServiceProvider>();
         var dbContext = new DatabaseContext(_options);
-        serviceProvider
-            .Setup(x => x.GetService(typeof(DatabaseContext)))
-            .Returns(dbContext);
+        serviceProvider.GetService(typeof(DatabaseContext)).Returns(dbContext);
 
-        var serviceScope = new Mock<IServiceScope>();
-        serviceScope.Setup(x => x.ServiceProvider).Returns(serviceProvider.Object);
+        var serviceScope = Substitute.For<IServiceScope>();
+        serviceScope.ServiceProvider.Returns(serviceProvider);
 
-        var serviceScopeFactory = new Mock<IServiceScopeFactory>();
-        serviceScopeFactory
-            .Setup(x => x.CreateScope())
-            .Returns(serviceScope.Object);
-        return serviceScopeFactory.Object;
+        var serviceScopeFactory = Substitute.For<IServiceScopeFactory>();
+        serviceScopeFactory.CreateScope().Returns(serviceScope);
+        return serviceScopeFactory;
     }
 }
 

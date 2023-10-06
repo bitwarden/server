@@ -35,7 +35,7 @@ public interface ICipherService
     Task SoftDeleteAsync(Cipher cipher, Guid deletingUserId, bool orgAdmin = false);
     Task SoftDeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task RestoreAsync(Cipher cipher, Guid restoringUserId, bool orgAdmin = false);
-    Task RestoreManyAsync(IEnumerable<CipherDetails> ciphers, Guid restoringUserId);
+    Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task UploadFileForExistingAttachmentAsync(Stream stream, Cipher cipher, CipherAttachment.MetaData attachmentId);
     Task<AttachmentResponseData> GetAttachmentDownloadDataAsync(Cipher cipher, string attachmentId);
     Task<bool> ValidateCipherAttachmentFile(Cipher cipher, CipherAttachment.MetaData attachmentData);

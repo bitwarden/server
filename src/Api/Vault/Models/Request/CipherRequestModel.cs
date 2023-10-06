@@ -18,6 +18,7 @@ public class CipherRequestModel
     public string FolderId { get; set; }
     public bool Favorite { get; set; }
     public CipherRepromptType Reprompt { get; set; }
+    public string Key { get; set; }
     [Required]
     [EncryptedString]
     [EncryptedStringLength(1000)]
@@ -86,6 +87,7 @@ public class CipherRequestModel
         }
 
         existingCipher.Reprompt = Reprompt;
+        existingCipher.Key = Key;
 
         var hasAttachments2 = (Attachments2?.Count ?? 0) > 0;
         var hasAttachments = (Attachments?.Count ?? 0) > 0;
@@ -291,6 +293,7 @@ public class CipherBulkRestoreRequestModel
 {
     [Required]
     public IEnumerable<string> Ids { get; set; }
+    public Guid OrganizationId { get; set; }
 }
 
 public class CipherBulkMoveRequestModel

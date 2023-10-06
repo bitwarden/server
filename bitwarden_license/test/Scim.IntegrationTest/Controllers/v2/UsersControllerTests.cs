@@ -55,6 +55,8 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+
+        Assert.Contains("application/scim+json", context.Response.Headers.ContentType.ToString());
     }
 
     [Fact]

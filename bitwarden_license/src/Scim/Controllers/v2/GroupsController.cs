@@ -12,6 +12,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/groups")]
+[Produces("application/scim+json")]
 [ExceptionHandlerFilter]
 public class GroupsController : Controller
 {
