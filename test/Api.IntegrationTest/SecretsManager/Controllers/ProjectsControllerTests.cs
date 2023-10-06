@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
@@ -10,7 +10,6 @@ using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Test.Common.Helpers;
-using Pipelines.Sockets.Unofficial.Arenas;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
@@ -24,6 +23,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     private readonly ApiApplicationFactory _factory;
     private readonly IProjectRepository _projectRepository;
     private readonly IAccessPolicyRepository _accessPolicyRepository;
+    private readonly ClientTestHelper _clientTestHelper;
 
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
@@ -34,6 +34,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         _client = _factory.CreateClient();
         _projectRepository = _factory.GetService<IProjectRepository>();
         _accessPolicyRepository = _factory.GetService<IAccessPolicyRepository>();
+        _clientTestHelper = new ClientTestHelper(_factory, _client);
     }
 
     public async Task InitializeAsync()
@@ -49,12 +50,6 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         return Task.CompletedTask;
     }
 
-    private async Task LoginAsync(string email)
-    {
-        var tokens = await _factory.LoginAsync(email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-    }
-
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
@@ -62,7 +57,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public async Task ListByOrganization_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -73,7 +68,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         await CreateProjectsAsync(org.Id);
 
@@ -108,7 +103,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public async Task Create_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
 
@@ -135,14 +130,14 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public async Task Create_Success(PermissionType permissionType)
     {
         var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
         var orgUserId = adminOrgUser.Id;
         var currentUserId = adminOrgUser.UserId!.Value;
 
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await LoginAsync(email);
+            await _clientTestHelper.LoginAsync(email);
             orgUserId = orgUser.Id;
             currentUserId = orgUser.UserId!.Value;
         }
@@ -184,7 +179,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public async Task Update_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var initialProject = await _projectRepository.CreateAsync(new Project
         {
@@ -232,7 +227,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public async Task Update_NonExistingProject_NotFound()
     {
         await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var request = new ProjectUpdateRequestModel
         {
@@ -250,7 +245,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
@@ -276,7 +271,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public async Task Get_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
         {
@@ -297,7 +292,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var createdProject = await _projectRepository.CreateAsync(new Project
         {
@@ -314,7 +309,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var createdProject = await _projectRepository.CreateAsync(new Project
         {
@@ -352,7 +347,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     public async Task Delete_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var projectIds = await CreateProjectsAsync(org.Id);
 
@@ -365,7 +360,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var projectIds = await CreateProjectsAsync(org.Id);
 
@@ -418,7 +413,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         int projectsToCreate = 3)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
         var projectIds = await CreateProjectsAsync(org.Id, projectsToCreate);
 
         if (permissionType == PermissionType.RunAsAdmin)
@@ -427,7 +422,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         }
 
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var accessPolicies = projectIds.Select(projectId => new UserProjectAccessPolicy
         {
@@ -447,7 +442,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     private async Task<Project> SetupProjectWithAccessAsync(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var initialProject = await _projectRepository.CreateAsync(new Project
         {
@@ -461,7 +456,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         }
 
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var accessPolicies = new List<BaseAccessPolicy>
         {

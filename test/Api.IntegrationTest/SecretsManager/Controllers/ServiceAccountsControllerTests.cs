@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
+using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
@@ -24,6 +24,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
+    private readonly ClientTestHelper _clientTestHelper;
 
     private readonly IAccessPolicyRepository _accessPolicyRepository;
     private readonly IApiKeyRepository _apiKeyRepository;
@@ -39,6 +40,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         _serviceAccountRepository = _factory.GetService<IServiceAccountRepository>();
         _accessPolicyRepository = _factory.GetService<IAccessPolicyRepository>();
         _apiKeyRepository = _factory.GetService<IApiKeyRepository>();
+        _clientTestHelper = new ClientTestHelper(_factory, _client);
     }
 
     public async Task InitializeAsync()
@@ -54,12 +56,6 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         return Task.CompletedTask;
     }
 
-    private async Task LoginAsync(string email)
-    {
-        var tokens = await _factory.LoginAsync(email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-    }
-
     [Theory]
     [InlineData(false, false)]
     [InlineData(true, false)]
@@ -67,7 +63,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task ListByOrganization_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/service-accounts");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -77,7 +73,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task ListByOrganization_Admin_Success()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccountIds = await SetupGetServiceAccountsByOrganizationAsync(org);
 
@@ -95,7 +91,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var serviceAccountIds = await SetupGetServiceAccountsByOrganizationAsync(org);
 
@@ -127,7 +123,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task GetByServiceAccountId_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -143,7 +139,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task GetByServiceAccountId_ServiceAccountDoesNotExist_NotFound()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"/service-accounts/{new Guid()}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -154,7 +150,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -191,7 +187,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task Create_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var request = new ServiceAccountCreateRequestModel { Name = _mockEncryptedString };
 
@@ -205,7 +201,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task Create_Success(PermissionType permissionType)
     {
         var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var orgUserId = adminOrgUser.Id;
         var currentUserId = adminOrgUser.UserId!.Value;
@@ -213,7 +209,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await LoginAsync(email);
+            await _clientTestHelper.LoginAsync(email);
             orgUserId = orgUser.Id;
             currentUserId = orgUser.UserId!.Value;
         }
@@ -254,7 +250,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task Update_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -273,7 +269,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -291,7 +287,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task Update_NonExistingServiceAccount_NotFound()
     {
         await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var request = new ServiceAccountUpdateRequestModel { Name = _mockNewName };
 
@@ -333,7 +329,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task Delete_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -352,7 +348,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -385,12 +381,12 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
-            await LoginAsync(_email);
+            await _clientTestHelper.LoginAsync(_email);
         }
         else
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await LoginAsync(email);
+            await _clientTestHelper.LoginAsync(email);
 
             await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> {
                 new UserServiceAccountAccessPolicy
@@ -419,7 +415,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task GetAccessTokens_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -436,7 +432,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -461,7 +457,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task GetAccessTokens_Success(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -472,7 +468,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await LoginAsync(email);
+            await _clientTestHelper.LoginAsync(email);
 
             await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> {
                 new UserServiceAccountAccessPolicy
@@ -512,7 +508,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task CreateAccessToken_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -537,7 +533,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task CreateAccessToken_Admin()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -571,7 +567,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -607,7 +603,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -632,7 +628,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task CreateAccessToken_ExpireAtNull_Admin()
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -667,7 +663,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     public async Task RevokeAccessToken_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
     {
         var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -698,7 +694,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -750,12 +746,12 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
         if (permissionType == PermissionType.RunAsAdmin)
         {
-            await LoginAsync(_email);
+            await _clientTestHelper.LoginAsync(_email);
         }
         else
         {
             var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-            await LoginAsync(email);
+            await _clientTestHelper.LoginAsync(email);
 
             await _accessPolicyRepository.CreateManyAsync(new List<BaseAccessPolicy> {
                 new UserServiceAccountAccessPolicy
@@ -815,7 +811,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     private async Task<ServiceAccount> SetupServiceAccountWithAccessAsync(PermissionType permissionType)
     {
         var (org, _) = await _organizationHelper.Initialize(true, true);
-        await LoginAsync(_email);
+        await _clientTestHelper.LoginAsync(_email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -829,7 +825,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         }
 
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
-        await LoginAsync(email);
+        await _clientTestHelper.LoginAsync(email);
 
         var accessPolicies = new List<BaseAccessPolicy>
         {

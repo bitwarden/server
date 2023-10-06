@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using Bit.Api.IntegrationTest.Factories;
+﻿using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -19,18 +18,13 @@ public class SecretsManagerOrganizationHelper
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
-    private readonly HttpClient _client;
 
     public Organization _organization = null!;
     public OrganizationUser _owner = null!;
 
-    public SecretsManagerOrganizationHelper(ApiApplicationFactory factory, string ownerEmail, HttpClient? client = null)
+    public SecretsManagerOrganizationHelper(ApiApplicationFactory factory, string ownerEmail)
     {
         _factory = factory;
-        if (client != null)
-        {
-            _client = client;
-        }
         _organizationRepository = factory.GetService<IOrganizationRepository>();
         _organizationUserRepository = factory.GetService<IOrganizationUserRepository>();
         _ownerEmail = ownerEmail;
@@ -66,43 +60,28 @@ public class SecretsManagerOrganizationHelper
         return (email, orgUser);
     }
 
-    public async Task<(Guid serviceAccountId, ApiKeyClientSecretDetails apiKeyDetails)> CreateNewServiceAccountApiKeyAsync()
+    public async Task<ApiKeyClientSecretDetails> CreateNewServiceAccountApiKeyAsync()
     {
         var serviceAccountId = Guid.NewGuid();
-        var serviceAccount = new ServiceAccount()
+        var serviceAccount = new ServiceAccount
         {
             Id = serviceAccountId,
             OrganizationId = _organization.Id,
             Name = $"integration-test-{serviceAccountId}sa",
             CreationDate = DateTime.UtcNow,
-            RevisionDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow
         };
         await _serviceAccountRepository.CreateAsync(serviceAccount);
 
-        var apiKey = new ApiKey()
+        var apiKey = new ApiKey
         {
             ServiceAccountId = serviceAccountId,
             Name = "integration-token",
             Key = Guid.NewGuid().ToString(),
             ExpireAt = null,
             Scope = "[\"api.secrets\"]",
-            EncryptedPayload = Guid.NewGuid().ToString(),
+            EncryptedPayload = Guid.NewGuid().ToString()
         };
-        var result = await _createAccessTokenCommand.CreateAsync(apiKey);
-
-        return (serviceAccountId, result);
-    }
-
-    public async Task LoginAsync(string email)
-    {
-        var tokens = await _factory.LoginAsync(email);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.Token);
-    }
-
-    public async Task LoginAsync(Guid serviceAccountId, Guid clientId, string clientSecret)
-    {
-        var token = await _factory.LoginWithClientSecretAsync(clientId, clientSecret);
-        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        _client.DefaultRequestHeaders.Add("service_account_id", serviceAccountId.ToString());
+        return await _createAccessTokenCommand.CreateAsync(apiKey);
     }
 }
