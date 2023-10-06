@@ -55,7 +55,7 @@ public class SetInitialMasterPasswordCommandTests
 
     [Theory]
     [BitAutoData]
-    public async Task SetInitialMasterPassword_AlreadyHasPassword(SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key, string orgIdentifier)
+    public async Task SetInitialMasterPassword_AlreadyHasPassword_ReturnsFalse(SutProvider<SetInitialMasterPasswordCommand> sutProvider, User user, string masterPassword, string key, string orgIdentifier)
     {
         // Arrange
         user.MasterPassword = "ExistingPassword";
