@@ -29,8 +29,7 @@ public class SyncController : Controller
     private readonly IPolicyRepository _policyRepository;
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
-
-    protected ICurrentContext CurrentContext { get; }
+    private ICurrentContext CurrentContext { get; }
 
     public SyncController(
         IUserService userService,
