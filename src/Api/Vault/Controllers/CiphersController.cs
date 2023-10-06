@@ -180,7 +180,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateClientFeatureSupportForCipherUpdate(cipher);
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
@@ -204,7 +205,8 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
 
-        ValidateClientFeatureSupportForCipherUpdate(cipher);
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
 
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
@@ -269,7 +271,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateClientFeatureSupportForCipherUpdate(cipher);
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
         await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
@@ -586,7 +589,7 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
-        ValidateClientFeatureSupportForCipherUpdate(cipher);
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
 
         if (request.FileSize > CipherService.MAX_FILE_SIZE)
         {
@@ -808,32 +811,23 @@ public class CiphersController : Controller
         }
     }
 
-/// <summary>
-/// Ensure that the old client versions cannot update ciphers that have been updated to use new features
-/// and result in lost data.
-/// </summary>
-/// <param name="existingCipher"></param>
-/// <exception cref="BadRequestException"></exception>
-    private void ValidateClientFeatureSupportForCipherUpdate(Cipher existingCipher)
+     private void ValidateClientVersionForItemLevelEncryptionSupport(Cipher cipher)
     {
-        var hasFeatureSupport = true;
-        if (existingCipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
+        if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
         {
-            hasFeatureSupport = false;
-        } 
-        else if(existingCipher.Type == Core.Vault.Enums.CipherType.Login)
+            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
+        }
+    }
+
+    private void ValidateClientVersionForFido2CredentialSupport(Cipher cipher)
+    {
+        if (cipher.Type == Core.Vault.Enums.CipherType.Login)
         {
-            var loginData = JsonSerializer.Deserialize<CipherLoginData>(existingCipher.Data);    
+            var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
             if (loginData?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
             {
-                hasFeatureSupport = false;
+                throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
             }
         }
-        
-        if(!hasFeatureSupport)
-        {
-            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");  
-        }
-
     }
 }
