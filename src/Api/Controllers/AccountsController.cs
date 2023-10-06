@@ -49,7 +49,7 @@ public class AccountsController : Controller
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
 
-    protected ICurrentContext CurrentContext { get; }
+    private ICurrentContext CurrentContext { get; }
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -470,10 +470,12 @@ public class AccountsController : Controller
                 ProviderUserStatusType.Confirmed);
 
         var hasManageResetPasswordPermission = await CurrentContext.AnyOrgUserHasManageResetPasswordPermission(organizationUserDetails);
+        var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
 
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, await _userService.TwoFactorIsEnabledAsync(user),
-            await _userService.HasPremiumFromOrganization(user), hasManageResetPasswordPermission);
+            providerUserOrganizationDetails, twoFactorEnabled,
+            hasPremiumFromOrg, hasManageResetPasswordPermission);
         return response;
     }
 
