@@ -1561,7 +1561,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("Folders")
                         .HasColumnType("TEXT");
-                    
+
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
 
