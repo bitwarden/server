@@ -540,7 +540,7 @@ public class CiphersController : Controller
 
             ValidateClientVersionForItemLevelEncryptionSupport(existingCipher);
             ValidateClientVersionForFido2CredentialSupport(existingCipher);
-         
+
             shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
         }
 
@@ -816,7 +816,7 @@ public class CiphersController : Controller
         }
     }
 
-     private void ValidateClientVersionForItemLevelEncryptionSupport(Cipher cipher)
+    private void ValidateClientVersionForItemLevelEncryptionSupport(Cipher cipher)
     {
         if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
         {
