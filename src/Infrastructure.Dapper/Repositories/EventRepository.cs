@@ -118,6 +118,11 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         }
     }
 
+    //TODO
+    public Task<PagedResult<IEvent>> GetManyByServiceAccountAsync(Guid organizationId, Guid serviceAccountId, DateTime startDate, DateTime endDate,
+        PageOptions pageOptions) =>
+        throw new NotImplementedException();
+
     private async Task<PagedResult<IEvent>> GetManyAsync(string sprocName,
         IDictionary<string, object> sprocParams, DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {

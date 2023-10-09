@@ -49,6 +49,11 @@ public class EventRepository : Repository<Core.Entities.Event, Event, Guid>, IEv
         }
     }
 
+    // TODO
+    public Task<PagedResult<IEvent>> GetManyByServiceAccountAsync(Guid organizationId, Guid serviceAccountId, DateTime startDate, DateTime endDate,
+        PageOptions pageOptions) =>
+        throw new NotImplementedException();
+
     public async Task<PagedResult<IEvent>> GetManyByCipherAsync(Cipher cipher, DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
         DateTime? beforeDate = null;

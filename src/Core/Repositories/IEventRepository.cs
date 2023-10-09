@@ -19,4 +19,6 @@ public interface IEventRepository
         PageOptions pageOptions);
     Task CreateAsync(IEvent e);
     Task CreateManyAsync(IEnumerable<IEvent> e);
+    Task<PagedResult<IEvent>> GetManyByServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
+        DateTime startDate, DateTime endDate, PageOptions pageOptions);
 }

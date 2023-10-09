@@ -61,6 +61,14 @@ public class EventRepository : IEventRepository
         return await GetManyAsync(partitionKey, $"CipherId={cipher.Id}__Date={{0}}", startDate, endDate, pageOptions);
     }
 
+    public async Task<PagedResult<IEvent>> GetManyByServiceAccountAsync(Guid organizationId,
+        Guid serviceAccountId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
+    {
+
+        return await GetManyAsync($"OrganizationId={organizationId}",
+            $"ServiceAccountId={serviceAccountId}__Date={{0}}", startDate, endDate, pageOptions);
+    }
+
     public async Task CreateAsync(IEvent e)
     {
         if (!(e is EventTableEntity entity))
