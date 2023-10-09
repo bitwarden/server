@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
+using Bit.Core.Exceptions;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
@@ -68,5 +69,27 @@ public static class ApiHelpers
         }
 
         return new OkObjectResult(response);
+    }
+
+    public static Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)
+    {
+        if (!end.HasValue || !start.HasValue)
+        {
+            end = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
+            start = DateTime.UtcNow.Date.AddDays(-30);
+        }
+        else if (start.Value > end.Value)
+        {
+            var newEnd = start;
+            start = end;
+            end = newEnd;
+        }
+
+        if ((end.Value - start.Value) > TimeSpan.FromDays(367))
+        {
+            throw new BadRequestException("Range too large.");
+        }
+
+        return new Tuple<DateTime, DateTime>(start.Value, end.Value);
     }
 }

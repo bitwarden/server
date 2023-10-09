@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
@@ -42,34 +43,12 @@ public class SecretsManagerEventsController : Controller
             throw new NotFoundException();
         }
 
-        var dateRange = GetDateRange(start, end);
+        var dateRange = ApiHelpers.GetDateRange(start, end);
 
         var result = await _eventRepository.GetManyByServiceAccountAsync(serviceAccount.OrganizationId,
             serviceAccount.Id, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
-    }
-
-    private Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)
-    {
-        if (!end.HasValue || !start.HasValue)
-        {
-            end = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
-            start = DateTime.UtcNow.Date.AddDays(-30);
-        }
-        else if (start.Value > end.Value)
-        {
-            var newEnd = start;
-            start = end;
-            end = newEnd;
-        }
-
-        if (end.Value - start.Value > TimeSpan.FromDays(367))
-        {
-            throw new BadRequestException("Range too large.");
-        }
-
-        return new Tuple<DateTime, DateTime>(start.Value, end.Value);
     }
 }
