@@ -25,7 +25,7 @@ public class SecretsManagerOrganizationHelper
         _ownerEmail = ownerEmail;
     }
 
-    public async Task<(Organization organization, OrganizationUser owner)> Initialize(bool useSecrets, bool ownerAccessSecrets, bool organizationEnabled = true)
+    public async Task<(Organization organization, OrganizationUser owner)> Initialize(bool useSecrets, bool ownerAccessSecrets, bool organizationEnabled)
     {
         (_organization, _owner) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: _ownerEmail, billingEmail: _ownerEmail);
 

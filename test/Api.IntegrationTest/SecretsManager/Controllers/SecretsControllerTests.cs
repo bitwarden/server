@@ -77,7 +77,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task ListByOrganization_Success(PermissionType permissionType)
     {
-        var (org, orgUserOwner) = await _organizationHelper.Initialize(true, true);
+        var (org, orgUserOwner) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
@@ -153,7 +153,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task CreateWithoutProject_RunAsAdmin_Success()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var request = new SecretCreateRequestModel
@@ -187,7 +187,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task CreateWithDifferentProjectOrgId_RunAsAdmin_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project { Name = "123" });
@@ -207,7 +207,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task CreateWithMultipleProjects_RunAsAdmin_BadRequest()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var projectA = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123A" });
@@ -228,7 +228,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task CreateWithoutProject_RunAsUser_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -248,7 +248,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task CreateWithProject_Success(PermissionType permissionType)
     {
-        var (org, orgAdminUser) = await _organizationHelper.Initialize(true, true);
+        var (org, orgAdminUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         AccessClientType accessType = AccessClientType.NoAccessCheck;
@@ -333,7 +333,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Get_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project()
@@ -408,7 +408,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task GetSecretsByProject_UserWithNoPermission_EmptyList()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -441,7 +441,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task GetSecretsByProject_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project()
@@ -525,7 +525,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Update_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project()
@@ -592,7 +592,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task UpdateWithDifferentProjectOrgId_RunAsAdmin_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project { Name = "123" });
@@ -620,7 +620,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task UpdateWithMultipleProjects_BadRequest()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var projectA = await _projectRepository.CreateAsync(new Project { OrganizationId = org.Id, Name = "123A" });
@@ -675,7 +675,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [Fact]
     public async Task Delete_MissingAccessPolicy_AccessDenied()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -695,7 +695,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Delete_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var (project, secretIds) = await CreateSecretsAsync(org.Id, 3);
@@ -765,7 +765,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task GetSecretsByIds_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var (project, secretIds) = await CreateSecretsAsync(org.Id);

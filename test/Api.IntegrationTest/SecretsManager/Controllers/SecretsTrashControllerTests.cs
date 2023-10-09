@@ -67,7 +67,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task ListByOrganization_NotAdmin_Unauthorized()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -78,7 +78,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task ListByOrganization_Success()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         await _secretRepository.CreateAsync(new Secret
@@ -124,7 +124,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task Empty_NotAdmin_Unauthorized()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -136,7 +136,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task Empty_Invalid_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var secret = await _secretRepository.CreateAsync(new Secret
@@ -154,7 +154,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task Empty_Success()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var secret = await _secretRepository.CreateAsync(new Secret
@@ -191,7 +191,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task Restore_NotAdmin_Unauthorized()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -203,7 +203,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task Restore_Invalid_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var secret = await _secretRepository.CreateAsync(new Secret
@@ -221,7 +221,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
     [Fact]
     public async Task Restore_Success()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var secret = await _secretRepository.CreateAsync(new Secret

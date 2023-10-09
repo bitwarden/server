@@ -75,7 +75,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task ListByOrganization_UserWithoutPermission_EmptyList()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -142,7 +142,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Create_Success(PermissionType permissionType)
     {
-        var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
+        var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
         var orgUserId = adminOrgUser.Id;
         var currentUserId = adminOrgUser.UserId!.Value;
@@ -243,7 +243,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Update_NonExistingProject_NotFound()
     {
-        await _organizationHelper.Initialize(true, true);
+        await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var request = new ProjectUpdateRequestModel
@@ -260,7 +260,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Update_MissingAccessPolicy_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -311,7 +311,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Get_MissingAccessPolicy_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -328,7 +328,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Get_NonExistingProject_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -383,7 +383,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Fact]
     public async Task Delete_MissingAccessPolicy_AccessDenied()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -437,7 +437,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     private async Task<(List<Guid>, Organization)> SetupProjectsWithAccessAsync(PermissionType permissionType,
         int projectsToCreate = 3)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
         var projectIds = await CreateProjectsAsync(org.Id, projectsToCreate);
 
@@ -466,7 +466,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
 
     private async Task<Project> SetupProjectWithAccessAsync(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var initialProject = await _projectRepository.CreateAsync(new Project
