@@ -41,12 +41,22 @@ public class CollectionService : ICollectionService
     }
 
     public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
-        IEnumerable<CollectionAccessSelection> users = null, Guid? assignUserId = null)
+        IEnumerable<CollectionAccessSelection> users = null)
     {
         var org = await _organizationRepository.GetByIdAsync(collection.OrganizationId);
         if (org == null)
         {
             throw new BadRequestException("Organization not found");
+        }
+
+        var groupsList = groups?.ToList();
+        var usersList = users?.ToList();
+        var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
+        var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
+        if (!groupHasManageAccess && !userHasManageAccess)
+        {
+            throw new BadRequestException(
+                "At least one member or group must have can manage permission.");
         }
 
         if (collection.Id == default(Guid))
@@ -61,26 +71,13 @@ public class CollectionService : ICollectionService
                 }
             }
 
-            await _collectionRepository.CreateAsync(collection, org.UseGroups ? groups : null, users);
-
-            // Assign a user to the newly created collection.
-            if (assignUserId.HasValue)
-            {
-                var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, assignUserId.Value);
-                if (orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
-                {
-                    await _collectionRepository.UpdateUsersAsync(collection.Id,
-                        new List<CollectionAccessSelection> {
-                            new CollectionAccessSelection { Id = orgUser.Id, Manage = true} });
-                }
-            }
-
+            await _collectionRepository.CreateAsync(collection, org.UseGroups ? groupsList : null, usersList);
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Created);
             await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.CollectionCreated, org, _currentContext));
         }
         else
         {
-            await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groups : null, users);
+            await _collectionRepository.ReplaceAsync(collection, org.UseGroups ? groupsList : null, usersList);
             await _eventService.LogCollectionEventAsync(collection, Enums.EventType.Collection_Updated);
         }
     }
