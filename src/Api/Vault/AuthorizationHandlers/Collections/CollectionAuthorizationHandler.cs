@@ -1,43 +1,27 @@
-﻿using Bit.Core;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Utilities;
-using LaunchDarkly.Sdk.Server.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
 
-/// <summary>
-/// Handles authorization logic for Collection objects, including access permissions for users and groups.
-/// This uses new logic implemented in the Flexible Collections initiative.
-/// </summary>
 public class CollectionAuthorizationHandler : BulkAuthorizationHandler<CollectionOperationRequirement, Collection>
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IFeatureService _featureService;
 
-    public CollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository,
-        IFeatureService featureService)
+    public CollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository)
     {
         _currentContext = currentContext;
         _collectionRepository = collectionRepository;
-        _featureService = featureService;
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         CollectionOperationRequirement requirement, ICollection<Collection> resources)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
-        {
-            // Flexible collections is OFF, do not use the new logic in this handler
-            return;
-        }
-
         // Establish pattern of authorization handler null checking passed resources
         if (resources == null || !resources.Any())
         {
