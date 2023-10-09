@@ -201,6 +201,8 @@ public class CollectionsController : Controller
     }
 
     [HttpPost("bulk-access")]
+    [RequireFeature(FeatureFlagKeys.BulkCollectionAccess)]
+    [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
     public async Task PostBulkCollectionAccess([FromBody] BulkCollectionAccessRequestModel model)
     {
         var collections = await _collectionRepository.GetManyByManyIdsAsync(model.CollectionIds);
@@ -255,6 +257,7 @@ public class CollectionsController : Controller
             }
 
             await _deleteCollectionCommand.DeleteManyAsync(collections);
+            return;
         }
 
         // Old pre-flexible collections logic follows
