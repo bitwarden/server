@@ -159,7 +159,7 @@ public class CollectionsController : Controller
 
         var authorized = FlexibleCollectionsIsEnabled()
             ? (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Create)).Succeeded
-            : await CanCreateCollection(orgId, collection.Id) && await CanEditCollectionAsync(orgId, collection.Id);
+            : await CanCreateCollection(orgId, collection.Id) || await CanEditCollectionAsync(orgId, collection.Id);
         if (!authorized)
         {
             throw new NotFoundException();
@@ -202,6 +202,8 @@ public class CollectionsController : Controller
 
     [HttpPost("bulk-access")]
     [RequireFeature(FeatureFlagKeys.BulkCollectionAccess)]
+    // Also gated behind Flexible Collections flag because it only has new authorization logic.
+    // Could be removed if legacy authorization logic were implemented for many collections.
     [RequireFeature(FeatureFlagKeys.FlexibleCollections)]
     public async Task PostBulkCollectionAccess([FromBody] BulkCollectionAccessRequestModel model)
     {
