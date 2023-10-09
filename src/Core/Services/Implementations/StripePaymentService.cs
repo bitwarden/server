@@ -791,51 +791,51 @@ public class StripePaymentService : IPaymentService
         string paymentIntentClientSecret = null;
         try
         {
-            try
-            {
-                var subItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub).Select(item =>
+            var subItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub).Select(item =>
                     new Stripe.InvoiceSubscriptionItemOptions
                     {
                         Id = item.Id,
                         Plan = item.Plan,
                         Quantity = item.Quantity,
-                    }).ToList();
+                    })
+                .ToList();
 
-                var reviewInvoiceResponse = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
-                paymentIntentClientSecret = reviewInvoiceResponse.Item2;
+            var reviewInvoiceResponse = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
+            paymentIntentClientSecret = reviewInvoiceResponse.Item2;
 
-                var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
-                var invoice = await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
-                if (invoice == null)
-                {
-                    throw new BadRequestException("Unable to locate draft invoice for subscription update.");
-                }
-            }
-            catch (Exception e)
+            var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
+            var invoice =
+                await _stripeAdapter.InvoiceGetAsync(subResponse?.LatestInvoiceId, new Stripe.InvoiceGetOptions());
+            if (invoice == null)
             {
-                // Need to revert the subscription
-                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
-                {
-                    Items = subscriptionUpdate.RevertItemsOptions(sub),
-                    // This proration behavior prevents a false "credit" from
-                    //  being applied forward to the next month's invoice
-                    ProrationBehavior = "none",
-                    CollectionMethod = collectionMethod,
-                    DaysUntilDue = daysUntilDue,
-                });
-                throw;
+                throw new BadRequestException("Unable to locate draft invoice for subscription update.");
             }
+        }
+        catch (Exception e)
+        {
+            // Need to revert the subscription
+            await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
+            {
+                Items = subscriptionUpdate.RevertItemsOptions(sub),
+                // This proration behavior prevents a false "credit" from
+                //  being applied forward to the next month's invoice
+                ProrationBehavior = "none",
+                CollectionMethod = collectionMethod,
+                DaysUntilDue = daysUntilDue,
+            });
+            throw;
         }
         finally
         {
             // Change back the subscription collection method and/or days until due
             if (collectionMethod != "send_invoice" || daysUntilDue == null)
             {
-                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, new Stripe.SubscriptionUpdateOptions
-                {
-                    CollectionMethod = collectionMethod,
-                    DaysUntilDue = daysUntilDue,
-                });
+                await _stripeAdapter.SubscriptionUpdateAsync(sub.Id,
+                    new Stripe.SubscriptionUpdateOptions
+                    {
+                        CollectionMethod = collectionMethod,
+                        DaysUntilDue = daysUntilDue,
+                    });
             }
         }
 
