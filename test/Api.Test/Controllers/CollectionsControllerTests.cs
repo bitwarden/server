@@ -172,7 +172,7 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         // Act
-        await sutProvider.Sut.DeleteMany(model);
+        await sutProvider.Sut.DeleteMany(orgId, model);
 
         // Assert
         await sutProvider.GetDependency<IDeleteCollectionCommand>()
@@ -215,7 +215,7 @@ public class CollectionsControllerTests
 
         // Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.DeleteMany(model));
+            sutProvider.Sut.DeleteMany(orgId, model));
 
         await sutProvider.GetDependency<IDeleteCollectionCommand>()
             .DidNotReceiveWithAnyArgs()
