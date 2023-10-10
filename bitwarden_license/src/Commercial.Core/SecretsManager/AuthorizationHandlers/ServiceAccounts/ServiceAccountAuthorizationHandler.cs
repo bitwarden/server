@@ -56,6 +56,9 @@ public class
             case not null when requirement == ServiceAccountOperations.RevokeAccessTokens:
                 await CanRevokeAccessTokensAsync(context, requirement, resource);
                 break;
+            case not null when requirement == ServiceAccountOperations.ReadEvents:
+                await CanReadEventsAsync(context, requirement, resource);
+                break;
             default:
                 throw new ArgumentException("Unsupported operation requirement type provided.",
                     nameof(requirement));
@@ -156,6 +159,21 @@ public class
     }
 
     private async Task CanRevokeAccessTokensAsync(AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    {
+        var (accessClient, userId) =
+            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var access =
+            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
+                accessClient);
+
+        if (access.Write)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task CanReadEventsAsync(AuthorizationHandlerContext context,
         ServiceAccountOperationRequirement requirement, ServiceAccount resource)
     {
         var (accessClient, userId) =

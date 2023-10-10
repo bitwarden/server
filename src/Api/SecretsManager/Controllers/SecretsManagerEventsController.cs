@@ -36,7 +36,7 @@ public class SecretsManagerEventsController : Controller
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(serviceAccountId);
         var authorizationResult =
-            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.Update);
+            await _authorizationService.AuthorizeAsync(User, serviceAccount, ServiceAccountOperations.ReadEvents);
 
         if (!authorizationResult.Succeeded)
         {
