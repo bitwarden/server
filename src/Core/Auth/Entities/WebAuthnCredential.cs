@@ -13,12 +13,15 @@ public class WebAuthnCredential : ITableObject<Guid>
     [MaxLength(256)]
     public string PublicKey { get; set; }
     [MaxLength(256)]
-    public string DescriptorId { get; set; }
+    public string CredentialId { get; set; }
     public int Counter { get; set; }
     [MaxLength(20)]
     public string Type { get; set; }
     public Guid AaGuid { get; set; }
-    public string UserKey { get; set; }
+    public string EncryptedUserKey { get; set; }
+    public string EncryptedPrivateKey { get; set; }
+    public string EncryptedPublicKey { get; set; }
+    public bool SupportsPrf { get; set; }
     public DateTime CreationDate { get; internal set; } = DateTime.UtcNow;
     public DateTime RevisionDate { get; internal set; } = DateTime.UtcNow;
 

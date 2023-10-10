@@ -3,11 +3,14 @@
     @UserId UNIQUEIDENTIFIER,
     @Name NVARCHAR(50),
     @PublicKey VARCHAR (256),
-    @DescriptorId VARCHAR(256),
+    @CredentialId VARCHAR(256),
     @Counter INT,
     @Type VARCHAR(20),
     @AaGuid UNIQUEIDENTIFIER,
-    @UserKey VARCHAR (MAX),
+    @EncryptedUserKey VARCHAR (MAX),
+    @EncryptedPrivateKey VARCHAR (MAX),
+    @EncryptedPublicKey VARCHAR (MAX),
+    @SupportsPrf BIT,
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7)
 AS
@@ -20,11 +23,14 @@ BEGIN
         [UserId] = @UserId,
         [Name] = @Name,
         [PublicKey] = @PublicKey,
-        [DescriptorId] = @DescriptorId,
+        [CredentialId] = @CredentialId,
         [Counter] = @Counter,
         [Type] = @Type,
         [AaGuid] = @AaGuid,
-        [UserKey] = @UserKey,
+        [EncryptedUserKey] = @EncryptedUserKey,
+        [EncryptedPrivateKey] = @EncryptedPrivateKey,
+        [EncryptedPublicKey] = @EncryptedPublicKey,
+        [SupportsPrf] = @SupportsPrf,
         [CreationDate] = @CreationDate,
         [RevisionDate] = @RevisionDate
     WHERE

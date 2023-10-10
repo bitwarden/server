@@ -524,13 +524,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         // Get existing keys to exclude
         var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var excludeCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
+            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
             .ToList();
 
         var authenticatorSelection = new AuthenticatorSelection
         {
             AuthenticatorAttachment = null,
-            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred 
+            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred
             UserVerification = UserVerificationRequirement.Preferred
         };
 
@@ -552,7 +552,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             return false;
         }
 
-        var existingCredentialIds = existingCredentials.Select(c => c.DescriptorId);
+        var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);
         IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
 
         var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
@@ -560,7 +560,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var credential = new WebAuthnCredential
         {
             Name = name,
-            DescriptorId = CoreHelpers.Base64UrlEncode(success.Result.CredentialId),
+            CredentialId = CoreHelpers.Base64UrlEncode(success.Result.CredentialId),
             PublicKey = CoreHelpers.Base64UrlEncode(success.Result.PublicKey),
             Type = success.Result.CredType,
             AaGuid = success.Result.Aaguid,
@@ -577,7 +577,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
         var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var existingCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.DescriptorId)))
+            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
             .ToList();
 
         if (existingCredentials.Count == 0)
@@ -604,7 +604,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
-        var credential = userCredentials.FirstOrDefault(c => c.DescriptorId == assertionId);
+        var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertionId);
         if (credential == null)
         {
             return null;
