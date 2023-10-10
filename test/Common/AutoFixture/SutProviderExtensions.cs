@@ -1,4 +1,6 @@
 ﻿using AutoFixture;
+using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
@@ -46,5 +48,15 @@ public static class SutProviderExtensions
             .SetDependency(settings)
             .SetDependency(mockHttpClientFactory)
             .Create();
+    }
+
+    public static SutProvider<T> EnableFeatureFlag<T>(this SutProvider<T> sutProvider,
+        string featureFlagKey)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(featureFlagKey, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
+            .Returns(true);
+
+        return sutProvider;
     }
 }

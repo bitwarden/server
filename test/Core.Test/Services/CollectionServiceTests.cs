@@ -112,11 +112,7 @@ public class CollectionServiceTest
     {
         collection.Id = default;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
-
-        // TODO: move to customization / attribute
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
-            .Returns(true);
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(collection, null, users));
         Assert.Contains("At least one member or group must have can manage permission.", ex.Message);
