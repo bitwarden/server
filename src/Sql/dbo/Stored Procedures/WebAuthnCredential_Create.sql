@@ -30,7 +30,7 @@ BEGIN
         [EncryptedUserKey],
         [EncryptedPrivateKey],
         [EncryptedPublicKey],
-        [SupportsPrf]
+        [SupportsPrf],
         [CreationDate],
         [RevisionDate]
     )
