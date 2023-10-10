@@ -2,6 +2,7 @@
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -25,6 +26,8 @@ public class CollectionsControllerTests
     public async Task Post_Success(Guid orgId, CollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
+
         Collection ExpectedCollection() => Arg.Is<Collection>(c =>
             c.Name == collectionRequest.Name && c.ExternalId == collectionRequest.ExternalId &&
             c.OrganizationId == orgId);
@@ -47,6 +50,7 @@ public class CollectionsControllerTests
     public async Task Put_Success(Guid orgId, Guid collectionId, Guid userId, CollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         sutProvider.GetDependency<ICurrentContext>()
             .ViewAssignedCollections(orgId)
             .Returns(true);
@@ -73,6 +77,7 @@ public class CollectionsControllerTests
     public async Task Put_CanNotEditAssignedCollection_ThrowsNotFound(Guid orgId, Guid collectionId, Guid userId, CollectionRequestModel collectionRequest,
         SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         sutProvider.GetDependency<ICurrentContext>()
             .EditAssignedCollections(orgId)
             .Returns(true);
@@ -91,6 +96,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task GetOrganizationCollectionsWithGroups_NoManagerPermissions_ThrowsNotFound(Organization organization, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetManyWithDetails(organization.Id));
@@ -101,6 +107,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task GetOrganizationCollectionsWithGroups_AdminPermissions_GetsAllCollections(Organization organization, User user, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
         sutProvider.GetDependency<ICurrentContext>().ViewAllCollections(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationAdmin(organization.Id).Returns(true);
@@ -114,6 +121,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task GetOrganizationCollectionsWithGroups_MissingViewAllPermissions_GetsAssignedCollections(Organization organization, User user, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
         sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().OrganizationManager(organization.Id).Returns(true);
@@ -127,6 +135,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task GetOrganizationCollectionsWithGroups_CustomUserWithManagerPermissions_GetsAssignedCollections(Organization organization, User user, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(user.Id);
         sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organization.Id).Returns(true);
         sutProvider.GetDependency<ICurrentContext>().EditAssignedCollections(organization.Id).Returns(true);
@@ -142,6 +151,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task DeleteMany_Success(Guid orgId, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         // Arrange
         var model = new CollectionBulkDeleteRequestModel
         {
@@ -184,6 +194,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task DeleteMany_PermissionDenied_ThrowsNotFound(Guid orgId, Collection collection1, Collection collection2, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         // Arrange
         var model = new CollectionBulkDeleteRequestModel
         {
@@ -225,6 +236,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task PostBulkCollectionAccess_Success(User actingUser, ICollection<Collection> collections, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         // Arrange
         var userId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
@@ -271,6 +283,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task PostBulkCollectionAccess_CollectionsNotFound_Throws(User actingUser, ICollection<Collection> collections, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         var userId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var model = new BulkCollectionAccessRequestModel
@@ -302,6 +315,7 @@ public class CollectionsControllerTests
     [Theory, BitAutoData]
     public async Task PostBulkCollectionAccess_AccessDenied_Throws(User actingUser, ICollection<Collection> collections, SutProvider<CollectionsController> sutProvider)
     {
+        sutProvider.EnableFeatureFlag(FeatureFlagKeys.FlexibleCollections);
         var userId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var model = new BulkCollectionAccessRequestModel
