@@ -277,7 +277,7 @@ jobs:
 
       - name: Retrieve github PAT secrets
         id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@fdcf1fcec3b04762ce48216cbf3af32498bed74c
+        uses: bitwarden/gh-actions/get-keyvault-secrets@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
@@ -528,7 +528,7 @@ jobs:
 
       - name: Retrieve github PAT secrets
         id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@fdcf1fcec3b04762ce48216cbf3af32498bed74c
+        uses: bitwarden/gh-actions/get-keyvault-secrets@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
@@ -603,7 +603,7 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@fdcf1fcec3b04762ce48216cbf3af32498bed74c
+        uses: bitwarden/gh-actions/get-keyvault-secrets@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
         if: failure()
         with:
           keyvault: "bitwarden-ci"
