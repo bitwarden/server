@@ -200,7 +200,7 @@ public class OrganizationUsersController : Controller
         }
 
         await _organizationService.InitPendingOrganization(user.Id, orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
-        await _acceptOrgUserCommand.AcceptOrgUserByTokenAsync(organizationUserId, user, model.Token, _userService);
+        await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
         await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
     }
 
@@ -222,7 +222,7 @@ public class OrganizationUsersController : Controller
             throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
         }
 
-        await _acceptOrgUserCommand.AcceptOrgUserByTokenAsync(organizationUserId, user, model.Token, _userService);
+        await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
 
         if (useMasterPasswordPolicy)
         {

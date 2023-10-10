@@ -45,7 +45,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
     }
 
-    public async Task<OrganizationUser> AcceptOrgUserByTokenAsync(Guid organizationUserId, User user, string token,
+    public async Task<OrganizationUser> AcceptOrgUserByEmailTokenAsync(Guid organizationUserId, User user, string emailToken,
         IUserService userService)
     {
         var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
@@ -62,10 +62,10 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
         // TODO: update this code to only run old token validation if new token validation fails
         var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
-            _orgUserInviteTokenDataFactory, token, orgUser);
+            _orgUserInviteTokenDataFactory, emailToken, orgUser);
 
         var tokenValid = newTokenValid ||
-                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id,
+                         CoreHelpers.UserInviteTokenIsValid(_dataProtector, emailToken, user.Email, orgUser.Id,
                              _globalSettings);
 
         if (!tokenValid)

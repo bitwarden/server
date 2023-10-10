@@ -195,7 +195,7 @@ public class AcceptOrgUserCommandTests
         var oldToken = CreateOldToken(sutProvider, orgUser);
 
         // Act
-        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, oldToken, _userService);
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, oldToken, _userService);
 
         // Assert
         AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
@@ -231,7 +231,7 @@ public class AcceptOrgUserCommandTests
         var newToken = CreateNewToken(orgUser);
 
         // Act
-        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService);
+        var resultOrgUser = await sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, newToken, _userService);
 
         // Assert
         AssertValidAcceptedOrgUser(resultOrgUser, orgUser, user);
@@ -254,7 +254,7 @@ public class AcceptOrgUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUserId, user, "token", _userService));
+            () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUserId, user, "token", _userService));
 
         Assert.Equal("User invalid.", exception.Message);
     }
@@ -274,7 +274,7 @@ public class AcceptOrgUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, invalidToken, _userService));
+            () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, invalidToken, _userService));
 
         Assert.Equal("Invalid token.", exception.Message);
     }
@@ -298,7 +298,7 @@ public class AcceptOrgUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, oldToken, _userService));
+            () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, oldToken, _userService));
 
         Assert.Equal("Invalid token.", exception.Message);
     }
@@ -330,7 +330,7 @@ public class AcceptOrgUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService));
+            () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, newToken, _userService));
 
         Assert.Equal("Invalid token.", exception.Message);
 
@@ -375,7 +375,7 @@ public class AcceptOrgUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService));
+            () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, newToken, _userService));
 
         Assert.Equal(expectedErrorMessage, exception.Message);
     }
@@ -408,7 +408,7 @@ public class AcceptOrgUserCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.AcceptOrgUserByTokenAsync(orgUser.Id, user, newToken, _userService));
+            () => sutProvider.Sut.AcceptOrgUserByEmailTokenAsync(orgUser.Id, user, newToken, _userService));
 
         Assert.Equal("User email does not match invite.", exception.Message);
     }
