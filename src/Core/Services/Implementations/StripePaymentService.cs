@@ -801,7 +801,7 @@ public class StripePaymentService : IPaymentService
                 .ToList();
 
             var reviewInvoiceResponse = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
-            paymentIntentClientSecret = reviewInvoiceResponse.Item2;
+            paymentIntentClientSecret = reviewInvoiceResponse.PaymentIntentClientSecret;
 
             var subResponse = await _stripeAdapter.SubscriptionUpdateAsync(sub.Id, subUpdateOptions);
             var invoice =
@@ -1083,8 +1083,121 @@ public class StripePaymentService : IPaymentService
         return paymentIntentClientSecret;
     }
 
-    internal async Task<Tuple<bool, string>> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber,
+    internal async Task<InvoicePreviewResult> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber,
         List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
+    {
+        var customer = await CheckInAppPurchaseMethod(subscriber);
+
+        string paymentIntentClientSecret = null;
+
+        var pendingInvoiceItems = GetPendingInvoiceItems(subscriber);
+
+        var upcomingPreview = await GetUpcomingInvoiceAsync(subscriber, subItemOptions);
+
+        var itemsForInvoice = GetItemsForInvoice(subItemOptions, upcomingPreview, pendingInvoiceItems);
+        var invoiceAmount = itemsForInvoice?.Sum(i => i.Amount) ?? 0;
+        var invoiceNow = invoiceAmount >= prorateThreshold;
+        if (invoiceNow)
+        {
+            await ProcessImmediateInvoiceAsync(subscriber, upcomingPreview, invoiceAmount, customer, itemsForInvoice, pendingInvoiceItems, paymentIntentClientSecret);
+        }
+
+        return new InvoicePreviewResult { IsInvoicedNow = invoiceNow, PaymentIntentClientSecret = paymentIntentClientSecret };
+    }
+
+    private async Task<InvoicePreviewResult> ProcessImmediateInvoiceAsync(ISubscriber subscriber, Invoice upcomingPreview, long invoiceAmount,
+     Customer customer, IEnumerable<InvoiceLineItem> itemsForInvoice, PendingInoviceItems pendingInvoiceItems,
+     string paymentIntentClientSecret)
+    {
+        // Owes more than prorateThreshold on the next invoice.
+        // Invoice them and pay now instead of waiting until the next billing cycle.
+
+        string cardPaymentMethodId = null;
+        var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
+        cardPaymentMethodId = GetCardPaymentMethodId(invoiceAmountDue, customer, cardPaymentMethodId);
+
+        Stripe.Invoice invoice = null;
+        var createdInvoiceItems = new List<Stripe.InvoiceItem>();
+        Braintree.Transaction braintreeTransaction = null;
+
+        try
+        {
+            await CreateInvoiceItemsAsync(subscriber, itemsForInvoice, pendingInvoiceItems, createdInvoiceItems);
+
+            invoice = await CreateInvoiceAsync(subscriber, cardPaymentMethodId);
+
+            var invoicePayOptions = new Stripe.InvoicePayOptions();
+            await CreateBrainTreeTransactionRequestAsync(subscriber, invoice, customer, invoicePayOptions,
+                cardPaymentMethodId, braintreeTransaction);
+
+            await InvoicePayAsync(invoicePayOptions, invoice, paymentIntentClientSecret);
+        }
+        catch (Exception e)
+        {
+            if (braintreeTransaction != null)
+            {
+                await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
+            }
+
+            if (invoice != null)
+            {
+                if (invoice.Status == "paid")
+                {
+                    // It's apparently paid, so we return without throwing an exception
+                    return new InvoicePreviewResult
+                    {
+                        IsInvoicedNow = false,
+                        PaymentIntentClientSecret = paymentIntentClientSecret
+                    };
+                }
+
+                await RestoreInvoiceItemsAsync(invoice, customer, pendingInvoiceItems.PendingInvoiceItems);
+            }
+            else
+            {
+                foreach (var ii in createdInvoiceItems)
+                {
+                    await _stripeAdapter.InvoiceDeleteAsync(ii.Id);
+                }
+            }
+
+            if (e is Stripe.StripeException strEx &&
+                (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
+            {
+                throw new GatewayException("Bank account is not yet verified.");
+            }
+
+            throw;
+        }
+
+        return new InvoicePreviewResult
+        {
+            IsInvoicedNow = false,
+            PaymentIntentClientSecret = paymentIntentClientSecret
+        };
+    }
+
+    private static IEnumerable<InvoiceLineItem> GetItemsForInvoice(List<InvoiceSubscriptionItemOptions> subItemOptions, Invoice upcomingPreview,
+        PendingInoviceItems pendingInvoiceItems)
+    {
+        var itemsForInvoice = upcomingPreview.Lines?.Data?
+            .Where(i => pendingInvoiceItems.PendingInvoiceItemsDict.ContainsKey(i.Id) ||
+                        (i.Plan.Id == subItemOptions[0]?.Plan && i.Proration));
+        return itemsForInvoice;
+    }
+
+    private PendingInoviceItems GetPendingInvoiceItems(ISubscriber subscriber)
+    {
+        var pendingInvoiceItems = new PendingInoviceItems();
+        var invoiceItems = _stripeAdapter.InvoiceItemListAsync(new Stripe.InvoiceItemListOptions
+        {
+            Customer = subscriber.GatewayCustomerId
+        }).ToList().Where(i => i.InvoiceId == null);
+        pendingInvoiceItems.PendingInvoiceItemsDict = invoiceItems.ToDictionary(pii => pii.Id);
+        return pendingInvoiceItems;
+    }
+
+    private async Task<Customer> CheckInAppPurchaseMethod(ISubscriber subscriber)
     {
         var customerOptions = GetCustomerPaymentOptions();
         var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId, customerOptions);
@@ -1095,94 +1208,30 @@ public class StripePaymentService : IPaymentService
                                           "Contact support.");
         }
 
-        string paymentIntentClientSecret = null;
-
-        var pendingInvoiceItems = _stripeAdapter.InvoiceItemListAsync(new Stripe.InvoiceItemListOptions
-        {
-            Customer = subscriber.GatewayCustomerId
-        }).ToList().Where(i => i.InvoiceId == null);
-        var pendingInvoiceItemsDict = pendingInvoiceItems.ToDictionary(pii => pii.Id);
-
-        var upcomingPreview = await GetUpcomingInvoiceAsync(subscriber, subItemOptions);
-
-        var itemsForInvoice = upcomingPreview.Lines?.Data?
-            .Where(i => pendingInvoiceItemsDict.ContainsKey(i.Id) || (i.Plan.Id == subItemOptions[0]?.Plan && i.Proration));
-        var invoiceAmount = itemsForInvoice?.Sum(i => i.Amount) ?? 0;
-        var invoiceNow = invoiceAmount >= prorateThreshold;
-        if (invoiceNow)
-        {
-            // Owes more than prorateThreshold on next invoice.
-            // Invoice them and pay now instead of waiting until next billing cycle.
-
-            string cardPaymentMethodId = null;
-            var invoiceAmountDue = upcomingPreview.StartingBalance + invoiceAmount;
-            cardPaymentMethodId = GetCardPaymentMethodId(invoiceAmountDue, customer, cardPaymentMethodId);
-
-            Stripe.Invoice invoice = null;
-            var createdInvoiceItems = new List<Stripe.InvoiceItem>();
-            Braintree.Transaction braintreeTransaction = null;
-            try
-            {
-                await CreateInvoiceItemsAsync(subscriber, itemsForInvoice, pendingInvoiceItemsDict, createdInvoiceItems);
-
-                invoice = await CreateInvoiceAsync(subscriber, cardPaymentMethodId);
-
-                var invoicePayOptions = new Stripe.InvoicePayOptions();
-                await CreateBrainTreeTransactionRequestAsync(subscriber, invoice, customer, invoicePayOptions, cardPaymentMethodId, braintreeTransaction);
-
-                await InvoicePayAsync(invoicePayOptions, invoice, paymentIntentClientSecret);
-            }
-            catch (Exception e)
-            {
-                if (braintreeTransaction != null)
-                {
-                    await _btGateway.Transaction.RefundAsync(braintreeTransaction.Id);
-                }
-
-                if (invoice != null)
-                {
-                    if (invoice.Status == "paid")
-                    {
-                        // It's apparently paid, so we need to return w/o throwing an exception
-                        return new Tuple<bool, string>(false, paymentIntentClientSecret);
-                    }
-
-                    await RestoreInvoiceItemsAsync(invoice, customer, pendingInvoiceItems);
-                }
-                else
-                {
-                    foreach (var ii in createdInvoiceItems)
-                    {
-                        await _stripeAdapter.InvoiceDeleteAsync(ii.Id);
-                    }
-                }
-
-                if (e is Stripe.StripeException strEx &&
-                    (strEx.StripeError?.Message?.Contains("cannot be used because it is not verified") ?? false))
-                {
-                    throw new GatewayException("Bank account is not yet verified.");
-                }
-
-                throw;
-            }
-        }
-
-        return new Tuple<bool, string>(invoiceNow, paymentIntentClientSecret);
+        return customer;
     }
 
     private string GetCardPaymentMethodId(long invoiceAmountDue, Customer customer, string cardPaymentMethodId)
     {
-        if (invoiceAmountDue <= 0 || customer.Metadata.ContainsKey("btCustomerId")) return cardPaymentMethodId;
-        var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
-        var hasDefaultValidSource = customer.DefaultSource != null &&
-                                    (customer.DefaultSource is Stripe.Card ||
-                                     customer.DefaultSource is Stripe.BankAccount);
-        if (hasDefaultCardPaymentMethod || hasDefaultValidSource) return cardPaymentMethodId;
-        cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
-        if (cardPaymentMethodId == null)
+        try
+        {
+            if (invoiceAmountDue <= 0 || customer.Metadata.ContainsKey("btCustomerId")) return cardPaymentMethodId;
+            var hasDefaultCardPaymentMethod = customer.InvoiceSettings?.DefaultPaymentMethod?.Type == "card";
+            var hasDefaultValidSource = customer.DefaultSource != null &&
+                                        (customer.DefaultSource is Stripe.Card ||
+                                         customer.DefaultSource is Stripe.BankAccount);
+            if (hasDefaultCardPaymentMethod || hasDefaultValidSource) return cardPaymentMethodId;
+            cardPaymentMethodId = GetLatestCardPaymentMethod(customer.Id)?.Id;
+            if (cardPaymentMethodId == null)
+            {
+                throw new BadRequestException("No payment method is available.");
+            }
+        }
+        catch (Exception e)
         {
             throw new BadRequestException("No payment method is available.");
         }
+
 
         return cardPaymentMethodId;
     }
@@ -1316,11 +1365,11 @@ public class StripePaymentService : IPaymentService
     }
 
     private async Task CreateInvoiceItemsAsync(ISubscriber subscriber, IEnumerable<InvoiceLineItem> itemsForInvoice,
-        Dictionary<string, InvoiceItem> pendingInvoiceItemsDict, List<InvoiceItem> createdInvoiceItems)
+        PendingInoviceItems pendingInvoiceItems, List<InvoiceItem> createdInvoiceItems)
     {
         foreach (var invoiceLineItem in itemsForInvoice)
         {
-            if (pendingInvoiceItemsDict.ContainsKey(invoiceLineItem.Id))
+            if (pendingInvoiceItems.PendingInvoiceItemsDict.ContainsKey(invoiceLineItem.Id))
             {
                 continue;
             }

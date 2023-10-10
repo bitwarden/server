@@ -805,8 +805,8 @@ public class StripePaymentServiceTests
 
         var result = await sutProvider.Sut.PreviewUpcomingInvoiceAndPayAsync(subscriber, new List<Stripe.InvoiceSubscriptionItemOptions>(), prorateThreshold);
 
-        Assert.False(result.Item1);
-        Assert.Null(result.Item2);
+        Assert.False(result.IsInvoicedNow);
+        Assert.Null(result.PaymentIntentClientSecret);
     }
 
     [Theory, BitAutoData]
@@ -883,8 +883,8 @@ public class StripePaymentServiceTests
                 )));
 
 
-        Assert.True(result.Item1);
-        Assert.Null(result.Item2);
+        Assert.True(result.IsInvoicedNow);
+        Assert.Null(result.PaymentIntentClientSecret);
     }
 
     private static Stripe.Invoice MockInVoice(Stripe.Customer customer, int invoiceAmountBelowThreshold) =>
