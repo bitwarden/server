@@ -1,7 +1,7 @@
 #!/usr/bin/env pwsh
 # Helper script for applying the same user secrets to each project
 param (
-    [bool]$clear,
+    [switch]$clear,
     [Parameter(ValueFromRemainingArguments = $true, Position=1)]
     $cmdArgs
 )

@@ -50,20 +50,20 @@ public static class CoreHelpers
     {
         var guidArray = startingGuid.ToByteArray();
 
-        // Get the days and milliseconds which will be used to build the byte string 
+        // Get the days and milliseconds which will be used to build the byte string
         var days = new TimeSpan(time.Ticks - _baseDateTicks);
         var msecs = time.TimeOfDay;
 
-        // Convert to a byte array 
-        // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333 
+        // Convert to a byte array
+        // Note that SQL Server is accurate to 1/300th of a millisecond so we divide by 3.333333
         var daysArray = BitConverter.GetBytes(days.Days);
         var msecsArray = BitConverter.GetBytes((long)(msecs.TotalMilliseconds / 3.333333));
 
-        // Reverse the bytes to match SQL Servers ordering 
+        // Reverse the bytes to match SQL Servers ordering
         Array.Reverse(daysArray);
         Array.Reverse(msecsArray);
 
-        // Copy the bytes into the guid 
+        // Copy the bytes into the guid
         Array.Copy(daysArray, daysArray.Length - 2, guidArray, guidArray.Length - 6, 2);
         Array.Copy(msecsArray, msecsArray.Length - 4, guidArray, guidArray.Length - 4, 4);
 
@@ -816,5 +816,20 @@ public static class CoreHelpers
             .Append(emailParts[1])
             .ToString();
 
+    }
+
+    public static string GetEmailDomain(string email)
+    {
+        if (!string.IsNullOrWhiteSpace(email))
+        {
+            var emailParts = email.Split('@', StringSplitOptions.RemoveEmptyEntries);
+
+            if (emailParts.Length == 2)
+            {
+                return emailParts[1].Trim();
+            }
+        }
+
+        return null;
     }
 }

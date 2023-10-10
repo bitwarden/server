@@ -415,7 +415,7 @@ public class DynamicAuthenticationSchemeProvider : AuthenticationSchemeProvider
         };
         options.IdentityProviders.Add(idp);
 
-        return new DynamicAuthenticationScheme(name, name, typeof(Saml2Handler), options, SsoType.Saml2);
+        return new DynamicAuthenticationScheme(name, name, typeof(Saml2BitHandler), options, SsoType.Saml2);
     }
 
     private NameIdFormat GetNameIdFormat(Saml2NameIdFormat format)
