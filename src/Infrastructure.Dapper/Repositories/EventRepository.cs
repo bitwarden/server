@@ -118,7 +118,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         }
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId, Guid serviceAccountId,
         DateTime startDate, DateTime endDate,
         PageOptions pageOptions)
     {

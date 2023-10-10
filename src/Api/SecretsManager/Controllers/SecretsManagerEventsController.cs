@@ -45,7 +45,7 @@ public class SecretsManagerEventsController : Controller
 
         var dateRange = ApiHelpers.GetDateRange(start, end);
 
-        var result = await _eventRepository.GetManyByServiceAccountAsync(serviceAccount.OrganizationId,
+        var result = await _eventRepository.GetManyByOrganizationServiceAccountAsync(serviceAccount.OrganizationId,
             serviceAccount.Id, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));

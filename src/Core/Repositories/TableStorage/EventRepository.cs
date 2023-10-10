@@ -61,7 +61,7 @@ public class EventRepository : IEventRepository
         return await GetManyAsync(partitionKey, $"CipherId={cipher.Id}__Date={{0}}", startDate, endDate, pageOptions);
     }
 
-    public async Task<PagedResult<IEvent>> GetManyByServiceAccountAsync(Guid organizationId,
+    public async Task<PagedResult<IEvent>> GetManyByOrganizationServiceAccountAsync(Guid organizationId,
         Guid serviceAccountId, DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
 
