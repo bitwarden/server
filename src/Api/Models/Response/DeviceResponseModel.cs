@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Utilities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
@@ -14,22 +15,18 @@ public class DeviceResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(device));
         }
 
-        Id = device.Id.ToString();
+        Id = device.Id;
         Name = device.Name;
         Type = device.Type;
         Identifier = device.Identifier;
         CreationDate = device.CreationDate;
-        EncryptedUserKey = device.EncryptedUserKey;
-        EncryptedPublicKey = device.EncryptedPublicKey;
-        EncryptedPrivateKey = device.EncryptedPrivateKey;
+        IsTrusted = device.IsTrusted();
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
     public DeviceType Type { get; set; }
     public string Identifier { get; set; }
     public DateTime CreationDate { get; set; }
-    public string EncryptedUserKey { get; }
-    public string EncryptedPublicKey { get; }
-    public string EncryptedPrivateKey { get; }
+    public bool IsTrusted { get; set; }
 }

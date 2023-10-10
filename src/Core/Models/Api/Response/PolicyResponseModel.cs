@@ -14,8 +14,8 @@ public class PolicyResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(policy));
         }
 
-        Id = policy.Id.ToString();
-        OrganizationId = policy.OrganizationId.ToString();
+        Id = policy.Id;
+        OrganizationId = policy.OrganizationId;
         Type = policy.Type;
         Enabled = policy.Enabled;
         if (!string.IsNullOrWhiteSpace(policy.Data))
@@ -24,8 +24,8 @@ public class PolicyResponseModel : ResponseModel
         }
     }
 
-    public string Id { get; set; }
-    public string OrganizationId { get; set; }
+    public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public PolicyType Type { get; set; }
     public Dictionary<string, object> Data { get; set; }
     public bool Enabled { get; set; }

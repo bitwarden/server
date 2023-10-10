@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -185,4 +186,56 @@ public class CollectionServiceTest
             .LogOrganizationUserEventAsync(default, default);
     }
 
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsAsync_WithViewAssignedCollectionsTrue_ReturnsAssignedCollections(
+        CollectionDetails collectionDetails, Guid organizationId, Guid userId, SutProvider<CollectionService> sutProvider)
+    {
+        collectionDetails.OrganizationId = organizationId;
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails> { collectionDetails });
+        sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organizationId).Returns(true);
+
+        var result = await sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId);
+
+        Assert.Single(result);
+        Assert.Equal(collectionDetails, result.First());
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsAsync_WithViewAllCollectionsTrue_ReturnsAllOrganizationCollections(
+        Collection collection, Guid organizationId, Guid userId, SutProvider<CollectionService> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organizationId)
+            .Returns(new List<Collection> { collection });
+        sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organizationId).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().ViewAllCollections(organizationId).Returns(true);
+
+        var result = await sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId);
+
+        Assert.Single(result);
+        Assert.Equal(collection, result.First());
+
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByOrganizationIdAsync(organizationId);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCollectionsAsync_WithViewAssignedCollectionsFalse_ThrowsBadRequestException(
+        Guid organizationId, SutProvider<CollectionService> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().ViewAssignedCollections(organizationId).Returns(false);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetOrganizationCollectionsAsync(organizationId));
+
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
 }

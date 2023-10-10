@@ -12,6 +12,7 @@ using Bit.Admin.Services;
 
 #if !OSS
 using Bit.Commercial.Core.Utilities;
+using Bit.Commercial.Infrastructure.EntityFramework.SecretsManager;
 #endif
 
 namespace Bit.Admin;
@@ -91,6 +92,7 @@ public class Startup
         services.AddOosServices();
 #else
         services.AddCommercialCoreServices();
+        services.AddSecretsManagerEfRepositories();
 #endif
 
         // Mvc

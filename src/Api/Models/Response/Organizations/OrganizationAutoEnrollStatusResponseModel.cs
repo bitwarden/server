@@ -6,10 +6,10 @@ public class OrganizationAutoEnrollStatusResponseModel : ResponseModel
 {
     public OrganizationAutoEnrollStatusResponseModel(Guid orgId, bool resetPasswordEnabled) : base("organizationAutoEnrollStatus")
     {
-        Id = orgId.ToString();
+        Id = orgId;
         ResetPasswordEnabled = resetPasswordEnabled;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public bool ResetPasswordEnabled { get; set; }
 }

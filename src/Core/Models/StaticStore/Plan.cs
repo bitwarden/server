@@ -15,7 +15,10 @@ public class Plan
     public short? BaseStorageGb { get; set; }
     public short? MaxCollections { get; set; }
     public short? MaxUsers { get; set; }
+    public short? MaxServiceAccounts { get; set; }
     public bool AllowSeatAutoscale { get; set; }
+
+    public bool AllowServiceAccountsAutoscale { get; set; }
 
     public bool HasAdditionalSeatsOption { get; set; }
     public int? MaxAdditionalSeats { get; set; }
@@ -55,7 +58,7 @@ public class Plan
     public decimal PremiumAccessOptionPrice { get; set; }
     public decimal? AdditionalPricePerServiceAccount { get; set; }
     public short? BaseServiceAccount { get; set; }
-    public short? MaxServiceAccount { get; set; }
+    public short? MaxAdditionalServiceAccount { get; set; }
     public bool HasAdditionalServiceAccountOption { get; set; }
     public short? MaxProjects { get; set; }
     public BitwardenProductType BitwardenProduct { get; set; }

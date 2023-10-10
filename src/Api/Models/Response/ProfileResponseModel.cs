@@ -20,7 +20,7 @@ public class ProfileResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(user));
         }
 
-        Id = user.Id.ToString();
+        Id = user.Id;
         Name = user.Name;
         Email = user.Email;
         EmailVerified = user.EmailVerified;
@@ -45,7 +45,7 @@ public class ProfileResponseModel : ResponseModel
     {
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
     public string Email { get; set; }
     public bool EmailVerified { get; set; }

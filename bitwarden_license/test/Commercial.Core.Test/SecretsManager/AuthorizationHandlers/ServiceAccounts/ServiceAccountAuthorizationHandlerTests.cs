@@ -438,4 +438,63 @@ public class ServiceAccountAuthorizationHandlerTests
 
         Assert.Equal(expected, authzContext.HasSucceeded);
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteServiceAccount_AccessToSecretsManagerFalse_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal)
+    {
+        var requirement = ServiceAccountOperations.Delete;
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(serviceAccount.OrganizationId)
+            .Returns(false);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task CanDeleteServiceAccount_NullResource_DoesNotSucceed(
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.Delete;
+        SetupPermission(sutProvider, PermissionType.RunAsAdmin, serviceAccount.OrganizationId, userId);
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, null);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.False(authzContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
+    public async Task CanDeleteProject_AccessCheck(PermissionType permissionType, bool read, bool write,
+        bool expected,
+        SutProvider<ServiceAccountAuthorizationHandler> sutProvider, ServiceAccount serviceAccount,
+        ClaimsPrincipal claimsPrincipal,
+        Guid userId)
+    {
+        var requirement = ServiceAccountOperations.Delete;
+        SetupPermission(sutProvider, permissionType, serviceAccount.OrganizationId, userId);
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .AccessToServiceAccountAsync(serviceAccount.Id, userId, Arg.Any<AccessClientType>())
+            .Returns((read, write));
+        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
+            claimsPrincipal, serviceAccount);
+
+        await sutProvider.Sut.HandleAsync(authzContext);
+
+        Assert.Equal(expected, authzContext.HasSucceeded);
+    }
 }

@@ -10,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Microsoft.AspNetCore.DataProtection;
 
 namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
 
@@ -20,11 +21,11 @@ public class OrganizationCustomization : ICustomization
     public void Customize(IFixture fixture)
     {
         var organizationId = Guid.NewGuid();
-        var maxConnections = (short)new Random().Next(10, short.MaxValue);
+        var maxCollections = (short)new Random().Next(10, short.MaxValue);
 
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
-            .With(o => o.MaxCollections, maxConnections)
+            .With(o => o.MaxCollections, maxCollections)
             .With(o => o.UseGroups, UseGroups));
 
         fixture.Customize<Collection>(composer =>
@@ -127,6 +128,25 @@ internal class OrganizationInvite : ICustomization
     }
 }
 
+public class SecretsManagerOrganizationCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        var organizationId = Guid.NewGuid();
+        var planType = PlanType.EnterpriseAnnually;
+
+        fixture.Customize<Organization>(composer => composer
+            .With(o => o.Id, organizationId)
+            .With(o => o.UseSecretsManager, true)
+            .With(o => o.SecretsManagerBeta, false)
+            .With(o => o.PlanType, planType)
+            .With(o => o.Plan, StaticStore.GetPasswordManagerPlan(planType).Name)
+            .With(o => o.MaxAutoscaleSmSeats, (int?)null)
+            .With(o => o.MaxAutoscaleSmServiceAccounts, (int?)null)
+        );
+    }
+}
+
 internal class OrganizationCustomizeAttribute : BitCustomizeAttribute
 {
     public bool UseGroups { get; set; }
@@ -161,4 +181,38 @@ internal class OrganizationInviteCustomizeAttribute : BitCustomizeAttribute
         InvitorUserType = InvitorUserType,
         PermissionsBlob = PermissionsBlob,
     };
+}
+
+internal class SecretsManagerOrganizationCustomizeAttribute : BitCustomizeAttribute
+{
+    public override ICustomization GetCustomization() =>
+        new SecretsManagerOrganizationCustomization();
+}
+
+internal class EphemeralDataProtectionCustomization : ICustomization
+{
+    public void Customize(IFixture fixture)
+    {
+        fixture.Customizations.Add(new EphemeralDataProtectionProviderBuilder());
+    }
+
+    private class EphemeralDataProtectionProviderBuilder : ISpecimenBuilder
+    {
+        public object Create(object request, ISpecimenContext context)
+        {
+            var type = request as Type;
+            if (type == null || type != typeof(IDataProtectionProvider))
+            {
+                return new NoSpecimen();
+            }
+
+            return new EphemeralDataProtectionProvider();
+        }
+    }
+}
+
+internal class EphemeralDataProtectionAutoDataAttribute : CustomAutoDataAttribute
+{
+    public EphemeralDataProtectionAutoDataAttribute() : base(new SutProviderCustomization(), new EphemeralDataProtectionCustomization())
+    { }
 }

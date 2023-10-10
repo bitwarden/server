@@ -67,7 +67,7 @@ public class OrganizationDomainControllerTests
         var result = await sutProvider.Sut.Get(orgId.ToString());
 
         Assert.IsType<ListResponseModel<OrganizationDomainResponseModel>>(result);
-        Assert.Equal(orgId.ToString(), result.Data.Select(x => x.OrganizationId).FirstOrDefault());
+        Assert.Equal(orgId, result.Data.Select(x => x.OrganizationId).FirstOrDefault());
     }
 
     [Theory, BitAutoData]
@@ -125,7 +125,7 @@ public class OrganizationDomainControllerTests
         var result = await sutProvider.Sut.Get(orgId.ToString(), id.ToString());
 
         Assert.IsType<OrganizationDomainResponseModel>(result);
-        Assert.Equal(orgId.ToString(), result.OrganizationId);
+        Assert.Equal(orgId, result.OrganizationId);
     }
 
     [Theory, BitAutoData]

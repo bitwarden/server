@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Test.Common.Helpers;
+using Pipelines.Sockets.Unofficial.Arenas;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
@@ -118,6 +119,19 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
     [Theory]
     [InlineData(PermissionType.RunAsAdmin)]
     [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task Create_AtMaxProjects_BadRequest(PermissionType permissionType)
+    {
+        var (_, organization) = await SetupProjectsWithAccessAsync(permissionType, 3);
+        var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
+
+        var response = await _client.PostAsJsonAsync($"/organizations/{organization.Id}/projects", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Create_Success(PermissionType permissionType)
     {
         var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
@@ -144,7 +158,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         AssertHelper.AssertRecent(result.RevisionDate);
         AssertHelper.AssertRecent(result.CreationDate);
 
-        var createdProject = await _projectRepository.GetByIdAsync(new Guid(result.Id));
+        var createdProject = await _projectRepository.GetByIdAsync(result.Id);
         Assert.NotNull(result);
         Assert.Equal(request.Name, createdProject.Name);
         AssertHelper.AssertRecent(createdProject.RevisionDate);
@@ -205,7 +219,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         AssertHelper.AssertRecent(result.RevisionDate);
         Assert.NotEqual(initialProject.RevisionDate, result.RevisionDate);
 
-        var updatedProject = await _projectRepository.GetByIdAsync(new Guid(result.Id));
+        var updatedProject = await _projectRepository.GetByIdAsync(result.Id);
         Assert.NotNull(result);
         Assert.Equal(request.Name, updatedProject.Name);
         AssertHelper.AssertRecent(updatedProject.RevisionDate);
@@ -290,6 +304,25 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
             OrganizationId = org.Id,
             Name = _mockEncryptedString,
         });
+
+        var response = await _client.GetAsync($"/projects/{createdProject.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_NonExistingProject_NotFound()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var createdProject = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString,
+        });
+
+        var deleteResponse = await _client.PostAsync("/projects/delete", JsonContent.Create(createdProject.Id));
 
         var response = await _client.GetAsync($"/projects/{createdProject.Id}");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

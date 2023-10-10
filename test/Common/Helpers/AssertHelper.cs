@@ -103,6 +103,7 @@ public static class AssertHelper
     public static Expression<Predicate<T>> AssertEqualExpected<T>(T expected) =>
         (T actual) => AssertEqualExpectedPredicate(expected)(actual);
 
+    [StackTraceHidden]
     public static JsonElement AssertJsonProperty(JsonElement element, string propertyName, JsonValueKind jsonValueKind)
     {
         if (!element.TryGetProperty(propertyName, out var subElement))

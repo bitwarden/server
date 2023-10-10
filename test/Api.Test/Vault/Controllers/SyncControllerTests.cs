@@ -301,7 +301,7 @@ public class SyncControllerTests
         foreach (var profProviderOrg in result.Profile.ProviderOrganizations)
         {
             var matchedProviderUserOrgDetails =
-                providerUserOrganizationDetails.FirstOrDefault(p => p.OrganizationId.ToString() == profProviderOrg.Id);
+                providerUserOrganizationDetails.FirstOrDefault(p => p.OrganizationId == profProviderOrg.Id);
 
             if (matchedProviderUserOrgDetails != null)
             {

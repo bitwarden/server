@@ -14,15 +14,15 @@ public class GroupResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(group));
         }
 
-        Id = group.Id.ToString();
-        OrganizationId = group.OrganizationId.ToString();
+        Id = group.Id;
+        OrganizationId = group.OrganizationId;
         Name = group.Name;
         AccessAll = group.AccessAll;
         ExternalId = group.ExternalId;
     }
 
-    public string Id { get; set; }
-    public string OrganizationId { get; set; }
+    public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public string Name { get; set; }
     public bool AccessAll { get; set; }
     public string ExternalId { get; set; }

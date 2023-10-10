@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
@@ -13,6 +14,7 @@ public class SubscriptionResponseModel : ResponseModel
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         UpcomingInvoice = subscription.UpcomingInvoice != null ?
             new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
+        Discount = subscription.Discount != null ? new BillingCustomerDiscount(subscription.Discount) : null;
         StorageName = user.Storage.HasValue ? CoreHelpers.ReadableBytesSize(user.Storage.Value) : null;
         StorageGb = user.Storage.HasValue ? Math.Round(user.Storage.Value / 1073741824D, 2) : 0; // 1 GB
         MaxStorageGb = user.MaxStorageGb;
@@ -40,9 +42,22 @@ public class SubscriptionResponseModel : ResponseModel
     public short? MaxStorageGb { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
     public BillingSubscription Subscription { get; set; }
+    public BillingCustomerDiscount Discount { get; set; }
     public UserLicense License { get; set; }
     public DateTime? Expiration { get; set; }
     public bool UsingInAppPurchase { get; set; }
+}
+
+public class BillingCustomerDiscount
+{
+    public BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
+    {
+        Id = discount.Id;
+        Active = discount.Active;
+    }
+
+    public string Id { get; set; }
+    public bool Active { get; set; }
 }
 
 public class BillingSubscription
@@ -82,6 +97,8 @@ public class BillingSubscription
             Interval = item.Interval;
             Quantity = item.Quantity;
             SponsoredSubscriptionItem = item.SponsoredSubscriptionItem;
+            AddonSubscriptionItem = item.AddonSubscriptionItem;
+            BitwardenProduct = item.BitwardenProduct;
         }
 
         public string Name { get; set; }
@@ -89,6 +106,8 @@ public class BillingSubscription
         public int Quantity { get; set; }
         public string Interval { get; set; }
         public bool SponsoredSubscriptionItem { get; set; }
+        public bool AddonSubscriptionItem { get; set; }
+        public BitwardenProductType BitwardenProduct { get; set; }
     }
 }
 

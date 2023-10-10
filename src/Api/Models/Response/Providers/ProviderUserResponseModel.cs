@@ -16,8 +16,8 @@ public class ProviderUserResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(providerUser));
         }
 
-        Id = providerUser.Id.ToString();
-        UserId = providerUser.UserId?.ToString();
+        Id = providerUser.Id;
+        UserId = providerUser.UserId;
         Type = providerUser.Type;
         Status = providerUser.Status;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(providerUser.Permissions);
@@ -31,15 +31,15 @@ public class ProviderUserResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(providerUser));
         }
 
-        Id = providerUser.Id.ToString();
-        UserId = providerUser.UserId?.ToString();
+        Id = providerUser.Id;
+        UserId = providerUser.UserId;
         Type = providerUser.Type;
         Status = providerUser.Status;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(providerUser.Permissions);
     }
 
-    public string Id { get; set; }
-    public string UserId { get; set; }
+    public Guid Id { get; set; }
+    public Guid? UserId { get; set; }
     public ProviderUserType Type { get; set; }
     public ProviderUserStatusType Status { get; set; }
     public Permissions Permissions { get; set; }

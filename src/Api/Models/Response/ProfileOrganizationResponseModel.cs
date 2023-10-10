@@ -15,7 +15,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
 
     public ProfileOrganizationResponseModel(OrganizationUserOrganizationDetails organization) : this("profileOrganization")
     {
-        Id = organization.OrganizationId.ToString();
+        Id = organization.OrganizationId;
         Name = organization.Name;
         UsePolicies = organization.UsePolicies;
         UseSso = organization.UseSso;
@@ -29,6 +29,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         UseApi = organization.UseApi;
         UseResetPassword = organization.UseResetPassword;
         UseSecretsManager = organization.UseSecretsManager;
+        UsePasswordManager = organization.UsePasswordManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
         UseActivateAutofillPolicy = organization.PlanType == PlanType.EnterpriseAnnually ||
@@ -46,8 +47,8 @@ public class ProfileOrganizationResponseModel : ResponseModel
         Identifier = organization.Identifier;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(organization.Permissions);
         ResetPasswordEnrolled = organization.ResetPasswordKey != null;
-        UserId = organization.UserId?.ToString();
-        ProviderId = organization.ProviderId?.ToString();
+        UserId = organization.UserId;
+        ProviderId = organization.ProviderId;
         ProviderName = organization.ProviderName;
         ProviderType = organization.ProviderType;
         FamilySponsorshipFriendlyName = organization.FamilySponsorshipFriendlyName;
@@ -68,7 +69,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
         }
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
     public bool UsePolicies { get; set; }
     public bool UseSso { get; set; }
@@ -82,6 +83,7 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public bool UseApi { get; set; }
     public bool UseResetPassword { get; set; }
     public bool UseSecretsManager { get; set; }
+    public bool UsePasswordManager { get; set; }
     public bool UsersGetPremium { get; set; }
     public bool UseCustomPermissions { get; set; }
     public bool UseActivateAutofillPolicy { get; set; }
@@ -97,9 +99,9 @@ public class ProfileOrganizationResponseModel : ResponseModel
     public string Identifier { get; set; }
     public Permissions Permissions { get; set; }
     public bool ResetPasswordEnrolled { get; set; }
-    public string UserId { get; set; }
+    public Guid? UserId { get; set; }
     public bool HasPublicAndPrivateKeys { get; set; }
-    public string ProviderId { get; set; }
+    public Guid? ProviderId { get; set; }
     public string ProviderName { get; set; }
     public ProviderType? ProviderType { get; set; }
     public string FamilySponsorshipFriendlyName { get; set; }

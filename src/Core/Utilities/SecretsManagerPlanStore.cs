@@ -39,12 +39,13 @@ public static class SecretsManagerPlanStore
                 HasCustomPermissions = true,
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
-                StripeSeatPlanId = "sm-enterprise-seat-monthly",
-                StripeServiceAccountPlanId = "service-account-monthly",
+                StripeSeatPlanId = "secrets-manager-enterprise-seat-monthly",
+                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly",
                 BasePrice = 0,
                 SeatPrice = 13,
                 AdditionalPricePerServiceAccount = 0.5M,
                 AllowSeatAutoscale = true,
+                AllowServiceAccountsAutoscale = true
             },
             new Plan
             {
@@ -77,12 +78,13 @@ public static class SecretsManagerPlanStore
                 HasCustomPermissions = true,
                 UpgradeSortOrder = 3,
                 DisplaySortOrder = 3,
-                StripeSeatPlanId = "sm-enterprise-seat-annually",
-                StripeServiceAccountPlanId = "service-account-annually",
+                StripeSeatPlanId = "secrets-manager-enterprise-seat-annually",
+                StripeServiceAccountPlanId = "secrets-manager-service-account-annually",
                 BasePrice = 0,
                 SeatPrice = 144,
                 AdditionalPricePerServiceAccount = 6,
                 AllowSeatAutoscale = true,
+                AllowServiceAccountsAutoscale = true
             },
             new Plan
             {
@@ -107,12 +109,13 @@ public static class SecretsManagerPlanStore
                 UsersGetPremium = true,
                 UpgradeSortOrder = 2,
                 DisplaySortOrder = 2,
-                StripeSeatPlanId = "sm-teams-seat-monthly",
-                StripeServiceAccountPlanId = "service-account-monthly",
+                StripeSeatPlanId = "secrets-manager-teams-seat-monthly",
+                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly",
                 BasePrice = 0,
                 SeatPrice = 7,
                 AdditionalPricePerServiceAccount = 0.5M,
                 AllowSeatAutoscale = true,
+                AllowServiceAccountsAutoscale = true
             },
             new Plan
             {
@@ -139,12 +142,13 @@ public static class SecretsManagerPlanStore
 
                 UpgradeSortOrder = 2,
                 DisplaySortOrder = 2,
-                StripeSeatPlanId = "sm-teams-seat-annually",
-                StripeServiceAccountPlanId = "service-account-annually",
+                StripeSeatPlanId = "secrets-manager-teams-seat-annually",
+                StripeServiceAccountPlanId = "secrets-manager-service-account-annually",
                 BasePrice = 0,
                 SeatPrice = 72,
                 AdditionalPricePerServiceAccount = 6,
                 AllowSeatAutoscale = true,
+                AllowServiceAccountsAutoscale = true
             },
             new Plan
             {
@@ -158,7 +162,7 @@ public static class SecretsManagerPlanStore
                 BaseServiceAccount = 3,
                 MaxProjects = 3,
                 MaxUsers = 2,
-                MaxServiceAccount = 3,
+                MaxServiceAccounts = 3,
                 UpgradeSortOrder = -1, // Always the lowest plan, cannot be upgraded to
                 DisplaySortOrder = -1,
                 AllowSeatAutoscale = false,

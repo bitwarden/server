@@ -13,8 +13,8 @@ public class OrganizationDomainResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(organizationDomain));
         }
 
-        Id = organizationDomain.Id.ToString();
-        OrganizationId = organizationDomain.OrganizationId.ToString();
+        Id = organizationDomain.Id;
+        OrganizationId = organizationDomain.OrganizationId;
         Txt = organizationDomain.Txt;
         DomainName = organizationDomain.DomainName;
         CreationDate = organizationDomain.CreationDate;
@@ -24,8 +24,8 @@ public class OrganizationDomainResponseModel : ResponseModel
         LastCheckedDate = organizationDomain.LastCheckedDate;
     }
 
-    public string Id { get; set; }
-    public string OrganizationId { get; set; }
+    public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public string Txt { get; set; }
     public string DomainName { get; set; }
     public DateTime CreationDate { get; set; }

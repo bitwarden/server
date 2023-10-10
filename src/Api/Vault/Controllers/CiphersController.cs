@@ -36,6 +36,7 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
+    private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -177,6 +178,8 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        ValidateItemLevelEncryptionIsAvailable(cipher);
+
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
             (Guid?)null : new Guid(model.OrganizationId);
@@ -198,6 +201,9 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
+
+        ValidateItemLevelEncryptionIsAvailable(cipher);
+
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
         {
@@ -451,7 +457,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("restore")]
-    public async Task<ListResponseModel<CipherResponseModel>> PutRestoreMany([FromBody] CipherBulkRestoreRequestModel model)
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutRestoreMany([FromBody] CipherBulkRestoreRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
         {
@@ -461,12 +467,30 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
-        var restoringCiphers = ciphers.Where(c => cipherIdsToRestore.Contains(c.Id) && c.Edit);
+        var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId);
+        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
+    }
 
-        await _cipherService.RestoreManyAsync(restoringCiphers, userId);
-        var responses = restoringCiphers.Select(c => new CipherResponseModel(c, _globalSettings));
-        return new ListResponseModel<CipherResponseModel>(responses);
+    [HttpPut("restore-admin")]
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutRestoreManyAdmin([FromBody] CipherBulkRestoreRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only restore up to 500 items at a time.");
+        }
+
+        if (model == null || model.OrganizationId == default || !await _currentContext.EditAnyCollection(model.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+
+        var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId, model.OrganizationId, true);
+        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
     }
 
     [HttpPut("move")]
@@ -557,6 +581,8 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
+
+        ValidateItemLevelEncryptionIsAvailable(cipher);
 
         if (request.FileSize > CipherService.MAX_FILE_SIZE)
         {
@@ -696,7 +722,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
-            await _cipherService.CreateAttachmentShareAsync(cipher, stream,
+            await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName, key,
                 Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
         });
     }
@@ -775,6 +801,14 @@ public class CiphersController : Controller
         if (!Request?.ContentType.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
+        }
+    }
+
+    private void ValidateItemLevelEncryptionIsAvailable(Cipher cipher)
+    {
+        if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
+        {
+            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
         }
     }
 }
