@@ -18,7 +18,7 @@ public static class KdfSettingsValidator
             case KdfType.Argon2id:
                 if (!AuthConstants.ARGON2_ITERATIONS.InsideRange(kdfIterations))
                 {
-                    yield return new ValidationResult($"Argon2 iterations must be between {AuthConstants.ARGON2_ITERATIONS.Min} and {AuthConstants.PBKDF2_ITERATIONS.Max}.");
+                    yield return new ValidationResult($"Argon2 iterations must be between {AuthConstants.ARGON2_ITERATIONS.Min} and {AuthConstants.ARGON2_ITERATIONS.Max}.");
                 }
                 else if (!kdfMemory.HasValue || !AuthConstants.ARGON2_MEMORY.InsideRange(kdfMemory.Value))
                 {

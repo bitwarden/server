@@ -9,11 +9,11 @@ public class KdfRequestModelTests
 {
     [Theory]
     [InlineData(KdfType.PBKDF2_SHA256, 1_000_000, null, null)] // Somewhere in the middle
-    [InlineData(KdfType.PBKDF2_SHA256, 5000, null, null)] // Right on the lower boundary
+    [InlineData(KdfType.PBKDF2_SHA256, 600_000, null, null)] // Right on the lower boundary
     [InlineData(KdfType.PBKDF2_SHA256, 2_000_000, null, null)] // Right on the upper boundary
-    [InlineData(KdfType.Argon2id, 10, 500, 8)] // Somewhere in the middle
+    [InlineData(KdfType.Argon2id, 5, 500, 8)] // Somewhere in the middle
     [InlineData(KdfType.Argon2id, 1, 15, 1)] // Right on the lower boundary
-    [InlineData(KdfType.Argon2id, 5000, 1024, 16)] // Right on the upper boundary
+    [InlineData(KdfType.Argon2id, 10, 1024, 16)] // Right on the upper boundary
     public void Validate_IsValid(KdfType kdfType, int? kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
         var model = new KdfRequestModel
@@ -32,7 +32,7 @@ public class KdfRequestModelTests
 
     [Theory]
     [InlineData(null, 350_000, null, null, 1)] // Although KdfType is nullable, it's marked as [Required]
-    [InlineData(KdfType.PBKDF2_SHA256, 1000, null, null, 1)] // Too few iterations
+    [InlineData(KdfType.PBKDF2_SHA256, 500_000, null, null, 1)] // Too few iterations
     [InlineData(KdfType.PBKDF2_SHA256, 2_000_001, null, null, 1)] // Too many iterations
     [InlineData(KdfType.Argon2id, 0, 30, 8, 1)] // Iterations must be greater than 0
     [InlineData(KdfType.Argon2id, 10, 14, 8, 1)] // Too little memory
