@@ -14,8 +14,8 @@ public class PayPalIpnClient
     public PayPalIpnClient(IOptions<BillingSettings> billingSettings)
     {
         var bSettings = billingSettings?.Value;
-        _ipnUri = new Uri(bSettings.PayPal.Production ? "https://www.paypal.com/cgi-bin/webscr" :
-            "https://www.sandbox.paypal.com/cgi-bin/webscr");
+        _ipnUri = new Uri(bSettings.PayPal.Production ? "https://ipnpb.paypal.com/cgi-bin/webscr" :
+            "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr");
     }
 
     public async Task<bool> VerifyIpnAsync(string ipnBody)
