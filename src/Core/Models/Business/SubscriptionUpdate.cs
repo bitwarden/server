@@ -32,12 +32,12 @@ public abstract class SubscriptionUpdate
 public abstract class BaseSeatSubscriptionUpdate : SubscriptionUpdate
 {
     private readonly int _previousSeats;
-    protected readonly StaticStore.Plan _plan;
+    protected readonly StaticStore.Plan Plan;
     private readonly long? _additionalSeats;
 
     protected BaseSeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats, int previousSeats)
     {
-        _plan = plan;
+        Plan = plan;
         _additionalSeats = additionalSeats;
         _previousSeats = previousSeats;
     }
@@ -84,7 +84,7 @@ public class SeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
         : base(organization, plan, additionalSeats, organization.Seats.GetValueOrDefault())
     { }
 
-    protected override string GetPlanId() => _plan.PasswordManager.StripeSeatPlanId;
+    protected override string GetPlanId() => Plan.PasswordManager.StripeSeatPlanId;
 }
 
 public class SmSeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
@@ -93,7 +93,7 @@ public class SmSeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
         : base(organization, plan, additionalSeats, organization.SmSeats.GetValueOrDefault())
     { }
 
-    protected override string GetPlanId() => _plan.SecretsManager.StripeSeatPlanId;
+    protected override string GetPlanId() => Plan.SecretsManager.StripeSeatPlanId;
 }
 
 public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
