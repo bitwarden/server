@@ -2,6 +2,7 @@
 using Bit.Billing.Services.Implementations;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.Settings;
+using FluentAssertions;
 using NSubstitute;
 using Stripe;
 using Xunit;
