@@ -49,14 +49,4 @@ public static class SutProviderExtensions
             .SetDependency(mockHttpClientFactory)
             .Create();
     }
-
-    public static SutProvider<T> EnableFeatureFlag<T>(this SutProvider<T> sutProvider,
-        string featureFlagKey)
-    {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(featureFlagKey, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(true);
-
-        return sutProvider;
-    }
 }
