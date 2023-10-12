@@ -10,12 +10,14 @@ public class PayPalIpnClient
 {
     private readonly HttpClient _httpClient = new HttpClient();
     private readonly Uri _ipnUri;
+    private readonly ILogger<PayPalIpnClient> _logger;
 
-    public PayPalIpnClient(IOptions<BillingSettings> billingSettings)
+    public PayPalIpnClient(IOptions<BillingSettings> billingSettings, ILogger<PayPalIpnClient> logger)
     {
         var bSettings = billingSettings?.Value;
         _ipnUri = new Uri(bSettings.PayPal.Production ? "https://ipnpb.paypal.com/cgi-bin/webscr" :
             "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr");
+        _logger = logger;
     }
 
     public async Task<bool> VerifyIpnAsync(string ipnBody)
@@ -43,14 +45,14 @@ public class PayPalIpnClient
         {
             return true;
         }
-        else if (responseContent.Equals("INVALID"))
+
+        if (responseContent.Equals("INVALID"))
         {
+            _logger.LogWarning(responseContent);
             return false;
         }
-        else
-        {
-            throw new Exception("Failed to verify IPN.");
-        }
+        _logger.LogError(responseContent);
+        throw new Exception("Failed to verify IPN.");
     }
 
     public class IpnTransaction
