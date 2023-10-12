@@ -409,6 +409,11 @@ public class OrganizationService : IOrganizationService
 
         if (signup.UseSecretsManager)
         {
+            if (provider)
+            {
+                throw new BadRequestException(
+                    "Organizations with a Managed Service Provider do not support Secrets Manager.");
+            }
             ValidateSecretsManagerPlan(plan, signup);
         }
 
