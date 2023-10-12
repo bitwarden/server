@@ -22,8 +22,10 @@ public class PayPalIpnClient
 
     public async Task<bool> VerifyIpnAsync(string ipnBody)
     {
+        _logger.LogInformation("Verifying IPN with PayPal at {Timestamp}: {VerificationUri}", DateTime.UtcNow, _ipnUri);
         if (ipnBody == null)
         {
+            _logger.LogError("No IPN body.");
             throw new ArgumentException("No IPN body.");
         }
 
@@ -48,10 +50,10 @@ public class PayPalIpnClient
 
         if (responseContent.Equals("INVALID"))
         {
-            _logger.LogWarning(responseContent);
+            _logger.LogWarning("Received an INVALID response from PayPal: {ResponseContent}", responseContent);
             return false;
         }
-        _logger.LogError(responseContent);
+        _logger.LogError("Failed to verify IPN: {ResponseContent}", responseContent);
         throw new Exception("Failed to verify IPN.");
     }
 
