@@ -1,6 +1,4 @@
 ﻿using AutoFixture;
-using Bit.Core;
-using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;
