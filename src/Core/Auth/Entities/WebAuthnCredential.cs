@@ -34,7 +34,6 @@ public class WebAuthnCredential : ITableObject<Guid>
         Id = CoreHelpers.GenerateComb();
     }
 
-
     public WebAuthnPrfStatus GetPrfStatus()
     {
         if (SupportsPrf && EncryptedUserKey != null && EncryptedPrivateKey != null && EncryptedPublicKey != null)
