@@ -1,8 +1,10 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 
@@ -12,17 +14,21 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
 {
     private readonly IPaymentService _paymentService;
     private readonly IOrganizationService _organizationService;
+    private readonly IProviderRepository _providerRepository;
+
     public AddSecretsManagerSubscriptionCommand(
         IPaymentService paymentService,
-        IOrganizationService organizationService)
+        IOrganizationService organizationService,
+        IProviderRepository providerRepository)
     {
         _paymentService = paymentService;
         _organizationService = organizationService;
+        _providerRepository = providerRepository;
     }
     public async Task SignUpAsync(Organization organization, int additionalSmSeats,
         int additionalServiceAccounts)
     {
-        ValidateOrganization(organization);
+        await ValidateOrganization(organization);
 
         var plan = StaticStore.GetSecretsManagerPlan(organization.PlanType);
         var signup = SetOrganizationUpgrade(organization, additionalSmSeats, additionalServiceAccounts);
@@ -55,7 +61,7 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         return signup;
     }
 
-    private static void ValidateOrganization(Organization organization)
+    private async Task ValidateOrganization(Organization organization)
     {
         if (organization == null)
         {
@@ -82,6 +88,13 @@ public class AddSecretsManagerSubscriptionCommand : IAddSecretsManagerSubscripti
         if (string.IsNullOrWhiteSpace(organization.GatewaySubscriptionId) && plan.Product != ProductType.Free)
         {
             throw new BadRequestException("No subscription found.");
+        }
+
+        var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+        if (provider is { Type: ProviderType.Msp })
+        {
+            throw new BadRequestException(
+                "Organizations with a Managed Service Provider do not support Secrets Manager.");
         }
     }
 }
