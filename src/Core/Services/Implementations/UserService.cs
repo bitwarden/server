@@ -530,8 +530,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var authenticatorSelection = new AuthenticatorSelection
         {
             AuthenticatorAttachment = null,
-            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred
-            UserVerification = UserVerificationRequirement.Preferred
+            RequireResidentKey = true, 
+            UserVerification = UserVerificationRequirement.Required
         };
 
         var extensions = new AuthenticationExtensionsClientInputs { };
@@ -595,7 +595,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             UserVerificationMethod = true
         };
-        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Preferred, exts);
+        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Required, exts);
 
         // TODO: temp save options to user record somehow
 
