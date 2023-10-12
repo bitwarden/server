@@ -3,6 +3,7 @@ using AutoFixture;
 using AutoFixture.Kernel;
 using Bit.Core.Context;
 using Bit.Core.Services;
+using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 
@@ -31,7 +32,8 @@ internal class FeatureServiceBuilder : ISpecimenBuilder
 
         if (pi.ParameterType == typeof(IFeatureService))
         {
-            var featureService = Substitute.For<IFeatureService>();
+            var fixture = new Fixture();
+            var featureService = fixture.WithAutoNSubstitutions().Create<IFeatureService>();
             featureService
                 .IsEnabled(_enabledFeatureFlag, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
                 .Returns(true);
