@@ -1,7 +1,7 @@
 ﻿using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Web;
 using NS = Newtonsoft.Json;
 
 namespace Bit.Core.Utilities;
@@ -217,7 +217,7 @@ public class HtmlEncodingStringConverter : JsonConverter<string>
         if (reader.TokenType == JsonTokenType.String)
         {
             var originalValue = reader.GetString();
-            return HttpUtility.HtmlEncode(originalValue);
+            return WebUtility.HtmlEncode(originalValue);
         }
         return reader.GetString();
     }
@@ -226,7 +226,7 @@ public class HtmlEncodingStringConverter : JsonConverter<string>
     {
         if (!string.IsNullOrEmpty(value))
         {
-            var encodedValue = HttpUtility.HtmlDecode(value);
+            var encodedValue = WebUtility.HtmlDecode(value);
             writer.WriteStringValue(encodedValue);
         }
         else
