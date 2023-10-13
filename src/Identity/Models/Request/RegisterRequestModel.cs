@@ -1,10 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using Bit.Core.Auth.Models.Api;
+using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Auth.Models.Api.Request.Accounts;
+namespace Bit.Identity.Models.Request;
 
 public class RegisterRequestModel : IValidatableObject, ICaptchaProtectedModel
 {

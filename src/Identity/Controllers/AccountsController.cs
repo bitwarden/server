@@ -1,12 +1,12 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Auth.Models.Api.Response.Accounts;
-using Bit.Core.Auth.Services;
+﻿using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Identity.Models.Request;
+using Bit.Identity.Models.Response;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Mvc;
 
