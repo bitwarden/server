@@ -91,7 +91,7 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToSha256And600000Iterations()
+    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
     {
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult((UserKdfInformation)null));
 
