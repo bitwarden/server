@@ -118,9 +118,9 @@ public class PoliciesController : Controller
     [Obsolete("Deprecated API", false)]
     [AllowAnonymous]
     [HttpGet("invited-user")]
-    public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(Guid orgId, [FromQuery] string userId)
+    public async Task<ListResponseModel<PolicyResponseModel>> GetByInvitedUser(Guid orgId, [FromQuery] Guid userId)
     {
-        var user = await _userService.GetUserByIdAsync(new Guid(userId));
+        var user = await _userService.GetUserByIdAsync(userId);
         if (user == null)
         {
             throw new UnauthorizedAccessException();
