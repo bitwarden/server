@@ -354,6 +354,12 @@ public class ProviderService : IProviderService
         var organization = await _organizationRepository.GetByIdAsync(organizationId);
         ThrowOnInvalidPlanType(organization.PlanType);
 
+        if (organization.UseSecretsManager)
+        {
+            throw new BadRequestException(
+                "The organization is subscribed to Secrets Manager. Please contact Customer Support to manage the subscription.");
+        }
+
         var providerOrganization = new ProviderOrganization
         {
             ProviderId = providerId,
