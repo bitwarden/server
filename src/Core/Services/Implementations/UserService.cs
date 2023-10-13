@@ -530,7 +530,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var authenticatorSelection = new AuthenticatorSelection
         {
             AuthenticatorAttachment = null,
-            RequireResidentKey = true, 
+            RequireResidentKey = true,
             UserVerification = UserVerificationRequirement.Required
         };
 
