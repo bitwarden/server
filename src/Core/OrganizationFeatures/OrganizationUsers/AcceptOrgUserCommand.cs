@@ -178,8 +178,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
 
         if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
         {
-            throw new BadRequestException("You may not join this organization until you leave or remove " +
-                "all other organizations.");
+            throw new BadRequestException("You may not join this organization until you leave or remove all other organizations.");
         }
 
         // Enforce Single Organization Policy of other organizations user is a member of
@@ -187,8 +186,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
             PolicyType.SingleOrg);
         if (anySingleOrgPolicies)
         {
-            throw new BadRequestException("You cannot join this organization because you are a member of " +
-                "another organization which forbids it");
+            throw new BadRequestException("You cannot join this organization because you are a member of another organization which forbids it");
         }
 
         // Enforce Two Factor Authentication Policy of organization user is trying to join
@@ -198,8 +196,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
                 PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
             if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
             {
-                throw new BadRequestException("You cannot join this organization until you enable " +
-                    "two-step login on your user account.");
+                throw new BadRequestException("You cannot join this organization until you enable two-step login on your user account.");
             }
         }
 
