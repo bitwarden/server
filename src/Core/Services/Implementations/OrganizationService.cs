@@ -114,6 +114,7 @@ public class OrganizationService : IOrganizationService
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
