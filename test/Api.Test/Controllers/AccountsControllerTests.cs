@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Controllers;
+using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;
@@ -98,7 +99,7 @@ public class AccountsControllerTests : IDisposable
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
-        Assert.Equal(600000, response.KdfIterations);
+        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
     }
 
     [Fact]
