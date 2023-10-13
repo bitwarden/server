@@ -1,4 +1,6 @@
 ﻿using System.Globalization;
+using Bit.Billing.Services;
+using Bit.Billing.Services.Implementations;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
@@ -80,6 +82,9 @@ public class Startup
 
         // Set up HttpClients
         services.AddHttpClient("FreshdeskApi");
+
+        services.AddScoped<IStripeFacade, StripeFacade>();
+        services.AddScoped<IStripeEventService, StripeEventService>();
     }
 
     public void Configure(
