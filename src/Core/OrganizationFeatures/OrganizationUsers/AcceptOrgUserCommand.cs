@@ -35,7 +35,7 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
     {
 
         // TODO: remove data protector when old token validation removed
-        _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
+        _dataProtector = dataProtectionProvider.CreateProtector(OrgUserInviteTokenable.DataProtectorPurpose);
         _globalSettings = globalSettings;
         _organizationUserRepository = organizationUserRepository;
         _organizationRepository = organizationRepository;
