@@ -100,7 +100,7 @@ public class WebAuthnControllerTests
             .GetUserByPrincipalAsync(default)
             .ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IUserService>()
-            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>())
+            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>())
             .Returns(true);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
