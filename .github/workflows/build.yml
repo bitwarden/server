@@ -9,6 +9,8 @@ on:
     paths-ignore:
       - ".github/workflows/**"
   workflow_dispatch:
+  workflow_call: {}
+
 
 env:
   _AZ_REGISTRY: "bitwardenprod.azurecr.io"
