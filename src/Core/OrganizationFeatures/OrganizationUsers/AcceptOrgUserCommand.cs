@@ -60,7 +60,6 @@ public class AcceptOrgUserCommand : IAcceptOrgUserCommand
         // For backwards compatibility, must check validity of both types of tokens and accept if either is valid
 
         // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
-        // TODO: update this code to only run old token validation if new token validation fails
         var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
             _orgUserInviteTokenDataFactory, emailToken, orgUser);
 
