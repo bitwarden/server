@@ -20,7 +20,7 @@ public static class Constants
     /// </summary>
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 
-    public const string Fido2KeyCipherMinimumVersion = "2023.9.1";
+    public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
     public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
 }
@@ -57,7 +57,8 @@ public static class FeatureFlagKeys
         // place overriding values when needed locally (offline), or return null
         return new Dictionary<string, string>()
         {
-            { TrustedDeviceEncryption, "true" }
+            { TrustedDeviceEncryption, "true" },
+            { Fido2VaultCredentials, "true" }
         };
     }
 }
