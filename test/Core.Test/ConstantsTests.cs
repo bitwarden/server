@@ -32,7 +32,7 @@ public class ConstantsTests
         [Fact]
         public void Constructor_WithDefaultValueOutsideRange_ThrowsArgumentOutOfRangeException()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => new RangeConstant(0, 10, 1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new RangeConstant(0, 10, 20));
         }
 
         [Theory]
