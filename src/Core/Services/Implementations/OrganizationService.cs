@@ -410,6 +410,11 @@ public class OrganizationService : IOrganizationService
         var secretsManagerPlan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == signup.Plan);
         if (signup.UseSecretsManager)
         {
+            if (provider)
+            {
+                throw new BadRequestException(
+                    "Organizations with a Managed Service Provider do not support Secrets Manager.");
+            }
             ValidateSecretsManagerPlan(secretsManagerPlan, signup);
         }
 
@@ -568,7 +573,11 @@ public class OrganizationService : IOrganizationService
             PrivateKey = privateKey,
             CreationDate = DateTime.UtcNow,
             RevisionDate = DateTime.UtcNow,
-            Status = OrganizationStatusType.Created
+            Status = OrganizationStatusType.Created,
+            UsePasswordManager = license.UsePasswordManager,
+            UseSecretsManager = license.UseSecretsManager,
+            SmSeats = license.SmSeats,
+            SmServiceAccounts = license.SmServiceAccounts
         };
 
         var result = await SignUpAsync(organization, owner.Id, ownerKey, collectionName, false);
