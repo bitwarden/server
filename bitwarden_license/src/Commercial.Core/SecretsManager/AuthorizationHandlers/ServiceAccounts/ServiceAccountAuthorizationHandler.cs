@@ -182,7 +182,7 @@ public class
             await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
                 accessClient);
 
-        if (access.Write)
+        if (access.Read)
         {
             context.Succeed(requirement);
         }

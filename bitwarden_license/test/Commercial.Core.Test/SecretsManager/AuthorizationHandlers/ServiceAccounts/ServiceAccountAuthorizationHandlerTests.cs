@@ -535,8 +535,8 @@ public class ServiceAccountAuthorizationHandlerTests
     [Theory]
     [BitAutoData(PermissionType.RunAsAdmin, true, true, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, false, false, false)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, true)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, false, true, false)]
+    [BitAutoData(PermissionType.RunAsUserWithPermission, true, false, true)]
     [BitAutoData(PermissionType.RunAsUserWithPermission, true, true, true)]
     public async Task CanReadEvents_AccessCheck(PermissionType permissionType, bool read, bool write,
         bool expected,
