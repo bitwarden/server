@@ -100,7 +100,7 @@ public class ClientStore : IClientStore
         {
             case ServiceAccountApiKeyDetails key:
                 var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
-                if (!org.UseSecretsManager)
+                if (!org.UseSecretsManager || !org.Enabled)
                 {
                     return null;
                 }
