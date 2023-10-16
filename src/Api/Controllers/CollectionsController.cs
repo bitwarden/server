@@ -308,10 +308,7 @@ public class CollectionsController : Controller
         return collection;
     }
 
-    private bool FlexibleCollectionsIsEnabled()
-    {
-        return _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-    }
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     private void DeprecatedPermissionsGuard()
     {
