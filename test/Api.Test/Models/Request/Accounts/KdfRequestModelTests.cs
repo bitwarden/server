@@ -12,7 +12,7 @@ public class KdfRequestModelTests
     [InlineData(KdfType.PBKDF2_SHA256, 600_000, null, null)] // Right on the lower boundary
     [InlineData(KdfType.PBKDF2_SHA256, 2_000_000, null, null)] // Right on the upper boundary
     [InlineData(KdfType.Argon2id, 5, 500, 8)] // Somewhere in the middle
-    [InlineData(KdfType.Argon2id, 1, 15, 1)] // Right on the lower boundary
+    [InlineData(KdfType.Argon2id, 2, 15, 1)] // Right on the lower boundary
     [InlineData(KdfType.Argon2id, 10, 1024, 16)] // Right on the upper boundary
     public void Validate_IsValid(KdfType kdfType, int? kdfIterations, int? kdfMemory, int? kdfParallelism)
     {
