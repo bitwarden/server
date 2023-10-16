@@ -9,7 +9,6 @@ using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
@@ -49,7 +48,6 @@ public class AccountsController : Controller
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
 
-    private ICurrentContext CurrentContext { get; }
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -65,8 +63,7 @@ public class AccountsController : Controller
         ISendService sendService,
         ICaptchaValidationService captchaValidationService,
         IPolicyService policyService,
-        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
-        ICurrentContext currentContext
+        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand
         )
     {
         _cipherRepository = cipherRepository;
@@ -83,7 +80,6 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
-        CurrentContext = currentContext;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -469,13 +465,12 @@ public class AccountsController : Controller
             await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
 
-        var hasManageResetPasswordPermission = await CurrentContext.AnyOrgUserHasManageResetPasswordPermission(organizationUserDetails);
         var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
         var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
 
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
             providerUserOrganizationDetails, twoFactorEnabled,
-            hasPremiumFromOrg, hasManageResetPasswordPermission);
+            hasPremiumFromOrg);
         return response;
     }
 

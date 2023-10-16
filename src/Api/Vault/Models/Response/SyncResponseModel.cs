@@ -28,12 +28,11 @@ public class SyncResponseModel : ResponseModel
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersDict,
         bool excludeDomains,
         IEnumerable<Policy> policies,
-        IEnumerable<Send> sends,
-        bool hasManageResetPasswordPermission)
+        IEnumerable<Send> sends)
         : base("sync")
     {
         Profile = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization, hasManageResetPasswordPermission);
+            providerUserOrganizationDetails, userTwoFactorEnabled, userHasPremiumFromOrganization);
         Folders = folders.Select(f => new FolderResponseModel(f));
         Ciphers = ciphers.Select(c => new CipherDetailsResponseModel(c, globalSettings, collectionCiphersDict));
         Collections = collections?.Select(
