@@ -47,6 +47,8 @@ public class CollectionsController : Controller
         _featureService = featureService;
     }
 
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
     [HttpGet("{id}")]
     public async Task<CollectionResponseModel> Get(Guid orgId, Guid id)
     {
@@ -157,7 +159,7 @@ public class CollectionsController : Controller
     {
         var collection = model.ToCollection(orgId);
 
-        var authorized = FlexibleCollectionsIsEnabled()
+        var authorized = FlexibleCollectionsIsEnabled
             ? (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Create)).Succeeded
             : await CanCreateCollection(orgId, collection.Id) || await CanEditCollectionAsync(orgId, collection.Id);
         if (!authorized)
@@ -233,7 +235,7 @@ public class CollectionsController : Controller
     {
         var collection = await GetCollectionAsync(id, orgId);
 
-        var authorized = FlexibleCollectionsIsEnabled()
+        var authorized = FlexibleCollectionsIsEnabled
             ? (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Delete)).Succeeded
             : await CanDeleteCollectionAsync(orgId, id);
         if (!authorized)
@@ -248,7 +250,7 @@ public class CollectionsController : Controller
     [HttpPost("delete")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
-        if (FlexibleCollectionsIsEnabled())
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
@@ -308,11 +310,9 @@ public class CollectionsController : Controller
         return collection;
     }
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
     private void DeprecatedPermissionsGuard()
     {
-        if (FlexibleCollectionsIsEnabled())
+        if (FlexibleCollectionsIsEnabled)
         {
             throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
         }
