@@ -1054,12 +1054,16 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task GetProjectPeopleAccessPolicies_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task GetProjectPeopleAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
         var initData = await SetupAccessPolicyRequest(org.Id);
@@ -1071,7 +1075,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task GetProjectPeopleAccessPolicies_ReturnsEmpty()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var project = await _projectRepository.CreateAsync(new Project
@@ -1093,7 +1097,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task GetProjectPeopleAccessPolicies_NoPermission_NotFound()
     {
-        await _organizationHelper.Initialize(true, true);
+        await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -1113,7 +1117,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task GetProjectPeopleAccessPolicies_Success(PermissionType permissionType)
     {
-        var (_, organizationUser) = await _organizationHelper.Initialize(true, true);
+        var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var (project, _) = await SetupProjectPeoplePermissionAsync(permissionType, organizationUser);
@@ -1128,12 +1132,16 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task PutProjectPeopleAccessPolicies_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task PutProjectPeopleAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (_, organizationUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (_, organizationUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
         var (project, request) = await SetupProjectPeopleRequestAsync(PermissionType.RunAsAdmin, organizationUser);
@@ -1145,7 +1153,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [Fact]
     public async Task PutProjectPeopleAccessPolicies_NoPermission()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, organizationUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await LoginAsync(email);
 
@@ -1173,7 +1181,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task PutProjectPeopleAccessPolicies_MismatchedOrgIds_NotFound(PermissionType permissionType)
     {
-        var (_, organizationUser) = await _organizationHelper.Initialize(true, true);
+        var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
@@ -1197,7 +1205,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task PutProjectPeopleAccessPolicies_Success(PermissionType permissionType)
     {
-        var (_, organizationUser) = await _organizationHelper.Initialize(true, true);
+        var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
