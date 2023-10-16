@@ -71,8 +71,7 @@ public class SyncController : Controller
                 ProviderUserStatusType.Confirmed);
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var allCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
-        var ciphers = allCiphers;
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, hasEnabledOrgs);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;
