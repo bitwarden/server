@@ -47,12 +47,16 @@ public class SecretsManagerEventsControllerTests : IClassFixture<ApiApplicationF
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task GetServiceAccountEvents_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task GetServiceAccountEvents_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
