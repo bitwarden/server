@@ -54,6 +54,9 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IFeatureService _featureService;
+
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -82,7 +85,8 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -111,6 +115,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _featureService = featureService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -2061,7 +2066,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
         }
 
-        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organizationId, permissions))
+        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrantAsync(organizationId, permissions))
         {
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
@@ -2086,7 +2091,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
+    private async Task<bool> ValidateCustomPermissionsGrantAsync(Guid organizationId, Permissions permissions)
     {
         if (permissions == null || await _currentContext.OrganizationAdmin(organizationId))
         {
@@ -2133,9 +2138,17 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
+        if (permissions.DeleteAssignedCollections)
         {
-            return false;
+            if (FlexibleCollectionsIsEnabled)
+            {
+                throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
+            }
+
+            if (!await _currentContext.DeleteAssignedCollections(organizationId))
+            {
+                return false;
+            }
         }
 
         if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
@@ -2143,9 +2156,17 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
+        if (permissions.EditAssignedCollections)
         {
-            return false;
+            if (FlexibleCollectionsIsEnabled)
+            {
+                throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
+            }
+
+            if (!await _currentContext.EditAssignedCollections(organizationId))
+            {
+                return false;
+            }
         }
 
         if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
