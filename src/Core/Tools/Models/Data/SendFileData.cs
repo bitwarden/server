@@ -50,6 +50,9 @@ public class SendFileData : SendData
     /// <summary>
     /// Attached file name.
     /// </summary>
+    /// <value>
+    /// Should contain a non-empty string once the file upload completes.
+    /// </value>
     public string FileName { get; set; } = string.Empty;
 
     /// <summary>
