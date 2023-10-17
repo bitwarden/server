@@ -51,7 +51,7 @@ public class SetUpSponsorshipCommand : ISetUpSponsorshipCommand
         var requiredSponsoredProductType = StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value)?.SponsoredProductType;
         if (requiredSponsoredProductType == null ||
             sponsoredOrganization == null ||
-            StaticStore.GetPasswordManagerPlan(sponsoredOrganization.PlanType).Product != requiredSponsoredProductType.Value)
+            StaticStore.GetPlan(sponsoredOrganization.PlanType).Product != requiredSponsoredProductType.Value)
         {
             throw new BadRequestException("Can only redeem sponsorship offer on families organizations.");
         }
