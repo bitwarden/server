@@ -9,17 +9,15 @@ namespace Bit.Api.IntegrationTest.Factories;
 public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
     private readonly IdentityApplicationFactory _identityApplicationFactory;
-    private readonly SqliteConnection _connection;
     private const string _connectionString = "DataSource=:memory:";
 
     public ApiApplicationFactory()
     {
-        _connection = new SqliteConnection(_connectionString);
-        _connection.Open();
+        SqliteConnection = new SqliteConnection(_connectionString);
+        SqliteConnection.Open();
 
         _identityApplicationFactory = new IdentityApplicationFactory();
-        _identityApplicationFactory.SqliteConnection = _connection;
-        SqliteConnection = _connection;
+        _identityApplicationFactory.SqliteConnection = SqliteConnection;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
