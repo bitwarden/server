@@ -6,7 +6,7 @@ CREATE PROCEDURE [dbo].[Group_CreateWithCollections_V2]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Collections AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON

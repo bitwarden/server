@@ -1,5 +1,5 @@
 -- Remove old stored procedures and SelectionReadOnlyArray for Flexible Collections
--- They have been superseded via their respective _V2 variants
+-- They have been superseded via their respective _V2 variants and the CollectionAccessSelectionType
 
 IF OBJECT_ID('[dbo].[CollectionUser_UpdateUsers]') IS NOT NULL
 BEGIN

@@ -46,14 +46,14 @@ BEGIN
 END
 GO
 
--- Create a new SelectionReadOnlyArray_V2 type with a new [Manage] column
-IF TYPE_ID('[dbo].[SelectionReadOnlyArray_V2]') IS NOT NULL
+-- Create a new CollectionAccessSelectionType with a new [Manage] column
+IF TYPE_ID('[dbo].[CollectionAccessSelectionType]') IS NOT NULL
 BEGIN
-    DROP TYPE [dbo].[SelectionReadOnlyArray_V2]
+    DROP TYPE [dbo].[CollectionAccessSelectionType]
 END
 GO
 
-CREATE TYPE [dbo].[SelectionReadOnlyArray_V2] AS TABLE (
+CREATE TYPE [dbo].[CollectionAccessSelectionType] AS TABLE (
     [Id]            UNIQUEIDENTIFIER NOT NULL,
     [ReadOnly]      BIT              NOT NULL,
     [HidePasswords] BIT              NOT NULL,
@@ -319,11 +319,11 @@ GO
 
 -- END Update procedures that support backwards compatability in place
 
--- BEGIN Create V2 of existing procedures to support new [Manage] column and new SelectionReadOnlyArray_V2 type
+-- BEGIN Create V2 of existing procedures to support new [Manage] column and new CollectionAccessSelectionType
 
 CREATE OR ALTER PROCEDURE [dbo].[CollectionUser_UpdateUsers_V2]
     @CollectionId UNIQUEIDENTIFIER,
-    @Users AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -414,7 +414,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Group_UpdateWithCollections_V2]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Collections AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -478,8 +478,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_UpdateWithGroupsAndUsers_V2]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Groups AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
-    @Users AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -598,7 +598,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_UpdateWithCollections_V2]
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
-    @Collections AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY,
     @AccessSecretsManager BIT = 0
 AS
 BEGIN
@@ -680,7 +680,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Group_CreateWithCollections_V2]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Collections AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -732,7 +732,7 @@ CREATE OR ALTER PROCEDURE [dbo].[OrganizationUser_CreateWithCollections_V2]
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
-    @Collections AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY,
     @AccessSecretsManager BIT = 0
 AS
 BEGIN
@@ -776,8 +776,8 @@ CREATE OR ALTER PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers_V2]
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Groups AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
-    @Users AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON

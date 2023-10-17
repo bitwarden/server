@@ -32,7 +32,7 @@ public static class DapperHelpers
     public static DataTable ToArrayTVP(this IEnumerable<CollectionAccessSelection> values)
     {
         var table = new DataTable();
-        table.SetTypeName("[dbo].[SelectionReadOnlyArray_V2]");
+        table.SetTypeName("[dbo].[CollectionAccessSelectionType]");
 
         var idColumn = new DataColumn("Id", typeof(Guid));
         table.Columns.Add(idColumn);

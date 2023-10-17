@@ -1,8 +1,8 @@
 CREATE PROCEDURE [dbo].[Collection_CreateOrUpdateAccessForMany]
 	@OrganizationId UNIQUEIDENTIFIER,
 	@CollectionIds AS [dbo].[GuidIdArray] READONLY,
-    @Groups AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
-    @Users AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
 	SET NOCOUNT ON

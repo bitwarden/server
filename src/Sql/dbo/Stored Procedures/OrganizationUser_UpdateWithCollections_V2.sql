@@ -12,7 +12,7 @@
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
-    @Collections AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY,
     @AccessSecretsManager BIT = 0
 AS
 BEGIN

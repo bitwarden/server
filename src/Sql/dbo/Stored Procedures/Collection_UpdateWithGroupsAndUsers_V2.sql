@@ -5,8 +5,8 @@
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Groups AS [dbo].[SelectionReadOnlyArray_V2] READONLY,
-    @Users AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON

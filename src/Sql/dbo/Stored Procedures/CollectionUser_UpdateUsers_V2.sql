@@ -1,6 +1,6 @@
 ﻿CREATE PROCEDURE [dbo].[CollectionUser_UpdateUsers_V2]
     @CollectionId UNIQUEIDENTIFIER,
-    @Users AS [dbo].[SelectionReadOnlyArray_V2] READONLY
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
