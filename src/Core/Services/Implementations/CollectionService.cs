@@ -19,6 +19,7 @@ public class CollectionService : ICollectionService
     private readonly IMailService _mailService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
 
     public CollectionService(
         IEventService eventService,
@@ -28,7 +29,8 @@ public class CollectionService : ICollectionService
         IUserRepository userRepository,
         IMailService mailService,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IFeatureService featureService)
     {
         _eventService = eventService;
         _organizationRepository = organizationRepository;
@@ -38,6 +40,7 @@ public class CollectionService : ICollectionService
         _mailService = mailService;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
+        _featureService = featureService;
     }
 
     public async Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null,
@@ -51,12 +54,17 @@ public class CollectionService : ICollectionService
 
         var groupsList = groups?.ToList();
         var usersList = users?.ToList();
-        var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
-        var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
-        if (!groupHasManageAccess && !userHasManageAccess)
+
+        // If using Flexible Collections - a collection should always have someone with Can Manage permissions
+        if (_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
         {
-            throw new BadRequestException(
-                "At least one member or group must have can manage permission.");
+            var groupHasManageAccess = groupsList?.Any(g => g.Manage) ?? false;
+            var userHasManageAccess = usersList?.Any(u => u.Manage) ?? false;
+            if (!groupHasManageAccess && !userHasManageAccess)
+            {
+                throw new BadRequestException(
+                    "At least one member or group must have can manage permission.");
+            }
         }
 
         if (collection.Id == default(Guid))
