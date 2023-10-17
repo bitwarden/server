@@ -1498,6 +1498,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("Folders")
                         .HasColumnType("longtext");
+                    
+                    b.Property<string>("Key")
+                        .HasColumnType("longtext");
 
                     b.Property<Guid?>("OrganizationId")
                         .HasColumnType("char(36)");
