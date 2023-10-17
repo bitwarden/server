@@ -77,10 +77,10 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             return;
         }
 
-        // Owners, Admins, Providers, and users with CreateNewCollections or EditAnyCollection permission can always create collections
+        // Owners, Admins, Providers, and users with CreateNewCollections permission can always create collections
         if (
             org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions.CreateNewCollections || org.Permissions.EditAnyCollection ||
+            org.Permissions is { CreateNewCollections: true } ||
             await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
             context.Succeed(requirement);
@@ -93,10 +93,10 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private async Task CanDeleteAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         ICollection<Collection> resources, CurrentContextOrganization org)
     {
-        // Owners, Admins, Providers, and users with DeleteAnyCollection or EditAnyCollection permission can always delete collections
+        // Owners, Admins, Providers, and users with DeleteAnyCollection permission can always delete collections
         if (
             org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions.DeleteAnyCollection || org.Permissions.EditAnyCollection ||
+            org.Permissions is { DeleteAnyCollection: true } ||
             await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
             context.Succeed(requirement);
