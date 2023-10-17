@@ -128,7 +128,7 @@ public class ReferenceEvent
     /// </summary>
     /// <value>
     /// Should contain a value only on <see cref="ReferenceEventType.Rebilled"/>,
-    /// <see cref="ReferenceEventType.AdjustSeats"/>, <see cref="ReferenceEventType.UpgradePlan"/>, 
+    /// <see cref="ReferenceEventType.AdjustSeats"/>, <see cref="ReferenceEventType.UpgradePlan"/>,
     /// and <see cref="ReferenceEventType.Signup"/> events initiated by organizations.
     /// Otherwise the value should be <see langword="null"/>.
     /// </value>
@@ -138,19 +138,19 @@ public class ReferenceEvent
     /// Seat count when a seat adjustment occurs.
     /// </summary>
     /// <value>
-    /// Should contain a value only on <see cref="ReferenceEventType.AdjustSeats"/> 
+    /// Should contain a value only on <see cref="ReferenceEventType.AdjustSeats"/>
     /// events initiated by organizations.
     /// Otherwise the value should be <see langword="null"/>.
     /// </value>
     public int? PreviousSeats { get; set; }
 
     /// <summary>
-    /// Qty in GB of storage. When adjusting storage, contains the adjusted 
+    /// Qty in GB of storage. When adjusting storage, contains the adjusted
     /// storage qty. Otherwise contains the total storage quantity.
     /// </summary>
     /// <value>
     /// Should contain a value only on <see cref="ReferenceEventType.Rebilled"/>,
-    /// <see cref="ReferenceEventType.AdjustStorage"/>, <see cref="ReferenceEventType.UpgradePlan"/>, 
+    /// <see cref="ReferenceEventType.AdjustStorage"/>, <see cref="ReferenceEventType.UpgradePlan"/>,
     /// and <see cref="ReferenceEventType.Signup"/> events.
     /// Otherwise the value should be <see langword="null"/>.
     /// </value>
@@ -179,12 +179,13 @@ public class ReferenceEvent
     public bool? SendHasNotes { get; set; }
 
     /// <summary>
-    /// Whether the created send has private notes.
+    /// The send expires after its access count exceeds this value.
     /// </summary>
     /// <value>
-    /// Should contain a value only on <see cref="ReferenceEventType.SendAccessed"/>
-    /// and <see cref="ReferenceEventType.SendCreated"/> events.
-    /// Otherwise the value should be <see langword="null"/>.
+    /// This field only contains a value when the send has a max access count
+    /// and <see cref="Type"/> is <see cref="ReferenceEventType.SendAccessed"/>
+    /// or <see cref="ReferenceEventType.SendCreated"/> events.
+    /// Otherwise, the value should be <see langword="null"/>.
     /// </value>
     public int? MaxAccessCount { get; set; }
 
