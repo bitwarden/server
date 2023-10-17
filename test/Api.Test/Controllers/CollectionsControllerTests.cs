@@ -2,6 +2,7 @@
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -9,6 +10,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +21,7 @@ namespace Bit.Api.Test.Controllers;
 
 [ControllerCustomize(typeof(CollectionsController))]
 [SutProviderCustomize]
+[FeatureServiceCustomize(FeatureFlagKeys.FlexibleCollections)]
 public class CollectionsControllerTests
 {
     [Theory, BitAutoData]
@@ -172,7 +175,7 @@ public class CollectionsControllerTests
             .Returns(AuthorizationResult.Success());
 
         // Act
-        await sutProvider.Sut.DeleteMany(model);
+        await sutProvider.Sut.DeleteMany(orgId, model);
 
         // Assert
         await sutProvider.GetDependency<IDeleteCollectionCommand>()
@@ -215,7 +218,7 @@ public class CollectionsControllerTests
 
         // Assert
         await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.DeleteMany(model));
+            sutProvider.Sut.DeleteMany(orgId, model));
 
         await sutProvider.GetDependency<IDeleteCollectionCommand>()
             .DidNotReceiveWithAnyArgs()
