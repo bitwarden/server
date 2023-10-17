@@ -30,7 +30,7 @@ BEGIN
         AND [Target].[GroupId] = @Id
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
-        INSERT -- Add explicit column list
+        INSERT -- With column list because a value for Manage is not being provided
         (
         	[CollectionId],
         	[GroupId],

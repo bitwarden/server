@@ -357,7 +357,7 @@ BEGIN
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
         )
 
-    -- Insert (now with column list)
+    -- Insert (with column list because a value for Manage is not being provided)
     INSERT INTO [dbo].[CollectionUser]
     (
         [CollectionId],
@@ -438,7 +438,7 @@ BEGIN
         AND [Target].[GroupId] = @Id
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
-        INSERT -- Add explicit column list
+        INSERT -- With column list because a value for Manage is not being provided
         (
         	[CollectionId],
         	[GroupId],
@@ -501,7 +501,7 @@ BEGIN
         AND [Target].[GroupId] = [Source].[Id]
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableGroupsCTE]) THEN
-        INSERT -- Add explicit column list
+        INSERT -- With column list because a value for Manage is not being provided
         (
 	        [CollectionId],
 	        [GroupId],
@@ -544,7 +544,7 @@ BEGIN
         AND [Target].[OrganizationUserId] = [Source].[Id]
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableGroupsCTE]) THEN
-        INSERT -- Add explicit column list
+        INSERT -- With column list because a value for Manage is not being provided
         (
 	        [CollectionId],
 	        [OrganizationUserId],
@@ -612,7 +612,7 @@ BEGIN
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
         )
 
-    -- Insert (with explicit column list)
+    -- Insert (with column list because a value for Manage is not being provided)
     INSERT INTO [dbo].[CollectionUser]
     (
         [CollectionId],

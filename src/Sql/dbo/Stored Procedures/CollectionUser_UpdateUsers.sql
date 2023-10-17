@@ -31,7 +31,7 @@ BEGIN
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
         )
 
-    -- Insert (now with column list)
+    -- Insert (with column list because a value for Manage is not being provided)
     INSERT INTO [dbo].[CollectionUser]
     (
         [CollectionId],
