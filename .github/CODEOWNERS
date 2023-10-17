@@ -8,6 +8,7 @@
 
 # DevOps for Actions and other workflow changes.
 .github/workflows @bitwarden/dept-devops
+util/MsSqlMigratorUtility/Dockerfile @bitwarden/dept-devops
 
 ## Auth team files ##
 **/Auth @bitwarden/team-auth-dev
