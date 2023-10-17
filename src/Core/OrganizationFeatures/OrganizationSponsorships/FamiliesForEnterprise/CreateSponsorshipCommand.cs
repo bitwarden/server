@@ -32,7 +32,7 @@ public class CreateSponsorshipCommand : ICreateSponsorshipCommand
         var requiredSponsoringProductType = StaticStore.GetSponsoredPlan(sponsorshipType)?.SponsoringProductType;
         if (requiredSponsoringProductType == null ||
             sponsoringOrg == null ||
-            StaticStore.GetPasswordManagerPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
+            StaticStore.GetPlan(sponsoringOrg.PlanType).Product != requiredSponsoringProductType.Value)
         {
             throw new BadRequestException("Specified Organization cannot sponsor other organizations.");
         }

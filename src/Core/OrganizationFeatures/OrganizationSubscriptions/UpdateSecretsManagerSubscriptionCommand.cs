@@ -205,10 +205,10 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
 
         // Check plan maximum seats
-        if (!plan.HasAdditionalSeatsOption ||
-            (plan.MaxAdditionalSeats.HasValue && update.SmSeatsExcludingBase > plan.MaxAdditionalSeats.Value))
+        if (!plan.SecretsManager.HasAdditionalSeatsOption ||
+            (plan.SecretsManager.MaxAdditionalSeats.HasValue && update.SmSeatsExcludingBase > plan.SecretsManager.MaxAdditionalSeats.Value))
         {
-            var planMaxSeats = plan.BaseSeats + plan.MaxAdditionalSeats.GetValueOrDefault();
+            var planMaxSeats = plan.SecretsManager.BaseSeats + plan.SecretsManager.MaxAdditionalSeats.GetValueOrDefault();
             throw new BadRequestException($"You have reached the maximum number of Secrets Manager seats ({planMaxSeats}) for this plan.");
         }
 
@@ -222,9 +222,9 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
 
         // Check minimum seats included with plan
-        if (plan.BaseSeats > update.SmSeats.Value)
+        if (plan.SecretsManager.BaseSeats > update.SmSeats.Value)
         {
-            throw new BadRequestException($"Plan has a minimum of {plan.BaseSeats} Secrets Manager  seats.");
+            throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseSeats} Secrets Manager  seats.");
         }
 
         // Check minimum seats required by business logic
@@ -262,11 +262,11 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
 
         // Check plan maximum service accounts
-        if (!plan.HasAdditionalServiceAccountOption ||
-            (plan.MaxAdditionalServiceAccount.HasValue && update.SmServiceAccountsExcludingBase > plan.MaxAdditionalServiceAccount.Value))
+        if (!plan.SecretsManager.HasAdditionalServiceAccountOption ||
+            (plan.SecretsManager.MaxAdditionalServiceAccount.HasValue && update.SmServiceAccountsExcludingBase > plan.SecretsManager.MaxAdditionalServiceAccount.Value))
         {
-            var planMaxServiceAccounts = plan.BaseServiceAccount.GetValueOrDefault() +
-                                         plan.MaxAdditionalServiceAccount.GetValueOrDefault();
+            var planMaxServiceAccounts = plan.SecretsManager.BaseServiceAccount +
+                                         plan.SecretsManager.MaxAdditionalServiceAccount.GetValueOrDefault();
             throw new BadRequestException($"You have reached the maximum number of service accounts ({planMaxServiceAccounts}) for this plan.");
         }
 
@@ -281,9 +281,9 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
         }
 
         // Check minimum service accounts included with plan
-        if (plan.BaseServiceAccount.HasValue && plan.BaseServiceAccount.Value > update.SmServiceAccounts.Value)
+        if (plan.SecretsManager.BaseServiceAccount > update.SmServiceAccounts.Value)
         {
-            throw new BadRequestException($"Plan has a minimum of {plan.BaseServiceAccount} service accounts.");
+            throw new BadRequestException($"Plan has a minimum of {plan.SecretsManager.BaseServiceAccount} service accounts.");
         }
 
         // Check minimum service accounts required by business logic
@@ -319,15 +319,15 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException($"Cannot set max Secrets Manager seat autoscaling below current Secrets Manager seat count.");
         }
 
-        if (plan.MaxUsers.HasValue && update.MaxAutoscaleSmSeats.Value > plan.MaxUsers)
+        if (plan.SecretsManager.MaxSeats.HasValue && update.MaxAutoscaleSmSeats.Value > plan.SecretsManager.MaxSeats)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a Secrets Manager seat limit of {plan.MaxUsers}, ",
+                $"Your plan has a Secrets Manager seat limit of {plan.SecretsManager.MaxSeats}, ",
                 $"but you have specified a max autoscale count of {update.MaxAutoscaleSmSeats}.",
                 "Reduce your max autoscale count."));
         }
 
-        if (!plan.AllowSeatAutoscale)
+        if (!plan.SecretsManager.AllowSeatAutoscale)
         {
             throw new BadRequestException("Your plan does not allow Secrets Manager seat autoscaling.");
         }
@@ -349,15 +349,15 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 $"Cannot set max service accounts autoscaling below current service accounts count.");
         }
 
-        if (!plan.AllowServiceAccountsAutoscale)
+        if (!plan.SecretsManager.AllowServiceAccountsAutoscale)
         {
             throw new BadRequestException("Your plan does not allow service accounts autoscaling.");
         }
 
-        if (plan.MaxServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value > plan.MaxServiceAccounts)
+        if (plan.SecretsManager.MaxServiceAccounts.HasValue && update.MaxAutoscaleSmServiceAccounts.Value > plan.SecretsManager.MaxServiceAccounts)
         {
             throw new BadRequestException(string.Concat(
-                $"Your plan has a service account limit of {plan.MaxServiceAccounts}, ",
+                $"Your plan has a service account limit of {plan.SecretsManager.MaxServiceAccounts}, ",
                 $"but you have specified a max autoscale count of {update.MaxAutoscaleSmServiceAccounts}.",
                 "Reduce your max autoscale count."));
         }
