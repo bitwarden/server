@@ -37,8 +37,13 @@ public class SendFileData : SendData
     public long Size { get; set; }
 
     /// <summary>
-    /// Uniquely identifies the file.
+    /// Uniquely identifies an uploaded file.
     /// </summary>
+    /// <value>
+    /// Should contain <see langword="null" /> only when a file
+    /// upload is pending. Should never contain null once the
+    /// file upload completes.
+    /// </value>
     [DisallowNull]
     public string? Id { get; set; }
 
