@@ -20,6 +20,8 @@ public static class Constants
     /// </summary>
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
 
+    public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
+
     public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
 
     /// <summary>
@@ -52,6 +54,7 @@ public static class FeatureFlagKeys
     public const string DisplayEuEnvironment = "display-eu-environment";
     public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
+    public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
 
@@ -68,7 +71,8 @@ public static class FeatureFlagKeys
         // place overriding values when needed locally (offline), or return null
         return new Dictionary<string, string>()
         {
-            { TrustedDeviceEncryption, "true" }
+            { TrustedDeviceEncryption, "true" },
+            { Fido2VaultCredentials, "true" }
         };
     }
 }

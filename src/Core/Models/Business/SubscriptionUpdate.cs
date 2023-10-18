@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Stripe;
 
 namespace Bit.Core.Models.Business;
@@ -30,28 +29,22 @@ public abstract class SubscriptionUpdate
         planId == null ? null : subscription.Items?.Data?.FirstOrDefault(i => i.Plan.Id == planId);
 }
 
-public class SeatSubscriptionUpdate : SubscriptionUpdate
+public abstract class BaseSeatSubscriptionUpdate : SubscriptionUpdate
 {
     private readonly int _previousSeats;
-    private readonly StaticStore.Plan _plan;
+    protected readonly StaticStore.Plan Plan;
     private readonly long? _additionalSeats;
-    protected override List<string> PlanIds => new() { _plan.StripeSeatPlanId };
 
-
-    public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
+    protected BaseSeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats, int previousSeats)
     {
-        _plan = plan;
+        Plan = plan;
         _additionalSeats = additionalSeats;
-        switch (plan.BitwardenProduct)
-        {
-            case BitwardenProductType.PasswordManager:
-                _previousSeats = organization.Seats.GetValueOrDefault();
-                break;
-            case BitwardenProductType.SecretsManager:
-                _previousSeats = organization.SmSeats.GetValueOrDefault();
-                break;
-        }
+        _previousSeats = previousSeats;
     }
+
+    protected abstract string GetPlanId();
+
+    protected override List<string> PlanIds => new() { GetPlanId() };
 
     public override List<SubscriptionItemOptions> UpgradeItemsOptions(Subscription subscription)
     {
@@ -85,12 +78,30 @@ public class SeatSubscriptionUpdate : SubscriptionUpdate
     }
 }
 
+public class SeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
+{
+    public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
+        : base(organization, plan, additionalSeats, organization.Seats.GetValueOrDefault())
+    { }
+
+    protected override string GetPlanId() => Plan.PasswordManager.StripeSeatPlanId;
+}
+
+public class SmSeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
+{
+    public SmSeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
+        : base(organization, plan, additionalSeats, organization.SmSeats.GetValueOrDefault())
+    { }
+
+    protected override string GetPlanId() => Plan.SecretsManager.StripeSeatPlanId;
+}
+
 public class ServiceAccountSubscriptionUpdate : SubscriptionUpdate
 {
     private long? _prevServiceAccounts;
     private readonly StaticStore.Plan _plan;
     private readonly long? _additionalServiceAccounts;
-    protected override List<string> PlanIds => new() { _plan.StripeServiceAccountPlanId };
+    protected override List<string> PlanIds => new() { _plan.SecretsManager.StripeServiceAccountPlanId };
 
     public ServiceAccountSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalServiceAccounts)
     {
@@ -190,7 +201,7 @@ public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
 
     public SponsorOrganizationSubscriptionUpdate(StaticStore.Plan existingPlan, StaticStore.SponsoredPlan sponsoredPlan, bool applySponsorship)
     {
-        _existingPlanStripeId = existingPlan.StripePlanId;
+        _existingPlanStripeId = existingPlan.PasswordManager.StripePlanId;
         _sponsoredPlanStripeId = sponsoredPlan?.StripePlanId;
         _applySponsorship = applySponsorship;
     }
@@ -269,7 +280,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     private readonly long? _additionalServiceAccounts;
     private readonly int _previousSeats;
     private readonly int _previousServiceAccounts;
-    protected override List<string> PlanIds => new() { _plan.StripeSeatPlanId, _plan.StripeServiceAccountPlanId };
+    protected override List<string> PlanIds => new() { _plan.SecretsManager.StripeSeatPlanId, _plan.SecretsManager.StripeServiceAccountPlanId };
     public SecretsManagerSubscribeUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats, long? additionalServiceAccounts)
     {
         _plan = plan;
@@ -303,7 +314,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Plan = _plan.StripeSeatPlanId,
+                Price = _plan.SecretsManager.StripeSeatPlanId,
                 Quantity = _additionalSeats
             });
         }
@@ -312,9 +323,8 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Plan = _plan.StripeServiceAccountPlanId,
-                Quantity = _additionalServiceAccounts,
-
+                Price = _plan.SecretsManager.StripeServiceAccountPlanId,
+                Quantity = _additionalServiceAccounts
             });
         }
     }
@@ -323,14 +333,14 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     {
         updatedItems.Add(new SubscriptionItemOptions
         {
-            Price = _plan.StripeSeatPlanId,
+            Price = _plan.SecretsManager.StripeSeatPlanId,
             Quantity = _previousSeats,
             Deleted = _previousSeats == 0 ? true : (bool?)null,
         });
 
         updatedItems.Add(new SubscriptionItemOptions
         {
-            Price = _plan.StripeServiceAccountPlanId,
+            Price = _plan.SecretsManager.StripeServiceAccountPlanId,
             Quantity = _previousServiceAccounts,
             Deleted = _previousServiceAccounts == 0 ? true : (bool?)null,
         });

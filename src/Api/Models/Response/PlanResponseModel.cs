@@ -21,15 +21,6 @@ public class PlanResponseModel : ResponseModel
         NameLocalizationKey = plan.NameLocalizationKey;
         DescriptionLocalizationKey = plan.DescriptionLocalizationKey;
         CanBeUsedByBusiness = plan.CanBeUsedByBusiness;
-        BaseSeats = plan.BaseSeats;
-        BaseStorageGb = plan.BaseStorageGb;
-        MaxCollections = plan.MaxCollections;
-        MaxUsers = plan.MaxUsers;
-        HasAdditionalSeatsOption = plan.HasAdditionalSeatsOption;
-        HasAdditionalStorageOption = plan.HasAdditionalStorageOption;
-        MaxAdditionalSeats = plan.MaxAdditionalSeats;
-        MaxAdditionalStorage = plan.MaxAdditionalStorage;
-        HasPremiumAccessOption = plan.HasPremiumAccessOption;
         TrialPeriodDays = plan.TrialPeriodDays;
         HasSelfHost = plan.HasSelfHost;
         HasPolicies = plan.HasPolicies;
@@ -45,22 +36,12 @@ public class PlanResponseModel : ResponseModel
         DisplaySortOrder = plan.DisplaySortOrder;
         LegacyYear = plan.LegacyYear;
         Disabled = plan.Disabled;
-        StripePlanId = plan.StripePlanId;
-        StripeSeatPlanId = plan.StripeSeatPlanId;
-        StripeStoragePlanId = plan.StripeStoragePlanId;
-        BasePrice = plan.BasePrice;
-        SeatPrice = plan.SeatPrice;
-        AdditionalStoragePricePerGb = plan.AdditionalStoragePricePerGb;
-        PremiumAccessOptionPrice = plan.PremiumAccessOptionPrice;
+        if (plan.SecretsManager != null)
+        {
+            SecretsManager = new SecretsManagerPlanFeaturesResponseModel(plan.SecretsManager);
+        }
 
-        AdditionalPricePerServiceAccount = plan.AdditionalPricePerServiceAccount;
-        BaseServiceAccount = plan.BaseServiceAccount;
-        MaxServiceAccounts = plan.MaxServiceAccounts;
-        MaxAdditionalServiceAccounts = plan.MaxAdditionalServiceAccount;
-        HasAdditionalServiceAccountOption = plan.HasAdditionalServiceAccountOption;
-        MaxProjects = plan.MaxProjects;
-        BitwardenProduct = plan.BitwardenProduct;
-        StripeServiceAccountPlanId = plan.StripeServiceAccountPlanId;
+        PasswordManager = new PasswordManagerPlanFeaturesResponseModel(plan.PasswordManager);
     }
 
     public PlanType Type { get; set; }
@@ -70,16 +51,6 @@ public class PlanResponseModel : ResponseModel
     public string NameLocalizationKey { get; set; }
     public string DescriptionLocalizationKey { get; set; }
     public bool CanBeUsedByBusiness { get; set; }
-    public int BaseSeats { get; set; }
-    public short? BaseStorageGb { get; set; }
-    public short? MaxCollections { get; set; }
-    public short? MaxUsers { get; set; }
-
-    public bool HasAdditionalSeatsOption { get; set; }
-    public int? MaxAdditionalSeats { get; set; }
-    public bool HasAdditionalStorageOption { get; set; }
-    public short? MaxAdditionalStorage { get; set; }
-    public bool HasPremiumAccessOption { get; set; }
     public int? TrialPeriodDays { get; set; }
 
     public bool HasSelfHost { get; set; }
@@ -98,21 +69,95 @@ public class PlanResponseModel : ResponseModel
     public int DisplaySortOrder { get; set; }
     public int? LegacyYear { get; set; }
     public bool Disabled { get; set; }
+    public SecretsManagerPlanFeaturesResponseModel SecretsManager { get; protected init; }
+    public PasswordManagerPlanFeaturesResponseModel PasswordManager { get; protected init; }
 
-    public string StripePlanId { get; set; }
-    public string StripeSeatPlanId { get; set; }
-    public string StripeStoragePlanId { get; set; }
-    public string StripePremiumAccessPlanId { get; set; }
-    public decimal BasePrice { get; set; }
-    public decimal SeatPrice { get; set; }
-    public decimal AdditionalStoragePricePerGb { get; set; }
-    public decimal PremiumAccessOptionPrice { get; set; }
-    public string StripeServiceAccountPlanId { get; set; }
-    public decimal? AdditionalPricePerServiceAccount { get; set; }
-    public short? BaseServiceAccount { get; set; }
-    public short? MaxServiceAccounts { get; set; }
-    public short? MaxAdditionalServiceAccounts { get; set; }
-    public bool HasAdditionalServiceAccountOption { get; set; }
-    public short? MaxProjects { get; set; }
-    public BitwardenProductType BitwardenProduct { get; set; }
+    public class SecretsManagerPlanFeaturesResponseModel
+    {
+        public SecretsManagerPlanFeaturesResponseModel(Plan.SecretsManagerPlanFeatures plan)
+        {
+            MaxServiceAccounts = plan.MaxServiceAccounts;
+            AllowServiceAccountsAutoscale = plan is { AllowServiceAccountsAutoscale: true };
+            StripeServiceAccountPlanId = plan.StripeServiceAccountPlanId;
+            AdditionalPricePerServiceAccount = plan.AdditionalPricePerServiceAccount;
+            BaseServiceAccount = plan.BaseServiceAccount;
+            MaxAdditionalServiceAccount = plan.MaxAdditionalServiceAccount;
+            HasAdditionalServiceAccountOption = plan is { HasAdditionalServiceAccountOption: true };
+            StripeSeatPlanId = plan.StripeSeatPlanId;
+            HasAdditionalSeatsOption = plan is { HasAdditionalSeatsOption: true };
+            BasePrice = plan.BasePrice;
+            SeatPrice = plan.SeatPrice;
+            BaseSeats = plan.BaseSeats;
+            MaxSeats = plan.MaxSeats;
+            MaxAdditionalSeats = plan.MaxAdditionalSeats;
+            AllowSeatAutoscale = plan.AllowSeatAutoscale;
+            MaxProjects = plan.MaxProjects;
+        }
+        // Service accounts
+        public short? MaxServiceAccounts { get; init; }
+        public bool AllowServiceAccountsAutoscale { get; init; }
+        public string StripeServiceAccountPlanId { get; init; }
+        public decimal? AdditionalPricePerServiceAccount { get; init; }
+        public short? BaseServiceAccount { get; init; }
+        public short? MaxAdditionalServiceAccount { get; init; }
+        public bool HasAdditionalServiceAccountOption { get; init; }
+        // Seats
+        public string StripeSeatPlanId { get; init; }
+        public bool HasAdditionalSeatsOption { get; init; }
+        public decimal BasePrice { get; init; }
+        public decimal SeatPrice { get; init; }
+        public int BaseSeats { get; init; }
+        public short? MaxSeats { get; init; }
+        public int? MaxAdditionalSeats { get; init; }
+        public bool AllowSeatAutoscale { get; init; }
+
+        // Features
+        public int MaxProjects { get; init; }
+    }
+
+    public record PasswordManagerPlanFeaturesResponseModel
+    {
+        public PasswordManagerPlanFeaturesResponseModel(Plan.PasswordManagerPlanFeatures plan)
+        {
+            StripePlanId = plan.StripePlanId;
+            StripeSeatPlanId = plan.StripeSeatPlanId;
+            BasePrice = plan.BasePrice;
+            SeatPrice = plan.SeatPrice;
+            AllowSeatAutoscale = plan.AllowSeatAutoscale;
+            HasAdditionalSeatsOption = plan.HasAdditionalSeatsOption;
+            MaxAdditionalSeats = plan.MaxAdditionalSeats;
+            BaseSeats = plan.BaseSeats;
+            HasPremiumAccessOption = plan.HasPremiumAccessOption;
+            StripePremiumAccessPlanId = plan.StripePremiumAccessPlanId;
+            PremiumAccessOptionPrice = plan.PremiumAccessOptionPrice;
+            MaxSeats = plan.MaxSeats;
+            BaseStorageGb = plan.BaseStorageGb;
+            HasAdditionalStorageOption = plan.HasAdditionalStorageOption;
+            AdditionalStoragePricePerGb = plan.AdditionalStoragePricePerGb;
+            StripeStoragePlanId = plan.StripeStoragePlanId;
+            MaxAdditionalStorage = plan.MaxAdditionalStorage;
+            MaxCollections = plan.MaxCollections;
+        }
+        // Seats
+        public string StripePlanId { get; init; }
+        public string StripeSeatPlanId { get; init; }
+        public decimal BasePrice { get; init; }
+        public decimal SeatPrice { get; init; }
+        public bool AllowSeatAutoscale { get; init; }
+        public bool HasAdditionalSeatsOption { get; init; }
+        public int? MaxAdditionalSeats { get; init; }
+        public int BaseSeats { get; init; }
+        public bool HasPremiumAccessOption { get; init; }
+        public string StripePremiumAccessPlanId { get; init; }
+        public decimal PremiumAccessOptionPrice { get; init; }
+        public short? MaxSeats { get; init; }
+        // Storage
+        public short? BaseStorageGb { get; init; }
+        public bool HasAdditionalStorageOption { get; init; }
+        public decimal AdditionalStoragePricePerGb { get; init; }
+        public string StripeStoragePlanId { get; init; }
+        public short? MaxAdditionalStorage { get; init; }
+        // Feature
+        public short? MaxCollections { get; init; }
+    }
 }
