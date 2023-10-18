@@ -1,16 +1,18 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 
-namespace Bit.Core.OrganizationFeatures.Groups;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 
 public class CreateGroupCommand : ICreateGroupCommand
 {
@@ -46,7 +48,7 @@ public class CreateGroupCommand : ICreateGroupCommand
             await GroupRepositoryUpdateUsersAsync(group, users);
         }
 
-        await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created);
+        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Created);
     }
 
     public async Task CreateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
@@ -61,7 +63,7 @@ public class CreateGroupCommand : ICreateGroupCommand
             await GroupRepositoryUpdateUsersAsync(group, users, systemUser);
         }
 
-        await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Created, systemUser);
+        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Created, systemUser);
     }
 
     private async Task GroupRepositoryCreateGroupAsync(Group group, Organization organization, IEnumerable<CollectionAccessSelection> collections = null)

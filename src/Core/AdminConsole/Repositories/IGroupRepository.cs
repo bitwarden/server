@@ -1,7 +1,8 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.AdminConsole.Repositories;
 
 public interface IGroupRepository : IRepository<Group, Guid>
 {
