@@ -319,8 +319,16 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _upgradeOrganizationPlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
-        return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
+        var (success, paymentIntentClientSecret) = await _upgradeOrganizationPlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+
+        if (model.UseSecretsManager && success)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+
+            await TryGrantOwnerAccessToSecretsManagerAsync(orgIdGuid, userId);
+        }
+
+        return new PaymentResponseModel { Success = success, PaymentIntentClientSecret = paymentIntentClientSecret };
     }
 
     [HttpPost("{id}/subscription")]
@@ -373,6 +381,9 @@ public class OrganizationsController : Controller
             model.AdditionalServiceAccounts);
 
         var userId = _userService.GetProperUserId(User).Value;
+
+        await TryGrantOwnerAccessToSecretsManagerAsync(organization.Id, userId);
+
         var organizationDetails = await _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
             OrganizationUserStatusType.Confirmed);
 
@@ -765,5 +776,16 @@ public class OrganizationsController : Controller
         await _organizationService.UpdateAsync(organization);
 
         return new OrganizationSsoResponseModel(organization, _globalSettings, ssoConfig);
+    }
+
+    private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
+    {
+        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+
+        if (organizationUser is { Status: OrganizationUserStatusType.Confirmed, Type: OrganizationUserType.Owner })
+        {
+            organizationUser.AccessSecretsManager = true;
+            await _organizationUserRepository.ReplaceAsync(organizationUser);
+        }
     }
 }
