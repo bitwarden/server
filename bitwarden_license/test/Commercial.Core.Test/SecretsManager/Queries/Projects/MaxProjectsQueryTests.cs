@@ -61,27 +61,6 @@ public class MaxProjectsQueryTests
     [BitAutoData(PlanType.EnterpriseAnnually2019)]
     [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
-    public async Task GetByOrgIdAsync_SmPlanIsNull_NoExceptionThrown(PlanType planType,
-        SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
-    {
-        organization.PlanType = planType;
-        sutProvider.GetDependency<IOrganizationRepository>()
-            .GetByIdAsync(organization.Id)
-            .Returns(organization);
-
-        await sutProvider.Sut
-            .GetByOrgIdAsync(organization.Id, 1);
-
-        await sutProvider.GetDependency<IProjectRepository>()
-            .DidNotReceiveWithAnyArgs()
-            .GetProjectCountByOrganizationIdAsync(organization.Id);
-    }
-
-    [Theory]
-    [BitAutoData(PlanType.TeamsMonthly)]
-    [BitAutoData(PlanType.TeamsAnnually)]
-    [BitAutoData(PlanType.EnterpriseMonthly)]
-    [BitAutoData(PlanType.EnterpriseAnnually)]
     public async Task GetByOrgIdAsync_SmNoneFreePlans_ReturnsNull(PlanType planType,
         SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
