@@ -75,36 +75,39 @@ public class AccountsController : Controller
         return new PreloginResponseModel(kdfInformation);
     }
 
-    [HttpPost("webauthn-assertion-options")]
+    [HttpPost("webauthn/assertion-options")]
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
+    // TODO: Add tests
     // TODO: Create proper models for this call
-    public async Task<AssertionOptions> PostWebAuthnAssertionOptions([FromBody] PreloginRequestModel model)
+    public async Task<WebAuthnLoginAssertionOptionsResponseModel> PostWebAuthnLoginAssertionOptions(WebAuthnLoginAssertionOptionsRequestModel model)
     {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
-        {
-            // TODO: return something? possible enumeration attacks with this response
-            return new AssertionOptions();
-        }
+        //var user = await _userRepository.GetByEmailAsync(model.Email);
+        //if (user == null)
+        //{
+        //    // TODO: return something? possible enumeration attacks with this response
+        //    return new AssertionOptions();
+        //}
 
-        var options = await _userService.StartWebAuthnLoginAssertionAsync(user);
-        return options;
+        //var options = await _userService.StartWebAuthnLoginAssertionAsync(user);
+        //return options;
+        return null;
     }
 
-    [HttpPost("webauthn-assertion")]
-    [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
-    // TODO: Create proper models for this call
-    public async Task<string> PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
-    {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
-        {
-            // TODO: proper response here?
-            throw new BadRequestException();
-        }
+    // TODO: Remove, this will move to the grant validator
+    //[HttpPost("webauthn-assertion")]
+    //[RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
+    //// TODO: Create proper models for this call
+    //public async Task<string> PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
+    //{
+    //    var user = await _userRepository.GetByEmailAsync(model.Email);
+    //    if (user == null)
+    //    {
+    //        // TODO: proper response here?
+    //        throw new BadRequestException();
+    //    }
 
-        var token = await _userService.CompleteWebAuthLoginAssertionAsync(null, user);
-        return token;
-    }
+    //    var token = await _userService.CompleteWebAuthLoginAssertionAsync(null, user);
+    //    return token;
+    //}
 }
