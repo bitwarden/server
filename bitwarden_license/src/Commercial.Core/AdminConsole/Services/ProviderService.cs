@@ -1,11 +1,11 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Business.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;

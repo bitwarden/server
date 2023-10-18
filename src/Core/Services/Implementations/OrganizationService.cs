@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -9,7 +10,6 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;

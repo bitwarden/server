@@ -1,9 +1,9 @@
-﻿using Bit.Core.Entities.Provider;
-using Bit.Core.Enums.Provider;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Context;
+namespace Bit.Core.AdminConsole.Context;
 
 public class CurrentContextProvider
 {

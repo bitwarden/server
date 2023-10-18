@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums.Provider;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.AdminConsole.Models.Data.Provider;
 
 public class ProviderUserOrganizationDetails
 {
@@ -34,5 +34,5 @@ public class ProviderUserOrganizationDetails
     public Guid? ProviderId { get; set; }
     public Guid? ProviderUserId { get; set; }
     public string ProviderName { get; set; }
-    public Enums.PlanType PlanType { get; set; }
+    public Core.Enums.PlanType PlanType { get; set; }
 }

@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums.Provider;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
 
-namespace Bit.Core.Models.Business.Provider;
+namespace Bit.Core.AdminConsole.Models.Business.Provider;
 
 public class ProviderUserInvite<T>
 {

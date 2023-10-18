@@ -1,12 +1,10 @@
-﻿using Bit.Core.Entities.Provider;
-
-namespace Bit.Core.Models.Data;
+﻿namespace Bit.Core.AdminConsole.Models.Data.Provider;
 
 public class ProviderAbility
 {
     public ProviderAbility() { }
 
-    public ProviderAbility(Provider provider)
+    public ProviderAbility(Entities.Provider.Provider provider)
     {
         Id = provider.Id;
         UseEvents = provider.UseEvents;

@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Models.Data;
+﻿namespace Bit.Core.AdminConsole.Models.Data.Provider;
 
 public class ProviderUserPublicKey
 {

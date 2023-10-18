@@ -1,7 +1,8 @@
-﻿using Bit.Core.Enums.Provider;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities.Provider;
+namespace Bit.Core.AdminConsole.Entities.Provider;
 
 public class Provider : ITableObject<Guid>
 {

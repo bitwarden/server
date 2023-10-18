@@ -1,7 +1,7 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Business.Provider;
 
 namespace Bit.Core.Services;
 

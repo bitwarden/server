@@ -1,6 +1,6 @@
 ﻿using Bit.Commercial.Core.AdminConsole.Providers;
 using Bit.Commercial.Core.AdminConsole.Services;
-using Bit.Core.Providers.Interfaces;
+using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 

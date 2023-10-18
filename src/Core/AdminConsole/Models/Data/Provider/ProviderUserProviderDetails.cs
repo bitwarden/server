@@ -1,6 +1,6 @@
-﻿using Bit.Core.Enums.Provider;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.AdminConsole.Models.Data.Provider;
 
 public class ProviderUserProviderDetails
 {

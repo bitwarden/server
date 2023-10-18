@@ -1,6 +1,7 @@
-﻿using Bit.Core.Utilities;
+﻿using Bit.Core.Entities;
+using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities.Provider;
+namespace Bit.Core.AdminConsole.Entities.Provider;
 
 public class ProviderOrganization : ITableObject<Guid>
 {
