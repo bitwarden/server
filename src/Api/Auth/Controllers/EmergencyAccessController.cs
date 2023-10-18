@@ -1,8 +1,6 @@
-﻿using Bit.Api.AdminConsole.Models.Request;
-using Bit.Api.AdminConsole.Models.Request.Organizations;
+﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Response;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Auth.Services;
