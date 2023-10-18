@@ -32,7 +32,7 @@ public class CipherService : ICipherService
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
     private readonly GlobalSettings _globalSettings;
-    private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
+    private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -650,7 +650,7 @@ public class CipherService : ICipherService
 
         cipher.RevisionDate = DateTime.UtcNow;
 
-        // The sprocs will validate that all collections belong to this org/user and that they have
+        // The sprocs will validate that all collections belong to this org/user and that they have 
         // proper write permissions.
         if (orgAdmin)
         {
