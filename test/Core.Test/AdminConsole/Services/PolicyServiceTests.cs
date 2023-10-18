@@ -9,26 +9,24 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 using GlobalSettings = Bit.Core.Settings.GlobalSettings;
-using PolicyFixtures = Bit.Core.Test.AutoFixture.PolicyFixtures;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.AdminConsole.Services;
 
 [SutProviderCustomize]
 public class PolicyServiceTests
 {
     [Theory, BitAutoData]
     public async Task SaveAsync_OrganizationDoesNotExist_ThrowsBadRequest(
-        [PolicyFixtures.Policy(PolicyType.DisableSend)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.DisableSend)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         SetupOrg(sutProvider, policy.OrganizationId, null);
 
@@ -51,7 +49,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_OrganizationCannotUsePolicies_ThrowsBadRequest(
-        [PolicyFixtures.Policy(PolicyType.DisableSend)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.DisableSend)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         var orgId = Guid.NewGuid();
 
@@ -79,7 +77,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_SingleOrg_RequireSsoEnabled_ThrowsBadRequest(
-        [PolicyFixtures.Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = false;
 
@@ -111,7 +109,7 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_SingleOrg_VaultTimeoutEnabled_ThrowsBadRequest([PolicyFixtures.Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
+    public async Task SaveAsync_SingleOrg_VaultTimeoutEnabled_ThrowsBadRequest([Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = false;
 
@@ -178,7 +176,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync(
-        [PolicyFixtures.Policy(PolicyType.RequireSso)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.RequireSso)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = true;
 
@@ -211,7 +209,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_NewPolicy_Created(
-        [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Id = default;
         policy.Data = null;
@@ -242,7 +240,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_VaultTimeoutPolicy_NotEnabled_ThrowsBadRequestAsync(
-        [PolicyFixtures.Policy(PolicyType.MaximumVaultTimeout)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.MaximumVaultTimeout)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = true;
 
@@ -275,7 +273,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_ExistingPolicy_UpdateTwoFactor(
-        [PolicyFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.TwoFactorAuthentication)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
@@ -345,7 +343,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_ExistingPolicy_UpdateSingleOrg(
-        [PolicyFixtures.Policy(PolicyType.TwoFactorAuthentication)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.TwoFactorAuthentication)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         // If the policy that this is updating isn't enabled then do some work now that the current one is enabled
 
@@ -414,7 +412,7 @@ public class PolicyServiceTests
     public async Task SaveAsync_ResetPasswordPolicyRequiredByTrustedDeviceEncryption_DisablePolicyOrDisableAutomaticEnrollment_ThrowsBadRequest(
         bool policyEnabled,
         bool autoEnrollEnabled,
-        [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy,
+        [Policy(PolicyType.ResetPassword)] Policy policy,
         SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = policyEnabled;
@@ -455,7 +453,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_RequireSsoPolicyRequiredByTrustedDeviceEncryption_DisablePolicy_ThrowsBadRequest(
-        [PolicyFixtures.Policy(PolicyType.RequireSso)] Policy policy,
+        [Policy(PolicyType.RequireSso)] Policy policy,
         SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = false;
@@ -492,7 +490,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_PolicyRequiredForAccountRecovery_NotEnabled_ThrowsBadRequestAsync(
-        [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = true;
         policy.SetDataModel(new ResetPasswordDataModel());
@@ -527,7 +525,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_SingleOrg_AccountRecoveryEnabled_ThrowsBadRequest(
-        [PolicyFixtures.Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = false;
 

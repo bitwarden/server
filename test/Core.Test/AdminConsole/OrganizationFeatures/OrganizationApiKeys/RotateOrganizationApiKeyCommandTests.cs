@@ -1,12 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
-using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationApiKeys;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 
 [SutProviderCustomize]
 public class RotateOrganizationApiKeyCommandTests

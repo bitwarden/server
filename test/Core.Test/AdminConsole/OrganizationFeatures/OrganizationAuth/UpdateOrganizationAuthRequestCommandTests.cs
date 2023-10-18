@@ -12,7 +12,7 @@ using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Core.Test.AdminConsole.OrganizationAuth;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationAuth;
 
 [SutProviderCustomize]
 public class UpdateOrganizationAuthRequestCommandTests

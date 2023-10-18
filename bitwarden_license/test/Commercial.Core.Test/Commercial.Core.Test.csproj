@@ -22,4 +22,9 @@
     <ProjectReference Include="..\..\..\test\Core.Test\Core.Test.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="ProviderFeatures\" />
+    <Folder Include="Services\" />
+  </ItemGroup>
+
 </Project>

@@ -8,14 +8,13 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
+namespace Bit.Core.Test.AdminConsole.AutoFixture;
 
 public class OrganizationCustomization : ICustomization
 {

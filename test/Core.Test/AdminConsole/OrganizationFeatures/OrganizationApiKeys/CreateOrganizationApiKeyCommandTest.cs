@@ -2,16 +2,12 @@
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
-using NSubstitute.ReceivedExtensions;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationApiKeys;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 
 [SutProviderCustomize]
 public class CreateOrganizationApiKeyCommandTest

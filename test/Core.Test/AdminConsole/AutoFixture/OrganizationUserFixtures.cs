@@ -3,10 +3,8 @@ using AutoFixture;
 using AutoFixture.Xunit2;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
 
-namespace Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+namespace Bit.Core.Test.AdminConsole.AutoFixture;
 
 public class OrganizationUserCustomization : ICustomization
 {

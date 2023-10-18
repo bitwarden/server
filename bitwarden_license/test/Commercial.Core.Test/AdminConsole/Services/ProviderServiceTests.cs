@@ -12,7 +12,6 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -25,7 +24,7 @@ using Xunit;
 using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
 using ProviderUser = Bit.Core.AdminConsole.Entities.Provider.ProviderUser;
 
-namespace Bit.Commercial.Core.Test.Services;
+namespace Bit.Commercial.Core.Test.AdminConsole.Services;
 
 [SutProviderCustomize]
 public class ProviderServiceTests

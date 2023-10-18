@@ -24,9 +24,7 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-using Bit.Core.Test.AutoFixture.PolicyFixtures;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
@@ -41,7 +39,7 @@ using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationUser = Bit.Core.AdminConsole.Entities.OrganizationUser;
 using Policy = Bit.Core.AdminConsole.Entities.Policy;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.AdminConsole.Services;
 
 [SutProviderCustomize]
 public class OrganizationServiceTests

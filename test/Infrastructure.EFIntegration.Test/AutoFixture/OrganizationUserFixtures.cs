@@ -6,7 +6,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
-using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
