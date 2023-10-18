@@ -14,7 +14,7 @@ public class GetOrganizationDomainByOrganizationIdQueryTests
     public async Task GetDomainsByOrganizationId_CallsGetDomainsByOrganizationIdAsync(Guid orgId,
         SutProvider<GetOrganizationDomainByOrganizationIdQuery> sutProvider)
     {
-        await sutProvider.Sut.GetDomainsByOrganizationId(orgId);
+        await sutProvider.Sut.GetDomainsByOrganizationIdAsync(orgId);
 
         await sutProvider.GetDependency<IOrganizationDomainRepository>().Received(1)
             .GetDomainsByOrganizationIdAsync(orgId);
