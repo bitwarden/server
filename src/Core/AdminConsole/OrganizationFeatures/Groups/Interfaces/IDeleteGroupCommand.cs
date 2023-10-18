@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
