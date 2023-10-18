@@ -9,8 +9,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AdminConsole.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.AdminConsole.Repositories.EqualityComparers;
-using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
-using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;

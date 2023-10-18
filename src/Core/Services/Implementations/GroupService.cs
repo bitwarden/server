@@ -2,7 +2,6 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
 
 namespace Bit.Core.Services;
 

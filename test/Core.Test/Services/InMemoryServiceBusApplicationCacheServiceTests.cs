@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using NSubstitute;

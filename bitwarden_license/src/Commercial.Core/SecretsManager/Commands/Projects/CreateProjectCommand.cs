@@ -2,7 +2,6 @@
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;

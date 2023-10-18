@@ -2,7 +2,6 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
-using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationApiKeys;

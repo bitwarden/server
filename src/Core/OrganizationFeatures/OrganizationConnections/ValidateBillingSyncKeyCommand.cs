@@ -2,7 +2,6 @@
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
-using Bit.Core.Repositories;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationConnections;
 
