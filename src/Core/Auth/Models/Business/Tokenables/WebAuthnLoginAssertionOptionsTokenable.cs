@@ -14,7 +14,7 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
     public const string TokenIdentifier = "WebAuthnLoginAssertionOptionsToken";
 
     public string Identifier { get; set; } = TokenIdentifier;
-    public CredentialCreateOptions Options { get; set; }
+    public AssertionOptions Options { get; set; }
     public WebAuthnLoginAssertionOptionsScope Scope { get; set;  }
 
     [JsonConstructor]
@@ -23,7 +23,7 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
         ExpirationDate = DateTime.UtcNow.AddHours(_tokenLifetimeInHours);
     }
 
-    public WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope scope, CredentialCreateOptions options) : this()
+    public WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope scope, AssertionOptions options) : this()
     {
         Scope = scope;
         Options = options;
