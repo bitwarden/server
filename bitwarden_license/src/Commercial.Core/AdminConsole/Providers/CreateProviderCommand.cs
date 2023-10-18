@@ -5,9 +5,8 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 
-namespace Bit.Commercial.Core.Providers;
+namespace Bit.Commercial.Core.AdminConsole.Providers;
 
 public class CreateProviderCommand : ICreateProviderCommand
 {

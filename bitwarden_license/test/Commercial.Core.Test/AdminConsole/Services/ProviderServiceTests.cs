@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.Services;
+﻿using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Commercial.Core.Test.AutoFixture;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;

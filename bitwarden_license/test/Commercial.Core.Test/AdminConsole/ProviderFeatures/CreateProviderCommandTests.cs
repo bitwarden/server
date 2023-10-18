@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.Providers;
+﻿using Bit.Commercial.Core.AdminConsole.Providers;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
