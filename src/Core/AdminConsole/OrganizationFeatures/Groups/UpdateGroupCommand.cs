@@ -1,12 +1,14 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 
-namespace Bit.Core.OrganizationFeatures.Groups;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups;
 
 public class UpdateGroupCommand : IUpdateGroupCommand
 {
@@ -36,7 +38,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             await GroupRepositoryUpdateUsersAsync(group, userIds);
         }
 
-        await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated);
+        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Updated);
     }
 
     public async Task UpdateGroupAsync(Group group, Organization organization, EventSystemUser systemUser,
@@ -51,7 +53,7 @@ public class UpdateGroupCommand : IUpdateGroupCommand
             await GroupRepositoryUpdateUsersAsync(group, userIds, systemUser);
         }
 
-        await _eventService.LogGroupEventAsync(group, Enums.EventType.Group_Updated, systemUser);
+        await _eventService.LogGroupEventAsync(group, Core.Enums.EventType.Group_Updated, systemUser);
     }
 
     private async Task GroupRepositoryUpdateGroupAsync(Group group, IEnumerable<CollectionAccessSelection> collections = null)

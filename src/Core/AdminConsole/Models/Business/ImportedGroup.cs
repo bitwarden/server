@@ -1,6 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.AdminConsole.Models.Business;
 
 public class ImportedGroup
 {

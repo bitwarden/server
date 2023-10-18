@@ -1,4 +1,4 @@
-﻿namespace Bit.Core.Entities;
+﻿namespace Bit.Core.AdminConsole.Entities;
 
 public class GroupUser
 {

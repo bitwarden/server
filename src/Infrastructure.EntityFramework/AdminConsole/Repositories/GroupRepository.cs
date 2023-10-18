@@ -1,19 +1,22 @@
 ﻿using AutoMapper;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Group = Bit.Core.AdminConsole.Entities.Group;
+using GroupUser = Bit.Core.AdminConsole.Entities.GroupUser;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
-public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGroupRepository
+public class GroupRepository : Repository<Group, Models.Group, Guid>, IGroupRepository
 {
     public GroupRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Groups)
     { }
 
-    public async Task CreateAsync(Core.Entities.Group obj, IEnumerable<CollectionAccessSelection> collections)
+    public async Task CreateAsync(Group obj, IEnumerable<CollectionAccessSelection> collections)
     {
         var grp = await base.CreateAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -51,7 +54,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
-    public async Task<Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<Group, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
     {
         var grp = await base.GetByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -67,12 +70,12 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                 ReadOnly = c.ReadOnly,
                 HidePasswords = c.HidePasswords,
             }).ToList();
-            return new Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>(
+            return new Tuple<Group, ICollection<CollectionAccessSelection>>(
                 grp, collections);
         }
     }
 
-    public async Task<ICollection<Core.Entities.Group>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<Group>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -81,11 +84,11 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                 from g in dbContext.Groups
                 where g.OrganizationId == organizationId
                 select g).ToListAsync();
-            return Mapper.Map<List<Core.Entities.Group>>(data);
+            return Mapper.Map<List<Group>>(data);
         }
     }
 
-    public async Task<ICollection<Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>>>
+    public async Task<ICollection<Tuple<Group, ICollection<CollectionAccessSelection>>>>
         GetManyWithCollectionsByOrganizationIdAsync(Guid organizationId)
     {
         var groups = await GetManyByOrganizationIdAsync(organizationId);
@@ -100,7 +103,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
             var collections = query.GroupBy(c => c.GroupId).ToList();
 
             return groups.Select(group =>
-                new Tuple<Core.Entities.Group, ICollection<CollectionAccessSelection>>(
+                new Tuple<Group, ICollection<CollectionAccessSelection>>(
                     group,
                     collections
                         .FirstOrDefault(c => c.Key == group.Id)?
@@ -115,7 +118,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
-    public async Task<ICollection<Core.Entities.Group>> GetManyByManyIds(IEnumerable<Guid> groupIds)
+    public async Task<ICollection<Group>> GetManyByManyIds(IEnumerable<Guid> groupIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -124,11 +127,11 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                         where groupIds.Contains(g.Id)
                         select g;
             var groups = await query.ToListAsync();
-            return Mapper.Map<List<Core.Entities.Group>>(groups);
+            return Mapper.Map<List<Group>>(groups);
         }
     }
 
-    public async Task<ICollection<Core.Entities.GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<GroupUser>> GetManyGroupUsersByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -140,7 +143,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                 where g.OrganizationId == organizationId
                 select gu;
             var groupUsers = await query.ToListAsync();
-            return Mapper.Map<List<Core.Entities.GroupUser>>(groupUsers);
+            return Mapper.Map<List<GroupUser>>(groupUsers);
         }
     }
 
@@ -172,7 +175,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.Group group, IEnumerable<CollectionAccessSelection> requestedCollections)
+    public async Task ReplaceAsync(Group group, IEnumerable<CollectionAccessSelection> requestedCollections)
     {
         await base.ReplaceAsync(group);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -230,7 +233,7 @@ public class GroupRepository : Repository<Core.Entities.Group, Group, Guid>, IGr
                          where organizationUserIds.Contains(ou.Id) &&
                              ou.OrganizationId == orgId &&
                              !dbContext.GroupUsers.Any(gu => gu.GroupId == groupId && ou.Id == gu.OrganizationUserId)
-                         select new GroupUser
+                         select new Models.GroupUser
                          {
                              GroupId = groupId,
                              OrganizationUserId = ou.Id,

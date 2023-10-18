@@ -1,8 +1,9 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 
-namespace Bit.Core.OrganizationFeatures.Groups.Interfaces;
+namespace Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 
 public interface ICreateGroupCommand
 {
