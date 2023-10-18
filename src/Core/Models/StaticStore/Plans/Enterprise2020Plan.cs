@@ -2,13 +2,13 @@
 
 namespace Bit.Core.Models.StaticStore.Plans;
 
-public record EnterprisePlan : Models.StaticStore.Plan
+public record Enterprise2020Plan : Models.StaticStore.Plan
 {
-    public EnterprisePlan(bool isAnnual)
+    public Enterprise2020Plan(bool isAnnual)
     {
-        Type = isAnnual ? PlanType.EnterpriseAnnually : PlanType.EnterpriseMonthly;
+        Type = isAnnual ? PlanType.EnterpriseAnnually2020 : PlanType.EnterpriseMonthly2020;
         Product = ProductType.Enterprise;
-        Name = isAnnual ? "Enterprise (Annually)" : "Enterprise (Monthly)";
+        Name = isAnnual ? "Enterprise (Annually) 2020" : "Enterprise (Monthly) 2020";
         IsAnnual = isAnnual;
         NameLocalizationKey = "planNameEnterprise";
         DescriptionLocalizationKey = "planDescEnterprise";
@@ -33,14 +33,15 @@ public record EnterprisePlan : Models.StaticStore.Plan
 
         UpgradeSortOrder = 3;
         DisplaySortOrder = 3;
+        LegacyYear = 2023;
 
-        PasswordManager = new EnterprisePasswordManagerFeatures(isAnnual);
-        SecretsManager = new EnterpriseSecretsManagerFeatures(isAnnual);
+        PasswordManager = new Enterprise2020PasswordManagerFeatures(isAnnual);
+        SecretsManager = new Enterprise2020SecretsManagerFeatures(isAnnual);
     }
 
-    private record EnterpriseSecretsManagerFeatures : SecretsManagerPlanFeatures
+    private record Enterprise2020SecretsManagerFeatures : SecretsManagerPlanFeatures
     {
-        public EnterpriseSecretsManagerFeatures(bool isAnnual)
+        public Enterprise2020SecretsManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BasePrice = 0;
@@ -69,9 +70,9 @@ public record EnterprisePlan : Models.StaticStore.Plan
         }
     }
 
-    private record EnterprisePasswordManagerFeatures : PasswordManagerPlanFeatures
+    private record Enterprise2020PasswordManagerFeatures : PasswordManagerPlanFeatures
     {
-        public EnterprisePasswordManagerFeatures(bool isAnnual)
+        public Enterprise2020PasswordManagerFeatures(bool isAnnual)
         {
             BaseSeats = 0;
             BaseStorageGb = 1;
@@ -85,14 +86,14 @@ public record EnterprisePlan : Models.StaticStore.Plan
             {
                 AdditionalStoragePricePerGb = 4;
                 StripeStoragePlanId = "storage-gb-annually";
-                StripeSeatPlanId = "2023-enterprise-org-seat-annually";
-                SeatPrice = 72;
+                StripeSeatPlanId = "2020-enterprise-org-seat-annually";
+                SeatPrice = 60;
             }
             else
             {
-                StripeSeatPlanId = "2023-enterprise-seat-monthly";
+                StripeSeatPlanId = "2020-enterprise-seat-monthly";
                 StripeStoragePlanId = "storage-gb-monthly";
-                SeatPrice = 7;
+                SeatPrice = 6;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }

@@ -30,22 +30,50 @@ public class MaxProjectsQueryTests
 
     [Theory]
     [BitAutoData(PlanType.FamiliesAnnually2019)]
-    [BitAutoData(PlanType.TeamsMonthly2019)]
-    [BitAutoData(PlanType.TeamsAnnually2019)]
-    [BitAutoData(PlanType.EnterpriseMonthly2019)]
-    [BitAutoData(PlanType.EnterpriseAnnually2019)]
     [BitAutoData(PlanType.Custom)]
     [BitAutoData(PlanType.FamiliesAnnually)]
     public async Task GetByOrgIdAsync_SmPlanIsNull_ThrowsBadRequest(PlanType planType,
         SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
     {
         organization.PlanType = planType;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
 
         await Assert.ThrowsAsync<BadRequestException>(
             async () => await sutProvider.Sut.GetByOrgIdAsync(organization.Id, 1));
 
-        await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs()
+        await sutProvider.GetDependency<IProjectRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .GetProjectCountByOrganizationIdAsync(organization.Id);
+    }
+
+    [Theory]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
+    [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
+    [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
+    [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
+    [BitAutoData(PlanType.EnterpriseAnnually)]
+    public async Task GetByOrgIdAsync_SmPlanIsNull_NoExceptionThrown(PlanType planType,
+        SutProvider<MaxProjectsQuery> sutProvider, Organization organization)
+    {
+        organization.PlanType = planType;
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        await sutProvider.Sut
+            .GetByOrgIdAsync(organization.Id, 1);
+
+        await sutProvider.GetDependency<IProjectRepository>()
+            .DidNotReceiveWithAnyArgs()
             .GetProjectCountByOrganizationIdAsync(organization.Id);
     }
 

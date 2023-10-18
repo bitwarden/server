@@ -132,8 +132,8 @@ public class SecretsManagerOrganizationCustomization : ICustomization
 {
     public void Customize(IFixture fixture)
     {
+        const PlanType planType = PlanType.EnterpriseAnnually;
         var organizationId = Guid.NewGuid();
-        var planType = PlanType.EnterpriseAnnually;
 
         fixture.Customize<Organization>(composer => composer
             .With(o => o.Id, organizationId)
@@ -142,8 +142,7 @@ public class SecretsManagerOrganizationCustomization : ICustomization
             .With(o => o.PlanType, planType)
             .With(o => o.Plan, StaticStore.GetPlan(planType).Name)
             .With(o => o.MaxAutoscaleSmSeats, (int?)null)
-            .With(o => o.MaxAutoscaleSmServiceAccounts, (int?)null)
-        );
+            .With(o => o.MaxAutoscaleSmServiceAccounts, (int?)null));
     }
 }
 
