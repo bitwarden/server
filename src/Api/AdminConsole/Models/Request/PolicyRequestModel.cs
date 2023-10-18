@@ -2,8 +2,6 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
 
 namespace Bit.Api.AdminConsole.Models.Request;
 

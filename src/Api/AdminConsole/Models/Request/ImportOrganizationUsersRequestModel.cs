@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.Models.Business;
 
 namespace Bit.Api.AdminConsole.Models.Request;
 

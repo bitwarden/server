@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
 using Stripe;
 
 namespace Bit.Core.Models.Business;

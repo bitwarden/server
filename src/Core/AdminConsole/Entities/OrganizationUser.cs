@@ -1,7 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;

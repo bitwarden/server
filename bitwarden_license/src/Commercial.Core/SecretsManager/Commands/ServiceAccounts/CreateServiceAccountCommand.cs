@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;

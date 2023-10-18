@@ -1,8 +1,6 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.ServiceAccounts;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Test.Common.AutoFixture;

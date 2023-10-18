@@ -2,8 +2,6 @@
 using System.Text.Json.Serialization;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
-using Bit.Core.Entities;
-using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;

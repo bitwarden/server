@@ -16,7 +16,6 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;

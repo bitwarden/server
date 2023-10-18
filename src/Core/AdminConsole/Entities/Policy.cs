@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.Entities;

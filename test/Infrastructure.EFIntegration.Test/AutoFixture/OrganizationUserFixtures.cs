@@ -4,7 +4,6 @@ using AutoFixture.Kernel;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.UserFixtures;

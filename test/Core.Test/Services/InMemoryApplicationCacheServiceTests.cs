@@ -1,7 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services.Implementations;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
 using NSubstitute;
 using Xunit;
 

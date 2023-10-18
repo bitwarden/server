@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 

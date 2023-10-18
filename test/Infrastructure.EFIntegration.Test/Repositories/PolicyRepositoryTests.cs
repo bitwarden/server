@@ -1,15 +1,11 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
-using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
 using Policy = Bit.Core.AdminConsole.Entities.Policy;
 using PolicyRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.PolicyRepository;
-using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
 

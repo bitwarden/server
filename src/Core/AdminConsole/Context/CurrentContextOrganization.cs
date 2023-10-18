@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Utilities;
 

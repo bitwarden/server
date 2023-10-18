@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
 
 namespace Bit.Admin.Models;
 

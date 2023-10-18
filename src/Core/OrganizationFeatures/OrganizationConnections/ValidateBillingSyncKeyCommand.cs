@@ -1,10 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
-using Bit.Core.Repositories;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationConnections;
 

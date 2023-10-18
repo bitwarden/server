@@ -1,7 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;

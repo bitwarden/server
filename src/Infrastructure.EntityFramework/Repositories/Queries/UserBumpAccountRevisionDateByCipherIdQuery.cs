@@ -1,5 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Enums;
 using User = Bit.Infrastructure.EntityFramework.Models.User;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;

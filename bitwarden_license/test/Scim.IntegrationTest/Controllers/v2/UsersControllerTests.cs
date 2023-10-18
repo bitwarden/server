@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.Enums;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Models;
 using Bit.Scim.Utilities;

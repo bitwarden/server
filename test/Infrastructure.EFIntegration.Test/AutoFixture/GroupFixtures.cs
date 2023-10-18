@@ -1,10 +1,8 @@
 ﻿using AutoFixture;
 using AutoFixture.Kernel;
 using Bit.Core.AdminConsole.Entities;
-using Bit.Core.Entities;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture.Relays;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 

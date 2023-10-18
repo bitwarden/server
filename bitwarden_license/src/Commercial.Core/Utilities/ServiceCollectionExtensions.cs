@@ -2,7 +2,6 @@
 using Bit.Commercial.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Bit.Commercial.Core.Utilities;

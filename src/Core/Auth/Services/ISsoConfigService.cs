@@ -1,6 +1,5 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Entities;
-using Bit.Core.Entities;
 
 namespace Bit.Core.Auth.Services;
 

@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Vault.Entities;
 
 namespace Bit.Admin.Models;
