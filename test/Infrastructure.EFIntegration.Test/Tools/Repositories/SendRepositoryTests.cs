@@ -2,11 +2,13 @@
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Core.Tools.Entities;
+using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.Tools.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Tools.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using EfSendRepo = Bit.Infrastructure.EntityFramework.Tools.Repositories;
+using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 using SqlSendRepo = Bit.Infrastructure.Dapper.Tools.Repositories;
 
@@ -22,10 +24,10 @@ public class SendRepositoryTests
         SendCompare equalityComparer,
         List<EfSendRepo.SendRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
-        List<EfRepo.OrganizationRepository> efOrgRepos,
+        List<OrganizationRepository> efOrgRepos,
         SqlSendRepo.SendRepository sqlSendRepo,
         SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo
+        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrgRepo
         )
     {
         var savedSends = new List<Send>();

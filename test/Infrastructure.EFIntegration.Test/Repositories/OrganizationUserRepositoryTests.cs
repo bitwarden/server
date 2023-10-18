@@ -9,11 +9,18 @@ using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
 using OrganizationUser = Bit.Core.AdminConsole.Entities.OrganizationUser;
+using OrganizationUserRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationUserRepository;
+using PolicyRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.PolicyRepository;
+using ProviderOrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.ProviderOrganizationRepository;
+using ProviderRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.ProviderRepository;
+using ProviderUserRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.ProviderUserRepository;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -22,10 +29,10 @@ public class OrganizationUserRepositoryTests
 {
     [CiSkippedTheory, EfOrganizationUserAutoData]
     public async void CreateAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
-        OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
-        SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+        OrganizationUserCompare equalityComparer, List<OrganizationUserRepository> suts,
+        List<OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
+        Dapper.AdminConsole.Repositories.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
+        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrgRepo)
     {
         var savedOrgUsers = new List<OrganizationUser>();
         foreach (var sut in suts)
@@ -65,12 +72,12 @@ public class OrganizationUserRepositoryTests
         User user,
         Organization org,
         OrganizationUserCompare equalityComparer,
-        List<EfRepo.OrganizationUserRepository> suts,
+        List<OrganizationUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
-        List<EfRepo.OrganizationRepository> efOrgRepos,
-        SqlRepo.OrganizationUserRepository sqlOrgUserRepo,
+        List<OrganizationRepository> efOrgRepos,
+        Dapper.AdminConsole.Repositories.OrganizationUserRepository sqlOrgUserRepo,
         SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo
+        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrgRepo
         )
     {
         var savedOrgUsers = new List<OrganizationUser>();
@@ -111,10 +118,10 @@ public class OrganizationUserRepositoryTests
     }
 
     [CiSkippedTheory, EfOrganizationUserAutoData]
-    public async void DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfRepo.OrganizationUserRepository> suts,
-        List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
-        SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+    public async void DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<OrganizationUserRepository> suts,
+        List<EfRepo.UserRepository> efUserRepos, List<OrganizationRepository> efOrgRepos,
+        Dapper.AdminConsole.Repositories.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
+        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrgRepo)
     {
         foreach (var sut in suts)
         {
@@ -183,22 +190,22 @@ public class OrganizationUserRepositoryTests
         OrganizationUserPolicyDetailsCompare equalityComparer,
 
         // Auto data - EF repos
-        List<EfRepo.PolicyRepository> efPolicyRepository,
+        List<PolicyRepository> efPolicyRepository,
         List<EfRepo.UserRepository> efUserRepository,
-        List<EfRepo.OrganizationRepository> efOrganizationRepository,
-        List<EfRepo.OrganizationUserRepository> suts,
-        List<EfRepo.ProviderRepository> efProviderRepository,
-        List<EfRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
-        List<EfRepo.ProviderUserRepository> efProviderUserRepository,
+        List<OrganizationRepository> efOrganizationRepository,
+        List<OrganizationUserRepository> suts,
+        List<ProviderRepository> efProviderRepository,
+        List<ProviderOrganizationRepository> efProviderOrganizationRepository,
+        List<ProviderUserRepository> efProviderUserRepository,
 
         // Auto data - SQL repos
-        SqlRepo.PolicyRepository sqlPolicyRepo,
+        Dapper.AdminConsole.Repositories.PolicyRepository sqlPolicyRepo,
         SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo,
-        SqlRepo.ProviderRepository sqlProviderRepo,
-        SqlRepo.OrganizationUserRepository sqlOrganizationUserRepo,
-        SqlRepo.ProviderOrganizationRepository sqlProviderOrganizationRepo,
-        SqlRepo.ProviderUserRepository sqlProviderUserRepo
+        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrganizationRepo,
+        Dapper.AdminConsole.Repositories.ProviderRepository sqlProviderRepo,
+        Dapper.AdminConsole.Repositories.OrganizationUserRepository sqlOrganizationUserRepo,
+        Dapper.AdminConsole.Repositories.ProviderOrganizationRepository sqlProviderOrganizationRepo,
+        Dapper.AdminConsole.Repositories.ProviderUserRepository sqlProviderUserRepo
         )
     {
         // Combine EF and SQL repos into one list per type

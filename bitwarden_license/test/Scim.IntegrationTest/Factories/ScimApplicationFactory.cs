@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Services;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.Models;
@@ -187,41 +188,41 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
         };
     }
 
-    private List<Infrastructure.EntityFramework.Models.Group> GetSeedingGroups()
+    private List<Group> GetSeedingGroups()
     {
-        return new List<Infrastructure.EntityFramework.Models.Group>()
+        return new List<Group>()
         {
-            new Infrastructure.EntityFramework.Models.Group { Id = TestGroupId1, OrganizationId = TestOrganizationId1, Name = "Test Group 1", ExternalId = "A" },
-            new Infrastructure.EntityFramework.Models.Group { Id = TestGroupId2, OrganizationId = TestOrganizationId1, Name = "Test Group 2", ExternalId = "B" },
-            new Infrastructure.EntityFramework.Models.Group { Id = TestGroupId3, OrganizationId = TestOrganizationId1, Name = "Test Group 3", ExternalId = "C" }
+            new Group { Id = TestGroupId1, OrganizationId = TestOrganizationId1, Name = "Test Group 1", ExternalId = "A" },
+            new Group { Id = TestGroupId2, OrganizationId = TestOrganizationId1, Name = "Test Group 2", ExternalId = "B" },
+            new Group { Id = TestGroupId3, OrganizationId = TestOrganizationId1, Name = "Test Group 3", ExternalId = "C" }
         };
     }
 
-    private List<Infrastructure.EntityFramework.Models.Organization> GetSeedingOrganizations()
+    private List<Organization> GetSeedingOrganizations()
     {
-        return new List<Infrastructure.EntityFramework.Models.Organization>()
+        return new List<Organization>()
         {
-            new Infrastructure.EntityFramework.Models.Organization { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
+            new Organization { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
         };
     }
 
-    private List<Infrastructure.EntityFramework.Models.OrganizationUser> GetSeedingOrganizationUsers()
+    private List<OrganizationUser> GetSeedingOrganizationUsers()
     {
-        return new List<Infrastructure.EntityFramework.Models.OrganizationUser>()
+        return new List<OrganizationUser>()
         {
-            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId1, OrganizationId = TestOrganizationId1, UserId = TestUserId1, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UA", Email = "user1@example.com" },
-            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId2, OrganizationId = TestOrganizationId1, UserId = TestUserId2, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UB", Email = "user2@example.com" },
-            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId3, OrganizationId = TestOrganizationId1, UserId = TestUserId3, Status = OrganizationUserStatusType.Revoked, ExternalId = "UC", Email = "user3@example.com" },
-            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId4, OrganizationId = TestOrganizationId1, UserId = TestUserId4, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UD", Email = "user4@example.com" },
+            new OrganizationUser { Id = TestOrganizationUserId1, OrganizationId = TestOrganizationId1, UserId = TestUserId1, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UA", Email = "user1@example.com" },
+            new OrganizationUser { Id = TestOrganizationUserId2, OrganizationId = TestOrganizationId1, UserId = TestUserId2, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UB", Email = "user2@example.com" },
+            new OrganizationUser { Id = TestOrganizationUserId3, OrganizationId = TestOrganizationId1, UserId = TestUserId3, Status = OrganizationUserStatusType.Revoked, ExternalId = "UC", Email = "user3@example.com" },
+            new OrganizationUser { Id = TestOrganizationUserId4, OrganizationId = TestOrganizationId1, UserId = TestUserId4, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UD", Email = "user4@example.com" },
         };
     }
 
-    private List<Infrastructure.EntityFramework.Models.GroupUser> GetSeedingGroupUsers()
+    private List<GroupUser> GetSeedingGroupUsers()
     {
-        return new List<Infrastructure.EntityFramework.Models.GroupUser>()
+        return new List<GroupUser>()
         {
-            new Infrastructure.EntityFramework.Models.GroupUser { GroupId = TestGroupId1, OrganizationUserId = TestOrganizationUserId1 },
-            new Infrastructure.EntityFramework.Models.GroupUser { GroupId = TestGroupId1, OrganizationUserId = TestOrganizationUserId4 }
+            new GroupUser { GroupId = TestGroupId1, OrganizationUserId = TestOrganizationUserId1 },
+            new GroupUser { GroupId = TestGroupId1, OrganizationUserId = TestOrganizationUserId4 }
         };
     }
 

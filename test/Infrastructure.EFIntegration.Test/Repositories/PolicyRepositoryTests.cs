@@ -1,11 +1,14 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
 using Policy = Bit.Core.AdminConsole.Entities.Policy;
+using PolicyRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.PolicyRepository;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -17,10 +20,10 @@ public class PolicyRepositoryTests
         Policy policy,
         Organization organization,
         PolicyCompare equalityComparer,
-        List<EfRepo.PolicyRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrganizationRepos,
-        SqlRepo.PolicyRepository sqlPolicyRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo
+        List<PolicyRepository> suts,
+        List<OrganizationRepository> efOrganizationRepos,
+        Dapper.AdminConsole.Repositories.PolicyRepository sqlPolicyRepo,
+        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrganizationRepo
         )
     {
         var savedPolicys = new List<Policy>();
