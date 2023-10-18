@@ -2,9 +2,11 @@
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -30,7 +32,9 @@ public class OrganizationUsersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IUpdateOrganizationUserCommand _updateOrganizationUserCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly ILogger<OrganizationUsersController> _logger;
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -43,7 +47,9 @@ public class OrganizationUsersController : Controller
         ICurrentContext currentContext,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserCommand updateOrganizationUserCommand,
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        ILogger<OrganizationUsersController> logger)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -55,7 +61,9 @@ public class OrganizationUsersController : Controller
         _currentContext = currentContext;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _updateOrganizationUserCommand = updateOrganizationUserCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _logger = logger;
     }
 
     [HttpGet("{id}")]
@@ -273,25 +281,38 @@ public class OrganizationUsersController : Controller
         return new ListResponseModel<OrganizationUserPublicKeyResponseModel>(responses);
     }
 
-    [HttpPut("{id}")]
-    [HttpPost("{id}")]
-    public async Task Put(string orgId, string id, [FromBody] OrganizationUserUpdateRequestModel model)
+    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
+    public async Task Put(Guid orgId, Guid id, [FromBody] OrganizationUserUpdateRequestModel model)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ManageUsers(orgGuidId))
+        if (!await _currentContext.ManageUsers(orgId))
         {
             throw new NotFoundException();
         }
 
-        var organizationUser = await _organizationUserRepository.GetByIdAsync(new Guid(id));
-        if (organizationUser == null || organizationUser.OrganizationId != orgGuidId)
+        var (organizationUser, organizationUserCollections) = await _organizationUserRepository.GetByIdWithCollectionsAsync(id);
+        if (organizationUser == null || organizationUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        await _organizationService.SaveUserAsync(model.ToOrganizationUser(organizationUser), userId.Value,
-            model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+        var savingUserId = _userService.GetProperUserId(User);
+        var updateSecretsManagerAccess = !organizationUser.AccessSecretsManager && model.AccessSecretsManager;
+        var updatedOrganizationUser = model.ToOrganizationUser(organizationUser);
+        var additionalSmSeatsRequired = updateSecretsManagerAccess
+            ? await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(orgId, 1)
+            : 0;
+
+        if (additionalSmSeatsRequired > 0)
+        {
+            await HandleUpdateWithSecretsManagerSeatsRequiredAsync(organizationUser, organizationUserCollections,
+                updatedOrganizationUser, savingUserId.Value, model, additionalSmSeatsRequired);
+        }
+        else
+        {
+            await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
+                model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+        }
     }
 
     [HttpPut("{id}/groups")]
@@ -497,5 +518,37 @@ public class OrganizationUsersController : Controller
         var result = await statusAction(orgId, model.Ids, userId.Value);
         return new ListResponseModel<OrganizationUserBulkResponseModel>(result.Select(r =>
             new OrganizationUserBulkResponseModel(r.Item1.Id, r.Item2)));
+    }
+
+    private async Task HandleUpdateWithSecretsManagerSeatsRequiredAsync(
+        OrganizationUser savedOrganizationUser, ICollection<CollectionAccessSelection> savedCollections,
+        OrganizationUser updatedOrganizationUser, Guid savingUserId,
+        OrganizationUserUpdateRequestModel model, int additionalSmSeatsRequired)
+    {
+        var organization = await _organizationRepository.GetByIdAsync(updatedOrganizationUser.OrganizationId);
+        var update = new SecretsManagerSubscriptionUpdate(organization, true)
+            .AdjustSeats(additionalSmSeatsRequired);
+
+        await _updateSecretsManagerSubscriptionCommand.ValidateUpdate(update);
+
+        // Retrieve the original OrganizationUser Groups data so that we can revert if Stripe fails
+        var organizationUserGroupIds = await _groupRepository.GetManyIdsByUserIdAsync(updatedOrganizationUser.Id);
+
+        await _updateOrganizationUserCommand.UpdateUserAsync(updatedOrganizationUser, savingUserId,
+            model.Collections?.Select(c => c.ToSelectionReadOnly()), model.Groups);
+
+        try
+        {
+            // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
+            // updating Stripe
+            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
+        }
+        catch (Exception e)
+        {
+            // If we fail to update Stripe, we need to revert the updates to OrganizationUser and its Collections and Groups
+            await _updateOrganizationUserCommand.UpdateUserAsync(savedOrganizationUser, savingUserId,
+                savedCollections, organizationUserGroupIds);
+            _logger.LogError(e, "Failed to update Secrets Manager subscription, reverted OrganizationUser updates");
+        }
     }
 }

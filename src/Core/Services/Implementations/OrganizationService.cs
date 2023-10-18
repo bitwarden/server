@@ -1394,63 +1394,6 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task SaveUserAsync(OrganizationUser user, Guid? savingUserId,
-        IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups)
-    {
-        if (user.Id.Equals(default(Guid)))
-        {
-            throw new BadRequestException("Invite the user first.");
-        }
-
-        var originalUser = await _organizationUserRepository.GetByIdAsync(user.Id);
-        if (user.Equals(originalUser))
-        {
-            throw new BadRequestException("Please make changes before saving.");
-        }
-
-        if (savingUserId.HasValue)
-        {
-            await ValidateOrganizationUserUpdatePermissions(user.OrganizationId, user.Type, originalUser.Type, user.GetPermissions());
-        }
-
-        await ValidateOrganizationCustomPermissionsEnabledAsync(user.OrganizationId, user.Type);
-
-        if (user.Type != OrganizationUserType.Owner &&
-            !await HasConfirmedOwnersExceptAsync(user.OrganizationId, new[] { user.Id }))
-        {
-            throw new BadRequestException("Organization must have at least one confirmed owner.");
-        }
-
-        // Only autoscale (if required) after all validation has passed so that we know it's a valid request before
-        // updating Stripe
-        if (!originalUser.AccessSecretsManager && user.AccessSecretsManager)
-        {
-            var additionalSmSeatsRequired = await _countNewSmSeatsRequiredQuery.CountNewSmSeatsRequiredAsync(user.OrganizationId, 1);
-            if (additionalSmSeatsRequired > 0)
-            {
-                var organization = await _organizationRepository.GetByIdAsync(user.OrganizationId);
-                var update = new SecretsManagerSubscriptionUpdate(organization, true)
-                    .AdjustSeats(additionalSmSeatsRequired);
-                await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(update);
-            }
-        }
-
-        if (user.AccessAll)
-        {
-            // We don't need any collections if we're flagged to have all access.
-            collections = new List<CollectionAccessSelection>();
-        }
-        await _organizationUserRepository.ReplaceAsync(user, collections);
-
-        if (groups != null)
-        {
-            await _organizationUserRepository.UpdateGroupsAsync(user.Id, groups);
-        }
-
-        await _eventService.LogOrganizationUserEventAsync(user, EventType.OrganizationUser_Updated);
-    }
-
     [Obsolete("IDeleteOrganizationUserCommand should be used instead. To be removed by EC-607.")]
     public async Task DeleteUserAsync(Guid organizationId, Guid organizationUserId, Guid? deletingUserId)
     {
@@ -1915,7 +1858,6 @@ public class OrganizationService : IOrganizationService
         await _pushNotificationService.PushSyncOrgKeysAsync(userId);
     }
 
-
     private async Task<IEnumerable<string>> GetUserDeviceIdsAsync(Guid userId)
     {
         var devices = await _deviceRepository.GetManyByUserIdAsync(userId);
@@ -2071,7 +2013,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
+    public async Task ValidateOrganizationCustomPermissionsEnabledAsync(Guid organizationId, OrganizationUserType newType)
     {
         if (newType != OrganizationUserType.Custom)
         {
