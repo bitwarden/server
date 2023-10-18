@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Scim.Models;
 
@@ -20,7 +21,7 @@ public class ScimUserResponseModel : BaseScimUserModel
         DisplayName = orgUser.Name;
         Emails = new List<EmailModel> { new EmailModel(orgUser.Email) };
         Name = new NameModel(orgUser.Name);
-        Active = orgUser.Status != Core.Enums.OrganizationUserStatusType.Revoked;
+        Active = orgUser.Status != OrganizationUserStatusType.Revoked;
     }
 
     public Guid Id { get; set; }

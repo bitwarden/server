@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Services;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon.Factories;
@@ -208,10 +209,10 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
     {
         return new List<Infrastructure.EntityFramework.Models.OrganizationUser>()
         {
-            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId1, OrganizationId = TestOrganizationId1, UserId = TestUserId1, Status = Core.Enums.OrganizationUserStatusType.Confirmed, ExternalId = "UA", Email = "user1@example.com" },
-            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId2, OrganizationId = TestOrganizationId1, UserId = TestUserId2, Status = Core.Enums.OrganizationUserStatusType.Confirmed, ExternalId = "UB", Email = "user2@example.com" },
-            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId3, OrganizationId = TestOrganizationId1, UserId = TestUserId3, Status = Core.Enums.OrganizationUserStatusType.Revoked, ExternalId = "UC", Email = "user3@example.com" },
-            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId4, OrganizationId = TestOrganizationId1, UserId = TestUserId4, Status = Core.Enums.OrganizationUserStatusType.Confirmed, ExternalId = "UD", Email = "user4@example.com" },
+            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId1, OrganizationId = TestOrganizationId1, UserId = TestUserId1, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UA", Email = "user1@example.com" },
+            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId2, OrganizationId = TestOrganizationId1, UserId = TestUserId2, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UB", Email = "user2@example.com" },
+            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId3, OrganizationId = TestOrganizationId1, UserId = TestUserId3, Status = OrganizationUserStatusType.Revoked, ExternalId = "UC", Email = "user3@example.com" },
+            new Infrastructure.EntityFramework.Models.OrganizationUser { Id = TestOrganizationUserId4, OrganizationId = TestOrganizationId1, UserId = TestUserId4, Status = OrganizationUserStatusType.Confirmed, ExternalId = "UD", Email = "user4@example.com" },
         };
     }
 

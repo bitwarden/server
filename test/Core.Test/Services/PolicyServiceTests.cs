@@ -1,12 +1,17 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.Services.Implementations;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
@@ -106,7 +111,7 @@ public class PolicyServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_SingleOrg_VaultTimeoutEnabled_ThrowsBadRequest([PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
+    public async Task SaveAsync_SingleOrg_VaultTimeoutEnabled_ThrowsBadRequest([PolicyFixtures.Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = false;
 
@@ -117,7 +122,7 @@ public class PolicyServiceTests
         });
 
         sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.MaximumVaultTimeout)
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.MaximumVaultTimeout)
             .Returns(new Policy { Enabled = true });
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
@@ -137,7 +142,7 @@ public class PolicyServiceTests
     [BitAutoData(PolicyType.SingleOrg)]
     [BitAutoData(PolicyType.RequireSso)]
     public async Task SaveAsync_PolicyRequiredByKeyConnector_DisablePolicy_ThrowsBadRequest(
-        Enums.PolicyType policyType,
+        PolicyType policyType,
         Policy policy,
         SutProvider<PolicyService> sutProvider)
     {
@@ -173,7 +178,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_RequireSsoPolicy_NotEnabled_ThrowsBadRequestAsync(
-        [PolicyFixtures.Policy(Enums.PolicyType.RequireSso)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [PolicyFixtures.Policy(PolicyType.RequireSso)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = true;
 
@@ -218,7 +223,7 @@ public class PolicyServiceTests
         });
 
         sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.SingleOrg)
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.SingleOrg)
             .Returns(Task.FromResult(new Policy { Enabled = true }));
 
         var utcNow = DateTime.UtcNow;
@@ -248,7 +253,7 @@ public class PolicyServiceTests
         });
 
         sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.SingleOrg)
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.SingleOrg)
             .Returns(Task.FromResult(new Policy { Enabled = false }));
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(
@@ -292,7 +297,7 @@ public class PolicyServiceTests
                 Enabled = false,
             });
 
-        var orgUserDetail = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
+        var orgUserDetail = new OrganizationUserUserDetails
         {
             Id = Guid.NewGuid(),
             Status = OrganizationUserStatusType.Accepted,
@@ -305,7 +310,7 @@ public class PolicyServiceTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
-            .Returns(new List<Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails>
+            .Returns(new List<OrganizationUserUserDetails>
             {
                 orgUserDetail,
             });
@@ -362,7 +367,7 @@ public class PolicyServiceTests
                 Enabled = false,
             });
 
-        var orgUserDetail = new Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails
+        var orgUserDetail = new OrganizationUserUserDetails
         {
             Id = Guid.NewGuid(),
             Status = OrganizationUserStatusType.Accepted,
@@ -375,7 +380,7 @@ public class PolicyServiceTests
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetManyDetailsByOrganizationAsync(policy.OrganizationId)
-            .Returns(new List<Core.Models.Data.Organizations.OrganizationUsers.OrganizationUserUserDetails>
+            .Returns(new List<OrganizationUserUserDetails>
             {
                 orgUserDetail,
             });
@@ -487,7 +492,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_PolicyRequiredForAccountRecovery_NotEnabled_ThrowsBadRequestAsync(
-        [PolicyFixtures.Policy(Enums.PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [PolicyFixtures.Policy(PolicyType.ResetPassword)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = true;
         policy.SetDataModel(new ResetPasswordDataModel());
@@ -522,7 +527,7 @@ public class PolicyServiceTests
 
     [Theory, BitAutoData]
     public async Task SaveAsync_SingleOrg_AccountRecoveryEnabled_ThrowsBadRequest(
-        [PolicyFixtures.Policy(Enums.PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
+        [PolicyFixtures.Policy(PolicyType.SingleOrg)] Policy policy, SutProvider<PolicyService> sutProvider)
     {
         policy.Enabled = false;
 
@@ -533,7 +538,7 @@ public class PolicyServiceTests
         });
 
         sutProvider.GetDependency<IPolicyRepository>()
-            .GetByOrganizationIdTypeAsync(policy.OrganizationId, Enums.PolicyType.ResetPassword)
+            .GetByOrganizationIdTypeAsync(policy.OrganizationId, PolicyType.ResetPassword)
             .Returns(new Policy { Enabled = true });
 
         var badRequestException = await Assert.ThrowsAsync<BadRequestException>(

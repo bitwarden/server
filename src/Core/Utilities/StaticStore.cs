@@ -1,6 +1,6 @@
 ﻿using System.Collections.Immutable;
+using Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.StaticStore;
 using Bit.Core.Models.StaticStore.Plans;
 

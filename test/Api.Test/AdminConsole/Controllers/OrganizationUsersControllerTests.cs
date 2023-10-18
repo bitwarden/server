@@ -1,7 +1,11 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -21,7 +25,7 @@ public class OrganizationUsersControllerTests
     public async Task PutResetPasswordEnrollment_InivitedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
         User user, OrganizationUser orgUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        orgUser.Status = Core.Enums.OrganizationUserStatusType.Invited;
+        orgUser.Status = OrganizationUserStatusType.Invited;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
 
@@ -35,7 +39,7 @@ public class OrganizationUsersControllerTests
     public async Task PutResetPasswordEnrollment_ConfirmedUser_AcceptsInvite(Guid orgId, Guid userId, OrganizationUserResetPasswordEnrollmentRequestModel model,
         User user, OrganizationUser orgUser, SutProvider<OrganizationUsersController> sutProvider)
     {
-        orgUser.Status = Core.Enums.OrganizationUserStatusType.Confirmed;
+        orgUser.Status = OrganizationUserStatusType.Confirmed;
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByOrganizationAsync(default, default).ReturnsForAnyArgs(orgUser);
 
@@ -81,7 +85,7 @@ public class OrganizationUsersControllerTests
         };
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(orgId,
-            Core.Enums.PolicyType.ResetPassword).Returns(policy);
+            PolicyType.ResetPassword).Returns(policy);
 
         await sutProvider.Sut.Accept(orgId, orgUserId, model);
 

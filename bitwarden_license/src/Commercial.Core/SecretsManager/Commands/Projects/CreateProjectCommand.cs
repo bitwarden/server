@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Identity;
 using Bit.Core.Repositories;

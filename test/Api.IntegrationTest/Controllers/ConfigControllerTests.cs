@@ -2,6 +2,8 @@
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Entities;
 using Xunit;
 
@@ -79,7 +81,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
             Organization org;
             (org, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: Core.Enums.PlanType.Free, ownerEmail: ownerEmail,
                 name: i.ToString(), billingEmail: ownerEmail, ownerKey: i.ToString());
-            await OrganizationTestHelpers.CreateUserAsync(_factory, org.Id, _email, Core.Enums.OrganizationUserType.User);
+            await OrganizationTestHelpers.CreateUserAsync(_factory, org.Id, _email, OrganizationUserType.User);
         }
 
         await LoginAsync();

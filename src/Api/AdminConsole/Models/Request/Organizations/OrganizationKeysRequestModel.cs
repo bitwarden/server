@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 

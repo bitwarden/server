@@ -1,4 +1,8 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -70,7 +74,7 @@ public class PatchUserCommand : IPatchUserCommand
         }
     }
 
-    private async Task<bool> HandleActiveOperationAsync(Core.Entities.OrganizationUser orgUser, bool active)
+    private async Task<bool> HandleActiveOperationAsync(OrganizationUser orgUser, bool active)
     {
         if (active && orgUser.Status == OrganizationUserStatusType.Revoked)
         {

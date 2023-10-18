@@ -1,4 +1,8 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -21,7 +25,7 @@ public class PatchUserCommandTests
     [BitAutoData]
     public async Task PatchUser_RestorePath_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
     {
-        organizationUser.Status = Core.Enums.OrganizationUserStatusType.Revoked;
+        organizationUser.Status = OrganizationUserStatusType.Revoked;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
@@ -50,7 +54,7 @@ public class PatchUserCommandTests
     [BitAutoData]
     public async Task PatchUser_RestoreValue_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
     {
-        organizationUser.Status = Core.Enums.OrganizationUserStatusType.Revoked;
+        organizationUser.Status = OrganizationUserStatusType.Revoked;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
@@ -78,7 +82,7 @@ public class PatchUserCommandTests
     [BitAutoData]
     public async Task PatchUser_RevokePath_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
     {
-        organizationUser.Status = Core.Enums.OrganizationUserStatusType.Confirmed;
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)
@@ -107,7 +111,7 @@ public class PatchUserCommandTests
     [BitAutoData]
     public async Task PatchUser_RevokeValue_Success(SutProvider<PatchUserCommand> sutProvider, OrganizationUser organizationUser)
     {
-        organizationUser.Status = Core.Enums.OrganizationUserStatusType.Confirmed;
+        organizationUser.Status = OrganizationUserStatusType.Confirmed;
 
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByIdAsync(organizationUser.Id)

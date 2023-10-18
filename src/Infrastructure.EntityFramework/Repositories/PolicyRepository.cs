@@ -1,31 +1,34 @@
 ﻿using AutoMapper;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Policy = Bit.Core.AdminConsole.Entities.Policy;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
-public class PolicyRepository : Repository<Core.Entities.Policy, Policy, Guid>, IPolicyRepository
+public class PolicyRepository : Repository<Policy, Models.Policy, Guid>, IPolicyRepository
 {
     public PolicyRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Policies)
     { }
 
-    public async Task<Core.Entities.Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
+    public async Task<Policy> GetByOrganizationIdTypeAsync(Guid organizationId, PolicyType type)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var results = await dbContext.Policies
                 .FirstOrDefaultAsync(p => p.OrganizationId == organizationId && p.Type == type);
-            return Mapper.Map<Core.Entities.Policy>(results);
+            return Mapper.Map<Policy>(results);
         }
     }
 
-    public async Task<ICollection<Core.Entities.Policy>> GetManyByOrganizationIdAsync(Guid organizationId)
+    public async Task<ICollection<Policy>> GetManyByOrganizationIdAsync(Guid organizationId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -33,11 +36,11 @@ public class PolicyRepository : Repository<Core.Entities.Policy, Policy, Guid>, 
             var results = await dbContext.Policies
                 .Where(p => p.OrganizationId == organizationId)
                 .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Policy>>(results);
+            return Mapper.Map<List<Policy>>(results);
         }
     }
 
-    public async Task<ICollection<Core.Entities.Policy>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<Policy>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -45,7 +48,7 @@ public class PolicyRepository : Repository<Core.Entities.Policy, Policy, Guid>, 
 
             var query = new PolicyReadByUserIdQuery(userId);
             var results = await query.Run(dbContext).ToListAsync();
-            return Mapper.Map<List<Core.Entities.Policy>>(results);
+            return Mapper.Map<List<Policy>>(results);
         }
     }
 }

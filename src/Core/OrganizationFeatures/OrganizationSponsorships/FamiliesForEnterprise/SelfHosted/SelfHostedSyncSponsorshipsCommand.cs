@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.IdentityServer;
 using Bit.Core.Models.Api.Request.OrganizationSponsorships;

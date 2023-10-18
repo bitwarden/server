@@ -1,6 +1,8 @@
 ﻿using System.Reflection;
 using AutoFixture;
 using AutoFixture.Xunit2;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 

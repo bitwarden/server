@@ -2,7 +2,7 @@
 using Bit.Api.Auth.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Core;
-using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationAuth.Interfaces;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;

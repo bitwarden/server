@@ -1,22 +1,25 @@
 ﻿using AutoMapper;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using OrganizationUser = Bit.Core.AdminConsole.Entities.OrganizationUser;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
-public class OrganizationUserRepository : Repository<Core.Entities.OrganizationUser, OrganizationUser, Guid>, IOrganizationUserRepository
+public class OrganizationUserRepository : Repository<OrganizationUser, Models.OrganizationUser, Guid>, IOrganizationUserRepository
 {
     public OrganizationUserRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.OrganizationUsers)
     { }
 
-    public async Task<Guid> CreateAsync(Core.Entities.OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
+    public async Task<Guid> CreateAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> collections)
     {
         var organizationUser = await base.CreateAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -41,7 +44,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return organizationUser.Id;
     }
 
-    public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
+    public async Task<ICollection<Guid>> CreateManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
         if (!organizationUsers.Any())
         {
@@ -56,7 +59,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var entities = Mapper.Map<List<OrganizationUser>>(organizationUsers);
+            var entities = Mapper.Map<List<Models.OrganizationUser>>(organizationUsers);
             await dbContext.AddRangeAsync(entities);
             await dbContext.SaveChangesAsync();
         }
@@ -64,7 +67,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         return organizationUsers.Select(u => u.Id).ToList();
     }
 
-    public override async Task DeleteAsync(Core.Entities.OrganizationUser organizationUser) => await DeleteAsync(organizationUser.Id);
+    public override async Task DeleteAsync(OrganizationUser organizationUser) => await DeleteAsync(organizationUser.Id);
     public async Task DeleteAsync(Guid organizationUserId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -128,7 +131,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
+    public async Task<Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>> GetByIdWithCollectionsAsync(Guid id)
     {
         var organizationUser = await base.GetByIdAsync(id);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -147,12 +150,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 ReadOnly = cu.ReadOnly,
                 HidePasswords = cu.HidePasswords,
             });
-            return new Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>(
+            return new Tuple<OrganizationUser, ICollection<CollectionAccessSelection>>(
                 organizationUser, collections.ToList());
         }
     }
 
-    public async Task<Core.Entities.OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
+    public async Task<OrganizationUser> GetByOrganizationAsync(Guid organizationId, Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -163,7 +166,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<Core.Entities.OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
+    public async Task<OrganizationUser> GetByOrganizationEmailAsync(Guid organizationId, string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -260,7 +263,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
+    public async Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -273,7 +276,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
+    public async Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -281,11 +284,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var query = from ou in dbContext.OrganizationUsers
                         where userIds.Contains(ou.Id)
                         select ou;
-            return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
+            return Mapper.Map<List<OrganizationUser>>(await query.ToListAsync());
         }
     }
 
-    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type)
+    public async Task<ICollection<OrganizationUser>> GetManyByOrganizationAsync(Guid organizationId, OrganizationUserType? type)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -294,11 +297,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         where ou.OrganizationId == organizationId &&
                             (type == null || ou.Type == type)
                         select ou;
-            return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
+            return Mapper.Map<List<OrganizationUser>>(await query.ToListAsync());
         }
     }
 
-    public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByUserAsync(Guid userId)
+    public async Task<ICollection<OrganizationUser>> GetManyByUserAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -306,7 +309,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var query = from ou in dbContext.OrganizationUsers
                         where ou.UserId == userId
                         select ou;
-            return Mapper.Map<List<Core.Entities.OrganizationUser>>(await query.ToListAsync());
+            return Mapper.Map<List<OrganizationUser>>(await query.ToListAsync());
         }
     }
 
@@ -411,7 +414,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async override Task ReplaceAsync(Core.Entities.OrganizationUser organizationUser)
+    public async override Task ReplaceAsync(OrganizationUser organizationUser)
     {
         await base.ReplaceAsync(organizationUser);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -422,7 +425,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task ReplaceAsync(Core.Entities.OrganizationUser obj, IEnumerable<CollectionAccessSelection> requestedCollections)
+    public async Task ReplaceAsync(OrganizationUser obj, IEnumerable<CollectionAccessSelection> requestedCollections)
     {
         await ReplaceAsync(obj);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -462,7 +465,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task ReplaceManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
+    public async Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -518,10 +521,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task UpsertManyAsync(IEnumerable<Core.Entities.OrganizationUser> organizationUsers)
+    public async Task UpsertManyAsync(IEnumerable<OrganizationUser> organizationUsers)
     {
-        var createUsers = new List<Core.Entities.OrganizationUser>();
-        var replaceUsers = new List<Core.Entities.OrganizationUser>();
+        var createUsers = new List<OrganizationUser>();
+        var replaceUsers = new List<OrganizationUser>();
         foreach (var organizationUser in organizationUsers)
         {
             if (organizationUser.Id.Equals(default))

@@ -1,9 +1,10 @@
 ﻿using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.AdminConsole.Models.Response.Providers;
+using Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Api.Models.Response;
 

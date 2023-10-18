@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;

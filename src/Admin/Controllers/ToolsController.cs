@@ -3,6 +3,9 @@ using System.Text.Json;
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
@@ -203,7 +206,7 @@ public class ToolsController : Controller
         {
             ModelState.AddModelError(nameof(model.UserId), "User Id not found in this organization.");
         }
-        else if (user.Type != Core.Enums.OrganizationUserType.Admin)
+        else if (user.Type != OrganizationUserType.Admin)
         {
             ModelState.AddModelError(nameof(model.UserId), "User is not an admin of this organization.");
         }
@@ -213,7 +216,7 @@ public class ToolsController : Controller
             return View(model);
         }
 
-        user.Type = Core.Enums.OrganizationUserType.Owner;
+        user.Type = OrganizationUserType.Owner;
         await _organizationUserRepository.ReplaceAsync(user);
         return RedirectToAction("Edit", "Organizations", new { id = model.OrganizationId.Value });
     }

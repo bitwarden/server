@@ -1,4 +1,4 @@
-﻿using Bit.Core.AdminConsole.OrganizationAuth;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationAuth;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.AuthRequest;
 using Bit.Core.Auth.Services;

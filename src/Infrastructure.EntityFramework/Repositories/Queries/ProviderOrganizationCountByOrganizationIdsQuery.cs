@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 

@@ -1,13 +1,18 @@
 ﻿using Bit.Commercial.Core.Services;
 using Bit.Commercial.Core.Test.AutoFixture;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Business.Provider;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.Business.Provider;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
@@ -17,8 +22,8 @@ using Microsoft.AspNetCore.DataProtection;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using Provider = Bit.Core.Entities.Provider.Provider;
-using ProviderUser = Bit.Core.Entities.Provider.ProviderUser;
+using Provider = Bit.Core.AdminConsole.Entities.Provider.Provider;
+using ProviderUser = Bit.Core.AdminConsole.Entities.Provider.ProviderUser;
 
 namespace Bit.Commercial.Core.Test.Services;
 

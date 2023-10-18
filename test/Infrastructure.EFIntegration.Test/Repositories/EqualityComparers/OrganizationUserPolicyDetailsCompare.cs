@@ -1,4 +1,4 @@
-﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+﻿using Bit.Core.AdminConsole.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 

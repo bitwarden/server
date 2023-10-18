@@ -3,6 +3,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations;
@@ -13,7 +14,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using Organization = Bit.Core.Entities.Organization;
+using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationDomain = Bit.Core.Entities.OrganizationDomain;
 
 namespace Bit.Api.Test.Controllers;

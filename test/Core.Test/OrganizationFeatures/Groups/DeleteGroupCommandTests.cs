@@ -1,7 +1,9 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.Groups;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
@@ -42,7 +44,7 @@ public class DeleteGroupCommandTests
     {
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(groupId)
-            .Returns(new Core.Entities.Group
+            .Returns(new Group
             {
                 Id = groupId,
                 OrganizationId = Guid.NewGuid()

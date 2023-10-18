@@ -2,6 +2,7 @@
 using System.Net.Http.Headers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Repositories;
 using Xunit;

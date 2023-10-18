@@ -10,11 +10,13 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues.Models;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Identity;
 using Bit.Core.Settings;
 using IdentityModel;
@@ -647,31 +649,31 @@ public static class CoreHelpers
             {
                 switch (group.Key)
                 {
-                    case Enums.OrganizationUserType.Owner:
+                    case OrganizationUserType.Owner:
                         foreach (var org in group)
                         {
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationOwner, org.Id.ToString()));
                         }
                         break;
-                    case Enums.OrganizationUserType.Admin:
+                    case OrganizationUserType.Admin:
                         foreach (var org in group)
                         {
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationAdmin, org.Id.ToString()));
                         }
                         break;
-                    case Enums.OrganizationUserType.Manager:
+                    case OrganizationUserType.Manager:
                         foreach (var org in group)
                         {
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationManager, org.Id.ToString()));
                         }
                         break;
-                    case Enums.OrganizationUserType.User:
+                    case OrganizationUserType.User:
                         foreach (var org in group)
                         {
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationUser, org.Id.ToString()));
                         }
                         break;
-                    case Enums.OrganizationUserType.Custom:
+                    case OrganizationUserType.Custom:
                         foreach (var org in group)
                         {
                             claims.Add(new KeyValuePair<string, string>(Claims.OrganizationCustom, org.Id.ToString()));

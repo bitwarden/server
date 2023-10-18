@@ -1,4 +1,6 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -67,7 +69,7 @@ public class CollectionService : ICollectionService
             if (assignUserId.HasValue)
             {
                 var orgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, assignUserId.Value);
-                if (orgUser != null && orgUser.Status == Enums.OrganizationUserStatusType.Confirmed)
+                if (orgUser != null && orgUser.Status == OrganizationUserStatusType.Confirmed)
                 {
                     await _collectionRepository.UpdateUsersAsync(collection.Id,
                         new List<CollectionAccessSelection> {

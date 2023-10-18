@@ -1,4 +1,6 @@
-﻿using Bit.Core.Models.Data;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.Models.Data;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 
@@ -29,7 +31,7 @@ public class ProviderOrganizationOrganizationDetailsReadByProviderIdQuery : IQue
             Settings = x.po.Settings,
             CreationDate = x.po.CreationDate,
             RevisionDate = x.po.RevisionDate,
-            UserCount = x.o.OrganizationUsers.Count(ou => ou.Status == Core.Enums.OrganizationUserStatusType.Confirmed),
+            UserCount = x.o.OrganizationUsers.Count(ou => ou.Status == OrganizationUserStatusType.Confirmed),
             Seats = x.o.Seats,
             Plan = x.o.Plan,
             Status = x.o.Status
