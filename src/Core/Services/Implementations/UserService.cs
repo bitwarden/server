@@ -577,29 +577,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return true;
     }
 
-    public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
+    public Task<AssertionOptions> StartWebAuthnLoginAssertionAsync()
     {
-        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
-        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var existingCredentials = existingKeys
-            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
-            .ToList();
+        var options = _fido2.GetAssertionOptions(Enumerable.Empty<PublicKeyCredentialDescriptor>(), UserVerificationRequirement.Required);
 
-        if (existingCredentials.Count == 0)
-        {
-            return null;
-        }
-
-        // TODO: PRF?
-        var exts = new AuthenticationExtensionsClientInputs
-        {
-            UserVerificationMethod = true
-        };
-        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Required, exts);
-
-        // TODO: temp save options to user record somehow
-
-        return options;
+        return Task.FromResult(options);
     }
 
     public async Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user)

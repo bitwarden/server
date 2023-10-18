@@ -1,6 +1,8 @@
 ﻿using Bit.Core;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
@@ -8,6 +10,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Fido2NetLib;
@@ -23,17 +26,21 @@ public class AccountsController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
     private readonly ICaptchaValidationService _captchaValidationService;
+    private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
+
 
     public AccountsController(
         ILogger<AccountsController> logger,
         IUserRepository userRepository,
         IUserService userService,
-        ICaptchaValidationService captchaValidationService)
+        ICaptchaValidationService captchaValidationService,
+        IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector)
     {
         _logger = logger;
         _userRepository = userRepository;
         _userService = userService;
         _captchaValidationService = captchaValidationService;
+        _assertionOptionsDataProtector = assertionOptionsDataProtector;
     }
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
@@ -89,9 +96,16 @@ public class AccountsController : Controller
         //    return new AssertionOptions();
         //}
 
-        //var options = await _userService.StartWebAuthnLoginAssertionAsync(user);
-        //return options;
-        return null;
+        var options = await _userService.StartWebAuthnLoginAssertionAsync();
+
+        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.Authentication, options);
+        var token = _assertionOptionsDataProtector.Protect(tokenable);
+
+        return new WebAuthnLoginAssertionOptionsResponseModel
+        {
+            Options = options,
+            Token = token
+        };
     }
 
     // TODO: Remove, this will move to the grant validator
