@@ -5,8 +5,6 @@ using Bit.Core.AdminConsole.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
 
