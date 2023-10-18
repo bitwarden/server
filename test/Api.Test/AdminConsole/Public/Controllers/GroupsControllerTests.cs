@@ -1,9 +1,6 @@
-﻿using Bit.Api.Admin_Console.Public.Controllers;
+﻿using Bit.Api.AdminConsole.Public.Controllers;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
-using Bit.Api.Models.Public.Request;
-using Bit.Api.Models.Public.Response;
-using Bit.Api.Public.Controllers;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
@@ -15,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Public.Controllers;
+namespace Bit.Api.Test.AdminConsole.Public.Controllers;
 
 [ControllerCustomize(typeof(GroupsController))]
 [SutProviderCustomize]

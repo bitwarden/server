@@ -1,7 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request;
-using Bit.Api.Controllers;
-using Bit.Api.Models.Request;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
@@ -12,7 +10,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.AdminConsole.Controllers;
 
 [ControllerCustomize(typeof(GroupsController))]
 [SutProviderCustomize]

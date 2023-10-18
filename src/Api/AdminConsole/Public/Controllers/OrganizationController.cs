@@ -9,7 +9,7 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Admin_Console.Public.Controllers;
+namespace Bit.Api.AdminConsole.Public.Controllers;
 
 [Route("public/organization")]
 [Authorize("Organization")]

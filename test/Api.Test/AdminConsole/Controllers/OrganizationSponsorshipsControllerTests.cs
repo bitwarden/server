@@ -13,7 +13,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.AdminConsole.Controllers;
 
 [ControllerCustomize(typeof(OrganizationSponsorshipsController))]
 [SutProviderCustomize]

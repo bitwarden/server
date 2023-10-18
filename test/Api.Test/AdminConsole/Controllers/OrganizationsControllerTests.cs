@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Controllers;
-using Bit.Api.Controllers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -19,7 +18,7 @@ using Bit.Core.Settings;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.AdminConsole.Controllers;
 
 public class OrganizationsControllerTests : IDisposable
 {
