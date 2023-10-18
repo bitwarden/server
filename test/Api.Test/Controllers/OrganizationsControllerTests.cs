@@ -1,5 +1,6 @@
 ﻿using System.Security.Claims;
 using AutoFixture.Xunit2;
+using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.Controllers;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;

@@ -1,4 +1,6 @@
-﻿using Bit.Api.Controllers;
+﻿using Bit.Api.AdminConsole.Controllers;
+using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.Controllers;
 using Bit.Api.Models.Request;
 using Bit.Core.Context;
 using Bit.Core.Entities;
