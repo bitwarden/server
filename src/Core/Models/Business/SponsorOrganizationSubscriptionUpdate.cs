@@ -4,7 +4,7 @@ namespace Bit.Core.Models.Business;
 
 public class SponsorOrganizationSubscriptionUpdate : SubscriptionUpdate
 {
-     private readonly string _existingPlanStripeId;
+    private readonly string _existingPlanStripeId;
     private readonly string _sponsoredPlanStripeId;
     private readonly bool _applySponsorship;
     protected override List<string> PlanIds => new() { _existingPlanStripeId, _sponsoredPlanStripeId };

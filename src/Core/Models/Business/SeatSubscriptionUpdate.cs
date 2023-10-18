@@ -2,7 +2,7 @@
 
 namespace Bit.Core.Models.Business;
 
-public class SeatSubscriptionUpdate :BaseSeatSubscriptionUpdate
+public class SeatSubscriptionUpdate : BaseSeatSubscriptionUpdate
 {
     public SeatSubscriptionUpdate(Organization organization, StaticStore.Plan plan, long? additionalSeats)
         : base(organization, plan, additionalSeats, organization.Seats.GetValueOrDefault())
