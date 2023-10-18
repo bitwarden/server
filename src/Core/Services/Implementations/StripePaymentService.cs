@@ -49,7 +49,7 @@ public class StripePaymentService : IPaymentService
     }
 
     public async Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-        string paymentToken, List<StaticStore.Plan> plans, short additionalStorageGb,
+        string paymentToken, StaticStore.Plan plan, short additionalStorageGb,
         int additionalSeats, bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false,
         int additionalSmSeats = 0, int additionalServiceAccount = 0)
     {
@@ -119,7 +119,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plans, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
+        var subCreateOptions = new OrganizationPurchaseSubscriptionOptions(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon
         , additionalSmSeats, additionalServiceAccount);
 
         Stripe.Customer customer = null;
@@ -211,7 +211,7 @@ public class StripePaymentService : IPaymentService
 
     private async Task ChangeOrganizationSponsorship(Organization org, OrganizationSponsorship sponsorship, bool applySponsorship)
     {
-        var existingPlan = Utilities.StaticStore.GetPasswordManagerPlan(org.PlanType);
+        var existingPlan = Utilities.StaticStore.GetPlan(org.PlanType);
         var sponsoredPlan = sponsorship != null ?
             Utilities.StaticStore.GetSponsoredPlan(sponsorship.PlanSponsorshipType.Value) :
             null;
@@ -231,7 +231,7 @@ public class StripePaymentService : IPaymentService
     public Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship) =>
         ChangeOrganizationSponsorship(org, sponsorship, false);
 
-    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, List<StaticStore.Plan> plans,
+    public async Task<string> UpgradeFreeOrganizationAsync(Organization org, StaticStore.Plan plan,
         OrganizationUpgrade upgrade)
     {
         if (!string.IsNullOrWhiteSpace(org.GatewaySubscriptionId))
@@ -266,7 +266,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plans, upgrade);
+        var subCreateOptions = new OrganizationUpgradeSubscriptionOptions(customer.Id, org, plan, upgrade);
         var (stripePaymentMethod, paymentMethodType) = IdentifyPaymentMethod(customer, subCreateOptions);
 
         var subscription = await ChargeForNewSubscriptionAsync(org, customer, false,
@@ -1557,10 +1557,19 @@ public class StripePaymentService : IPaymentService
     {
         var subscriptionInfo = new SubscriptionInfo();
 
-        if (subscriber.IsUser() && !string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
+        if (!string.IsNullOrWhiteSpace(subscriber.GatewayCustomerId))
         {
             var customer = await _stripeAdapter.CustomerGetAsync(subscriber.GatewayCustomerId);
-            subscriptionInfo.UsingInAppPurchase = customer.Metadata.ContainsKey("appleReceipt");
+
+            if (customer.Discount != null)
+            {
+                subscriptionInfo.Discount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
+            }
+
+            if (subscriber.IsUser())
+            {
+                subscriptionInfo.UsingInAppPurchase = customer.Metadata.ContainsKey("appleReceipt");
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(subscriber.GatewaySubscriptionId))
