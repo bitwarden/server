@@ -5,7 +5,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 

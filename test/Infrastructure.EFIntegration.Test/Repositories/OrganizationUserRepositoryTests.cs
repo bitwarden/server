@@ -7,15 +7,12 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
-using ProviderOrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.ProviderOrganizationRepository;
-using ProviderRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.ProviderRepository;
-using ProviderUserRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.ProviderUserRepository;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -189,18 +186,18 @@ public class OrganizationUserRepositoryTests
         List<EfRepo.UserRepository> efUserRepository,
         List<EfRepo.OrganizationRepository> efOrganizationRepository,
         List<EfRepo.OrganizationUserRepository> suts,
-        List<ProviderRepository> efProviderRepository,
-        List<ProviderOrganizationRepository> efProviderOrganizationRepository,
-        List<ProviderUserRepository> efProviderUserRepository,
+        List<EfAdminConsoleRepo.ProviderRepository> efProviderRepository,
+        List<EfAdminConsoleRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
+        List<EfAdminConsoleRepo.ProviderUserRepository> efProviderUserRepository,
 
         // Auto data - SQL repos
         SqlRepo.PolicyRepository sqlPolicyRepo,
         SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,
-        Dapper.AdminConsole.Repositories.ProviderRepository sqlProviderRepo,
+        EfAdminConsoleRepo.ProviderRepository sqlProviderRepo,
         SqlRepo.OrganizationUserRepository sqlOrganizationUserRepo,
-        Dapper.AdminConsole.Repositories.ProviderOrganizationRepository sqlProviderOrganizationRepo,
-        Dapper.AdminConsole.Repositories.ProviderUserRepository sqlProviderUserRepo
+        EfAdminConsoleRepo.ProviderOrganizationRepository sqlProviderOrganizationRepo,
+        EfAdminConsoleRepo.ProviderUserRepository sqlProviderUserRepo
         )
     {
         // Combine EF and SQL repos into one list per type
