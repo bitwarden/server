@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Business;
 using Bit.Core.Utilities;
@@ -98,7 +97,6 @@ public class BillingSubscription
             Quantity = item.Quantity;
             SponsoredSubscriptionItem = item.SponsoredSubscriptionItem;
             AddonSubscriptionItem = item.AddonSubscriptionItem;
-            BitwardenProduct = item.BitwardenProduct;
         }
 
         public string Name { get; set; }
@@ -107,7 +105,6 @@ public class BillingSubscription
         public string Interval { get; set; }
         public bool SponsoredSubscriptionItem { get; set; }
         public bool AddonSubscriptionItem { get; set; }
-        public BitwardenProductType BitwardenProduct { get; set; }
     }
 }
 
