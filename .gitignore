@@ -226,3 +226,4 @@ src/Notifications/Notifications.zip
 bitwarden_license/src/Portal/Portal.zip
 bitwarden_license/src/Sso/Sso.zip
 src/Api/flags.json
+src/Identity/flags.json
