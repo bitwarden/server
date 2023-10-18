@@ -13,7 +13,6 @@
 **/Dockerfile @bitwarden/dept-devops
 **/*.Dockerfile @bitwarden/dept-devops
 **/.dockerignore @bitwarden/dept-devops
-**/prepare-env.sh @bitwarden/dept-devops
 
 ## Auth team files ##
 **/Auth @bitwarden/team-auth-dev
