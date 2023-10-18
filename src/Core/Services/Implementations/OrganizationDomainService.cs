@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
@@ -53,7 +54,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 {
                     _logger.LogInformation(Constants.BypassFiltersEventId, "Successfully validated domain");
 
-                    //update entry on OrganizationDomain table 
+                    //update entry on OrganizationDomain table
                     domain.SetLastCheckedDate();
                     domain.SetVerifiedDate();
                     domain.SetJobRunCount();
@@ -64,7 +65,7 @@ public class OrganizationDomainService : IOrganizationDomainService
                 }
                 else
                 {
-                    //update entry on OrganizationDomain table 
+                    //update entry on OrganizationDomain table
                     domain.SetLastCheckedDate();
                     domain.SetJobRunCount();
                     domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
@@ -78,7 +79,7 @@ public class OrganizationDomainService : IOrganizationDomainService
             }
             catch (Exception ex)
             {
-                //update entry on OrganizationDomain table 
+                //update entry on OrganizationDomain table
                 domain.SetLastCheckedDate();
                 domain.SetJobRunCount();
                 domain.SetNextRunDate(_globalSettings.DomainVerification.VerificationInterval);
@@ -117,7 +118,7 @@ public class OrganizationDomainService : IOrganizationDomainService
 
                 _logger.LogInformation(Constants.BypassFiltersEventId, "Expired domain: {domainName}", domain.DomainName);
             }
-            //delete domains that have not been verified within 7 days 
+            //delete domains that have not been verified within 7 days
             var status = await _domainRepository.DeleteExpiredAsync(_globalSettings.DomainVerification.ExpirationPeriod);
             _logger.LogInformation(Constants.BypassFiltersEventId, "Delete status {status}", status);
         }

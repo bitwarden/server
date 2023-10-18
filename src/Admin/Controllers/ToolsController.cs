@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;

@@ -1,6 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Public.Controllers;
 using Bit.Api.AdminConsole.Public.Models.Request;
 using Bit.Api.AdminConsole.Public.Models.Response;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;

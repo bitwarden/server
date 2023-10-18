@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;

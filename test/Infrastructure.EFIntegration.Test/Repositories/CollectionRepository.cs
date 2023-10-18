@@ -1,10 +1,12 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
+using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -18,9 +20,9 @@ public class CollectionRepositoryTests
         Organization organization,
         CollectionCompare equalityComparer,
         List<EfRepo.CollectionRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrganizationRepos,
+        List<OrganizationRepository> efOrganizationRepos,
         SqlRepo.CollectionRepository sqlCollectionRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo
+        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrganizationRepo
         )
     {
         var savedCollections = new List<Collection>();
