@@ -3,7 +3,7 @@ using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.Services.NoopImplementations;
 
 public class NoopProviderService : IProviderService
 {

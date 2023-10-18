@@ -1,12 +1,12 @@
 ﻿using AutoMapper;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class ProviderRepository : Repository<Provider, Models.Provider, Guid>, IProviderRepository
 {

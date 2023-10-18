@@ -1,8 +1,8 @@
 ﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.AdminConsole.Repositories;
 
 public interface IProviderRepository : IRepository<Provider, Guid>
 {

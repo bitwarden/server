@@ -6,6 +6,7 @@ using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;

@@ -1,13 +1,13 @@
 ﻿using System.Data;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class ProviderRepository : Repository<Provider, Guid>, IProviderRepository
 {

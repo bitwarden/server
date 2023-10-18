@@ -2,13 +2,14 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
-using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories.Queries;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class ProviderUserRepository :
     Repository<ProviderUser, Models.ProviderUser, Guid>, IProviderUserRepository
