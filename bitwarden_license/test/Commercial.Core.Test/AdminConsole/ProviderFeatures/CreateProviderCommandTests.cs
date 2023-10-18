@@ -1,4 +1,4 @@
-﻿using Bit.Commercial.Core.Providers;
+﻿using Bit.Commercial.Core.AdminConsole.Providers;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
@@ -10,7 +10,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Commercial.Core.Test.ProviderFeatures;
+namespace Bit.Commercial.Core.Test.AdminConsole.ProviderFeatures;
 
 [SutProviderCustomize]
 public class CreateProviderCommandTests

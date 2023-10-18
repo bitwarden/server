@@ -1,5 +1,5 @@
-﻿using Bit.Commercial.Core.Services;
-using Bit.Commercial.Core.Test.AutoFixture;
+﻿using Bit.Commercial.Core.AdminConsole.Services;
+using Bit.Commercial.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
@@ -20,7 +20,7 @@ using Xunit;
 using Provider = Bit.Core.Entities.Provider.Provider;
 using ProviderUser = Bit.Core.Entities.Provider.ProviderUser;
 
-namespace Bit.Commercial.Core.Test.Services;
+namespace Bit.Commercial.Core.Test.AdminConsole.Services;
 
 [SutProviderCustomize]
 public class ProviderServiceTests
