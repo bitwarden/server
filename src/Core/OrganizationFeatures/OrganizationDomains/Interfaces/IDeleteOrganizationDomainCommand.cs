@@ -1,6 +1,8 @@
-﻿namespace Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
+﻿using Bit.Core.Entities;
+
+namespace Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 
 public interface IDeleteOrganizationDomainCommand
 {
-    Task DeleteAsync(Guid id);
+    Task DeleteAsync(OrganizationDomain organizationDomain);
 }
