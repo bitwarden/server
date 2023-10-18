@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+﻿using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Repositories;
 using Bit.Scim.Users.Interfaces;
 
 namespace Bit.Scim.Users;

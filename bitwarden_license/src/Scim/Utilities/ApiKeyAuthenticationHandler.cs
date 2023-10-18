@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Encodings.Web;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Scim.Context;
 using IdentityModel;
 using Microsoft.AspNetCore.Authentication;

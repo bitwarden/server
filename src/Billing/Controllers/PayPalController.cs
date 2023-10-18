@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using Bit.Billing.Utilities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;

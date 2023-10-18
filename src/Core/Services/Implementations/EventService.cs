@@ -1,10 +1,10 @@
-﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Entities;

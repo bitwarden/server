@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Controllers;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Entities;

@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
 
 namespace Bit.Scim.Groups;

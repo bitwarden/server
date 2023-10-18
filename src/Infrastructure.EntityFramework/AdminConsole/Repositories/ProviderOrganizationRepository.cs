@@ -1,7 +1,7 @@
 ﻿using AutoMapper;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Data;
+using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;

@@ -1,10 +1,10 @@
 ﻿using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Providers.Interfaces;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Services;

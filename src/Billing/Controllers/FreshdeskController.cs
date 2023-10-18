@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Text;
 using System.Web;
 using Bit.Billing.Models;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;

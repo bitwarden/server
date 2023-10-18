@@ -1,8 +1,8 @@
-﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Scim.Models;
 using Bit.Scim.Users;

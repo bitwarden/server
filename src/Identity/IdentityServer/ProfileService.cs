@@ -1,7 +1,7 @@
 ﻿using System.Security.Claims;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Identity;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using IdentityServer4.Models;

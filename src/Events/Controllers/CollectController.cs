@@ -1,6 +1,6 @@
-﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Context;
+﻿using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;

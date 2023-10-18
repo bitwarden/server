@@ -2,9 +2,8 @@
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Repositories;
 
-namespace Bit.Core.AdminConsole.Repositories;
+namespace Bit.Core.Repositories;
 
 public interface IOrganizationUserRepository : IRepository<OrganizationUser, Guid>
 {

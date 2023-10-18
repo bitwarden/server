@@ -1,9 +1,8 @@
 ﻿using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Data;
-using Bit.Core.Repositories;
 
-namespace Bit.Core.AdminConsole.Repositories;
+namespace Bit.Core.Repositories;
 
 public interface IProviderUserRepository : IRepository<ProviderUser, Guid>
 {

@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Entities.Provider;
+﻿using Bit.Core.Entities.Provider;
 using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Providers.Interfaces;

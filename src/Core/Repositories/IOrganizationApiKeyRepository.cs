@@ -1,8 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Repositories;
 
-namespace Bit.Core.AdminConsole.Repositories;
+namespace Bit.Core.Repositories;
 
 public interface IOrganizationApiKeyRepository : IRepository<OrganizationApiKey, Guid>
 {

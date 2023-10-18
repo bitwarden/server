@@ -1,6 +1,5 @@
 ﻿using Bit.Billing.Controllers;
 using Bit.Billing.Models;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;

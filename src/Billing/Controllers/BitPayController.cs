@@ -1,6 +1,5 @@
 ﻿using System.Globalization;
 using Bit.Billing.Models;
-using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;

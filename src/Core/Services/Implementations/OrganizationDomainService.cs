@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Enums;
+﻿using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;

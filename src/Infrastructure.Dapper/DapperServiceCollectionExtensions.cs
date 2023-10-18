@@ -1,5 +1,4 @@
-﻿using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Repositories;
+﻿using Bit.Core.Auth.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Tools.Repositories;
