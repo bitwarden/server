@@ -1,6 +1,8 @@
 ﻿using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Api.Models.Response.Organizations;
+using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -31,6 +33,10 @@ public class OrganizationUsersController : Controller
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IFeatureService _featureService;
+    private readonly IAuthorizationService _authorizationService;
+
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -43,7 +49,9 @@ public class OrganizationUsersController : Controller
         ICurrentContext currentContext,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand)
+        IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IFeatureService featureService,
+        IAuthorizationService authorizationService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -56,6 +64,8 @@ public class OrganizationUsersController : Controller
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _featureService = featureService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet("{id}")]
@@ -78,18 +88,20 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpGet("")]
-    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(string orgId, bool includeGroups = false, bool includeCollections = false)
+    public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
-        var orgGuidId = new Guid(orgId);
-        if (!await _currentContext.ViewAllCollections(orgGuidId) &&
-            !await _currentContext.ViewAssignedCollections(orgGuidId) &&
-            !await _currentContext.ManageGroups(orgGuidId) &&
-            !await _currentContext.ManageUsers(orgGuidId))
+        var authorized = FlexibleCollectionsIsEnabled ?
+            (await _authorizationService.AuthorizeAsync(User, orgId, OrganizationUserOperations.Read(orgId))).Succeeded :
+            await _currentContext.ViewAllCollections(orgId) ||
+            await _currentContext.ViewAssignedCollections(orgId) ||
+            await _currentContext.ManageGroups(orgId) ||
+            await _currentContext.ManageUsers(orgId);
+        if (!authorized)
         {
             throw new NotFoundException();
         }
 
-        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgGuidId, includeGroups, includeCollections);
+        var organizationUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(orgId, includeGroups, includeCollections);
         var responseTasks = organizationUsers.Select(async o => new OrganizationUserUserDetailsResponseModel(o,
             await _userService.TwoFactorIsEnabledAsync(o)));
         var responses = await Task.WhenAll(responseTasks);
