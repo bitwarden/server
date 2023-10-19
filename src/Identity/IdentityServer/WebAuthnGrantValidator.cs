@@ -18,13 +18,13 @@ using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
-public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValidationContext>, IExtensionGrantValidator
+public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidationContext>, IExtensionGrantValidator
 {
     public const string GrantType = "webauthn";
 
     private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
 
-    public ExtensionGrantValidator(
+    public WebAuthnGrantValidator(
         UserManager<User> userManager,
         IDeviceRepository deviceRepository,
         IDeviceService deviceService,
