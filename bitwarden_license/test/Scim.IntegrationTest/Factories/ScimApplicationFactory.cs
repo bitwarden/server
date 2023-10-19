@@ -196,11 +196,11 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
         };
     }
 
-    private List<Infrastructure.EntityFramework.Models.Organization> GetSeedingOrganizations()
+    private List<Infrastructure.EntityFramework.AdminConsole.Models.Organization> GetSeedingOrganizations()
     {
-        return new List<Infrastructure.EntityFramework.Models.Organization>()
+        return new List<Infrastructure.EntityFramework.AdminConsole.Models.Organization>()
         {
-            new Infrastructure.EntityFramework.Models.Organization { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
+            new() { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
         };
     }
 
