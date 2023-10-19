@@ -593,10 +593,10 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return Task.FromResult(options);
     }
 
-    public async Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user)
+    public async Task<User> CompleteWebAuthLoginAssertionAsync(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse)
     {
-        // TODO: Get options from user record somehow, then clear them
-        var options = AssertionOptions.FromJson("");
+        var userId = new Guid(assertionResponse.Response.UserHandle);
+        var user = await _userRepository.GetByIdAsync(userId);
 
         var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
@@ -618,8 +618,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
         if (assertionVerificationResult.Status == "ok")
         {
-            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user));
-            return token;
+            return user;
         }
         else
         {
