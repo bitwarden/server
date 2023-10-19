@@ -54,9 +54,6 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
-    private readonly IFeatureService _featureService;
-
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -85,8 +82,7 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        IFeatureService featureService)
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -115,7 +111,6 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
-        _featureService = featureService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -2138,17 +2133,9 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.DeleteAssignedCollections)
+        if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
         {
-            if (FlexibleCollectionsIsEnabled)
-            {
-                throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
-            }
-
-            if (!await _currentContext.DeleteAssignedCollections(organizationId))
-            {
-                return false;
-            }
+            return false;
         }
 
         if (permissions.EditAnyCollection && !await _currentContext.EditAnyCollection(organizationId))
@@ -2156,17 +2143,9 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.EditAssignedCollections)
+        if (permissions.EditAssignedCollections && !await _currentContext.EditAssignedCollections(organizationId))
         {
-            if (FlexibleCollectionsIsEnabled)
-            {
-                throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
-            }
-
-            if (!await _currentContext.EditAssignedCollections(organizationId))
-            {
-                return false;
-            }
+            return false;
         }
 
         if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
