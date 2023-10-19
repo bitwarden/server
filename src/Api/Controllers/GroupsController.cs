@@ -1,6 +1,5 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
-using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -26,7 +25,6 @@ public class GroupsController : Controller
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly IFeatureService _featureService;
-    private readonly IAuthorizationService _authorizationService;
 
     private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
@@ -49,7 +47,6 @@ public class GroupsController : Controller
         _updateGroupCommand = updateGroupCommand;
         _deleteGroupCommand = deleteGroupCommand;
         _featureService = featureService;
-        _authorizationService = authorizationService;
     }
 
     [HttpGet("{id}")]
@@ -84,11 +81,6 @@ public class GroupsController : Controller
         if (FlexibleCollectionsIsEnabled)
         {
             groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
-            var authorized = (await _authorizationService.AuthorizeAsync(User, groups.Select(g => g.Item1), GroupOperations.Read)).Succeeded;
-            if (!authorized)
-            {
-                throw new NotFoundException();
-            }
         }
         else
         {
