@@ -2,11 +2,10 @@
 using System.Security.Claims;
 using Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -38,26 +37,16 @@ public class ServiceAccountPeopleAccessPoliciesAuthorizationHandlerTests
 
     private static void SetupOrganizationUsers(
         SutProvider<ServiceAccountPeopleAccessPoliciesAuthorizationHandler> sutProvider,
-        ServiceAccountPeopleAccessPolicies resource)
-    {
-        var orgUsers = resource.UserAccessPolicies.Select(userPolicy =>
-            new OrganizationUser
-            {
-                OrganizationId = resource.OrganizationId,
-                Id = userPolicy.OrganizationUserId!.Value
-            }).ToList();
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default)
-            .ReturnsForAnyArgs(orgUsers);
-    }
+        ServiceAccountPeopleAccessPolicies resource) =>
+        sutProvider.GetDependency<ISameOrganizationQuery>()
+            .OrgUsersInTheSameOrgAsync(Arg.Any<List<Guid>>(), resource.OrganizationId)
+            .Returns(true);
 
     private static void SetupGroups(SutProvider<ServiceAccountPeopleAccessPoliciesAuthorizationHandler> sutProvider,
-        ServiceAccountPeopleAccessPolicies resource)
-    {
-        var groups = resource.GroupAccessPolicies.Select(groupPolicy =>
-            new Group { OrganizationId = resource.OrganizationId, Id = groupPolicy.GroupId!.Value }).ToList();
-        sutProvider.GetDependency<IGroupRepository>().GetManyByManyIds(default)
-            .ReturnsForAnyArgs(groups);
-    }
+        ServiceAccountPeopleAccessPolicies resource) =>
+        sutProvider.GetDependency<ISameOrganizationQuery>()
+            .GroupsInTheSameOrgAsync(Arg.Any<List<Guid>>(), resource.OrganizationId)
+            .Returns(true);
 
     [Fact]
     public void ServiceAccountPeopleAccessPoliciesOperations_OnlyPublicStatic()
@@ -133,38 +122,9 @@ public class ServiceAccountPeopleAccessPoliciesAuthorizationHandlerTests
     {
         var requirement = ServiceAccountPeopleAccessPoliciesOperations.Replace;
         SetupUserPermission(sutProvider, accessClient, resource, userId);
-        var orgUsers = resource.UserAccessPolicies.Select(userPolicy =>
-                new OrganizationUser { OrganizationId = Guid.NewGuid(), Id = userPolicy.OrganizationUserId!.Value })
-            .ToList();
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default)
-            .ReturnsForAnyArgs(orgUsers);
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
-
-        await sutProvider.Sut.HandleAsync(authzContext);
-
-        Assert.False(authzContext.HasSucceeded);
-    }
-
-    [Theory]
-    [BitAutoData(AccessClientType.User)]
-    [BitAutoData(AccessClientType.NoAccessCheck)]
-    public async Task ReplaceServiceAccountPeople_UserCountMismatch_DoesNotSucceed(AccessClientType accessClient,
-        SutProvider<ServiceAccountPeopleAccessPoliciesAuthorizationHandler> sutProvider,
-        ServiceAccountPeopleAccessPolicies resource,
-        ClaimsPrincipal claimsPrincipal, Guid userId)
-    {
-        var requirement = ServiceAccountPeopleAccessPoliciesOperations.Replace;
-        SetupUserPermission(sutProvider, accessClient, resource, userId);
-        var orgUsers = resource.UserAccessPolicies.Select(userPolicy =>
-            new OrganizationUser
-            {
-                OrganizationId = resource.OrganizationId,
-                Id = userPolicy.OrganizationUserId!.Value
-            }).ToList();
-        orgUsers.RemoveAt(0);
-        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyAsync(default)
-            .ReturnsForAnyArgs(orgUsers);
+        sutProvider.GetDependency<ISameOrganizationQuery>()
+            .OrgUsersInTheSameOrgAsync(Arg.Any<List<Guid>>(), resource.OrganizationId)
+            .Returns(false);
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);
 
@@ -185,36 +145,8 @@ public class ServiceAccountPeopleAccessPoliciesAuthorizationHandlerTests
         SetupUserPermission(sutProvider, accessClient, resource, userId);
         SetupOrganizationUsers(sutProvider, resource);
 
-        var groups = resource.GroupAccessPolicies.Select(groupPolicy =>
-            new Group { OrganizationId = Guid.NewGuid(), Id = groupPolicy.GroupId!.Value }).ToList();
-        sutProvider.GetDependency<IGroupRepository>().GetManyByManyIds(default)
-            .ReturnsForAnyArgs(groups);
-
-        var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
-            claimsPrincipal, resource);
-
-        await sutProvider.Sut.HandleAsync(authzContext);
-
-        Assert.False(authzContext.HasSucceeded);
-    }
-
-    [Theory]
-    [BitAutoData(AccessClientType.User)]
-    [BitAutoData(AccessClientType.NoAccessCheck)]
-    public async Task ReplaceServiceAccountPeople_GroupCountMismatch_DoesNotSucceed(AccessClientType accessClient,
-        SutProvider<ServiceAccountPeopleAccessPoliciesAuthorizationHandler> sutProvider,
-        ServiceAccountPeopleAccessPolicies resource,
-        ClaimsPrincipal claimsPrincipal, Guid userId)
-    {
-        var requirement = ServiceAccountPeopleAccessPoliciesOperations.Replace;
-        SetupUserPermission(sutProvider, accessClient, resource, userId);
-        SetupOrganizationUsers(sutProvider, resource);
-
-        var groups = resource.GroupAccessPolicies.Select(groupPolicy =>
-            new Group { OrganizationId = resource.OrganizationId, Id = groupPolicy.GroupId!.Value }).ToList();
-        groups.RemoveAt(0);
-        sutProvider.GetDependency<IGroupRepository>().GetManyByManyIds(default)
-            .ReturnsForAnyArgs(groups);
+        sutProvider.GetDependency<ISameOrganizationQuery>()
+            .GroupsInTheSameOrgAsync(Arg.Any<List<Guid>>(), resource.OrganizationId).Returns(false);
 
         var authzContext = new AuthorizationHandlerContext(new List<IAuthorizationRequirement> { requirement },
             claimsPrincipal, resource);

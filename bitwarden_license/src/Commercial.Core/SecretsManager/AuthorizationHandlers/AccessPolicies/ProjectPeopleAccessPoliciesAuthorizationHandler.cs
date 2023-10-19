@@ -1,8 +1,8 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Enums;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Microsoft.AspNetCore.Authorization;
@@ -10,25 +10,23 @@ using Microsoft.AspNetCore.Authorization;
 namespace Bit.Commercial.Core.SecretsManager.AuthorizationHandlers.AccessPolicies;
 
 public class
-    ProjectPeopleAccessPoliciesAuthorizationHandler : AuthorizationHandler<ProjectPeopleAccessPoliciesOperationRequirement,
+    ProjectPeopleAccessPoliciesAuthorizationHandler : AuthorizationHandler<
+        ProjectPeopleAccessPoliciesOperationRequirement,
         ProjectPeopleAccessPolicies>
 {
     private readonly IAccessClientQuery _accessClientQuery;
     private readonly ICurrentContext _currentContext;
-    private readonly IGroupRepository _groupRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IProjectRepository _projectRepository;
+    private readonly ISameOrganizationQuery _sameOrganizationQuery;
 
     public ProjectPeopleAccessPoliciesAuthorizationHandler(ICurrentContext currentContext,
         IAccessClientQuery accessClientQuery,
-        IGroupRepository groupRepository,
-        IOrganizationUserRepository organizationUserRepository,
+        ISameOrganizationQuery sameOrganizationQuery,
         IProjectRepository projectRepository)
     {
         _currentContext = currentContext;
         _accessClientQuery = accessClientQuery;
-        _groupRepository = groupRepository;
-        _organizationUserRepository = organizationUserRepository;
+        _sameOrganizationQuery = sameOrganizationQuery;
         _projectRepository = projectRepository;
     }
 
@@ -70,9 +68,7 @@ public class
             if (resource.UserAccessPolicies != null && resource.UserAccessPolicies.Any())
             {
                 var orgUserIds = resource.UserAccessPolicies.Select(ap => ap.OrganizationUserId!.Value).ToList();
-                var users = await _organizationUserRepository.GetManyAsync(orgUserIds);
-                if (users.Any(user => user.OrganizationId != resource.OrganizationId) ||
-                    users.Count != orgUserIds.Count)
+                if (!await _sameOrganizationQuery.OrgUsersInTheSameOrgAsync(orgUserIds, resource.OrganizationId))
                 {
                     return;
                 }
@@ -81,9 +77,7 @@ public class
             if (resource.GroupAccessPolicies != null && resource.GroupAccessPolicies.Any())
             {
                 var groupIds = resource.GroupAccessPolicies.Select(ap => ap.GroupId!.Value).ToList();
-                var groups = await _groupRepository.GetManyByManyIds(groupIds);
-                if (groups.Any(group => group.OrganizationId != resource.OrganizationId) ||
-                    groups.Count != groupIds.Count)
+                if (!await _sameOrganizationQuery.GroupsInTheSameOrgAsync(groupIds, resource.OrganizationId))
                 {
                     return;
                 }
