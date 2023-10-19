@@ -782,7 +782,7 @@ public class OrganizationsController : Controller
     {
         var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
 
-        if (organizationUser is { Status: OrganizationUserStatusType.Confirmed, Type: OrganizationUserType.Owner })
+        if (organizationUser != null)
         {
             organizationUser.AccessSecretsManager = true;
             await _organizationUserRepository.ReplaceAsync(organizationUser);
