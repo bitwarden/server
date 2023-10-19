@@ -1,8 +1,8 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.Groups;
-using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Test.Common.AutoFixture;
@@ -10,7 +10,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.Groups;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.Groups;
 
 [SutProviderCustomize]
 public class DeleteGroupCommandTests
@@ -42,7 +42,7 @@ public class DeleteGroupCommandTests
     {
         sutProvider.GetDependency<IGroupRepository>()
             .GetByIdAsync(groupId)
-            .Returns(new Core.Entities.Group
+            .Returns(new Group
             {
                 Id = groupId,
                 OrganizationId = Guid.NewGuid()
