@@ -15,12 +15,11 @@ public class DiscoveryResponseGenerator : IdentityServer4.ResponseHandling.Disco
         IdentityServerOptions options,
         IResourceStore resourceStore,
         IKeyMaterialService keys,
-        ExtensionGrantValidator extensionGrants,
         ISecretsListParser secretParsers,
         IResourceOwnerPasswordValidator resourceOwnerValidator,
         ILogger<DiscoveryResponseGenerator> logger,
         GlobalSettings globalSettings)
-        : base(options, resourceStore, keys, extensionGrants, secretParsers, resourceOwnerValidator, logger)
+        : base(options, resourceStore, keys, secretParsers, resourceOwnerValidator, logger)
     {
         _globalSettings = globalSettings;
     }
