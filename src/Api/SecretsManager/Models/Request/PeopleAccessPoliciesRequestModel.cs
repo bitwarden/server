@@ -83,6 +83,11 @@ public class PeopleAccessPoliciesRequestModel
 
         CheckForDistinctAccessPolicies(policies);
 
+        if (!policies.All(ap => ap.Read && ap.Write))
+        {
+            throw new BadRequestException("Service account access must be Can read, write");
+        }
+
         return new ServiceAccountPeopleAccessPolicies
         {
             Id = grantedServiceAccountId,
