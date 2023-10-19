@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Api.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
@@ -42,7 +43,7 @@ public class EventsController : Controller
     public async Task<ListResponseModel<EventResponseModel>> GetUser(
         [FromQuery] DateTime? start = null, [FromQuery] DateTime? end = null, [FromQuery] string continuationToken = null)
     {
-        var dateRange = GetDateRange(start, end);
+        var dateRange = ApiHelpers.GetDateRange(start, end);
         var userId = _userService.GetProperUserId(User).Value;
         var result = await _eventRepository.GetManyByUserAsync(userId, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
@@ -76,7 +77,7 @@ public class EventsController : Controller
             throw new NotFoundException();
         }
 
-        var dateRange = GetDateRange(start, end);
+        var dateRange = ApiHelpers.GetDateRange(start, end);
         var result = await _eventRepository.GetManyByCipherAsync(cipher, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
@@ -93,7 +94,7 @@ public class EventsController : Controller
             throw new NotFoundException();
         }
 
-        var dateRange = GetDateRange(start, end);
+        var dateRange = ApiHelpers.GetDateRange(start, end);
         var result = await _eventRepository.GetManyByOrganizationAsync(orgId, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
@@ -111,7 +112,7 @@ public class EventsController : Controller
             throw new NotFoundException();
         }
 
-        var dateRange = GetDateRange(start, end);
+        var dateRange = ApiHelpers.GetDateRange(start, end);
         var result = await _eventRepository.GetManyByOrganizationActingUserAsync(organizationUser.OrganizationId,
             organizationUser.UserId.Value, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
@@ -128,7 +129,7 @@ public class EventsController : Controller
             throw new NotFoundException();
         }
 
-        var dateRange = GetDateRange(start, end);
+        var dateRange = ApiHelpers.GetDateRange(start, end);
         var result = await _eventRepository.GetManyByProviderAsync(providerId, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
@@ -146,33 +147,11 @@ public class EventsController : Controller
             throw new NotFoundException();
         }
 
-        var dateRange = GetDateRange(start, end);
+        var dateRange = ApiHelpers.GetDateRange(start, end);
         var result = await _eventRepository.GetManyByProviderActingUserAsync(providerUser.ProviderId,
             providerUser.UserId.Value, dateRange.Item1, dateRange.Item2,
             new PageOptions { ContinuationToken = continuationToken });
         var responses = result.Data.Select(e => new EventResponseModel(e));
         return new ListResponseModel<EventResponseModel>(responses, result.ContinuationToken);
-    }
-
-    private Tuple<DateTime, DateTime> GetDateRange(DateTime? start, DateTime? end)
-    {
-        if (!end.HasValue || !start.HasValue)
-        {
-            end = DateTime.UtcNow.Date.AddDays(1).AddMilliseconds(-1);
-            start = DateTime.UtcNow.Date.AddDays(-30);
-        }
-        else if (start.Value > end.Value)
-        {
-            var newEnd = start;
-            start = end;
-            end = newEnd;
-        }
-
-        if ((end.Value - start.Value) > TimeSpan.FromDays(367))
-        {
-            throw new BadRequestException("Range too large.");
-        }
-
-        return new Tuple<DateTime, DateTime>(start.Value, end.Value);
     }
 }
