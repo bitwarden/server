@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
 namespace Bit.Infrastructure.EntityFramework.SecretsManager.Models;
 
