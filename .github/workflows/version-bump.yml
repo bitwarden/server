@@ -23,7 +23,7 @@ jobs:
 
       - name: Retrieve secrets
         id: retrieve-secrets
-        uses: bitwarden/gh-actions/get-keyvault-secrets@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
+        uses: bitwarden/gh-actions/get-keyvault-secrets@c970b0fb89bd966749280e832928db62040812bf
         with:
           keyvault: "bitwarden-ci"
           secrets: "github-gpg-private-key, github-gpg-private-key-passphrase"
@@ -40,10 +40,13 @@ jobs:
         run: git switch -c version_bump_${{ github.event.inputs.version_number }}
 
       - name: Bump Version - Props
-        uses: bitwarden/gh-actions/version-bump@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
+        uses: bitwarden/gh-actions/version-bump@c970b0fb89bd966749280e832928db62040812bf
         with:
           version: ${{ github.event.inputs.version_number }}
           file_path: "Directory.Build.props"
+
+      - name: Refresh lockfiles
+        run: dotnet restore -f --force-evaluate --no-cache
 
       - name: Setup git
         run: |
