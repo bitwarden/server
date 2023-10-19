@@ -1,7 +1,7 @@
 ﻿using System.Data;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Core.Models.Data;
+namespace Bit.Core.AdminConsole.Models.Data;
 
 public class GroupWithCollections : Group
 {

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;

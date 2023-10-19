@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
+namespace Bit.Infrastructure.EFIntegration.Test.AdminConsole.Repositories.EqualityComparers;
 
 public class GroupCompare : IEqualityComparer<Group>
 {

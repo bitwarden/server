@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Entities;
 using Bit.Core.Models;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.AdminConsole.Entities;
 
 public class Group : ITableObject<Guid>, IExternal
 {

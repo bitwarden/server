@@ -1,7 +1,7 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.Services;
 
 public interface IGroupService
 {
