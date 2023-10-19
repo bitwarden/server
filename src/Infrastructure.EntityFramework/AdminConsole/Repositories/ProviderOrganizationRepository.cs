@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
 public class ProviderOrganizationRepository :
-    Repository<ProviderOrganization, Models.ProviderOrganization, Guid>, IProviderOrganizationRepository
+    Repository<ProviderOrganization, Models.Provider.ProviderOrganization, Guid>, IProviderOrganizationRepository
 {
     public ProviderOrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, context => context.ProviderOrganizations)
