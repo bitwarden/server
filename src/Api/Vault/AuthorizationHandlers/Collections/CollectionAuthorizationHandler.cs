@@ -20,6 +20,8 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private readonly ICollectionRepository _collectionRepository;
     private readonly IFeatureService _featureService;
 
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
     public CollectionAuthorizationHandler(ICurrentContext currentContext, ICollectionRepository collectionRepository,
         IFeatureService featureService)
     {
@@ -31,14 +33,14 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         CollectionOperationRequirement requirement, ICollection<Collection> resources)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
+        if (!FlexibleCollectionsIsEnabled)
         {
             // Flexible collections is OFF, should not be using this handler
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
         }
 
         // Establish pattern of authorization handler null checking passed resources
-        if (resources == null || !resources.Any())
+        if (resources == null)
         {
             context.Fail();
             return;
@@ -72,12 +74,20 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
                 await CanCreateAsync(context, requirement, org);
                 break;
 
+            case not null when requirement.Name == nameof(CollectionOperations.ReadAll):
+                await CanReadAllAsync(context, requirement, org);
+                break;
+
             case not null when requirement == CollectionOperations.Delete:
                 await CanDeleteAsync(context, requirement, resources, org);
                 break;
 
             case not null when requirement == CollectionOperations.ModifyAccess:
                 await CanManageCollectionAccessAsync(context, requirement, resources, org);
+                break;
+
+            default:
+                context.Fail();
                 break;
         }
     }
@@ -97,6 +107,23 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
             org.Permissions is { CreateNewCollections: true } ||
             await _currentContext.ProviderUserForOrgAsync(org.Id))
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
+        context.Fail();
+    }
+
+    private async Task CanReadAllAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
+        CurrentContextOrganization org)
+    {
+        if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
+            org.Permissions.ManageGroups ||
+            org.Permissions.ManageUsers ||
+            org.Permissions.EditAnyCollection ||
+            org.Permissions.DeleteAnyCollection ||
+            org.Permissions.AccessImportExport)
         {
             context.Succeed(requirement);
             return;

@@ -7,6 +7,8 @@ public class CollectionOperationRequirement : OperationAuthorizationRequirement 
 public static class CollectionOperations
 {
     public static readonly CollectionOperationRequirement Create = new() { Name = nameof(Create) };
+    public static readonly CollectionOperationRequirement ReadAll = new() { Name = nameof(ReadAll) };
+    public static readonly CollectionOperationRequirement Update = new() { Name = nameof(Update) };
     public static readonly CollectionOperationRequirement Delete = new() { Name = nameof(Delete) };
     /// <summary>
     /// The operation that represents creating, updating, or removing collection access.

@@ -95,7 +95,9 @@ public class CollectionsController : Controller
     [HttpGet("details")]
     public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
     {
-        if (!await ViewAtLeastOneCollectionAsync(orgId) && !await _currentContext.ManageUsers(orgId) &&
+        if (!FlexibleCollectionsIsEnabled &&
+            !await ViewAtLeastOneCollectionAsync(orgId) &&
+            !await _currentContext.ManageUsers(orgId) &&
             !await _currentContext.ManageGroups(orgId))
         {
             throw new NotFoundException();
@@ -130,7 +132,22 @@ public class CollectionsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
     {
-        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
+        IEnumerable<Collection> orgCollections;
+
+        if (FlexibleCollectionsIsEnabled)
+        {
+            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
+            var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, orgCollections, CollectionOperations.ReadAll)).Succeeded;
+            if (!readAllAuthorized)
+            {
+                var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+                orgCollections = collections.Where(c => c.OrganizationId == orgId);
+            }
+        }
+        else
+        {
+            orgCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
+        }
 
         var responses = orgCollections.Select(c => new CollectionResponseModel(c));
         return new ListResponseModel<CollectionResponseModel>(responses);
