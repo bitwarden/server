@@ -12,6 +12,7 @@ using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;

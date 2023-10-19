@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Core.Models.Business;
+namespace Bit.Core.AdminConsole.Models.Business;
 
 public class OrganizationSignup : OrganizationUpgrade
 {

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Business;
 using Stripe;
 using Plan = Bit.Core.Models.StaticStore.Plan;
 

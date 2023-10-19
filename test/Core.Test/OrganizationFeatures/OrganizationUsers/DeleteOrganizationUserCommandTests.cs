@@ -1,9 +1,9 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;

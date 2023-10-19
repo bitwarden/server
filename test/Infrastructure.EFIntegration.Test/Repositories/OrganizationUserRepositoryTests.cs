@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
@@ -7,6 +8,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
+using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
@@ -22,9 +24,9 @@ public class OrganizationUserRepositoryTests
     [CiSkippedTheory, EfOrganizationUserAutoData]
     public async void CreateAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org,
         OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
-        List<EfRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
+        List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+        OrganizationRepository sqlOrgRepo)
     {
         var savedOrgUsers = new List<OrganizationUser>();
         foreach (var sut in suts)
@@ -66,10 +68,10 @@ public class OrganizationUserRepositoryTests
         OrganizationUserCompare equalityComparer,
         List<EfRepo.OrganizationUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
-        List<EfRepo.OrganizationRepository> efOrgRepos,
+        List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo,
         SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo
+        OrganizationRepository sqlOrgRepo
         )
     {
         var savedOrgUsers = new List<OrganizationUser>();
@@ -111,9 +113,9 @@ public class OrganizationUserRepositoryTests
 
     [CiSkippedTheory, EfOrganizationUserAutoData]
     public async void DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfRepo.OrganizationUserRepository> suts,
-        List<EfRepo.UserRepository> efUserRepos, List<EfRepo.OrganizationRepository> efOrgRepos,
+        List<EfRepo.UserRepository> efUserRepos, List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrgRepo)
+        OrganizationRepository sqlOrgRepo)
     {
         foreach (var sut in suts)
         {
@@ -184,7 +186,7 @@ public class OrganizationUserRepositoryTests
         // Auto data - EF repos
         List<EfRepo.PolicyRepository> efPolicyRepository,
         List<EfRepo.UserRepository> efUserRepository,
-        List<EfRepo.OrganizationRepository> efOrganizationRepository,
+        List<EfAdminConsoleRepo.OrganizationRepository> efOrganizationRepository,
         List<EfRepo.OrganizationUserRepository> suts,
         List<EfAdminConsoleRepo.ProviderRepository> efProviderRepository,
         List<EfAdminConsoleRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
@@ -193,7 +195,7 @@ public class OrganizationUserRepositoryTests
         // Auto data - SQL repos
         SqlRepo.PolicyRepository sqlPolicyRepo,
         SqlRepo.UserRepository sqlUserRepo,
-        SqlRepo.OrganizationRepository sqlOrganizationRepo,
+        OrganizationRepository sqlOrganizationRepo,
         EfAdminConsoleRepo.ProviderRepository sqlProviderRepo,
         SqlRepo.OrganizationUserRepository sqlOrganizationUserRepo,
         EfAdminConsoleRepo.ProviderOrganizationRepository sqlProviderOrganizationRepo,

@@ -1,13 +1,13 @@
 ﻿using System.Security.Claims;
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;

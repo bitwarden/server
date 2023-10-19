@@ -1,5 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text.Json.Serialization;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;

@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;

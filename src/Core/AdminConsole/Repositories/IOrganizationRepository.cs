@@ -1,7 +1,8 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.Organizations;
+using Bit.Core.Repositories;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.AdminConsole.Repositories;
 
 public interface IOrganizationRepository : IRepository<Organization, Guid>
 {

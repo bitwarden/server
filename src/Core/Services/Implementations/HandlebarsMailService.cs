@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Reflection;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Business;

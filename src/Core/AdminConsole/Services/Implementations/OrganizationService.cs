@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.Repositories;
@@ -17,6 +18,7 @@ using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -26,7 +28,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.Services.Implementations;
 
 public class OrganizationService : IOrganizationService
 {
@@ -1941,7 +1943,7 @@ public class OrganizationService : IOrganizationService
         return await _organizationRepository.GetByIdAsync(id);
     }
 
-    private static void ValidatePlan(Models.StaticStore.Plan plan, int additionalSeats, string productType)
+    private static void ValidatePlan(Core.Models.StaticStore.Plan plan, int additionalSeats, string productType)
     {
         if (plan is not { LegacyYear: null })
         {
@@ -1959,7 +1961,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    public void ValidatePasswordManagerPlan(Core.Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
         ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
 
@@ -2001,7 +2003,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
+    public void ValidateSecretsManagerPlan(Core.Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
         if (plan.SupportsSecretsManager == false)
         {

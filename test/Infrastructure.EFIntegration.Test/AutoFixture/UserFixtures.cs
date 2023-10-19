@@ -1,5 +1,6 @@
 ﻿using AutoFixture;
 using Bit.Core.Test.AutoFixture.UserFixtures;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Test.Common.AutoFixture.Attributes;
 

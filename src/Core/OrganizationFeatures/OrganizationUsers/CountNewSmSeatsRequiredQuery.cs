@@ -1,4 +1,5 @@
-﻿using Bit.Core.Exceptions;
+﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 

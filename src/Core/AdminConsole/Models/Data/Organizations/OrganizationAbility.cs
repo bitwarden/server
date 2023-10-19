@@ -1,6 +1,6 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 
-namespace Bit.Core.Models.Data.Organizations;
+namespace Bit.Core.AdminConsole.Models.Data.Organizations;
 
 public class OrganizationAbility
 {

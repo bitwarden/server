@@ -4,6 +4,7 @@ using Bit.Admin.Services;
 using Bit.Admin.Utilities;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
