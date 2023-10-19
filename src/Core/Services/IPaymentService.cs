@@ -9,12 +9,12 @@ public interface IPaymentService
 {
     Task CancelAndRecoverChargesAsync(ISubscriber subscriber);
     Task<string> PurchaseOrganizationAsync(Organization org, PaymentMethodType paymentMethodType,
-        string paymentToken, List<Plan> plans, short additionalStorageGb, int additionalSeats,
+        string paymentToken, Plan plan, short additionalStorageGb, int additionalSeats,
         bool premiumAccessAddon, TaxInfo taxInfo, bool provider = false, int additionalSmSeats = 0,
         int additionalServiceAccount = 0);
     Task SponsorOrganizationAsync(Organization org, OrganizationSponsorship sponsorship);
     Task RemoveOrganizationSponsorshipAsync(Organization org, OrganizationSponsorship sponsorship);
-    Task<string> UpgradeFreeOrganizationAsync(Organization org, List<Plan> plans, OrganizationUpgrade upgrade);
+    Task<string> UpgradeFreeOrganizationAsync(Organization org, Plan plan, OrganizationUpgrade upgrade);
     Task<string> PurchasePremiumAsync(User user, PaymentMethodType paymentMethodType, string paymentToken,
         short additionalStorageGb, TaxInfo taxInfo);
     Task<string> AdjustSeatsAsync(Organization organization, Plan plan, int additionalSeats, DateTime? prorationDate = null);
