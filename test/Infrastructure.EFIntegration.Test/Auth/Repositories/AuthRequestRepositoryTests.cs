@@ -5,9 +5,10 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.Auth.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Auth.Repositories.EqualityComparers;
 using Xunit;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfAuthRepo = Bit.Infrastructure.EntityFramework.Auth.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
-using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
+using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
@@ -24,9 +25,9 @@ public class AuthRequestRepositoryTests
         Organization organization,
         User user,
         List<EfRepo.UserRepository> efUserRepos,
-        List<OrganizationRepository> efOrgRepos,
+        List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.UserRepository sqlUserRepo,
-        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrgRepo
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrgRepo
         )
     {
         authRequest.ResponseDeviceId = null;

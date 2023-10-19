@@ -6,8 +6,9 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
-using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
+using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlAuthRepo = Bit.Infrastructure.Dapper.Auth.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
@@ -252,9 +253,9 @@ public class UserRepositoryTests
     [CiSkippedTheory, EfUserAutoData]
     public async void GetBySsoUserAsync_Works_DataMatches(User user, Organization org,
         SsoUser ssoUser, UserCompare equalityComparer, List<EfRepo.UserRepository> suts,
-        List<EfRepo.SsoUserRepository> ssoUserRepos, List<OrganizationRepository> orgRepos,
+        List<EfRepo.SsoUserRepository> ssoUserRepos, List<EfAdminConsoleRepo.OrganizationRepository> orgRepos,
         SqlRepo.UserRepository sqlUserRepo, SqlAuthRepo.SsoUserRepository sqlSsoUserRepo,
-        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrgRepo)
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrgRepo)
     {
         var returnedList = new List<User>();
         foreach (var sut in suts)

@@ -4,8 +4,9 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
-using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
+using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -21,10 +22,10 @@ public class TransactionRepositoryTests
         TransactionCompare equalityComparer,
         List<EfRepo.TransactionRepository> suts,
         List<EfRepo.UserRepository> efUserRepos,
-        List<OrganizationRepository> efOrgRepos,
+        List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.TransactionRepository sqlTransactionRepo,
         SqlRepo.UserRepository sqlUserRepo,
-        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrgRepo
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrgRepo
         )
     {
         var savedTransactions = new List<Transaction>();

@@ -8,13 +8,13 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Test.AutoFixture.Attributes;
-using Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
 using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
+using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -26,7 +26,7 @@ public class OrganizationUserRepositoryTests
         OrganizationUserCompare equalityComparer, List<EfRepo.OrganizationUserRepository> suts,
         List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos, List<EfRepo.UserRepository> efUserRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
-        OrganizationRepository sqlOrgRepo)
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrgRepo)
     {
         var savedOrgUsers = new List<OrganizationUser>();
         foreach (var sut in suts)
@@ -71,7 +71,7 @@ public class OrganizationUserRepositoryTests
         List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo,
         SqlRepo.UserRepository sqlUserRepo,
-        OrganizationRepository sqlOrgRepo
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrgRepo
         )
     {
         var savedOrgUsers = new List<OrganizationUser>();
@@ -115,7 +115,7 @@ public class OrganizationUserRepositoryTests
     public async void DeleteAsync_Works_DataMatches(OrganizationUser orgUser, User user, Organization org, List<EfRepo.OrganizationUserRepository> suts,
         List<EfRepo.UserRepository> efUserRepos, List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
         SqlRepo.OrganizationUserRepository sqlOrgUserRepo, SqlRepo.UserRepository sqlUserRepo,
-        OrganizationRepository sqlOrgRepo)
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrgRepo)
     {
         foreach (var sut in suts)
         {
@@ -195,7 +195,7 @@ public class OrganizationUserRepositoryTests
         // Auto data - SQL repos
         SqlRepo.PolicyRepository sqlPolicyRepo,
         SqlRepo.UserRepository sqlUserRepo,
-        OrganizationRepository sqlOrganizationRepo,
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrganizationRepo,
         EfAdminConsoleRepo.ProviderRepository sqlProviderRepo,
         SqlRepo.OrganizationUserRepository sqlOrganizationUserRepo,
         EfAdminConsoleRepo.ProviderOrganizationRepository sqlProviderOrganizationRepo,

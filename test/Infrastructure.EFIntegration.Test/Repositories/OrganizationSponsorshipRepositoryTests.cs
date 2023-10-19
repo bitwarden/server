@@ -4,8 +4,9 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
-using OrganizationRepository = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.OrganizationRepository;
+using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -15,8 +16,8 @@ public class OrganizationSponsorshipRepositoryTests
     [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
     public async void CreateAsync_Works_DataMatches(
         OrganizationSponsorship organizationSponsorship, Organization sponsoringOrg,
-        List<OrganizationRepository> efOrgRepos,
-        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrganizationRepo,
+        List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrganizationRepo,
         SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
         OrganizationSponsorshipCompare equalityComparer,
         List<EfRepo.OrganizationSponsorshipRepository> suts)
@@ -50,8 +51,8 @@ public class OrganizationSponsorshipRepositoryTests
     [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
     public async void ReplaceAsync_Works_DataMatches(OrganizationSponsorship postOrganizationSponsorship,
         OrganizationSponsorship replaceOrganizationSponsorship, Organization sponsoringOrg,
-        List<OrganizationRepository> efOrgRepos,
-        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrganizationRepo,
+        List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrganizationRepo,
         SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
         OrganizationSponsorshipCompare equalityComparer, List<EfRepo.OrganizationSponsorshipRepository> suts)
     {
@@ -92,8 +93,8 @@ public class OrganizationSponsorshipRepositoryTests
     [CiSkippedTheory, EfOrganizationSponsorshipAutoData]
     public async void DeleteAsync_Works_DataMatches(OrganizationSponsorship organizationSponsorship,
         Organization sponsoringOrg,
-        List<OrganizationRepository> efOrgRepos,
-        Dapper.AdminConsole.Repositories.OrganizationRepository sqlOrganizationRepo,
+        List<EfAdminConsoleRepo.OrganizationRepository> efOrgRepos,
+        SqlAdminConsoleRepo.OrganizationRepository sqlOrganizationRepo,
         SqlRepo.OrganizationSponsorshipRepository sqlOrganizationSponsorshipRepo,
         List<EfRepo.OrganizationSponsorshipRepository> suts)
     {
