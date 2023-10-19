@@ -254,5 +254,9 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         ExpirationDate = license.Expires;
         LicenseKey = license.LicenseKey;
         RevisionDate = DateTime.UtcNow;
+        UsePasswordManager = license.UsePasswordManager;
+        UseSecretsManager = license.UseSecretsManager;
+        SmSeats = license.SmSeats;
+        SmServiceAccounts = license.SmServiceAccounts;
     }
 }

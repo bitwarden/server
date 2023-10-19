@@ -14,7 +14,7 @@ public class CurrentContextOrganization
         Id = orgUser.OrganizationId;
         Type = orgUser.Type;
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
-        AccessSecretsManager = orgUser.AccessSecretsManager && orgUser.UseSecretsManager;
+        AccessSecretsManager = orgUser.AccessSecretsManager && orgUser.UseSecretsManager && orgUser.Enabled;
         LimitCollectionCreationDeletion = orgUser.LimitCollectionCreationDeletion;
     }
 
