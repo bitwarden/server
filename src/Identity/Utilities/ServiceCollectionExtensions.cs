@@ -44,7 +44,8 @@ public static class ServiceCollectionExtensions
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
             .AddPersistedGrantStore<PersistedGrantStore>()
             .AddClientStore<ClientStore>()
-            .AddIdentityServerCertificate(env, globalSettings);
+            .AddIdentityServerCertificate(env, globalSettings)
+            .AddExtensionGrantValidator<WebAuthnGrantValidator>();
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;
