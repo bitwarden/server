@@ -35,7 +35,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private UserManager<User> _userManager;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IDeviceService _deviceService;
-    private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
     private readonly IOrganizationRepository _organizationRepository;
@@ -53,6 +52,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected IPolicyService PolicyService { get; }
     protected IFeatureService FeatureService { get; }
     protected ISsoConfigRepository SsoConfigRepository { get; }
+    protected IUserService _userService { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,

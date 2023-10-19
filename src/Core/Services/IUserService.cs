@@ -30,7 +30,7 @@ public interface IUserService
     Task<CredentialCreateOptions> StartWebAuthnLoginRegistrationAsync(User user);
     Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, bool supportsPrf, string encryptedUserKey, string encryptedPublicKey, string encryptedPrivateKey, CredentialCreateOptions options, AuthenticatorAttestationRawResponse attestationResponse);
     Task<AssertionOptions> StartWebAuthnLoginAssertionAsync();
-    Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user);
+    Task<User> CompleteWebAuthLoginAssertionAsync(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse);
     Task SendEmailVerificationAsync(User user);
     Task<IdentityResult> ConfirmEmailAsync(User user, string token);
     Task InitiateEmailChangeAsync(User user, string newEmail);

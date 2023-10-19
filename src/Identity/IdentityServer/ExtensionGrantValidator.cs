@@ -1,4 +1,6 @@
 ﻿using System.Security.Claims;
+using System.Text.Json;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
@@ -8,6 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
+using Fido2NetLib;
 using IdentityServer4.Models;
 using IdentityServer4.Validation;
 using Microsoft.AspNetCore.Identity;
@@ -17,8 +20,9 @@ namespace Bit.Identity.IdentityServer;
 
 public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValidationContext>, IExtensionGrantValidator
 {
-    private UserManager<User> _userManager;
-    private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
+    public const string GrantType = "webauthn";
+
+    private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
 
     public ExtensionGrantValidator(
         UserManager<User> userManager,
@@ -38,7 +42,7 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         IUserRepository userRepository,
         IPolicyService policyService,
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
-        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer,
+        IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
         IDistributedCache distributedCache
         )
@@ -47,24 +51,32 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
             applicationCacheService, mailService, logger, currentContext, globalSettings,
             userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, distributedCache)
     {
-        _userManager = userManager;
-        _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
+        _assertionOptionsDataProtector = assertionOptionsDataProtector;
     }
 
-    public string GrantType => "extension";
+    string IExtensionGrantValidator.GrantType => "webauthn";
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
-        var email = context.Request.Raw.Get("email");
-        var token = context.Request.Raw.Get("token");
-        var type = context.Request.Raw.Get("type");
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(type))
+        var rawToken = context.Request.Raw.Get("token");
+        var rawDeviceResponse = context.Request.Raw.Get("deviceResponse");
+        if (string.IsNullOrWhiteSpace(rawToken) || string.IsNullOrWhiteSpace(rawDeviceResponse))
         {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
             return;
         }
 
-        var user = await _userManager.FindByEmailAsync(email.ToLowerInvariant());
+        var verified = _assertionOptionsDataProtector.TryUnprotect(rawToken, out var token) &&
+            token.TokenIsValid(WebAuthnLoginAssertionOptionsScope.Authentication);
+        var deviceResponse = JsonSerializer.Deserialize<AuthenticatorAssertionRawResponse>(rawDeviceResponse);
+
+        if (!verified)
+        {
+            context.Result = new GrantValidationResult(TokenRequestErrors.InvalidRequest);
+            return;
+        }
+
+        var user = await _userService.CompleteWebAuthLoginAssertionAsync(token.Options, deviceResponse);
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
@@ -74,18 +86,15 @@ public class ExtensionGrantValidator : BaseRequestValidator<ExtensionGrantValida
         await ValidateAsync(context, context.Request, validatorContext);
     }
 
-    protected override async Task<bool> ValidateContextAsync(ExtensionGrantValidationContext context,
+    protected override Task<bool> ValidateContextAsync(ExtensionGrantValidationContext context,
         CustomValidatorRequestContext validatorContext)
     {
-        var token = context.Request.Raw.Get("token");
-        var type = context.Request.Raw.Get("type");
-        if (validatorContext.User == null || string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(type))
+        if (validatorContext.User == null)
         {
-            return false;
+            return Task.FromResult(false);
         }
-        var verified = _webAuthnLoginTokenizer.TryUnprotect(token, out var tokenData) &&
-            tokenData.Valid && tokenData.TokenIsValid(validatorContext.User);
-        return verified;
+
+        return Task.FromResult(true);
     }
 
     protected override Task SetSuccessResult(ExtensionGrantValidationContext context, User user,
