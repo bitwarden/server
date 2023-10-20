@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Models.Business;
 
 namespace Bit.Api.AdminConsole.Models.Request;
@@ -24,7 +25,7 @@ public class ImportOrganizationUsersRequestModel
         {
             var importedGroup = new ImportedGroup
             {
-                Group = new Core.Entities.Group
+                Group = new Core.AdminConsole.Entities.Group
                 {
                     OrganizationId = organizationId,
                     Name = Name,

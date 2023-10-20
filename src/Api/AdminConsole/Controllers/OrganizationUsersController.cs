@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
