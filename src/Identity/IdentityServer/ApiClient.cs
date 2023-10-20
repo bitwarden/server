@@ -13,7 +13,7 @@ public class ApiClient : Client
         string[] scopes = null)
     {
         ClientId = id;
-        AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode, "extension" };
+        AllowedGrantTypes = new[] { GrantType.ResourceOwnerPassword, GrantType.AuthorizationCode };
         RefreshTokenExpiration = TokenExpiration.Sliding;
         RefreshTokenUsage = TokenUsage.ReUse;
         SlidingRefreshTokenLifetime = 86400 * refreshTokenSlidingDays;
