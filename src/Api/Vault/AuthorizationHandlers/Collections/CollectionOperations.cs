@@ -2,13 +2,26 @@
 
 namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
 
-public class CollectionOperationRequirement : OperationAuthorizationRequirement { }
+public class CollectionOperationRequirement : OperationAuthorizationRequirement
+{
+    public Guid OrganizationId { get; set; }
+
+    public CollectionOperationRequirement() { }
+
+    public CollectionOperationRequirement(string name, Guid organizationId)
+    {
+        Name = name;
+        OrganizationId = organizationId;
+    }
+}
 
 public static class CollectionOperations
 {
     public static readonly CollectionOperationRequirement Create = new() { Name = nameof(Create) };
-    public static readonly CollectionOperationRequirement ReadAll = new() { Name = nameof(ReadAll) };
-    public static readonly CollectionOperationRequirement Update = new() { Name = nameof(Update) };
+    public static CollectionOperationRequirement ReadAll(Guid organizationId)
+    {
+        return new CollectionOperationRequirement(nameof(ReadAll), organizationId);
+    }
     public static readonly CollectionOperationRequirement Delete = new() { Name = nameof(Delete) };
     /// <summary>
     /// The operation that represents creating, updating, or removing collection access.

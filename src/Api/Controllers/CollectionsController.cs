@@ -136,9 +136,12 @@ public class CollectionsController : Controller
 
         if (FlexibleCollectionsIsEnabled)
         {
-            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
-            var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, orgCollections, CollectionOperations.ReadAll)).Succeeded;
-            if (!readAllAuthorized)
+            var readAll = (await _authorizationService.AuthorizeAsync(User, null, CollectionOperations.ReadAll(orgId))).Succeeded;
+            if (readAll)
+            {
+                orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
+            }
+            else
             {
                 var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
                 orgCollections = collections.Where(c => c.OrganizationId == orgId);
