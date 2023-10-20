@@ -1,3 +1,13 @@
+--Dev cleanup: drop previous column name (never used in production but may be present on some QA instances)
+IF COL_LENGTH('[dbo].[Organization]', 'LimitCollectionCdOwnerAdmin') IS NOT NULL
+BEGIN
+    ALTER TABLE
+        [dbo].[Organization]
+    DROP COLUMN
+        [LimitCollectionCdOwnerAdmin]
+END
+GO
+
 --Add column 'LimitCollectionCreationDeletion' to 'Organization' table
 IF COL_LENGTH('[dbo].[Organization]', 'LimitCollectionCreationDeletion') IS NULL
 BEGIN
