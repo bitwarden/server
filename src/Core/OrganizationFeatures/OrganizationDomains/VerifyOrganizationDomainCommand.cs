@@ -27,14 +27,8 @@ public class VerifyOrganizationDomainCommand : IVerifyOrganizationDomainCommand
         _logger = logger;
     }
 
-    public async Task<OrganizationDomain> VerifyOrganizationDomain(Guid id)
+    public async Task<OrganizationDomain> VerifyOrganizationDomainAsync(OrganizationDomain domain)
     {
-        var domain = await _organizationDomainRepository.GetByIdAsync(id);
-        if (domain is null)
-        {
-            throw new NotFoundException();
-        }
-
         if (domain.VerifiedDate is not null)
         {
             domain.SetLastCheckedDate();

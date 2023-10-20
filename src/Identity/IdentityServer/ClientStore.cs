@@ -100,16 +100,11 @@ public class ClientStore : IClientStore
         {
             case ServiceAccountApiKeyDetails key:
                 var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
-                if (!org.UseSecretsManager)
+                if (!org.UseSecretsManager || !org.Enabled)
                 {
                     return null;
                 }
                 break;
-        }
-
-        if (string.IsNullOrEmpty(apiKey.ClientSecretHash))
-        {
-            apiKey.ClientSecretHash = apiKey.ClientSecret.Sha256();
         }
 
         var client = new Client

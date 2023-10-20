@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
@@ -29,4 +30,5 @@ public interface IEventService
     Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type, DateTime? date = null);
     Task LogOrganizationDomainEventAsync(OrganizationDomain organizationDomain, EventType type, EventSystemUser systemUser, DateTime? date = null);
     Task LogServiceAccountSecretEventAsync(Guid serviceAccountId, Secret secret, EventType type, DateTime? date = null);
+    Task LogServiceAccountSecretsEventAsync(Guid serviceAccountId, IEnumerable<Secret> secrets, EventType type, DateTime? date = null);
 }

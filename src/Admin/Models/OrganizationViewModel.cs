@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -13,7 +14,7 @@ public class OrganizationViewModel
     public OrganizationViewModel(Organization org, Provider provider, IEnumerable<OrganizationConnection> connections,
         IEnumerable<OrganizationUserUserDetails> orgUsers, IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<Group> groups, IEnumerable<Policy> policies, int secretsCount, int projectCount, int serviceAccountsCount,
-        int smSeatsCount)
+        int occupiedSmSeatsCount)
 
     {
         Organization = org;
@@ -39,10 +40,10 @@ public class OrganizationViewModel
             orgUsers
             .Where(u => u.Type == OrganizationUserType.Admin && u.Status == organizationUserStatus)
             .Select(u => u.Email));
-        Secrets = secretsCount;
-        Projects = projectCount;
-        ServiceAccounts = serviceAccountsCount;
-        SmSeats = smSeatsCount;
+        SecretsCount = secretsCount;
+        ProjectsCount = projectCount;
+        ServiceAccountsCount = serviceAccountsCount;
+        OccupiedSmSeatsCount = occupiedSmSeatsCount;
     }
 
     public Organization Organization { get; set; }
@@ -59,9 +60,9 @@ public class OrganizationViewModel
     public int GroupCount { get; set; }
     public int PolicyCount { get; set; }
     public bool HasPublicPrivateKeys { get; set; }
-    public int Secrets { get; set; }
-    public int Projects { get; set; }
-    public int ServiceAccounts { get; set; }
-    public int SmSeats { get; set; }
+    public int SecretsCount { get; set; }
+    public int ProjectsCount { get; set; }
+    public int ServiceAccountsCount { get; set; }
+    public int OccupiedSmSeatsCount { get; set; }
     public bool UseSecretsManager => Organization.UseSecretsManager;
 }

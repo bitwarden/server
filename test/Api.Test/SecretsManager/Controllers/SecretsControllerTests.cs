@@ -346,4 +346,105 @@ public class SecretsControllerTests
             Assert.Null(result.Error);
         }
     }
+
+    [Theory]
+    [BitAutoData]
+    public async void GetSecretsByIds_NoSecretsFound_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
+        List<Secret> data)
+    {
+        var (ids, request) = BuildGetSecretsRequestModel(data);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(new List<Secret>());
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void GetSecretsByIds_SecretsFoundMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
+        List<Secret> data, Secret mockSecret)
+    {
+        var (ids, request) = BuildGetSecretsRequestModel(data);
+        ids.Add(mockSecret.Id);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids))
+            .ReturnsForAnyArgs(new List<Secret> { mockSecret });
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void GetSecretsByIds_OrganizationMisMatch_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
+        List<Secret> data)
+    {
+        var (ids, request) = BuildGetSecretsRequestModel(data);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void GetSecretsByIds_NoAccessToSecretsManager_ThrowsNotFound(
+        SutProvider<SecretsController> sutProvider, List<Secret> data)
+    {
+        var (ids, request) = BuildGetSecretsRequestModel(data);
+        var organizationId = SetOrganizations(ref data);
+
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+            .ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void GetSecretsByIds_AccessDenied_ThrowsNotFound(SutProvider<SecretsController> sutProvider,
+        List<Secret> data)
+    {
+        var (ids, request) = BuildGetSecretsRequestModel(data);
+        var organizationId = SetOrganizations(ref data);
+
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+            .ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Failed());
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetSecretsByIdsAsync(request));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async void GetSecretsByIds_Success(SutProvider<SecretsController> sutProvider, List<Secret> data)
+    {
+        var (ids, request) = BuildGetSecretsRequestModel(data);
+        var organizationId = SetOrganizations(ref data);
+
+        sutProvider.GetDependency<ISecretRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId))
+            .ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+
+        var results = await sutProvider.Sut.GetSecretsByIdsAsync(request);
+        Assert.Equal(data.Count, results.Data.Count());
+    }
+
+    private static (List<Guid> Ids, GetSecretsRequestModel request) BuildGetSecretsRequestModel(
+        IEnumerable<Secret> data)
+    {
+        var ids = data.Select(s => s.Id).ToList();
+        var request = new GetSecretsRequestModel { Ids = ids };
+        return (ids, request);
+    }
+
+    private static Guid SetOrganizations(ref List<Secret> data)
+    {
+        var organizationId = data.First().OrganizationId;
+        foreach (var s in data)
+        {
+            s.OrganizationId = organizationId;
+        }
+
+        return organizationId;
+    }
 }

@@ -93,6 +93,11 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 .Where(gu => gu.OrganizationUserId == organizationUserId);
             dbContext.GroupUsers.RemoveRange(groupUsers);
 
+            dbContext.UserProjectAccessPolicy.RemoveRange(
+                dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
+            dbContext.UserServiceAccountAccessPolicy.RemoveRange(
+                dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUserId == organizationUserId));
+
             var orgSponsorships = await dbContext.OrganizationSponsorships
                 .Where(os => os.SponsoringOrganizationUserId == organizationUserId)
                 .ToListAsync();
@@ -325,7 +330,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             var userIds = users.Select(u => u.Id);
             var userIdEntities = dbContext.OrganizationUsers.Where(x => userIds.Contains(x.Id));
 
-            // Query groups/collections separately to avoid cartesian explosion 
+            // Query groups/collections separately to avoid cartesian explosion
             if (includeGroups)
             {
                 groups = (await (from gu in dbContext.GroupUsers
@@ -588,7 +593,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId)
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -604,7 +609,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         join ou in dbContext.OrganizationUsers
                             on p.OrganizationId equals ou.OrganizationId
                         let email = dbContext.Users.Find(userId).Email  // Invited orgUsers do not have a UserId associated with them, so we have to match up their email
-                        where ou.UserId == userId || ou.Email == email
+                        where p.Type == policyType &&
+                            (ou.UserId == userId || ou.Email == email)
                         select new OrganizationUserPolicyDetails
                         {
                             OrganizationUserId = ou.Id,

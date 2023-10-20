@@ -556,7 +556,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var organizationUserRepository = _factory.Services.GetService<IOrganizationUserRepository>();
         var policyRepository = _factory.Services.GetService<IPolicyRepository>();
 
-        var organization = new Bit.Core.Entities.Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled };
+        var organization = new Bit.Core.Entities.Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled, UsePolicies = true };
         await organizationRepository.CreateAsync(organization);
 
         var user = await userRepository.GetByEmailAsync(username);

@@ -8,6 +8,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.SecretsManager.AutoFixture.ProjectsFixture;
@@ -43,7 +44,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void ListByOrganization_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
+    public async void ListByOrganization_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data).Returns(false);
 
@@ -124,6 +125,24 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
+    public async void Create_AtMaxProjects_Throws(SutProvider<ProjectsController> sutProvider,
+        Guid orgId, ProjectCreateRequestModel data)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.ToProject(orgId),
+                Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
+        sutProvider.GetDependency<IMaxProjectsQuery>().GetByOrgIdAsync(orgId, 1).Returns(((short)3, true));
+
+
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.CreateAsync(orgId, data));
+
+        await sutProvider.GetDependency<ICreateProjectCommand>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(Arg.Any<Project>(), Arg.Any<Guid>(), sutProvider.GetDependency<ICurrentContext>().ClientType);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async void Create_Success(SutProvider<ProjectsController> sutProvider,
         Guid orgId, ProjectCreateRequestModel data)
     {
@@ -186,7 +205,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Get_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
+    public async void Get_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
         SetupAdmin(sutProvider, orgId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(orgId).Returns(false);

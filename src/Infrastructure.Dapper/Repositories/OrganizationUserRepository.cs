@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -505,13 +506,13 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         }
     }
 
-    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId)
+    public async Task<IEnumerable<OrganizationUserPolicyDetails>> GetByUserIdWithPolicyDetailsAsync(Guid userId, PolicyType policyType)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<OrganizationUserPolicyDetails>(
                 $"[{Schema}].[{Table}_ReadByUserIdWithPolicyDetails]",
-                new { UserId = userId },
+                new { UserId = userId, PolicyType = policyType },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
