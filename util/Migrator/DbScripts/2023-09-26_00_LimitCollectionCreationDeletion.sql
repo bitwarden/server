@@ -67,7 +67,7 @@ CREATE OR ALTER PROCEDURE [dbo].[Organization_Create]
     @MaxAutoscaleSmSeats INT= null,
     @MaxAutoscaleSmServiceAccounts INT = null,
     @SecretsManagerBeta BIT = 0,
-    @LimitCollectionCreationDeletion BIT = 0
+    @LimitCollectionCreationDeletion BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
