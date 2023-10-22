@@ -1,8 +1,8 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationConnections;
 using Bit.Core.Models.OrganizationConnectionConfigs;
-using Bit.Core.OrganizationFeatures.OrganizationConnections;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

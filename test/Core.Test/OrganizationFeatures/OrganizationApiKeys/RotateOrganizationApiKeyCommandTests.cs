@@ -1,5 +1,5 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
+using Bit.Core.Entities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
