@@ -1143,6 +1143,59 @@ public class OrganizationService : IOrganizationService
     }
 
 
+    private async Task<OrganizationInvitesInfo> BuildOrganizationInvitesInfoAsync(
+        IEnumerable<OrganizationUser> orgUsers,
+        Organization organization,
+        bool initOrganization = false)
+    {
+        // Materialize the sequence into a list to avoid multiple enumeration warnings
+        var orgUsersList = orgUsers.ToList();
+
+        // Email links must include information about the org and user for us to make routing decisions client side
+        // Given an org user, determine if existing BW user exists
+        var orgUserEmails = orgUsersList.Select(ou => ou.Email).ToList();
+        var existingUsers = await _userRepository.GetManyByEmailsAsync(orgUserEmails);
+
+        // hash existing users emails list for O(1) lookups
+        var existingUserEmailsHashSet = new HashSet<string>(existingUsers.Select(u => u.Email));
+
+        // Create a dictionary of org user guids and bools for whether or not they have an existing BW user
+        var orgUserHasExistingUserDict = orgUsersList.ToDictionary(
+            ou => ou.Id,
+            ou => existingUserEmailsHashSet.Contains(ou.Email)
+        );
+
+        // Determine if org has SSO enabled and if user is required to login with SSO
+        // Note: we only want to call the DB after checking if the org can use SSO per plan and if they have any policies enabled.
+        var orgSsoEnabled = organization.UseSso && (await _ssoConfigRepository.GetByOrganizationIdAsync(organization.Id)).Enabled;
+        // Even though the require SSO policy can be turned on regardless of SSO being enabled, for this logic, we only
+        // need to check the policy if the org has SSO enabled.
+        var orgSsoLoginRequiredPolicyEnabled = orgSsoEnabled &&
+                                               organization.UsePolicies &&
+                                               (await _policyRepository.GetByOrganizationIdTypeAsync(organization.Id, PolicyType.RequireSso)).Enabled;
+
+        // Generate the list of org users and expiring tokens
+        // create helper function to create expiring tokens
+        (OrganizationUser, ExpiringToken) MakeOrgUserExpiringTokenPair(OrganizationUser orgUser)
+        {
+            var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
+            var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+            return (orgUser, new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate));
+        }
+
+        var orgUsersWithExpTokens = orgUsers.Select(MakeOrgUserExpiringTokenPair);
+
+        return new OrganizationInvitesInfo(
+            organization,
+            orgSsoEnabled,
+            orgSsoLoginRequiredPolicyEnabled,
+            orgUsersWithExpTokens,
+            orgUserHasExistingUserDict,
+            initOrganization
+        );
+    }
+
+
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, IUserService userService)
     {
