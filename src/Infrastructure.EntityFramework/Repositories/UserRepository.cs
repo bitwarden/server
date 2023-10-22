@@ -24,6 +24,18 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
+    public async Task<IEnumerable<Core.Entities.User>> GetManyByEmailsAsync(IEnumerable<string> emails)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var users = await GetDbSet(dbContext)
+                .Where(u => emails.Contains(u.Email))
+                .ToListAsync();
+            return Mapper.Map<List<Core.Entities.User>>(users);
+        }
+    }
+
     public async Task<DataModel.UserKdfInformation> GetKdfInformationByEmailAsync(string email)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

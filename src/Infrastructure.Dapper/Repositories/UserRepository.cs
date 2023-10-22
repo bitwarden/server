@@ -48,6 +48,27 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
+    public async Task<IEnumerable<User>> GetManyByEmailsAsync(IEnumerable<string> emails)
+    {
+        var emailTable = new DataTable();
+        emailTable.Columns.Add("Email", typeof(string));
+        foreach (var email in emails)
+        {
+            emailTable.Rows.Add(email);
+        }
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<User>(
+                $"[{Schema}].[{Table}_ReadByEmails]",
+                new { Emails = emailTable.AsTableValuedParameter("dbo.EmailArray") },
+                commandType: CommandType.StoredProcedure);
+
+            UnprotectData(results);
+            return results.ToList();
+        }
+    }
+
     public async Task<User> GetBySsoUserAsync(string externalId, Guid? organizationId)
     {
         using (var connection = new SqlConnection(ConnectionString))
