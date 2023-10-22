@@ -426,7 +426,7 @@ public class OrganizationService : IOrganizationService
         }
 
         var flexibleCollectionsIsEnabled =
-            !_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
         var organization = new Organization
         {
