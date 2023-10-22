@@ -2,9 +2,6 @@
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
-using Bit.Api.Controllers;
-using Bit.Api.Models.Request.Organizations;
-using Bit.Api.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -22,7 +19,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.AdminConsole.Controllers;
 
 [ControllerCustomize(typeof(OrganizationConnectionsController))]
 [SutProviderCustomize]
