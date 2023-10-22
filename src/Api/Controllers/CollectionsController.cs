@@ -5,6 +5,7 @@ using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -19,6 +20,7 @@ namespace Bit.Api.Controllers;
 public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionService _collectionService;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
@@ -29,6 +31,7 @@ public class CollectionsController : Controller
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
+        IOrganizationUserRepository organizationUserRepository,
         ICollectionService collectionService,
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
@@ -38,6 +41,7 @@ public class CollectionsController : Controller
         IFeatureService featureService)
     {
         _collectionRepository = collectionRepository;
+        _organizationUserRepository = organizationUserRepository;
         _collectionService = collectionService;
         _deleteCollectionCommand = deleteCollectionCommand;
         _userService = userService;
@@ -296,6 +300,8 @@ public class CollectionsController : Controller
     public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<SelectionReadOnlyRequestModel> model)
     {
         Collection collection;
+        var users = model?.Select(g => g.ToSelectionReadOnly()).ToList() ??
+                    new List<CollectionAccessSelection>();
 
         if (FlexibleCollectionsIsEnabled)
         {
@@ -314,9 +320,26 @@ public class CollectionsController : Controller
             }
 
             collection = await GetCollectionAsync(id, orgId);
+
+            // If not using Flexible Collections
+            // all users with EditAnyCollection permission should have Can Manage permission for the collection
+            var organizationUsers = await _organizationUserRepository
+                .GetManyByOrganizationAsync(collection.OrganizationId, null);
+            foreach (var orgUser in organizationUsers.Where(ou => ou.GetPermissions()?.EditAnyCollection ?? false))
+            {
+                var user = users.FirstOrDefault(u => u.Id == orgUser.Id);
+                if (user != null)
+                {
+                    user.Manage = true;
+                }
+                else
+                {
+                    users.Add(new CollectionAccessSelection { Id = orgUser.Id, Manage = true });
+                }
+            }
         }
 
-        await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
+        await _collectionRepository.UpdateUsersAsync(collection.Id, users);
     }
 
     [HttpPost("bulk-access")]

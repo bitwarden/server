@@ -54,6 +54,9 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IFeatureService _featureService;
+
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -82,7 +85,8 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -111,6 +115,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _featureService = featureService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -876,7 +881,6 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        var orgUsers = new List<OrganizationUser>();
         var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
         var orgUserGroups = new List<(OrganizationUser, IEnumerable<Guid>)>();
         var orgUserInvitedCount = 0;
@@ -915,14 +919,22 @@ public class OrganizationService : IOrganizationService
                         orgUser.Permissions = JsonSerializer.Serialize(invite.Permissions, JsonHelpers.CamelCase);
                     }
 
-                    if (!orgUser.AccessAll && invite.Collections.Any())
+                    var collections = invite.Collections;
+                    if (!FlexibleCollectionsIsEnabled)
                     {
-                        limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
+                        // If not using Flexible Collections - add access to all collections if user has EditAnyCollection or AccessAll permissions
+                        if (orgUser.GetPermissions()?.EditAnyCollection ?? false)
+                        {
+                            var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                            collections = orgCollections.Select(c => new CollectionAccessSelection { Id = c.Id, Manage = true });
+                        }
+                        else if (orgUser.AccessAll)
+                        {
+                            var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
+                            collections = orgCollections.Select(c => new CollectionAccessSelection { Id = c.Id, ReadOnly = true });
+                        }
                     }
-                    else
-                    {
-                        orgUsers.Add(orgUser);
-                    }
+                    limitedCollectionOrgUsers.Add((orgUser, collections));
 
                     if (invite.Groups != null && invite.Groups.Any())
                     {
@@ -947,7 +959,6 @@ public class OrganizationService : IOrganizationService
         var prorationDate = DateTime.UtcNow;
         try
         {
-            await _organizationUserRepository.CreateManyAsync(orgUsers);
             foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
             {
                 await _organizationUserRepository.CreateAsync(orgUser, collections);
@@ -969,7 +980,7 @@ public class OrganizationService : IOrganizationService
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
             await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
-            await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
+            await SendInvitesAsync(limitedCollectionOrgUsers.Select(u => u.Item1), organization);
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
@@ -980,7 +991,7 @@ public class OrganizationService : IOrganizationService
         catch (Exception e)
         {
             // Revert any added users.
-            var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
+            var invitedOrgUserIds = limitedCollectionOrgUsers.Select(u => u.Item1.Id);
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
@@ -1010,7 +1021,7 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        return (orgUsers, events);
+        return (limitedCollectionOrgUsers.Select(orgUser => orgUser.Item1).ToList(), events);
     }
 
     public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
@@ -1436,11 +1447,25 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        if (user.AccessAll)
+        // If not using Flexible Collections - add access to all collections if user has EditAnyCollection or AccessAll permissions
+        if (!FlexibleCollectionsIsEnabled)
         {
-            // We don't need any collections if we're flagged to have all access.
-            collections = new List<CollectionAccessSelection>();
+            if (user.GetPermissions()?.EditAnyCollection ?? false)
+            {
+                var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
+                collections = orgCollections.Select(c => new CollectionAccessSelection { Id = c.Id, Manage = true });
+            }
+            else if (user.AccessAll)
+            {
+                var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
+                collections = orgCollections.Select(c => new CollectionAccessSelection { Id = c.Id, ReadOnly = true });
+            }
+            else
+            {
+                collections = collections.Where(c => !c.Manage);
+            }
         }
+
         await _organizationUserRepository.ReplaceAsync(user, collections);
 
         if (groups != null)
