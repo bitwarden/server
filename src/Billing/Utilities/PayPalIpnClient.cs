@@ -10,18 +10,22 @@ public class PayPalIpnClient
 {
     private readonly HttpClient _httpClient = new HttpClient();
     private readonly Uri _ipnUri;
+    private readonly ILogger<PayPalIpnClient> _logger;
 
-    public PayPalIpnClient(IOptions<BillingSettings> billingSettings)
+    public PayPalIpnClient(IOptions<BillingSettings> billingSettings, ILogger<PayPalIpnClient> logger)
     {
         var bSettings = billingSettings?.Value;
-        _ipnUri = new Uri(bSettings.PayPal.Production ? "https://www.paypal.com/cgi-bin/webscr" :
-            "https://www.sandbox.paypal.com/cgi-bin/webscr");
+        _ipnUri = new Uri(bSettings.PayPal.Production ? "https://ipnpb.paypal.com/cgi-bin/webscr" :
+            "https://ipnpb.sandbox.paypal.com/cgi-bin/webscr");
+        _logger = logger;
     }
 
     public async Task<bool> VerifyIpnAsync(string ipnBody)
     {
+        _logger.LogInformation("Verifying IPN with PayPal at {Timestamp}: {VerificationUri}", DateTime.UtcNow, _ipnUri);
         if (ipnBody == null)
         {
+            _logger.LogError("No IPN body.");
             throw new ArgumentException("No IPN body.");
         }
 
@@ -30,6 +34,7 @@ public class PayPalIpnClient
             Method = HttpMethod.Post,
             RequestUri = _ipnUri
         };
+        _httpClient.DefaultRequestHeaders.Add("User-Agent", "CSharp-IPN-VerificationScript");
         var cmdIpnBody = string.Concat("cmd=_notify-validate&", ipnBody);
         request.Content = new StringContent(cmdIpnBody, Encoding.UTF8, "application/x-www-form-urlencoded");
         var response = await _httpClient.SendAsync(request);
@@ -42,14 +47,14 @@ public class PayPalIpnClient
         {
             return true;
         }
-        else if (responseContent.Equals("INVALID"))
+
+        if (responseContent.Equals("INVALID"))
         {
+            _logger.LogWarning("Received an INVALID response from PayPal: {ResponseContent}", responseContent);
             return false;
         }
-        else
-        {
-            throw new Exception("Failed to verify IPN.");
-        }
+        _logger.LogError("Failed to verify IPN: {ResponseContent}", responseContent);
+        throw new Exception("Failed to verify IPN.");
     }
 
     public class IpnTransaction
