@@ -9,7 +9,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationDomains;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationDomains;
 
 [SutProviderCustomize]
 public class VerifyOrganizationDomainCommandTests

@@ -11,7 +11,7 @@ using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationDomains;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationDomains;
 
 [SutProviderCustomize]
 public class CreateOrganizationDomainCommandTests

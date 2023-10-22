@@ -7,7 +7,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationApiKeys;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 
 [SutProviderCustomize]
 public class GetOrganizationApiKeyQueryTests

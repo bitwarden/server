@@ -5,7 +5,7 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationApiKeys;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
 
 [SutProviderCustomize]
 public class RotateOrganizationApiKeyCommandTests

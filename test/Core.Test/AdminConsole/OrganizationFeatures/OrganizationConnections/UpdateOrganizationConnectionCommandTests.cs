@@ -10,7 +10,7 @@ using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Core.Test.OrganizationFeatures.OrganizationConnections;
+namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.OrganizationConnections;
 
 [SutProviderCustomize]
 public class UpdateOrganizationConnectionCommandTests
