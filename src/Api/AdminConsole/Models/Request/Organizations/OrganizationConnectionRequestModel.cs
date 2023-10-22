@@ -5,7 +5,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationConnections;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Models.Request.Organizations;
+namespace Bit.Api.AdminConsole.Models.Request.Organizations;
 
 public class OrganizationConnectionRequestModel
 {

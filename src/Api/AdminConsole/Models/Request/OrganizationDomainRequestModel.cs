@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Api.Models.Request;
+namespace Bit.Api.AdminConsole.Models.Request;
 
 public class OrganizationDomainRequestModel
 {

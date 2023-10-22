@@ -12,7 +12,7 @@ using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.AdminConsole.Controllers;
 
 [Route("organizations/{orgId}/auth-requests")]
 [Authorize("Application")]

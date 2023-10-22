@@ -1,4 +1,6 @@
-﻿using Bit.Api.Models.Request.Organizations;
+﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.Context;
@@ -13,7 +15,7 @@ using Bit.Core.Settings;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.AdminConsole.Controllers;
 
 [Authorize("Application")]
 [Route("organizations/connections")]

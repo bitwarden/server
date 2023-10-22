@@ -2,7 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
-namespace Bit.Api.Models.Response.Organizations;
+namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationConnectionResponseModel
 {

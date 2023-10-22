@@ -1,7 +1,7 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Models.Response.Organizations;
+namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
 public class OrganizationDomainResponseModel : ResponseModel
 {

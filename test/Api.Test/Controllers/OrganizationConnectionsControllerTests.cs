@@ -1,4 +1,7 @@
 ﻿using System.Text.Json;
+using Bit.Api.AdminConsole.Controllers;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Controllers;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response.Organizations;
