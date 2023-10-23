@@ -919,22 +919,11 @@ public class OrganizationService : IOrganizationService
                         orgUser.Permissions = JsonSerializer.Serialize(invite.Permissions, JsonHelpers.CamelCase);
                     }
 
-                    var collections = invite.Collections;
-                    if (!FlexibleCollectionsIsEnabled)
-                    {
-                        // If not using Flexible Collections - add access to all collections if user has EditAnyCollection or AccessAll permissions
-                        if (orgUser.GetPermissions()?.EditAnyCollection ?? false)
-                        {
-                            var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                            collections = orgCollections.Select(c => new CollectionAccessSelection { Id = c.Id, Manage = true });
-                        }
-                        else if (orgUser.AccessAll)
-                        {
-                            var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgUser.OrganizationId);
-                            collections = orgCollections.Select(c => new CollectionAccessSelection { Id = c.Id, ReadOnly = true });
-                        }
-                    }
-                    limitedCollectionOrgUsers.Add((orgUser, collections));
+                    // If Flexible Collections is disabled and the user has EditAssignedCollections permission
+                    // grant Manage permission for all assigned collections
+                    invite.Collections = ApplyManageCollectionPermissions(orgUser, invite.Collections);
+
+                    limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
 
                     if (invite.Groups != null && invite.Groups.Any())
                     {
@@ -1021,7 +1010,7 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        return (limitedCollectionOrgUsers.Select(orgUser => orgUser.Item1).ToList(), events);
+        return (limitedCollectionOrgUsers.Select(o => o.Item1).ToList(), events);
     }
 
     public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,
@@ -1447,25 +1436,9 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        // If not using Flexible Collections - add access to all collections if user has EditAnyCollection or AccessAll permissions
-        if (!FlexibleCollectionsIsEnabled)
-        {
-            if (user.GetPermissions()?.EditAnyCollection ?? false)
-            {
-                var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
-                collections = orgCollections.Select(c => new CollectionAccessSelection { Id = c.Id, Manage = true });
-            }
-            else if (user.AccessAll)
-            {
-                var orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(user.OrganizationId);
-                collections = orgCollections.Select(c => new CollectionAccessSelection { Id = c.Id, ReadOnly = true });
-            }
-            else
-            {
-                collections = collections.Where(c => !c.Manage);
-            }
-        }
-
+        // If Flexible Collections is disabled and the user has EditAssignedCollections permission
+        // grant Manage permission for all assigned collections
+        collections = ApplyManageCollectionPermissions(user, collections);
         await _organizationUserRepository.ReplaceAsync(user, collections);
 
         if (groups != null)
@@ -2090,7 +2063,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Custom users can not manage Admins or Owners.");
         }
 
-        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrantAsync(organizationId, permissions))
+        if (newType == OrganizationUserType.Custom && !await ValidateCustomPermissionsGrant(organizationId, permissions))
         {
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
@@ -2115,7 +2088,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    private async Task<bool> ValidateCustomPermissionsGrantAsync(Guid organizationId, Permissions permissions)
+    private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
     {
         if (permissions == null || await _currentContext.OrganizationAdmin(organizationId))
         {
@@ -2569,5 +2542,19 @@ public class OrganizationService : IOrganizationService
             };
             await _collectionRepository.CreateAsync(defaultCollection);
         }
+    }
+
+    private IEnumerable<CollectionAccessSelection> ApplyManageCollectionPermissions(OrganizationUser orgUser, IEnumerable<CollectionAccessSelection> collections)
+    {
+        if (!FlexibleCollectionsIsEnabled && (orgUser.GetPermissions()?.EditAssignedCollections ?? false))
+        {
+            return collections.Select(c =>
+            {
+                c.Manage = true;
+                return c;
+            }).ToList();
+        }
+
+        return collections;
     }
 }

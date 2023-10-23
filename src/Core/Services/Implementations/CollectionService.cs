@@ -69,19 +69,15 @@ public class CollectionService : ICollectionService
         else
         {
             // If not using Flexible Collections
-            // all users with EditAnyCollection permission should have Can Manage permission for the collection
+            // all users with EditAssignedCollections permission should have Manage permission for the collection
             var organizationUsers = await _organizationUserRepository
                 .GetManyByOrganizationAsync(collection.OrganizationId, null);
-            foreach (var orgUser in organizationUsers.Where(ou => ou.GetPermissions()?.EditAnyCollection ?? false))
+            foreach (var orgUser in organizationUsers.Where(ou => ou.GetPermissions()?.EditAssignedCollections ?? false))
             {
                 var user = usersList.FirstOrDefault(u => u.Id == orgUser.Id);
                 if (user != null)
                 {
                     user.Manage = true;
-                }
-                else
-                {
-                    usersList.Add(new CollectionAccessSelection { Id = orgUser.Id, Manage = true });
                 }
             }
         }
