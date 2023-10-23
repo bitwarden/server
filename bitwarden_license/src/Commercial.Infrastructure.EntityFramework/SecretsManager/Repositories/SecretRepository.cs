@@ -313,6 +313,34 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         await dbContext.SaveChangesAsync();
     }
 
+    public async Task MoveSecretsAsync(IEnumerable<Core.SecretsManager.Entities.Secret> secrets, IEnumerable<Guid> projectIds)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var projectSecretsSet = dbContext.Set<Dictionary<string, object>>("ProjectSecret");
+
+        using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var secretIds = secrets.Select(s => s.Id).ToList();
+
+        var projectSecrets = secretIds.SelectMany(s => projectIds.Select(p => new Dictionary<string, object>
+        {
+            ["ProjectsId"] = p,
+            ["SecretsId"] = s
+        }));
+
+        await projectSecretsSet
+            .Where(ps => secretIds.Contains((Guid)ps["SecretsId"]))
+            .ExecuteDeleteAsync();
+
+        projectSecretsSet.AddRange(projectSecrets);
+
+        await dbContext.SaveChangesAsync();
+
+        await transaction.CommitAsync();
+    }
+
     private IQueryable<SecretPermissionDetails> SecretToPermissionDetails(IQueryable<Secret> query, Guid userId, AccessClientType accessType)
     {
         var secrets = accessType switch

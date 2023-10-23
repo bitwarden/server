@@ -33,6 +33,7 @@ public class SecretsController : Controller
     private readonly IEventService _eventService;
     private readonly IReferenceEventService _referenceEventService;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IMoveSecretsCommand _moveSecretsCommand;
 
     public SecretsController(
         ICurrentContext currentContext,
@@ -45,7 +46,8 @@ public class SecretsController : Controller
         IUserService userService,
         IEventService eventService,
         IReferenceEventService referenceEventService,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IMoveSecretsCommand moveSecretsCommand)
     {
         _currentContext = currentContext;
         _projectRepository = projectRepository;
@@ -58,7 +60,7 @@ public class SecretsController : Controller
         _eventService = eventService;
         _referenceEventService = referenceEventService;
         _authorizationService = authorizationService;
-
+        _moveSecretsCommand = moveSecretsCommand;
     }
 
     [HttpGet("organizations/{organizationId}/secrets")]
@@ -245,5 +247,37 @@ public class SecretsController : Controller
 
         var responses = secrets.Select(s => new BaseSecretResponseModel(s));
         return new ListResponseModel<BaseSecretResponseModel>(responses);
+    }
+
+    [HttpPost("secrets/{organizationId}/move")]
+    public async Task BulkMoveToProjectAsync(Guid organizationId, [FromBody] BulkMoveToProjectsRequestModel request)
+    {
+        var secrets = (await _secretRepository.GetManyByIds(request.Secrets)).ToList();
+        if (!secrets.Any() || secrets.Count != request.Secrets.Count)
+        {
+            throw new NotFoundException();
+        }
+
+        if (secrets.Any(secret => secret.OrganizationId != organizationId) ||
+            !_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        foreach (var secret in secrets)
+        {
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Update);
+            if (!authorizationResult.Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        if (request.Projects.Count != 1)
+        {
+            throw new BadRequestException("You are only allowed to assign a single project.");
+        }
+
+        await _moveSecretsCommand.MoveSecretsAsync(secrets, request.Projects);
     }
 }

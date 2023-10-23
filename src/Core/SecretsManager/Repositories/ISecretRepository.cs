@@ -22,4 +22,5 @@ public interface ISecretRepository
     Task<(bool Read, bool Write)> AccessToSecretAsync(Guid id, Guid userId, AccessClientType accessType);
     Task EmptyTrash(DateTime nowTime, uint deleteAfterThisNumberOfDays);
     Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId);
+    Task MoveSecretsAsync(IEnumerable<Secret> secrets, IEnumerable<Guid> projectIds);
 }
