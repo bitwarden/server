@@ -1,4 +1,5 @@
-﻿using Bit.Api.Models.Response.Providers;
+﻿using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Data;
