@@ -32,13 +32,22 @@ public class SecretsManagerOrganizationHelper
         _createAccessTokenCommand = factory.GetService<ICreateAccessTokenCommand>();
     }
 
-    public async Task<(Organization organization, OrganizationUser owner)> Initialize(bool useSecrets, bool ownerAccessSecrets)
+    public async Task<(Organization organization, OrganizationUser owner)> Initialize(bool useSecrets, bool ownerAccessSecrets, bool organizationEnabled)
     {
         (_organization, _owner) = await OrganizationTestHelpers.SignUpAsync(_factory, ownerEmail: _ownerEmail, billingEmail: _ownerEmail);
 
-        if (useSecrets)
+        if (useSecrets || !organizationEnabled)
         {
-            _organization.UseSecretsManager = true;
+            if (useSecrets)
+            {
+                _organization.UseSecretsManager = true;
+            }
+
+            if (!organizationEnabled)
+            {
+                _organization.Enabled = false;
+            }
+
             await _organizationRepository.ReplaceAsync(_organization);
         }
 

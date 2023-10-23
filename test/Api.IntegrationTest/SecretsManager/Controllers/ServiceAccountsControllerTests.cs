@@ -57,12 +57,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task ListByOrganization_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task ListByOrganization_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _clientTestHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/service-accounts");
@@ -72,7 +76,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task ListByOrganization_Admin_Success()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccountIds = await SetupGetServiceAccountsByOrganizationAsync(org);
@@ -89,7 +93,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task ListByOrganization_User_Success()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _clientTestHelper.LoginAsync(email);
 
@@ -117,12 +121,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task GetByServiceAccountId_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task GetByServiceAccountId_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -138,7 +146,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task GetByServiceAccountId_ServiceAccountDoesNotExist_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _clientTestHelper.LoginAsync(_email);
 
         var response = await _client.GetAsync($"/service-accounts/{new Guid()}");
@@ -148,7 +156,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task GetByServiceAccountId_UserWithoutPermission_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _clientTestHelper.LoginAsync(email);
 
@@ -181,12 +189,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Create_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Create_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _clientTestHelper.LoginAsync(_email);
 
         var request = new ServiceAccountCreateRequestModel { Name = _mockEncryptedString };
@@ -200,7 +212,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Create_Success(PermissionType permissionType)
     {
-        var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true);
+        var (org, adminOrgUser) = await _organizationHelper.Initialize(true, true, true);
         await _clientTestHelper.LoginAsync(_email);
 
         var orgUserId = adminOrgUser.Id;
@@ -244,12 +256,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Update_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Update_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _clientTestHelper.LoginAsync(_email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -267,7 +283,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task Update_User_NoPermissions()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _clientTestHelper.LoginAsync(email);
 
@@ -286,7 +302,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task Update_NonExistingServiceAccount_NotFound()
     {
-        await _organizationHelper.Initialize(true, true);
+        await _organizationHelper.Initialize(true, true, true);
         await _clientTestHelper.LoginAsync(_email);
 
         var request = new ServiceAccountUpdateRequestModel { Name = _mockNewName };
@@ -323,12 +339,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task Delete_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task Delete_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _clientTestHelper.LoginAsync(_email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -346,7 +366,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task Delete_MissingAccessPolicy_AccessDenied()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _clientTestHelper.LoginAsync(email);
 
@@ -369,7 +389,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task Delete_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -409,12 +429,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task GetAccessTokens_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task GetAccessTokens_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -430,7 +454,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task GetAccessTokens_UserNoPermission_NotFound()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _clientTestHelper.LoginAsync(email);
 
@@ -456,7 +480,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task GetAccessTokens_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -502,12 +526,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task CreateAccessToken_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task CreateAccessToken_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -532,7 +560,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task CreateAccessToken_Admin()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -565,7 +593,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task CreateAccessToken_User_WithPermission()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _clientTestHelper.LoginAsync(email);
 
@@ -601,7 +629,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task CreateAccessToken_User_NoPermission()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, _) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _clientTestHelper.LoginAsync(email);
 
@@ -627,7 +655,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [Fact]
     public async Task CreateAccessToken_ExpireAtNull_Admin()
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -657,12 +685,16 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     }
 
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(true, false)]
-    [InlineData(false, true)]
-    public async Task RevokeAccessToken_SmNotEnabled_NotFound(bool useSecrets, bool accessSecrets)
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task RevokeAccessToken_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
     {
-        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets);
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
         await _clientTestHelper.LoginAsync(_email);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
@@ -692,7 +724,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [InlineData(true)]
     public async Task RevokeAccessToken_User_NoPermission(bool hasReadAccess)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
         await _clientTestHelper.LoginAsync(email);
 
@@ -736,7 +768,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task RevokeAccessToken_Success(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
 
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
@@ -810,7 +842,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
     private async Task<ServiceAccount> SetupServiceAccountWithAccessAsync(PermissionType permissionType)
     {
-        var (org, _) = await _organizationHelper.Initialize(true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await _clientTestHelper.LoginAsync(_email);
 
         var initialServiceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
