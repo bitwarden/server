@@ -1,4 +1,4 @@
-using Bit.Core.SecretsManager.Entities;
+﻿using Bit.Core.SecretsManager.Entities;
 
 namespace Bit.Core.SecretsManager.Commands.Secrets.Interfaces;
 
