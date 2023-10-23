@@ -90,12 +90,12 @@ public class OrganizationUsersController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
-        var authorized = FlexibleCollectionsIsEnabled ?
-            (await _authorizationService.AuthorizeAsync(User, null, OrganizationUserOperations.Read(orgId))).Succeeded :
-            await _currentContext.ViewAllCollections(orgId) ||
-            await _currentContext.ViewAssignedCollections(orgId) ||
-            await _currentContext.ManageGroups(orgId) ||
-            await _currentContext.ManageUsers(orgId);
+        var authorized = FlexibleCollectionsIsEnabled
+            ? (await _authorizationService.AuthorizeAsync(User, null, OrganizationUserOperations.ReadAll(orgId))).Succeeded
+            : await _currentContext.ViewAllCollections(orgId) ||
+              await _currentContext.ViewAssignedCollections(orgId) ||
+              await _currentContext.ManageGroups(orgId) ||
+              await _currentContext.ManageUsers(orgId);
         if (!authorized)
         {
             throw new NotFoundException();

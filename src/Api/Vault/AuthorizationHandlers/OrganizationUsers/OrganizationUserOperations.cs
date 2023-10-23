@@ -15,8 +15,8 @@ public class OrganizationUserOperationRequirement : OperationAuthorizationRequir
 
 public static class OrganizationUserOperations
 {
-    public static OrganizationUserOperationRequirement Read(Guid organizationId)
+    public static OrganizationUserOperationRequirement ReadAll(Guid organizationId)
     {
-        return new OrganizationUserOperationRequirement(nameof(Read), organizationId);
+        return new OrganizationUserOperationRequirement(nameof(ReadAll), organizationId);
     }
 }

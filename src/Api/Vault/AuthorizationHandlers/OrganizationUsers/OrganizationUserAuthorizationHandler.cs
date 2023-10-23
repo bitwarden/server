@@ -51,13 +51,13 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
 
         switch (requirement)
         {
-            case not null when requirement.Name == nameof(OrganizationUserOperations.Read):
-                await CanReadAsync(context, requirement, org);
+            case not null when requirement.Name == nameof(OrganizationUserOperations.ReadAll):
+                await CanReadAllAsync(context, requirement, org);
                 break;
         }
     }
 
-    private async Task CanReadAsync(AuthorizationHandlerContext context, OrganizationUserOperationRequirement requirement,
+    private async Task CanReadAllAsync(AuthorizationHandlerContext context, OrganizationUserOperationRequirement requirement,
         CurrentContextOrganization org)
     {
         if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
