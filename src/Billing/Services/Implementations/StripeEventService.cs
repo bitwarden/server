@@ -7,13 +7,16 @@ namespace Bit.Billing.Services.Implementations;
 public class StripeEventService : IStripeEventService
 {
     private readonly GlobalSettings _globalSettings;
+    private readonly ILogger<StripeEventService> _logger;
     private readonly IStripeFacade _stripeFacade;
 
     public StripeEventService(
         GlobalSettings globalSettings,
+        ILogger<StripeEventService> logger,
         IStripeFacade stripeFacade)
     {
         _globalSettings = globalSettings;
+        _logger = logger;
         _stripeFacade = stripeFacade;
     }
 
@@ -23,6 +26,12 @@ public class StripeEventService : IStripeEventService
 
         if (!fresh)
         {
+            return eventCharge;
+        }
+
+        if (string.IsNullOrEmpty(eventCharge.Id))
+        {
+            _logger.LogWarning("Cannot retrieve up-to-date Charge for Event with ID '{eventId}' because no Charge ID was included in the Event.", stripeEvent.Id);
             return eventCharge;
         }
 
@@ -46,6 +55,12 @@ public class StripeEventService : IStripeEventService
             return eventCustomer;
         }
 
+        if (string.IsNullOrEmpty(eventCustomer.Id))
+        {
+            _logger.LogWarning("Cannot retrieve up-to-date Customer for Event with ID '{eventId}' because no Customer ID was included in the Event.", stripeEvent.Id);
+            return eventCustomer;
+        }
+
         var customer = await _stripeFacade.GetCustomer(eventCustomer.Id, new CustomerGetOptions { Expand = expand });
 
         if (customer == null)
@@ -63,6 +78,12 @@ public class StripeEventService : IStripeEventService
 
         if (!fresh)
         {
+            return eventInvoice;
+        }
+
+        if (string.IsNullOrEmpty(eventInvoice.Id))
+        {
+            _logger.LogWarning("Cannot retrieve up-to-date Invoice for Event with ID '{eventId}' because no Invoice ID was included in the Event.", stripeEvent.Id);
             return eventInvoice;
         }
 
@@ -86,6 +107,12 @@ public class StripeEventService : IStripeEventService
             return eventPaymentMethod;
         }
 
+        if (string.IsNullOrEmpty(eventPaymentMethod.Id))
+        {
+            _logger.LogWarning("Cannot retrieve up-to-date Payment Method for Event with ID '{eventId}' because no Payment Method ID was included in the Event.", stripeEvent.Id);
+            return eventPaymentMethod;
+        }
+
         var paymentMethod = await _stripeFacade.GetPaymentMethod(eventPaymentMethod.Id, new PaymentMethodGetOptions { Expand = expand });
 
         if (paymentMethod == null)
@@ -103,6 +130,12 @@ public class StripeEventService : IStripeEventService
 
         if (!fresh)
         {
+            return eventSubscription;
+        }
+
+        if (string.IsNullOrEmpty(eventSubscription.Id))
+        {
+            _logger.LogWarning("Cannot retrieve up-to-date Subscription for Event with ID '{eventId}' because no Subscription ID was included in the Event.", stripeEvent.Id);
             return eventSubscription;
         }
 
@@ -132,7 +165,7 @@ public class StripeEventService : IStripeEventService
                 (await GetCharge(stripeEvent, true, customerExpansion))?.Customer?.Metadata,
 
             HandledStripeWebhook.UpcomingInvoice =>
-                (await GetInvoice(stripeEvent, true, customerExpansion))?.Customer?.Metadata,
+                await GetCustomerMetadataFromUpcomingInvoiceEvent(stripeEvent),
 
             HandledStripeWebhook.PaymentSucceeded or HandledStripeWebhook.PaymentFailed or HandledStripeWebhook.InvoiceCreated =>
                 (await GetInvoice(stripeEvent, true, customerExpansion))?.Customer?.Metadata,
@@ -154,6 +187,20 @@ public class StripeEventService : IStripeEventService
         var customerRegion = GetCustomerRegion(customerMetadata);
 
         return customerRegion == serverRegion;
+
+        /* In Stripe, when we receive an invoice.upcoming event, the event does not include an Invoice ID because
+           the invoice hasn't been created yet. Therefore, rather than retrieving the fresh Invoice with a 'customer'
+           expansion, we need to use the Customer ID on the event to retrieve the metadata. */
+        async Task<Dictionary<string, string>> GetCustomerMetadataFromUpcomingInvoiceEvent(Event localStripeEvent)
+        {
+            var invoice = await GetInvoice(localStripeEvent);
+
+            var customer = !string.IsNullOrEmpty(invoice.CustomerId)
+                ? await _stripeFacade.GetCustomer(invoice.CustomerId)
+                : null;
+
+            return customer?.Metadata;
+        }
     }
 
     private static T Extract<T>(Event stripeEvent)

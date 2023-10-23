@@ -3,6 +3,7 @@ using Bit.Billing.Services.Implementations;
 using Bit.Billing.Test.Utilities;
 using Bit.Core.Settings;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Stripe;
 using Xunit;
@@ -21,7 +22,7 @@ public class StripeEventServiceTests
         globalSettings.BaseServiceUri = baseServiceUriSettings;
 
         _stripeFacade = Substitute.For<IStripeFacade>();
-        _stripeEventService = new StripeEventService(globalSettings, _stripeFacade);
+        _stripeEventService = new StripeEventService(globalSettings, Substitute.For<ILogger<StripeEventService>>(), _stripeFacade);
     }
 
     #region GetCharge
