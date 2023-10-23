@@ -1089,7 +1089,7 @@ public class StripePaymentService : IPaymentService
     }
 
     internal async Task<InvoicePreviewResult> PreviewUpcomingInvoiceAndPayAsync(ISubscriber subscriber,
-        List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 500)
+        List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, int prorateThreshold = 50000)
     {
         var customer = await CheckInAppPurchaseMethod(subscriber);
 
