@@ -38,7 +38,7 @@ public class PlansController : Controller
             .Where(plan => plansUpgradeIsEnabled || plan.Type <= PlanType.EnterpriseAnnually2020)
             .Select(plan =>
             {
-                if (plan.Type is <= PlanType.EnterpriseAnnually2020 and >= PlanType.TeamsMonthly2020)
+                if (!plansUpgradeIsEnabled && plan.Type is <= PlanType.EnterpriseAnnually2020 and >= PlanType.TeamsMonthly2020)
                 {
                     plan.LegacyYear = null;
                 }
