@@ -1857,7 +1857,7 @@ public class StripePaymentService : IPaymentService
 
             if (customer.Discount != null)
             {
-                subscriptionInfo.Discount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
+                subscriptionInfo.CustomerDiscount = new SubscriptionInfo.BillingCustomerDiscount(customer.Discount);
             }
 
             if (subscriber.IsUser())
