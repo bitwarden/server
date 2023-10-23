@@ -52,8 +52,8 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             return;
         }
 
-        var targetOrganizationId = requirement.OrganizationId != default ?
-            requirement.OrganizationId : resources.First().OrganizationId;
+        var targetOrganizationId = requirement.OrganizationId != default
+            ? requirement.OrganizationId : resources.First().OrganizationId;
 
         // Ensure all target collections belong to the same organization
         if (resources.Any(tc => tc.OrganizationId != targetOrganizationId))
@@ -72,7 +72,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         switch (requirement)
         {
             case not null when requirement == CollectionOperations.Create:
-                await CanCreateAsync(context, requirement, resources, org);
+                await CanCreateAsync(context, requirement, org);
                 break;
 
             case not null when requirement == CollectionOperations.Read:
@@ -91,22 +91,12 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             case not null when requirement == CollectionOperations.ModifyAccess:
                 await CanManageCollectionAccessAsync(context, requirement, resources, org);
                 break;
-
-            default:
-                context.Fail();
-                break;
         }
     }
 
     private async Task CanCreateAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
-        ICollection<Collection> targetCollections, CurrentContextOrganization org)
+        CurrentContextOrganization org)
     {
-        if (targetCollections.Any(c => c.Id != default))
-        {
-            context.Fail();
-            return;
-        }
-
         // If false, all organization members are allowed to create collections
         if (!org.LimitCollectionCreationDeletion)
         {
@@ -130,12 +120,6 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private async Task CanReadAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         ICollection<Collection> targetCollections, CurrentContextOrganization org)
     {
-        if (targetCollections.Any(c => c.Id == default))
-        {
-            context.Fail();
-            return;
-        }
-
         if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
             await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
@@ -143,47 +127,27 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             return;
         }
 
-        var manageableCollectionIds =
-            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
-            .Where(c => c.OrganizationId == org.Id)
-            .Select(c => c.Id)
-            .ToHashSet();
-
-        // The acting user does not have permission to manage all target collections, fail
-        if (targetCollections.Any(c => !manageableCollectionIds.Contains(c.Id)))
-        {
-            context.Fail();
-            return;
-        }
-
-        context.Succeed(requirement);
+        await CheckCollectionPermissionsAsync(context, requirement, targetCollections, org, requireManagePermission: false);
     }
 
     private async Task CanReadAllAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         CurrentContextOrganization org)
     {
-        if (org.Type is not (OrganizationUserType.Owner or OrganizationUserType.Admin) &&
-            !org.Permissions.ManageGroups &&
-            !org.Permissions.ManageUsers &&
-            !org.Permissions.EditAnyCollection &&
-            !org.Permissions.DeleteAnyCollection &&
-            !org.Permissions.AccessImportExport)
+        if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
+            org.Permissions.ManageGroups ||
+            org.Permissions.ManageUsers ||
+            org.Permissions.EditAnyCollection ||
+            org.Permissions.DeleteAnyCollection ||
+            org.Permissions.AccessImportExport ||
+            await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
-            context.Fail();
+            context.Succeed(requirement);
         }
-
-        context.Succeed(requirement);
     }
 
     private async Task CanDeleteAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
         ICollection<Collection> targetCollections, CurrentContextOrganization org)
     {
-        if (targetCollections.Any(c => c.Id == default))
-        {
-            context.Fail();
-            return;
-        }
-
         // Owners, Admins, Providers, and users with DeleteAnyCollection permission can always delete collections
         if (
             org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
@@ -201,21 +165,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             return;
         }
 
-        // Other members types should have the Manage capability for all collections being deleted
-        var manageableCollectionIds =
-            (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
-            .Where(c => c.Manage && c.OrganizationId == org.Id)
-            .Select(c => c.Id)
-            .ToHashSet();
-
-        // The acting user does not have permission to manage all target collections, fail
-        if (targetCollections.Any(c => !manageableCollectionIds.Contains(c.Id)))
-        {
-            context.Fail();
-            return;
-        }
-
-        context.Succeed(requirement);
+        await CheckCollectionPermissionsAsync(context, requirement, targetCollections, org, requireManagePermission: true);
     }
 
     /// <summary>
@@ -224,12 +174,6 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context,
         IAuthorizationRequirement requirement, ICollection<Collection> targetCollections, CurrentContextOrganization org)
     {
-        if (targetCollections.Any(c => c.Id == default))
-        {
-            context.Fail();
-            return;
-        }
-
         // Owners, Admins, Providers, and users with EditAnyCollection permission can always manage collection access
         if (
             org.Permissions is { EditAnyCollection: true } ||
@@ -240,14 +184,27 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
             return;
         }
 
-        // List of collection Ids the acting user is allowed to manage
+        await CheckCollectionPermissionsAsync(context, requirement, targetCollections, org, requireManagePermission: true);
+    }
+
+    private async Task CheckCollectionPermissionsAsync(
+        AuthorizationHandlerContext context,
+        IAuthorizationRequirement requirement,
+        ICollection<Collection> targetCollections,
+        CurrentContextOrganization org,
+        bool requireManagePermission)
+    {
+        // List of collection Ids the acting user has access to
         var manageableCollectionIds =
             (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
-            .Where(c => c.Manage && c.OrganizationId == org.Id)
+            .Where(c =>
+                // If requireManagePermission is true, check Collections with Manage permission
+                (!requireManagePermission || c.Manage)
+                && c.OrganizationId == org.Id)
             .Select(c => c.Id)
             .ToHashSet();
 
-        // The acting user does not have permission to manage all target collections, fail
+        // The acting user does not have permissions for all target collections, fail
         if (targetCollections.Any(tc => !manageableCollectionIds.Contains(tc.Id)))
         {
             context.Fail();
