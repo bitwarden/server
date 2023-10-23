@@ -725,7 +725,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task UpdateAsync(Organization organization, bool updateBilling = false)
+    public async Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated)
     {
         if (organization.Id == default(Guid))
         {
@@ -741,7 +741,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        await ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
+        await ReplaceAndUpdateCacheAsync(organization, eventType);
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
