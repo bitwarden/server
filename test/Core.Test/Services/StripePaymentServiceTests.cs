@@ -756,7 +756,7 @@ public class StripePaymentServiceTests
     public async void PreviewUpcomingInvoiceAndPayAsync_UpcomingInvoiceBelowThreshold_DoesNotInvoiceNow(SutProvider<StripePaymentService> sutProvider,
         Organization subscriber, List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions)
     {
-        var prorateThreshold = 500;
+        var prorateThreshold = 50000;
         var invoiceAmountBelowThreshold = prorateThreshold - 100;
         var customer = MockStripeCustomer(subscriber);
         sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(default, default).ReturnsForAnyArgs(customer);
@@ -811,7 +811,7 @@ public class StripePaymentServiceTests
     public async void PreviewUpcomingInvoiceAndPayAsync_NoPaymentMethod_ThrowsBadRequestException(SutProvider<StripePaymentService> sutProvider,
        Organization subscriber, List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, string planId)
     {
-        var prorateThreshold = 1200;
+        var prorateThreshold = 120000;
         var invoiceAmountBelowThreshold = prorateThreshold;
         var customer = new Stripe.Customer
         {
@@ -846,8 +846,8 @@ public class StripePaymentServiceTests
     public async void PreviewUpcomingInvoiceAndPayAsync_UpcomingInvoiceAboveThreshold_DoesInvoiceNow(SutProvider<StripePaymentService> sutProvider,
         Organization subscriber, List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, string planId)
     {
-        var prorateThreshold = 500;
-        var invoiceAmountBelowThreshold = 1000;
+        var prorateThreshold = 50000;
+        var invoiceAmountBelowThreshold = 100000;
         var customer = MockStripeCustomer(subscriber);
         sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(default, default).ReturnsForAnyArgs(customer);
         var invoiceItem = MockInoviceItemList(subscriber, planId, invoiceAmountBelowThreshold, customer);
