@@ -782,7 +782,7 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        await _organizationService.UpdateAsync(model.ToOrganization(organization));
+        await _organizationService.UpdateAsync(model.ToOrganization(organization), eventType: EventType.Organization_CollectionManagement_Updated);
         return new OrganizationResponseModel(organization);
     }
 }
