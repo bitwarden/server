@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
