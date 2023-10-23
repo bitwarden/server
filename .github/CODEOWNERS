@@ -2,8 +2,17 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
+# The following owners will be the default owners for everything in the repo.
+# Unless a later match takes precedence
+* @bitwarden/tech-leads
+
 # DevOps for Actions and other workflow changes.
 .github/workflows @bitwarden/dept-devops
+
+# DevOps for Docker changes.
+**/Dockerfile @bitwarden/dept-devops
+**/*.Dockerfile @bitwarden/dept-devops
+**/.dockerignore @bitwarden/dept-devops
 
 ## Auth team files ##
 **/Auth @bitwarden/team-auth-dev
@@ -19,3 +28,13 @@ bitwarden_license/src/Scim @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/AdminConsole @bitwarden/team-admin-console-dev
+
+# Billing Team
+**/*billing* @bitwarden/team-billing-dev
+**/*subscription* @bitwarden/team-billing-dev
+**/*stripe* @bitwarden/team-billing-dev
+**/*paypal* @bitwarden/team-billing-dev
+**/*braintree* @bitwarden/team-billing-dev
+**/*bitpay* @bitwarden/team-billing-dev
+**/*freshdesk* @bitwarden/team-billing-dev
+**/*freshsales* @bitwarden/team-billing-dev

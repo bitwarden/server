@@ -70,7 +70,7 @@ public class SqlServerDbMigrator : IDbMigrator
         cancellationToken.ThrowIfCancellationRequested();
         var builder = DeployChanges.To
             .SqlDatabase(_connectionString)
-            .JournalToSqlTable("dbo", "Migration")
+            .JournalToSqlTable("dbo", MigratorConstants.SqlTableJournalName)
             .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
                 s => s.Contains($".DbScripts.") && !s.Contains(".Archive."))
             .WithTransaction()

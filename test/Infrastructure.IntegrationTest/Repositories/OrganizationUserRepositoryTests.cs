@@ -10,8 +10,7 @@ public class OrganizationUserRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task DeleteAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        ITestDatabaseHelper helper)
+        IOrganizationUserRepository organizationUserRepository)
     {
         var user = await userRepository.CreateAsync(new User
         {
@@ -35,8 +34,6 @@ public class OrganizationUserRepositoryTests
             Status = OrganizationUserStatusType.Confirmed,
         });
 
-        helper.ClearTracker();
-
         await organizationUserRepository.DeleteAsync(orgUser);
 
         var newUser = await userRepository.GetByIdAsync(user.Id);
@@ -46,8 +43,7 @@ public class OrganizationUserRepositoryTests
     [DatabaseTheory, DatabaseData]
     public async Task DeleteManyAsync_Works(IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        ITestDatabaseHelper helper)
+        IOrganizationUserRepository organizationUserRepository)
     {
         var user1 = await userRepository.CreateAsync(new User
         {
@@ -85,8 +81,6 @@ public class OrganizationUserRepositoryTests
             UserId = user2.Id,
             Status = OrganizationUserStatusType.Confirmed,
         });
-
-        helper.ClearTracker();
 
         await organizationUserRepository.DeleteManyAsync(new List<Guid>
         {
