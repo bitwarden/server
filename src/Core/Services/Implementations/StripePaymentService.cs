@@ -1850,15 +1850,35 @@ public class StripePaymentService : IPaymentService
             return null;
         }
 
-        var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
+        return (await Collect())
+            .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
+            .OrderByDescending(invoice => invoice.Created)
+            .Select(invoice => new BillingInfo.BillingInvoice(invoice));
+
+        async Task<List<Stripe.Invoice>> Collect()
         {
-            Customer = customer.Id,
-            Limit = 50
-        });
+            var collected = new List<Stripe.Invoice>();
+            var hasMore = true;
 
-        return invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
-            .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
+            while (hasMore)
+            {
+                var invoiceListOptions = new Stripe.InvoiceListOptions { Customer = customer.Id, Limit = 100 };
 
+                if (collected.Any())
+                {
+                    var lastInvoiceId = collected.Last().Id;
+                    invoiceListOptions.StartingAfter = lastInvoiceId;
+                }
+
+                var invoices = await _stripeAdapter.InvoiceListAsync(invoiceListOptions);
+
+                collected.AddRange(invoices);
+
+                hasMore = invoices.HasMore;
+            }
+
+            return collected;
+        }
     }
 
     // We are taking only first 30 characters of the SubscriberName because stripe provide
