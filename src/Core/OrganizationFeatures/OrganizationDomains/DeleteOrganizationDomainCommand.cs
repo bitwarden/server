@@ -1,5 +1,5 @@
-﻿using Bit.Core.Enums;
-using Bit.Core.Exceptions;
+﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -18,15 +18,9 @@ public class DeleteOrganizationDomainCommand : IDeleteOrganizationDomainCommand
         _eventService = eventService;
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task DeleteAsync(OrganizationDomain organizationDomain)
     {
-        var domain = await _organizationDomainRepository.GetByIdAsync(id);
-        if (domain is null)
-        {
-            throw new NotFoundException();
-        }
-
-        await _organizationDomainRepository.DeleteAsync(domain);
-        await _eventService.LogOrganizationDomainEventAsync(domain, EventType.OrganizationDomain_Removed);
+        await _organizationDomainRepository.DeleteAsync(organizationDomain);
+        await _eventService.LogOrganizationDomainEventAsync(organizationDomain, EventType.OrganizationDomain_Removed);
     }
 }
