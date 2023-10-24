@@ -1,10 +1,9 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Core;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
-using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -25,6 +24,7 @@ public class GroupsController : Controller
     private readonly ICreateGroupCommand _createGroupCommand;
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly IFeatureService _featureService;
+    private readonly IAuthorizationService _authorizationService;
 
     private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
@@ -47,6 +47,7 @@ public class GroupsController : Controller
         _updateGroupCommand = updateGroupCommand;
         _deleteGroupCommand = deleteGroupCommand;
         _featureService = featureService;
+        _authorizationService = authorizationService;
     }
 
     [HttpGet("{id}")]
@@ -76,27 +77,24 @@ public class GroupsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
-        ICollection<Tuple<Group, ICollection<CollectionAccessSelection>>> groups;
-
         if (FlexibleCollectionsIsEnabled)
         {
-            groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
+            // New flexible collections logic
+            return await Get_FC(orgId);
         }
-        else
+
+        // Old pre-flexible collections logic follows
+        var canAccess = await _currentContext.ManageGroups(orgId) ||
+                        await _currentContext.ViewAssignedCollections(orgId) ||
+                        await _currentContext.ViewAllCollections(orgId) ||
+                        await _currentContext.ManageUsers(orgId);
+
+        if (!canAccess)
         {
-            var canAccess = await _currentContext.ManageGroups(orgId) ||
-                            await _currentContext.ViewAssignedCollections(orgId) ||
-                            await _currentContext.ViewAllCollections(orgId) ||
-                            await _currentContext.ManageUsers(orgId);
-
-            if (!canAccess)
-            {
-                throw new NotFoundException();
-            }
-
-            groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
+            throw new NotFoundException();
         }
 
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
         var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
         return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
@@ -200,5 +198,19 @@ public class GroupsController : Controller
         }
 
         await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
+    }
+
+    private async Task<ListResponseModel<GroupDetailsResponseModel>> Get_FC(Guid orgId)
+    {
+        var authorized =
+            (await _authorizationService.AuthorizeAsync(User, null, GroupOperations.ReadAll(orgId))).Succeeded;
+        if (!authorized)
+        {
+            throw new NotFoundException();
+        }
+
+        var groups = await _groupRepository.GetManyWithCollectionsByOrganizationIdAsync(orgId);
+        var responses = groups.Select(g => new GroupDetailsResponseModel(g.Item1, g.Item2));
+        return new ListResponseModel<GroupDetailsResponseModel>(responses);
     }
 }
