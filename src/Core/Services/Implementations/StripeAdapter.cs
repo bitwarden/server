@@ -97,9 +97,23 @@ public class StripeAdapter : IStripeAdapter
         return _invoiceService.GetAsync(id, options);
     }
 
-    public Task<Stripe.StripeList<Stripe.Invoice>> InvoiceListAsync(Stripe.InvoiceListOptions options)
+    public async Task<List<Stripe.Invoice>> InvoiceListAsync(StripeInvoiceListOptions options)
     {
-        return _invoiceService.ListAsync(options);
+        if (!options.SelectAll)
+        {
+            return (await _invoiceService.ListAsync(options.ToInvoiceListOptions())).Data;
+        }
+
+        options.Limit = 100;
+
+        var invoices = new List<Stripe.Invoice>();
+
+        await foreach (var invoice in _invoiceService.ListAutoPagingAsync(options.ToInvoiceListOptions()))
+        {
+            invoices.Add(invoice);
+        }
+
+        return invoices;
     }
 
     public IEnumerable<InvoiceItem> InvoiceItemListAsync(InvoiceItemListOptions options)

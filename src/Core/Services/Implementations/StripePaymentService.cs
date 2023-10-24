@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -668,7 +669,7 @@ public class StripePaymentService : IPaymentService
 
             if (!stripePaymentMethod && subInvoiceMetadata.Any())
             {
-                var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
+                var invoices = await _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
                 {
                     Subscription = subscription.Id
                 });
@@ -2138,15 +2139,26 @@ public class StripePaymentService : IPaymentService
             return null;
         }
 
-        var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
+        var options = new StripeInvoiceListOptions
         {
             Customer = customer.Id,
-            Limit = 50
-        });
+            SelectAll = true
+        };
 
-        return invoices.Data.Where(i => i.Status != "void" && i.Status != "draft")
-            .OrderByDescending(i => i.Created).Select(i => new BillingInfo.BillingInvoice(i));
+        try
+        {
+            var invoices = await _stripeAdapter.InvoiceListAsync(options);
 
+            return invoices
+                .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
+                .OrderByDescending(invoice => invoice.Created)
+                .Select(invoice => new BillingInfo.BillingInvoice(invoice));
+        }
+        catch (Stripe.StripeException exception)
+        {
+            _logger.LogError(exception, "An error occurred while listing Stripe invoices");
+            throw new GatewayException("Failed to retrieve current invoices", exception);
+        }
     }
 
     // We are taking only first 30 characters of the SubscriberName because stripe provide
