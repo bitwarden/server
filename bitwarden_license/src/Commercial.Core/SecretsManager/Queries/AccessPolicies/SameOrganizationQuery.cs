@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
 
 namespace Bit.Commercial.Core.SecretsManager.Queries.AccessPolicies;
