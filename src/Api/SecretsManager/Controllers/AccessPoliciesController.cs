@@ -268,16 +268,18 @@ public class AccessPoliciesController : Controller
     }
 
     [HttpGet("/service-accounts/{id}/access-policies/people")]
-    public async Task<ServiceAccountPeopleAccessPoliciesResponseModel> GetServiceAccountPeopleAccessPoliciesAsync([FromRoute] Guid id)
+    public async Task<ServiceAccountPeopleAccessPoliciesResponseModel> GetServiceAccountPeopleAccessPoliciesAsync(
+        [FromRoute] Guid id)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
-        var results = await _accessPolicyRepository.GetPeoplePoliciesByGrantedServiceAccountIdAsync(id);
-        return new ServiceAccountPeopleAccessPoliciesResponseModel(results);
+        var (_, userId) = await CheckUserHasWriteAccessToServiceAccountAsync(serviceAccount);
+        var results = await _accessPolicyRepository.GetPeoplePoliciesByGrantedServiceAccountIdAsync(id, userId);
+        return new ServiceAccountPeopleAccessPoliciesResponseModel(results, userId);
     }
 
     [HttpPut("/service-accounts/{id}/access-policies/people")]
-    public async Task<ServiceAccountPeopleAccessPoliciesResponseModel> PutServiceAccountPeopleAccessPoliciesAsync([FromRoute] Guid id,
+    public async Task<ServiceAccountPeopleAccessPoliciesResponseModel> PutServiceAccountPeopleAccessPoliciesAsync(
+        [FromRoute] Guid id,
         [FromBody] PeopleAccessPoliciesRequestModel request)
     {
         var serviceAccount = await _serviceAccountRepository.GetByIdAsync(id);
@@ -295,8 +297,9 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var results = await _accessPolicyRepository.ReplaceServiceAccountPeopleAsync(peopleAccessPolicies);
-        return new ServiceAccountPeopleAccessPoliciesResponseModel(results);
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var results = await _accessPolicyRepository.ReplaceServiceAccountPeopleAsync(peopleAccessPolicies, userId);
+        return new ServiceAccountPeopleAccessPoliciesResponseModel(results, userId);
     }
 
     private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToProjectAsync(Project project)
@@ -315,7 +318,7 @@ public class AccessPoliciesController : Controller
         return (accessClient, userId);
     }
 
-    private async Task CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
+    private async Task<(AccessClientType AccessClientType, Guid UserId)> CheckUserHasWriteAccessToServiceAccountAsync(ServiceAccount serviceAccount)
     {
         if (serviceAccount == null)
         {
@@ -335,6 +338,8 @@ public class AccessPoliciesController : Controller
         {
             throw new NotFoundException();
         }
+
+        return (accessClient, userId);
     }
 
     private async Task<(AccessClientType AccessClientType, Guid UserId)> GetAccessClientTypeAsync(Guid organizationId)

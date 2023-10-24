@@ -981,7 +981,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.GetServiceAccountPeopleAccessPoliciesAsync(data.Id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .GetPeoplePoliciesByGrantedServiceAccountIdAsync(Arg.Any<Guid>());
+            .GetPeoplePoliciesByGrantedServiceAccountIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1010,7 +1010,7 @@ public class AccessPoliciesControllerTests
         var result = await sutProvider.Sut.GetServiceAccountPeopleAccessPoliciesAsync(data.Id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetPeoplePoliciesByGrantedServiceAccountIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data.Id)));
+            .GetPeoplePoliciesByGrantedServiceAccountIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data.Id)), Arg.Any<Guid>());
 
         Assert.Empty(result.UserAccessPolicies);
         Assert.Empty(result.GroupAccessPolicies);
@@ -1031,7 +1031,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.GetServiceAccountPeopleAccessPoliciesAsync(data.Id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .GetPeoplePoliciesByGrantedServiceAccountIdAsync(Arg.Any<Guid>());
+            .GetPeoplePoliciesByGrantedServiceAccountIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1057,13 +1057,13 @@ public class AccessPoliciesControllerTests
                 break;
         }
 
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeoplePoliciesByGrantedServiceAccountIdAsync(default)
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeoplePoliciesByGrantedServiceAccountIdAsync(default, default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
 
         var result = await sutProvider.Sut.GetServiceAccountPeopleAccessPoliciesAsync(data.Id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetPeoplePoliciesByGrantedServiceAccountIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data.Id)));
+            .GetPeoplePoliciesByGrantedServiceAccountIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data.Id)), Arg.Any<Guid>());
 
         Assert.Empty(result.GroupAccessPolicies);
         Assert.NotEmpty(result.UserAccessPolicies);
@@ -1080,7 +1080,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutServiceAccountPeopleAccessPoliciesAsync(data.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>());
+            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1098,7 +1098,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutServiceAccountPeopleAccessPoliciesAsync(data.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>());
+            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1115,7 +1115,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutServiceAccountPeopleAccessPoliciesAsync(data.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>());
+            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1136,7 +1136,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutServiceAccountPeopleAccessPoliciesAsync(data.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>());
+            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -1144,21 +1144,23 @@ public class AccessPoliciesControllerTests
     public async void PutServiceAccountPeopleAccessPolicies_Success(
         SutProvider<AccessPoliciesController> sutProvider,
         ServiceAccount data,
+        Guid userId,
         PeopleAccessPoliciesRequestModel request)
     {
         request = SetRequestToCanReadWrite(request);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         sutProvider.GetDependency<IServiceAccountRepository>().GetByIdAsync(data.Id).ReturnsForAnyArgs(data);
         var peoplePolicies = request.ToServiceAccountPeopleAccessPolicies(data.Id, data.OrganizationId);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), peoplePolicies,
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
 
-        sutProvider.GetDependency<IAccessPolicyRepository>().ReplaceServiceAccountPeopleAsync(peoplePolicies)
+        sutProvider.GetDependency<IAccessPolicyRepository>().ReplaceServiceAccountPeopleAsync(peoplePolicies, Arg.Any<Guid>())
             .Returns(peoplePolicies.ToBaseAccessPolicies());
 
         await sutProvider.Sut.PutServiceAccountPeopleAccessPoliciesAsync(data.Id, request);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>());
+            .ReplaceServiceAccountPeopleAsync(Arg.Any<ServiceAccountPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 }

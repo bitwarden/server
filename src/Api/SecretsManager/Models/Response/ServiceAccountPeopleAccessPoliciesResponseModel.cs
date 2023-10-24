@@ -7,7 +7,7 @@ public class ServiceAccountPeopleAccessPoliciesResponseModel : ResponseModel
 {
     private const string _objectName = "serviceAccountAccessPolicies";
 
-    public ServiceAccountPeopleAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies)
+    public ServiceAccountPeopleAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies, Guid userId)
         : base(_objectName)
     {
         if (baseAccessPolicies == null)
@@ -20,7 +20,7 @@ public class ServiceAccountPeopleAccessPoliciesResponseModel : ResponseModel
             switch (baseAccessPolicy)
             {
                 case UserServiceAccountAccessPolicy accessPolicy:
-                    UserAccessPolicies.Add(new UserServiceAccountAccessPolicyResponseModel(accessPolicy));
+                    UserAccessPolicies.Add(new UserServiceAccountAccessPolicyResponseModel(accessPolicy, userId));
                     break;
                 case GroupServiceAccountAccessPolicy accessPolicy:
                     GroupAccessPolicies.Add(new GroupServiceAccountAccessPolicyResponseModel(accessPolicy));

@@ -324,23 +324,30 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
-        GetPeoplePoliciesByGrantedServiceAccountIdAsync(Guid id)
+        GetPeoplePoliciesByGrantedServiceAccountIdAsync(Guid id, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
         var entities = await dbContext.AccessPolicies.Where(ap =>
                 ((UserServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id ||
-                 ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id)
+                ((GroupServiceAccountAccessPolicy)ap).GrantedServiceAccountId == id)
             .Include(ap => ((UserServiceAccountAccessPolicy)ap).OrganizationUser.User)
             .Include(ap => ((GroupServiceAccountAccessPolicy)ap).Group)
+            .Select(ap => new
+            {
+                ap,
+                CurrentUserInGroup = ap is GroupServiceAccountAccessPolicy &&
+                                     ((GroupServiceAccountAccessPolicy)ap).Group.GroupUsers.Any(g =>
+                                         g.OrganizationUser.UserId == userId)
+            })
             .ToListAsync();
 
-        return entities.Select(MapToCore);
+        return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> ReplaceServiceAccountPeopleAsync(
-        ServiceAccountPeopleAccessPolicies peopleAccessPolicies)
+        ServiceAccountPeopleAccessPolicies peopleAccessPolicies, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -384,11 +391,11 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             }
         }
 
-        var results = await UpsertPeoplePoliciesAsync(dbContext,
+        await UpsertPeoplePoliciesAsync(dbContext,
             peopleAccessPolicies.ToBaseAccessPolicies().Select(MapToEntity).ToList(), userPolicyEntities,
             groupPolicyEntities);
         await dbContext.SaveChangesAsync();
-        return results.Select(MapToCore);
+        return await GetPeoplePoliciesByGrantedServiceAccountIdAsync(peopleAccessPolicies.Id, userId);
     }
 
     private static async Task<List<BaseAccessPolicy>> UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
