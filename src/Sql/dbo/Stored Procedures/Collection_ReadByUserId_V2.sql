@@ -15,7 +15,7 @@ BEGIN
         MIN([HidePasswords]) AS [HidePasswords],
         MIN([Manage]) AS [Manage]
     FROM
-        [dbo].[UserCollectionDetails](@UserId)
+        [dbo].[UserCollectionDetails_V2](@UserId)
     GROUP BY
         Id,
         OrganizationId,
