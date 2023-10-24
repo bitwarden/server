@@ -791,14 +791,13 @@ public class StripePaymentService : IPaymentService
         string paymentIntentClientSecret = null;
         try
         {
-            var subItemOptions = subscriptionUpdate.UpgradeItemsOptions(sub).Select(item =>
-                    new Stripe.InvoiceSubscriptionItemOptions
-                    {
-                        Id = item.Id,
-                        Plan = item.Plan,
-                        Quantity = item.Quantity,
-                    })
-                .ToList();
+            var subItemOptions = updatedItemOptions.Select(itemOption =>
+                new Stripe.InvoiceSubscriptionItemOptions
+                {
+                    Id = itemOption.Id,
+                    Plan = itemOption.Plan,
+                    Quantity = itemOption.Quantity,
+                }).ToList();
 
             var reviewInvoiceResponse = await PreviewUpcomingInvoiceAndPayAsync(storableSubscriber, subItemOptions);
             paymentIntentClientSecret = reviewInvoiceResponse.PaymentIntentClientSecret;
