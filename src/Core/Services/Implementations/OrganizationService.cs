@@ -57,6 +57,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IFeatureService _featureService;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -85,7 +86,8 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -114,6 +116,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _featureService = featureService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -425,6 +428,9 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
+        var flexibleCollectionsIsEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription..
@@ -462,6 +468,7 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
+            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled
         };
 
         if (signup.UseSecretsManager)
