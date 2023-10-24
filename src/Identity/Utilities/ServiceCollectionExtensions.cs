@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
                     options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
                 }
                 options.InputLengthRestrictions.UserName = 256;
+                options.KeyManagement.Enabled = false;
             })
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())

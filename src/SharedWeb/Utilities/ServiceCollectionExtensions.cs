@@ -427,6 +427,7 @@ public static class ServiceCollectionExtensions
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
+                options.MapInboundClaims = false;
                 options.Authority = globalSettings.BaseServiceUri.InternalIdentity;
                 options.RequireHttpsMetadata = !environment.IsDevelopment() &&
                     globalSettings.BaseServiceUri.InternalIdentity.StartsWith("https");
@@ -499,7 +500,11 @@ public static class ServiceCollectionExtensions
         {
             identityServerBuilder.AddSigningCredential(certificate);
         }
-        else if (!env.IsDevelopment())
+        else if (env.IsDevelopment())
+        {
+            identityServerBuilder.AddDeveloperSigningCredential(false);
+        }
+        else
         {
             throw new Exception("No identity certificate to use.");
         }

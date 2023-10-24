@@ -59,6 +59,7 @@ public static class ServiceCollectionExtensions
                     options.UserInteraction.ErrorIdParameter = "errorId";
                 }
                 options.InputLengthRestrictions.UserName = 256;
+                options.KeyManagement.Enabled = false;
             })
             .AddInMemoryCaching()
             .AddInMemoryClients(new List<Client>
