@@ -230,7 +230,11 @@ public class HandlebarsMailService : IMailService
                 OrganizationNameUrlEncoded = WebUtility.UrlEncode(orgInvitesInfo.OrganizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
-                InitOrganization = orgInvitesInfo.InitOrganization
+                InitOrganization = orgInvitesInfo.InitOrganization,
+                OrgSsoIdentifier = orgInvitesInfo.OrgSsoIdentifier,
+                OrgSsoEnabled = orgInvitesInfo.OrgSsoEnabled,
+                OrgSsoLoginRequiredPolicyEnabled = orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled,
+                OrgUserHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[invite.OrgUser.Id]
             }
         ));
 

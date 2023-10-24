@@ -10,13 +10,24 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
     public string Token { get; set; }
     public string ExpirationDate { get; set; }
     public bool InitOrganization { get; set; }
+    public string OrgSsoIdentifier { get; set; }
+    public bool OrgSsoEnabled { get; set; }
+    public bool OrgSsoLoginRequiredPolicyEnabled { get; set; }
+    public bool OrgUserHasExistingUser { get; set; }
+
     public string Url => string.Format("{0}/accept-organization?organizationId={1}&" +
-        "organizationUserId={2}&email={3}&organizationName={4}&token={5}&initOrganization={6}",
+        "organizationUserId={2}&email={3}&organizationName={4}&token={5}&initOrganization={6}" +
+        "&orgSsoIdentifier={7}&orgSsoEnabled={8}&orgSsoLoginRequiredPolicyEnabled={9}&orgUserHasExistingUser={10}" ,
         WebVaultUrl,
         OrganizationId,
         OrganizationUserId,
         Email,
         OrganizationNameUrlEncoded,
         Token,
-        InitOrganization);
+        InitOrganization,
+        OrgSsoIdentifier,
+        OrgSsoEnabled,
+        OrgSsoLoginRequiredPolicyEnabled,
+        OrgUserHasExistingUser
+        );
 }
