@@ -88,11 +88,19 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
-        List<string> items, bool mentionInvoices)
-    {
-        return Task.FromResult(0);
-    }
+    public Task SendInvoiceUpcoming(
+        string email,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices) => Task.FromResult(0);
+
+    public Task SendInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices) => Task.FromResult(0);
 
     public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {
