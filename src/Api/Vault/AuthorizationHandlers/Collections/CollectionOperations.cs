@@ -4,7 +4,7 @@ namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
 
 public class CollectionOperationRequirement : OperationAuthorizationRequirement
 {
-    public Guid OrganizationId { get; set; }
+    public Guid OrganizationId { get; init; }
 
     public CollectionOperationRequirement() { }
 
