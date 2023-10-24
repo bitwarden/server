@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
+CREATE PROCEDURE [dbo].[OrganizationUser_CreateWithCollections_V2]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER,
@@ -12,7 +12,7 @@
     @RevisionDate DATETIME2(7),
     @Permissions NVARCHAR(MAX),
     @ResetPasswordKey VARCHAR(MAX),
-    @Collections AS [dbo].[SelectionReadOnlyArray] READONLY,
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY,
     @AccessSecretsManager BIT = 0
 AS
 BEGIN
@@ -33,13 +33,15 @@ BEGIN
         [CollectionId],
         [OrganizationUserId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         [Id],
         @Id,
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     FROM
         @Collections
     WHERE

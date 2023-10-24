@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Group_CreateWithCollections]
+CREATE PROCEDURE [dbo].[Group_CreateWithCollections_V2]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name NVARCHAR(100),
@@ -6,7 +6,7 @@
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Collections AS [dbo].[SelectionReadOnlyArray] READONLY
+    @Collections AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -26,13 +26,15 @@ BEGIN
         [CollectionId],
         [GroupId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         [Id],
         @Id,
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     FROM
         @Collections
     WHERE

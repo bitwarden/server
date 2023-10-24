@@ -1,12 +1,12 @@
-﻿CREATE PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers]
+CREATE PROCEDURE [dbo].[Collection_CreateWithGroupsAndUsers_V2]
     @Id UNIQUEIDENTIFIER,
     @OrganizationId UNIQUEIDENTIFIER,
     @Name VARCHAR(MAX),
     @ExternalId NVARCHAR(300),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @Groups AS [dbo].[SelectionReadOnlyArray] READONLY,
-    @Users AS [dbo].[SelectionReadOnlyArray] READONLY
+    @Groups AS [dbo].[CollectionAccessSelectionType] READONLY,
+    @Users AS [dbo].[CollectionAccessSelectionType] READONLY
 AS
 BEGIN
     SET NOCOUNT ON
@@ -27,13 +27,15 @@ BEGIN
         [CollectionId],
         [GroupId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         @Id,
         [Id],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     FROM
         @Groups
     WHERE
@@ -53,13 +55,15 @@ BEGIN
         [CollectionId],
         [OrganizationUserId],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     )
     SELECT
         @Id,
         [Id],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     FROM
         @Users
     WHERE
