@@ -27,14 +27,14 @@ public class OrganizationInvitesInfo
         OrgUserHasExistingUserDict = orgUserHasExistingUserDict;
     }
 
-    public string OrganizationName { get;  }
-    public bool IsFreeOrg { get;  }
+    public string OrganizationName { get; }
+    public bool IsFreeOrg { get; }
     public bool InitOrganization { get; } = false;
     public bool OrgSsoEnabled { get; }
     public string OrgSsoIdentifier { get; }
-    public bool OrgSsoLoginRequiredPolicyEnabled { get;  }
+    public bool OrgSsoLoginRequiredPolicyEnabled { get; }
 
-    public IEnumerable<(OrganizationUser OrgUser, ExpiringToken Token)> Invites { get;  }
-    public Dictionary<Guid, bool> OrgUserHasExistingUserDict { get;  }
+    public IEnumerable<(OrganizationUser OrgUser, ExpiringToken Token)> Invites { get; }
+    public Dictionary<Guid, bool> OrgUserHasExistingUserDict { get; }
 
 }

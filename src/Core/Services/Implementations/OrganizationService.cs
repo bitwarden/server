@@ -18,10 +18,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-<<<<<<< HEAD
-=======
 using Bit.Core.Models.Data.Organizations.Policies;
->>>>>>> 8eeebbb36 (PM-1658 - OrganizationService.cs - (1) Created new BuildOrganizationInvitesInfoAsync method for building params object for BulkSendOrganizationInviteEmailAsync (includes several new required pieces of information for client side routing decisions) (2) Refactor SendInviteAsync to simply leverage the bulk send method as well)
 using Bit.Core.Models.Mail;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
