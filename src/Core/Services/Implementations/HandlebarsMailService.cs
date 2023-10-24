@@ -207,33 +207,31 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public Task SendOrganizationInviteEmailAsync(string organizationName, OrganizationUser orgUser, ExpiringToken token, bool isFreeOrg, bool initOrganization = false) =>
-        BulkSendOrganizationInviteEmailAsync(organizationName, new[] { (orgUser, token) }, isFreeOrg, initOrganization);
-
-    public async Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg, bool initOrganization = false)
+    public async Task BulkSendOrganizationInviteEmailAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
         MailQueueMessage CreateMessage(string email, object model)
         {
-            var message = CreateDefaultMessage($"Join {organizationName}", email);
+            var message = CreateDefaultMessage($"Join {orgInvitesInfo.OrganizationName}", email);
             return new MailQueueMessage(message, "OrganizationUserInvited", model);
         }
+
         var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
-        var messageModels = invites.Select(invite => CreateMessage(invite.orgUser.Email,
+        var messageModels = orgInvitesInfo.Invites.Select(invite => CreateMessage(invite.OrgUser.Email,
             new OrganizationUserInvitedViewModel
             {
-                TitleFirst = isFreeOrg ? freeOrgTitle : "Join ",
-                TitleSecondBold = isFreeOrg ? string.Empty : CoreHelpers.SanitizeForEmail(organizationName, false),
-                TitleThird = isFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
-                OrganizationName = CoreHelpers.SanitizeForEmail(organizationName, false) + invite.orgUser.Status,
-                Email = WebUtility.UrlEncode(invite.orgUser.Email),
-                OrganizationId = invite.orgUser.OrganizationId.ToString(),
-                OrganizationUserId = invite.orgUser.Id.ToString(),
-                Token = WebUtility.UrlEncode(invite.token.Token),
-                ExpirationDate = $"{invite.token.ExpirationDate.ToLongDateString()} {invite.token.ExpirationDate.ToShortTimeString()} UTC",
-                OrganizationNameUrlEncoded = WebUtility.UrlEncode(organizationName),
+                TitleFirst = orgInvitesInfo.IsFreeOrg ? freeOrgTitle : "Join ",
+                TitleSecondBold = orgInvitesInfo.IsFreeOrg ? string.Empty : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
+                TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
+                OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false) + invite.OrgUser.Status,
+                Email = WebUtility.UrlEncode(invite.OrgUser.Email),
+                OrganizationId = invite.OrgUser.OrganizationId.ToString(),
+                OrganizationUserId = invite.OrgUser.Id.ToString(),
+                Token = WebUtility.UrlEncode(invite.Token.Token),
+                ExpirationDate = $"{invite.Token.ExpirationDate.ToLongDateString()} {invite.Token.ExpirationDate.ToShortTimeString()} UTC",
+                OrganizationNameUrlEncoded = WebUtility.UrlEncode(orgInvitesInfo.OrganizationName),
                 WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
                 SiteName = _globalSettings.SiteName,
-                InitOrganization = initOrganization
+                InitOrganization = orgInvitesInfo.InitOrganization
             }
         ));
 

@@ -59,7 +59,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task BulkSendOrganizationInviteEmailAsync(string organizationName, IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites, bool isFreeOrg, bool initOrganization = false)
+    public Task BulkSendOrganizationInviteEmailAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
         return Task.FromResult(0);
     }
