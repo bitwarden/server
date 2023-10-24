@@ -359,6 +359,24 @@
           "Microsoft.Win32.Registry": "5.0.0"
         }
       },
+      "Duende.IdentityServer": {
+        "type": "Transitive",
+        "resolved": "6.0.4",
+        "contentHash": "4HVjzx1F8v5J+U7oa8RGAQGj2QzmzNSu87r18Sh+dlh10uyZZL8teAaT/FaVLDObnfItGdPFvN8mwpF/HkI3Xw==",
+        "dependencies": {
+          "Duende.IdentityServer.Storage": "6.0.4",
+          "Microsoft.AspNetCore.Authentication.OpenIdConnect": "6.0.0"
+        }
+      },
+      "Duende.IdentityServer.Storage": {
+        "type": "Transitive",
+        "resolved": "6.0.4",
+        "contentHash": "s5gAjfbpr2IMgI+fU2Nx+2AZdzstmbt9gpo13iX7GwvqSeSaBVqj9ZskAN0R2KF1OemPdZuGnfaTcevdXMUrrw==",
+        "dependencies": {
+          "IdentityModel": "6.0.0",
+          "Microsoft.AspNetCore.DataProtection.Abstractions": "6.0.0"
+        }
+      },
       "Fare": {
         "type": "Transitive",
         "resolved": "2.1.1",
@@ -403,49 +421,8 @@
       },
       "IdentityModel": {
         "type": "Transitive",
-        "resolved": "4.4.0",
-        "contentHash": "b18wrIx5wnZlMxAX7oVsE+nDtAJ4hajYlH0xPlaRvo4r/fz08K6pPeZvbiqS9nfNbzfIgLFmNX+FL9qR9ZR5PA==",
-        "dependencies": {
-          "Newtonsoft.Json": "11.0.2",
-          "System.Text.Encodings.Web": "4.7.0"
-        }
-      },
-      "IdentityModel.AspNetCore.OAuth2Introspection": {
-        "type": "Transitive",
-        "resolved": "4.0.1",
-        "contentHash": "ZNdMZMaj9fqR3j50vYsu+1U3QGd6n8+fqwf+a8mCTcmXGor+HgFDfdq0mM34bsmD6uEgAQup7sv2ZW5kR36dbA==",
-        "dependencies": {
-          "IdentityModel": "4.0.0"
-        }
-      },
-      "IdentityServer4": {
-        "type": "Transitive",
-        "resolved": "4.1.2",
-        "contentHash": "blaxxGuOA7v/w1q+fxn97wZ+x2ecG1ZD4mc/N/ZOXMNeFZZhqv+4LF26Gecyik3nWrJPmbMEtQbLmRsKG8k61w==",
-        "dependencies": {
-          "IdentityModel": "4.4.0",
-          "IdentityServer4.Storage": "4.1.2",
-          "Microsoft.AspNetCore.Authentication.OpenIdConnect": "3.1.0",
-          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "5.6.0",
-          "Newtonsoft.Json": "12.0.2"
-        }
-      },
-      "IdentityServer4.AccessTokenValidation": {
-        "type": "Transitive",
-        "resolved": "3.0.1",
-        "contentHash": "qu/M6UyN4o9NVep7q545Ms7hYAnsQqSdLbN1Fjjrn4m35lyBfeQPSSNzDryAKHbodyWOQfHaOqKEyMEJQ5Rpgw==",
-        "dependencies": {
-          "IdentityModel.AspNetCore.OAuth2Introspection": "4.0.1",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "3.0.0"
-        }
-      },
-      "IdentityServer4.Storage": {
-        "type": "Transitive",
-        "resolved": "4.1.2",
-        "contentHash": "KoSffyZyyeCNTIyJiZnCuPakJ1QbCHlpty6gbWUj/7yl+w0PXIchgmmJnJSvddzBb8iZ2xew/vGlxWUIP17P2g==",
-        "dependencies": {
-          "IdentityModel": "4.4.0"
-        }
+        "resolved": "6.0.0",
+        "contentHash": "eVHCR7a6m/dm5RFcBzE3qs/Jg5j9R5Rjpu8aTOv9e4AFvaQtBXb5ah7kmwU+YwA0ufRwz4wf1hnIvsD2hSnI4g=="
       },
       "Kralizek.AutoFixture.Extensions.MockHttp": {
         "type": "Transitive",
@@ -545,10 +522,10 @@
       },
       "Microsoft.AspNetCore.Authentication.OpenIdConnect": {
         "type": "Transitive",
-        "resolved": "3.1.0",
-        "contentHash": "O1cAQYUTU8EfRqwc5/rfTns4E4hKlFlg59fuKRrST+PzsxI6H07KqRN/JjdYhAuVYxF8jPnIGbj+zuc5paOWUw==",
+        "resolved": "6.0.0",
+        "contentHash": "cJxdro36spFzk/K2OFCddM6vZ+yoj6ug8mTFRH3Gdv1Pul/buSuCtfb/FSCp31UmS5S4C1315dU7wX3ErLFuDg==",
         "dependencies": {
-          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "5.5.0"
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "6.10.0"
         }
       },
       "Microsoft.AspNetCore.Cryptography.Internal": {
@@ -581,8 +558,8 @@
       },
       "Microsoft.AspNetCore.DataProtection.Abstractions": {
         "type": "Transitive",
-        "resolved": "3.1.32",
-        "contentHash": "MPL4iVyiaRxnOUY5VATHjvhDWaAEFb77KFiUxVRklv3Z3v+STofUr1UG/aCt1O9cgN7FVTDaC5A7U+zsLub8Xg=="
+        "resolved": "6.0.0",
+        "contentHash": "Z/UU4NEBm5UgNufJmw+j5baW26ytCOIZ0G7sZocPaOzsUeBon1bkM3lSMNZQG2GmDjAIVP2XMSODf2jzSGbibw=="
       },
       "Microsoft.AspNetCore.Mvc.Testing": {
         "type": "Transitive",
@@ -746,6 +723,14 @@
         "type": "Transitive",
         "resolved": "7.0.5",
         "contentHash": "yMLM/aK1MikVqpjxd7PJ1Pjgztd3VAd26ZHxyjxG3RPeM9cHjvS5tCg9kAAayR6eHmBg0ffZsHdT28WfA5tTlA=="
+      },
+      "Microsoft.EntityFrameworkCore.InMemory": {
+        "type": "Transitive",
+        "resolved": "7.0.5",
+        "contentHash": "y3S/A/0uJX7KOhppC3xqyta6Z0PRz0qPLngH5GFu4GZ7/+Sw2u/amf7MavvR5GfZjGabGcohMpsRSahMmpF9gA==",
+        "dependencies": {
+          "Microsoft.EntityFrameworkCore": "7.0.5"
+        }
       },
       "Microsoft.EntityFrameworkCore.Relational": {
         "type": "Transitive",
@@ -3138,25 +3123,25 @@
           "AspNetCore.HealthChecks.SqlServer": "[6.0.2, )",
           "AspNetCore.HealthChecks.Uris": "[6.0.3, )",
           "Azure.Messaging.EventGrid": "[4.10.0, )",
-          "Commercial.Core": "[2023.10.0, )",
-          "Commercial.Infrastructure.EntityFramework": "[2023.10.0, )",
-          "Core": "[2023.10.0, )",
-          "SharedWeb": "[2023.10.0, )",
+          "Commercial.Core": "[2023.9.1, )",
+          "Commercial.Infrastructure.EntityFramework": "[2023.9.1, )",
+          "Core": "[2023.9.1, )",
+          "SharedWeb": "[2023.9.1, )",
           "Swashbuckle.AspNetCore": "[6.5.0, )"
         }
       },
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.0, )"
+          "Core": "[2023.9.1, )"
         }
       },
       "commercial.infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.0, )",
-          "Infrastructure.EntityFramework": "[2023.10.0, )"
+          "Core": "[2023.9.1, )",
+          "Infrastructure.EntityFramework": "[2023.9.1, )"
         }
       },
       "common": {
@@ -3164,7 +3149,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2023.10.0, )",
+          "Core": "[2023.9.1, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -3185,7 +3170,7 @@
           "BitPay.Light": "[1.0.1907, )",
           "Braintree": "[5.19.0, )",
           "DnsClient": "[1.7.0, )",
-          "Duende.IdentityServer": "[6.0.0, )",
+          "Duende.IdentityServer": "[6.0.4, )",
           "Fido2.AspNet": "[3.0.1, )",
           "Handlebars.Net": "[2.1.2, )",
           "LaunchDarkly.ServerSdk": "[7.0.0, )",
@@ -3215,15 +3200,15 @@
       "identity": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.0, )",
-          "SharedWeb": "[2023.10.0, )",
+          "Core": "[2023.9.1, )",
+          "SharedWeb": "[2023.9.1, )",
           "Swashbuckle.AspNetCore.SwaggerGen": "[6.5.0, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.0, )",
+          "Core": "[2023.9.1, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -3231,7 +3216,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.0, )",
+          "Core": "[2023.9.1, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -3243,18 +3228,19 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2023.10.0, )",
-          "Identity": "[2023.10.0, )",
+          "Common": "[2023.9.1, )",
+          "Identity": "[2023.9.1, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[6.0.5, )",
+          "Microsoft.EntityFrameworkCore.InMemory": "[7.0.5, )",
           "Microsoft.Extensions.Configuration": "[6.0.1, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.0, )",
-          "Infrastructure.Dapper": "[2023.10.0, )",
-          "Infrastructure.EntityFramework": "[2023.10.0, )"
+          "Core": "[2023.9.1, )",
+          "Infrastructure.Dapper": "[2023.9.1, )",
+          "Infrastructure.EntityFramework": "[2023.9.1, )"
         }
       }
     }
