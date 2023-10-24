@@ -7,5 +7,5 @@ BEGIN
     SELECT
         *
     FROM
-        [dbo].[UserCipherDetails](@UserId)
+        [dbo].[UserCipherDetails_V2](@UserId)
 END

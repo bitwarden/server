@@ -18,7 +18,7 @@ BEGIN
         [UserId],
         [OrganizationId]
     FROM
-        [dbo].[UserCipherDetails](@UserId)
+        [dbo].[UserCipherDetails_V2](@UserId)
     WHERE
         [Edit] = 1
         AND [DeletedDate] IS NULL

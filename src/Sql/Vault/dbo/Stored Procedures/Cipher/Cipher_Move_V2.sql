@@ -13,7 +13,7 @@ BEGIN
         SELECT
             [Id]
         FROM
-            [dbo].[UserCipherDetails](@UserId)
+            [dbo].[UserCipherDetails_V2](@UserId)
         WHERE
             [Id] IN (SELECT * FROM @Ids)
     )

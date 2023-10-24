@@ -20,7 +20,7 @@ BEGIN
         [OrganizationId],
         CASE WHEN [Attachments] IS NULL THEN 0 ELSE 1 END
     FROM
-        [dbo].[UserCipherDetails](@UserId)
+        [dbo].[UserCipherDetails_V2](@UserId)
     WHERE
         [Edit] = 1
         AND [Id] IN (SELECT * FROM @Ids)

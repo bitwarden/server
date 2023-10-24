@@ -8,7 +8,7 @@ BEGIN
     SELECT TOP 1
         *
     FROM
-        [dbo].[UserCipherDetails](@UserId)
+        [dbo].[UserCipherDetails_V2](@UserId)
     WHERE
         [Id] = @Id
     ORDER BY
