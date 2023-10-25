@@ -49,4 +49,5 @@ public class OrganizationUserOrganizationDetails
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; }
+    public bool AllowAdminAccessToAllCollectionItems { get; set; }
 }
