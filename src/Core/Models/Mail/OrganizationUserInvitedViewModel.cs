@@ -17,7 +17,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
 
     public string Url => string.Format("{0}/accept-organization?organizationId={1}&" +
         "organizationUserId={2}&email={3}&organizationName={4}&token={5}&initOrganization={6}" +
-        "&orgSsoIdentifier={7}&orgSsoEnabled={8}&orgSsoLoginRequiredPolicyEnabled={9}&orgUserHasExistingUser={10}" ,
+        "&orgSsoIdentifier={7}&orgSsoEnabled={8}&orgSsoLoginRequiredPolicyEnabled={9}&orgUserHasExistingUser={10}",
         WebVaultUrl,
         OrganizationId,
         OrganizationUserId,
