@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -325,7 +326,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationUser_CreateWithCollections]",
+                $"[{Schema}].[OrganizationUser_CreateWithCollections_V2]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -342,7 +343,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[OrganizationUser_UpdateWithCollections]",
+                $"[{Schema}].[OrganizationUser_UpdateWithCollections_V2]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }

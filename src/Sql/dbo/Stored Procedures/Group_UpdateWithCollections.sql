@@ -23,29 +23,33 @@ BEGIN
     )
     MERGE
         [dbo].[CollectionGroup] AS [Target]
-    USING 
+    USING
         @Collections AS [Source]
     ON
         [Target].[CollectionId] = [Source].[Id]
         AND [Target].[GroupId] = @Id
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableCollectionsCTE]) THEN
-        INSERT VALUES
+        INSERT -- With column list because a value for Manage is not being provided
+        (
+        	[CollectionId],
+        	[GroupId],
+        	[ReadOnly],
+        	[HidePasswords]
+    	)
+        VALUES
         (
             [Source].[Id],
             @Id,
             [Source].[ReadOnly],
-            [Source].[HidePasswords],
-            [Source].[Manage]
+            [Source].[HidePasswords]
         )
     WHEN MATCHED AND (
         [Target].[ReadOnly] != [Source].[ReadOnly]
         OR [Target].[HidePasswords] != [Source].[HidePasswords]
-        OR [Target].[Manage] != [Source].[Manage]
     ) THEN
         UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly],
-                   [Target].[HidePasswords] = [Source].[HidePasswords],
-                   [Target].[Manage] = [Source].[Manage]
+                   [Target].[HidePasswords] = [Source].[HidePasswords]
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[GroupId] = @Id THEN
         DELETE

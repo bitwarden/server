@@ -24,8 +24,7 @@ BEGIN
         [Target]
     SET
         [Target].[ReadOnly] = [Source].[ReadOnly],
-        [Target].[HidePasswords] = [Source].[HidePasswords],
-        [Target].[Manage] = [Source].[Manage]
+        [Target].[HidePasswords] = [Source].[HidePasswords]
     FROM
         [dbo].[CollectionUser] AS [Target]
     INNER JOIN
@@ -35,18 +34,21 @@ BEGIN
         AND (
             [Target].[ReadOnly] != [Source].[ReadOnly]
             OR [Target].[HidePasswords] != [Source].[HidePasswords]
-            OR [Target].[Manage] != [Source].[Manage]
         )
 
-    -- Insert
-    INSERT INTO
-        [dbo].[CollectionUser]
+    -- Insert (with column list because a value for Manage is not being provided)
+    INSERT INTO [dbo].[CollectionUser]
+    (
+        [CollectionId],
+        [OrganizationUserId],
+        [ReadOnly],
+        [HidePasswords]
+    )
     SELECT
         [Source].[Id],
         @Id,
         [Source].[ReadOnly],
-        [Source].[HidePasswords],
-        [Source].[Manage]
+        [Source].[HidePasswords]
     FROM
         @Collections AS [Source]
     INNER JOIN

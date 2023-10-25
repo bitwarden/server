@@ -24,29 +24,33 @@ BEGIN
     )
     MERGE
         [dbo].[CollectionGroup] AS [Target]
-    USING 
+    USING
         @Groups AS [Source]
     ON
         [Target].[CollectionId] = @Id
         AND [Target].[GroupId] = [Source].[Id]
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableGroupsCTE]) THEN
-        INSERT VALUES
+        INSERT -- With column list because a value for Manage is not being provided
+        (
+	        [CollectionId],
+	        [GroupId],
+	        [ReadOnly],
+	        [HidePasswords]
+    	)
+        VALUES
         (
             @Id,
             [Source].[Id],
             [Source].[ReadOnly],
-            [Source].[HidePasswords],
-            [Source].[Manage]
+            [Source].[HidePasswords]
         )
     WHEN MATCHED AND (
         [Target].[ReadOnly] != [Source].[ReadOnly]
         OR [Target].[HidePasswords] != [Source].[HidePasswords]
-        OR [Target].[Manage] != [Source].[Manage]
     ) THEN
         UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly],
-                   [Target].[HidePasswords] = [Source].[HidePasswords],
-                   [Target].[Manage] = [Source].[Manage]
+                   [Target].[HidePasswords] = [Source].[HidePasswords]
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[CollectionId] = @Id THEN
         DELETE
@@ -63,29 +67,33 @@ BEGIN
     )
     MERGE
         [dbo].[CollectionUser] AS [Target]
-    USING 
+    USING
         @Users AS [Source]
     ON
         [Target].[CollectionId] = @Id
         AND [Target].[OrganizationUserId] = [Source].[Id]
     WHEN NOT MATCHED BY TARGET
     AND [Source].[Id] IN (SELECT [Id] FROM [AvailableGroupsCTE]) THEN
-        INSERT VALUES
+        INSERT -- With column list because a value for Manage is not being provided
+        (
+	        [CollectionId],
+	        [OrganizationUserId],
+	        [ReadOnly],
+	        [HidePasswords]
+    	)
+        VALUES
         (
             @Id,
             [Source].[Id],
             [Source].[ReadOnly],
-            [Source].[HidePasswords],
-            [Source].[Manage]
+            [Source].[HidePasswords]
         )
     WHEN MATCHED AND (
         [Target].[ReadOnly] != [Source].[ReadOnly]
         OR [Target].[HidePasswords] != [Source].[HidePasswords]
-        OR [Target].[Manage] != [Source].[Manage]
     ) THEN
         UPDATE SET [Target].[ReadOnly] = [Source].[ReadOnly],
-                   [Target].[HidePasswords] = [Source].[HidePasswords],
-                   [Target].[Manage] = [Source].[Manage]
+                   [Target].[HidePasswords] = [Source].[HidePasswords]
     WHEN NOT MATCHED BY SOURCE
     AND [Target].[CollectionId] = @Id THEN
         DELETE

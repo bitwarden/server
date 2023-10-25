@@ -33,15 +33,13 @@ BEGIN
         [CollectionId],
         [OrganizationUserId],
         [ReadOnly],
-        [HidePasswords],
-        [Manage]
+        [HidePasswords]
     )
     SELECT
         [Id],
         @Id,
         [ReadOnly],
-        [HidePasswords],
-        [Manage]
+        [HidePasswords]
     FROM
         @Collections
     WHERE
