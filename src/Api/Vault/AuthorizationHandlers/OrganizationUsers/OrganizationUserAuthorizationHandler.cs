@@ -16,6 +16,8 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
     public OrganizationUserAuthorizationHandler(
         ICurrentContext currentContext,
         IFeatureService featureService)
@@ -27,7 +29,7 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         OrganizationUserOperationRequirement requirement)
     {
-        if (!_featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext))
+        if (!FlexibleCollectionsIsEnabled)
         {
             // Flexible collections is OFF, should not be using this handler
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
@@ -40,14 +42,13 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
         }
 
         var targetOrganizationId = requirement.OrganizationId;
-
-        // Acting user is not a member of the target organization, fail
-        var org = _currentContext.GetOrganization(targetOrganizationId);
-        if (org == null)
+        if (targetOrganizationId == default)
         {
             context.Fail();
             return;
         }
+
+        var org = _currentContext.GetOrganization(targetOrganizationId);
 
         switch (requirement)
         {
@@ -60,17 +61,30 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
     private async Task CanReadAllAsync(AuthorizationHandlerContext context, OrganizationUserOperationRequirement requirement,
         CurrentContextOrganization org)
     {
-        if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions.ManageGroups ||
-            org.Permissions.ManageUsers ||
-            org.Permissions.EditAnyCollection ||
-            org.Permissions.DeleteAnyCollection ||
-            await _currentContext.ProviderUserForOrgAsync(org.Id))
+        if (org != null)
         {
-            context.Succeed(requirement);
-            return;
+            // Acting user is a member of the target organization, check permissions
+            if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
+                org.Permissions.ManageGroups ||
+                org.Permissions.ManageUsers ||
+                org.Permissions.EditAnyCollection ||
+                org.Permissions.DeleteAnyCollection)
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+        else
+        {
+            // Check if acting user is a provider user for the target organization
+            if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+            {
+                context.Succeed(requirement);
+                return;
+            }
         }
 
+        // Acting user is neither a member of the target organization or a provider user, fail
         context.Fail();
     }
 }

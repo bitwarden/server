@@ -48,13 +48,7 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
             return;
         }
 
-        // Acting user is not a member of the target organization, fail
         var org = _currentContext.GetOrganization(targetOrganizationId);
-        if (org == null)
-        {
-            context.Fail();
-            return;
-        }
 
         switch (requirement)
         {
@@ -67,15 +61,31 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
     private async Task CanReadAllAsync(AuthorizationHandlerContext context, GroupOperationRequirement requirement,
         CurrentContextOrganization org)
     {
-        if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions.ManageGroups ||
-            org.Permissions.ManageUsers ||
-            org.Permissions.EditAnyCollection ||
-            org.Permissions.DeleteAnyCollection ||
-            org.Permissions.AccessImportExport ||
-            await _currentContext.ProviderUserForOrgAsync(org.Id))
+        if (org != null)
         {
-            context.Succeed(requirement);
+            // Acting user is a member of the target organization, check permissions
+            if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
+                org.Permissions.ManageGroups ||
+                org.Permissions.ManageUsers ||
+                org.Permissions.EditAnyCollection ||
+                org.Permissions.DeleteAnyCollection ||
+                org.Permissions.AccessImportExport)
+            {
+                context.Succeed(requirement);
+                return;
+            }
         }
+        else
+        {
+            // Check if acting user is a provider user for the target organization
+            if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+
+        // Acting user is neither a member of the target organization or a provider user, fail
+        context.Fail();
     }
 }
