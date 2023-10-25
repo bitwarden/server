@@ -105,7 +105,6 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
 
-        // TODO: fix other IsFreeOrg asssertions
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(
                 Arg.Is<OrganizationInvitesInfo>(info => info.Invites.Count() == expectedNewUsersCount && info.IsFreeOrg == (org.PlanType == PlanType.Free) && info.OrganizationName == org.Name));
