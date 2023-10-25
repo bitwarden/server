@@ -17,30 +17,26 @@ namespace Bit.Api.Test.Vault.AuthorizationHandlers;
 public class CollectionAuthorizationHandlerTests
 {
     [Theory]
-    [BitAutoData(OrganizationUserType.User, false, true)]
-    [BitAutoData(OrganizationUserType.Admin, false, false)]
-    [BitAutoData(OrganizationUserType.Owner, false, false)]
-    [BitAutoData(OrganizationUserType.Custom, true, false)]
-    [BitAutoData(OrganizationUserType.Owner, true, true)]
-    public async Task CanReadAllAccessAsync_Success(
+    [BitAutoData(OrganizationUserType.Admin, false, false, false, false, false, true)]
+    [BitAutoData(OrganizationUserType.Owner, false, false, false, false, false, true)]
+    [BitAutoData(OrganizationUserType.User, false, false, false, false, false, false)]
+    [BitAutoData(OrganizationUserType.Custom, true, false, false, false, false, true)]
+    [BitAutoData(OrganizationUserType.Custom, false, true, false, false, false, true)]
+    [BitAutoData(OrganizationUserType.Custom, false, false, true, false, false, true)]
+    [BitAutoData(OrganizationUserType.Custom, false, false, false, true, false, true)]
+    [BitAutoData(OrganizationUserType.Custom, false, false, false, false, true, true)]
+    public async Task CanReadAllAccessAsync_ReturnsExpectedResult(
         OrganizationUserType userType, bool editAnyCollection, bool deleteAnyCollection,
+        bool manageGroups, bool manageUsers, bool accessImportExport, bool expectedSuccess,
         Guid userId, SutProvider<CollectionAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
-        // if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-        //     org.Permissions.ManageGroups ||
-        //     org.Permissions.ManageUsers ||
-        //     org.Permissions.EditAnyCollection ||
-        //     org.Permissions.DeleteAnyCollection ||
-        //     org.Permissions.AccessImportExport ||
-        //     await _currentContext.ProviderUserForOrgAsync(org.Id))
-        // {
-        //     context.Succeed(requirement);
-        // }
-
         organization.Type = userType;
         organization.Permissions.EditAnyCollection = editAnyCollection;
         organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
+        organization.Permissions.ManageGroups = manageGroups;
+        organization.Permissions.ManageUsers = manageUsers;
+        organization.Permissions.AccessImportExport = accessImportExport;
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAll(organization.Id) },
@@ -52,7 +48,7 @@ public class CollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
-        Assert.True(context.HasSucceeded);
+        Assert.True(expectedSuccess ? context.HasSucceeded : context.HasFailed);
     }
 
     [Theory, BitAutoData]
