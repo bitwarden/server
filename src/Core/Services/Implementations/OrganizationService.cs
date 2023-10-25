@@ -468,7 +468,8 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
-            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled
+            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled,
+            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsIsEnabled
         };
 
         if (signup.UseSecretsManager)
