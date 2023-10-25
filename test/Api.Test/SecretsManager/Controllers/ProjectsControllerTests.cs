@@ -44,7 +44,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void ListByOrganization_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
+    public async void ListByOrganization_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(data).Returns(false);
 
@@ -205,7 +205,7 @@ public class ProjectsControllerTests
 
     [Theory]
     [BitAutoData]
-    public async void Get_SmNotEnabled_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
+    public async void Get_SmAccessDenied_Throws(SutProvider<ProjectsController> sutProvider, Guid data, Guid orgId)
     {
         SetupAdmin(sutProvider, orgId);
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(orgId).Returns(false);

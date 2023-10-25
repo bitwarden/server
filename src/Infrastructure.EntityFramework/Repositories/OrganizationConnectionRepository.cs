@@ -15,6 +15,17 @@ public class OrganizationConnectionRepository : Repository<OrganizationConnectio
     {
     }
 
+    public async Task<OrganizationConnection> GetByIdOrganizationIdAsync(Guid id, Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var connection = await dbContext.OrganizationConnections
+                .FirstOrDefaultAsync(oc => oc.Id == id && oc.OrganizationId == organizationId);
+            return Mapper.Map<OrganizationConnection>(connection);
+        }
+    }
+
     public async Task<ICollection<OrganizationConnection>> GetByOrganizationIdTypeAsync(Guid organizationId, OrganizationConnectionType type)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

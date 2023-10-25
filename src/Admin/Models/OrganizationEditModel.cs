@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
@@ -158,11 +159,12 @@ public class OrganizationEditModel : OrganizationViewModel
      * Add mappings for individual properties as you need them
      */
     public IEnumerable<Dictionary<string, object>> GetPlansHelper() =>
-        StaticStore.SecretManagerPlans.Select(p =>
-            new Dictionary<string, object>
+        StaticStore.Plans
+            .Where(p => p.SupportsSecretsManager)
+            .Select(p => new Dictionary<string, object>
             {
                 { "type", p.Type },
-                { "baseServiceAccount", p.BaseServiceAccount }
+                { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
             });
 
     public Organization CreateOrganization(Provider provider)

@@ -15,7 +15,8 @@
     @ViewPassword BIT, -- not used
     @OrganizationUseTotp BIT, -- not used
     @DeletedDate DATETIME2(7),
-    @Reprompt TINYINT
+    @Reprompt TINYINT,
+    @Key VARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -35,7 +36,8 @@ BEGIN
         [CreationDate],
         [RevisionDate],
         [DeletedDate],
-        [Reprompt]
+        [Reprompt],
+        [Key]
     )
     VALUES
     (
@@ -49,7 +51,8 @@ BEGIN
         @CreationDate,
         @RevisionDate,
         @DeletedDate,
-        @Reprompt
+        @Reprompt,
+        @Key
     )
 
     IF @OrganizationId IS NOT NULL
