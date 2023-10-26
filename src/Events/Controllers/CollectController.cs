@@ -1,4 +1,5 @@
-﻿using Bit.Core.Context;
+﻿using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -18,18 +19,23 @@ public class CollectController : Controller
     private readonly IEventService _eventService;
     private readonly ICipherRepository _cipherRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IFeatureService _featureService;
 
     public CollectController(
         ICurrentContext currentContext,
         IEventService eventService,
         ICipherRepository cipherRepository,
-        IOrganizationRepository organizationRepository)
+        IOrganizationRepository organizationRepository,
+        IFeatureService featureService)
     {
         _currentContext = currentContext;
         _eventService = eventService;
         _cipherRepository = cipherRepository;
         _organizationRepository = organizationRepository;
+        _featureService = featureService;
     }
+
+    bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     [HttpPost]
     public async Task<IActionResult> Post([FromBody] IEnumerable<EventModel> model)
@@ -70,7 +76,8 @@ public class CollectController : Controller
                     else
                     {
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value,
-                           _currentContext.UserId.Value);
+                           _currentContext.UserId.Value,
+                           UseFlexibleCollections);
                     }
                     if (cipher == null)
                     {
