@@ -38,11 +38,15 @@ public class CollectionServiceTest
     }
 
     [Theory, BitAutoData]
-    public async Task SaveAsync_DefaultIdWithUsers_WithOneEditAssignedCollectionsUser_CreatesCollectionInTheRepository(
+    public async Task SaveAsync_DefaultIdWithUsers_WithOneEditAssignedCollectionsUser_WhileFCFlagDisabled_CreatesCollectionInTheRepository(
         Collection collection, Organization organization,
         [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> users,
         SutProvider<CollectionService> sutProvider)
     {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
+            .Returns(false);
+
         collection.Id = default;
         collection.OrganizationId = organization.Id;
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(collection.OrganizationId).Returns(organization);
