@@ -7,7 +7,7 @@
     "vscode": {
       "settings": {},
       "features": {},
-      "extensions": ["ms-dotnettools.csharp"]
+      "extensions": ["ms-dotnettools.csdevkit"]
     }
   },
   "postCreateCommand": "bash .devcontainer/community_dev/postCreateCommand.sh"
