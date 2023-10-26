@@ -141,21 +141,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
-    {
-        cipher.SetNewId();
-        var objWithCollections = JsonSerializer.Deserialize<CipherDetailsWithCollections>(
-            JsonSerializer.Serialize(cipher));
-        objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.ExecuteAsync(
-                $"[{Schema}].[CipherDetails_CreateWithCollections]",
-                objWithCollections,
-                commandType: CommandType.StoredProcedure);
-        }
-    }
-
     public async Task ReplaceAsync(CipherDetails obj)
     {
         using (var connection = new SqlConnection(ConnectionString))
