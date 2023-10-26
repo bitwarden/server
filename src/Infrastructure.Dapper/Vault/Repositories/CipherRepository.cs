@@ -1,6 +1,9 @@
 ﻿using System.Data;
 using System.Text.Json;
+using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -14,9 +17,18 @@ namespace Bit.Infrastructure.Dapper.Vault.Repositories;
 
 public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 {
-    public CipherRepository(GlobalSettings globalSettings)
+    private readonly IFeatureService _featureService;
+    private readonly ICurrentContext _currentContext;
+
+    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
+    public CipherRepository(GlobalSettings globalSettings, IFeatureService featureService,
+        ICurrentContext currentContext)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    {
+        _featureService = featureService;
+        _currentContext = currentContext;
+    }
 
     public CipherRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
@@ -24,10 +36,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[CipherDetails_ReadByIdUserId_V2]"
+            : $"[{Schema}].[CipherDetails_ReadByIdUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CipherDetails>(
-                $"[{Schema}].[CipherDetails_ReadByIdUserId]",
+                sprocName,
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -64,10 +80,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[Cipher_ReadCanEditByIdUserId_V2]"
+            : $"[{Schema}].[Cipher_ReadCanEditByIdUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.QueryFirstOrDefaultAsync<bool>(
-                $"[{Schema}].[Cipher_ReadCanEditByIdUserId]",
+                sprocName,
                 new { UserId = userId, Id = cipherId },
                 commandType: CommandType.StoredProcedure);
 
@@ -80,7 +100,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         string sprocName = null;
         if (withOrganizations)
         {
-            sprocName = $"[{Schema}].[CipherDetails_ReadByUserId]";
+            sprocName = UseFlexibleCollections
+                ? $"[{Schema}].[CipherDetails_ReadByUserId_V2]"
+                : $"[{Schema}].[CipherDetails_ReadByUserId]";
         }
         else
         {
@@ -116,6 +138,10 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[Cipher_CreateWithCollections_V2]"
+            : $"[{Schema}].[Cipher_CreateWithCollections]";
+
         cipher.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<CipherWithCollections>(
             JsonSerializer.Serialize(cipher));
@@ -123,7 +149,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Cipher_CreateWithCollections]",
+                sprocName,
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -143,6 +169,10 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[CipherDetails_CreateWithCollections_V2]"
+            : $"[{Schema}].[CipherDetails_CreateWithCollections]";
+
         cipher.SetNewId();
         var objWithCollections = JsonSerializer.Deserialize<CipherDetailsWithCollections>(
             JsonSerializer.Serialize(cipher));
@@ -150,7 +180,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[CipherDetails_CreateWithCollections]",
+                sprocName,
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -181,6 +211,10 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[Cipher_UpdateWithCollections_V2]"
+            : $"[{Schema}].[Cipher_UpdateWithCollections]";
+
         var objWithCollections = JsonSerializer.Deserialize<CipherWithCollections>(
             JsonSerializer.Serialize(obj));
         objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
@@ -188,7 +222,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var result = await connection.ExecuteScalarAsync<int>(
-                $"[{Schema}].[Cipher_UpdateWithCollections]",
+                sprocName,
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
             return result >= 0;
@@ -230,10 +264,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[Cipher_Delete_V2]"
+            : $"[{Schema}].[Cipher_Delete]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Cipher_Delete]",
+                sprocName,
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
@@ -263,10 +301,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[Cipher_Move_V2]"
+            : $"[{Schema}].[Cipher_Move]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Cipher_Move]",
+                sprocName,
                 new { Ids = ids.ToGuidIdArrayTVP(), FolderId = folderId, UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
@@ -649,10 +691,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[Cipher_SoftDelete_V2]"
+            : $"[{Schema}].[Cipher_SoftDelete]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Cipher_SoftDelete]",
+                sprocName,
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
         }
@@ -660,10 +706,14 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
+        var sprocName = UseFlexibleCollections
+            ? $"[{Schema}].[Cipher_Restore_V2]"
+            : $"[{Schema}].[Cipher_Restore]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteScalarAsync<DateTime>(
-                $"[{Schema}].[Cipher_Restore]",
+                sprocName,
                 new { Ids = ids.ToGuidIdArrayTVP(), UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
