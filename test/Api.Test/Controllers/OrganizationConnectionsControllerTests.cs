@@ -143,10 +143,10 @@ public class OrganizationConnectionsControllerTests
     public async Task UpdateConnection_RequiresOwnerPermissions(SutProvider<OrganizationConnectionsController> sutProvider)
     {
         sutProvider.GetDependency<IOrganizationConnectionRepository>()
-            .GetByIdAsync(Arg.Any<Guid>())
+            .GetByIdOrganizationIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>())
             .Returns(new OrganizationConnection());
 
-        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(default, null));
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(default, new OrganizationConnectionRequestModel()));
 
         Assert.Contains("You do not have permission to update this connection.", exception.Message);
     }
@@ -164,8 +164,8 @@ public class OrganizationConnectionsControllerTests
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(typedModel.OrganizationId).Returns(true);
 
         var orgConnectionRepository = sutProvider.GetDependency<IOrganizationConnectionRepository>();
-        orgConnectionRepository.GetByIdAsync(existing1.Id).Returns(existing1);
-        orgConnectionRepository.GetByIdAsync(existing2.Id).Returns(existing2);
+        orgConnectionRepository.GetByIdOrganizationIdAsync(existing1.Id, existing1.OrganizationId).Returns(existing1);
+        orgConnectionRepository.GetByIdOrganizationIdAsync(existing2.Id, existing2.OrganizationId).Returns(existing2);
         orgConnectionRepository.GetByOrganizationIdTypeAsync(typedModel.OrganizationId, type).Returns(new[] { existing1, existing2 });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateConnection(existing1.Id, typedModel));
@@ -186,7 +186,7 @@ public class OrganizationConnectionsControllerTests
         sutProvider.GetDependency<ICurrentContext>().OrganizationOwner(typedModel.OrganizationId).Returns(true);
 
         sutProvider.GetDependency<IOrganizationConnectionRepository>()
-            .GetByIdAsync(existing1.Id)
+            .GetByIdOrganizationIdAsync(existing1.Id, existing1.OrganizationId)
             .Returns(existing1);
 
         sutProvider.GetDependency<ICurrentContext>().ManageScim(typedModel.OrganizationId).Returns(true);
@@ -212,6 +212,7 @@ public class OrganizationConnectionsControllerTests
         });
         updated.Config = JsonSerializer.Serialize(config);
         updated.Id = existing.Id;
+        updated.OrganizationId = existing.OrganizationId;
         updated.Type = OrganizationConnectionType.CloudBillingSync;
         var model = RequestModelFromEntity<BillingSyncConfig>(updated);
 
@@ -224,7 +225,7 @@ public class OrganizationConnectionsControllerTests
             .UpdateAsync<BillingSyncConfig>(default)
             .ReturnsForAnyArgs(updated);
         sutProvider.GetDependency<IOrganizationConnectionRepository>()
-            .GetByIdAsync(existing.Id)
+            .GetByIdOrganizationIdAsync(existing.Id, existing.OrganizationId)
             .Returns(existing);
 
         OrganizationLicense organizationLicense = new OrganizationLicense();
@@ -264,6 +265,7 @@ public class OrganizationConnectionsControllerTests
         });
         updated.Config = JsonSerializer.Serialize(config);
         updated.Id = existing.Id;
+        updated.OrganizationId = existing.OrganizationId;
         updated.Type = OrganizationConnectionType.CloudBillingSync;
         var model = RequestModelFromEntity<BillingSyncConfig>(updated);
         sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
@@ -275,7 +277,7 @@ public class OrganizationConnectionsControllerTests
             .UpdateAsync<BillingSyncConfig>(default)
             .ReturnsForAnyArgs(updated);
         sutProvider.GetDependency<IOrganizationConnectionRepository>()
-            .GetByIdAsync(existing.Id)
+            .GetByIdOrganizationIdAsync(existing.Id, existing.OrganizationId)
             .Returns(existing);
 
         OrganizationLicense organizationLicense = new OrganizationLicense();
