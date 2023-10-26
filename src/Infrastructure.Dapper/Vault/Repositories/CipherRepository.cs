@@ -155,25 +155,6 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
-    {
-        var sprocName = UseFlexibleCollections
-            ? $"[{Schema}].[CipherDetails_CreateWithCollections_V2]"
-            : $"[{Schema}].[CipherDetails_CreateWithCollections]";
-
-        cipher.SetNewId();
-        var objWithCollections = JsonSerializer.Deserialize<CipherDetailsWithCollections>(
-            JsonSerializer.Serialize(cipher));
-        objWithCollections.CollectionIds = collectionIds.ToGuidIdArrayTVP();
-        using (var connection = new SqlConnection(ConnectionString))
-        {
-            var results = await connection.ExecuteAsync(
-                sprocName,
-                objWithCollections,
-                commandType: CommandType.StoredProcedure);
-        }
-    }
-
     public async Task ReplaceAsync(CipherDetails obj)
     {
         using (var connection = new SqlConnection(ConnectionString))

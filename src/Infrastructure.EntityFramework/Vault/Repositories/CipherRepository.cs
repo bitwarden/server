@@ -130,18 +130,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         return cipher;
     }
 
-    public async Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds)
-    {
-        cipher = await CreateAsyncReturnCipher(cipher);
-        using (var scope = ServiceScopeFactory.CreateScope())
-        {
-            var dbContext = GetDatabaseContext(scope);
-            await UpdateCollectionsAsync(dbContext, cipher.Id,
-                cipher.UserId, cipher.OrganizationId, collectionIds);
-            await dbContext.SaveChangesAsync();
-        }
-    }
-
     public async Task CreateAsync(IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders)
     {
         if (!ciphers.Any())

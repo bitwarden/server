@@ -16,7 +16,6 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
     Task CreateAsync(CipherDetails cipher);
-    Task CreateAsync(CipherDetails cipher, IEnumerable<Guid> collectionIds);
     Task ReplaceAsync(CipherDetails cipher);
     Task UpsertAsync(CipherDetails cipher);
     Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds);
