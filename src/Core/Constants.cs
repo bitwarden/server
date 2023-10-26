@@ -57,6 +57,7 @@ public static class FeatureFlagKeys
     public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
+    public const string AutofillOverlay = "autofill-overlay";
 
     public static List<string> GetAllKeys()
     {
