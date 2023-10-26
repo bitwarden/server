@@ -20,7 +20,7 @@ BEGIN
     BEGIN TRANSACTION Cipher_UpdateWithCollections
 
     DECLARE @UpdateCollectionsSuccess INT
-    EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
+    EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections_V2] @Id, @UserId, @OrganizationId, @CollectionIds
 
     IF @UpdateCollectionsSuccess < 0
     BEGIN

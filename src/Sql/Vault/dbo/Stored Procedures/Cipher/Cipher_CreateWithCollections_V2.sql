@@ -21,5 +21,5 @@ BEGIN
         @Attachments, @CreationDate, @RevisionDate, @DeletedDate, @Reprompt, @Key
 
     DECLARE @UpdateCollectionsSuccess INT
-    EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections] @Id, @UserId, @OrganizationId, @CollectionIds
+    EXEC @UpdateCollectionsSuccess = [dbo].[Cipher_UpdateCollections_V2] @Id, @UserId, @OrganizationId, @CollectionIds
 END
