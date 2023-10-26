@@ -9,7 +9,7 @@
     "vscode": {
       "settings": {},
       "features": {},
-      "extensions": ["ms-dotnettools.csharp"]
+      "extensions": ["ms-dotnettools.csdevkit"]
     }
   },
   "postCreateCommand": "bash .devcontainer/internal_dev/postCreateCommand.sh"
