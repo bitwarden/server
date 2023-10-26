@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.AdminConsole.Services.Implementations;
+using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
