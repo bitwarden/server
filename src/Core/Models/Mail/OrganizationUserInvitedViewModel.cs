@@ -54,19 +54,29 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
     public bool OrgSsoLoginRequiredPolicyEnabled { get; set; }
     public bool OrgUserHasExistingUser { get; set; }
 
-    public string Url => string.Format("{0}/accept-organization?organizationId={1}&" +
-        "organizationUserId={2}&email={3}&organizationName={4}&token={5}&initOrganization={6}" +
-        "&orgSsoIdentifier={7}&orgSsoEnabled={8}&orgSsoLoginRequiredPolicyEnabled={9}&orgUserHasExistingUser={10}",
-        WebVaultUrl,
-        OrganizationId,
-        OrganizationUserId,
-        Email,
-        OrganizationNameUrlEncoded,
-        Token,
-        InitOrganization,
-        OrgSsoIdentifier,
-        OrgSsoEnabled,
-        OrgSsoLoginRequiredPolicyEnabled,
-        OrgUserHasExistingUser
-        );
+  public string Url
+    {
+        get
+        {
+            var baseUrl = $"{WebVaultUrl}/accept-organization";
+            var queryParams = new List<string>
+            {
+                $"organizationId={OrganizationId}",
+                $"organizationUserId={OrganizationUserId}",
+                $"email={Email}",
+                $"organizationName={OrganizationNameUrlEncoded}",
+                $"token={Token}",
+                $"initOrganization={InitOrganization}",
+                $"orgUserHasExistingUser={OrgUserHasExistingUser}"
+            };
+
+            if (OrgSsoEnabled && OrgSsoLoginRequiredPolicyEnabled)
+            {
+                // Only send down the orgSsoIdentifier if we are going to accelerate the user to the SSO login page.
+                queryParams.Add($"orgSsoIdentifier={OrgSsoIdentifier}");
+            }
+
+            return $"{baseUrl}?{string.Join("&", queryParams)}";
+        }
+    }
 }
