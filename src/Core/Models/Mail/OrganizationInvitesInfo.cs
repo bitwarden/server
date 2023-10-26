@@ -9,7 +9,7 @@ public class OrganizationInvitesInfo
         Organization org,
         bool orgSsoEnabled,
         bool orgSsoLoginRequiredPolicyEnabled,
-        IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> invites,
+        IEnumerable<(OrganizationUser orgUser, ExpiringToken token)> orgUserTokenPairs,
         Dictionary<Guid, bool> orgUserHasExistingUserDict,
         bool initOrganization = false
         )
@@ -23,7 +23,7 @@ public class OrganizationInvitesInfo
         OrgSsoEnabled = orgSsoEnabled;
         OrgSsoLoginRequiredPolicyEnabled = orgSsoLoginRequiredPolicyEnabled;
 
-        Invites = invites;
+        OrgUserTokenPairs = orgUserTokenPairs;
         OrgUserHasExistingUserDict = orgUserHasExistingUserDict;
     }
 
@@ -34,7 +34,7 @@ public class OrganizationInvitesInfo
     public string OrgSsoIdentifier { get; }
     public bool OrgSsoLoginRequiredPolicyEnabled { get; }
 
-    public IEnumerable<(OrganizationUser OrgUser, ExpiringToken Token)> Invites { get; }
+    public IEnumerable<(OrganizationUser OrgUser, ExpiringToken Token)> OrgUserTokenPairs { get; }
     public Dictionary<Guid, bool> OrgUserHasExistingUserDict { get; }
 
 }

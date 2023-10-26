@@ -214,11 +214,11 @@ public class HandlebarsMailService : IMailService
             return new MailQueueMessage(message, "OrganizationUserInvited", model);
         }
 
-        var messageModels = orgInvitesInfo.Invites.Select(invite =>
+        var messageModels = orgInvitesInfo.OrgUserTokenPairs.Select(orgUserTokenPair =>
         {
             var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
-                orgInvitesInfo, invite.OrgUser, invite.Token, _globalSettings);
-            return CreateMessage(invite.OrgUser.Email, orgUserInviteViewModel);
+                orgInvitesInfo, orgUserTokenPair.OrgUser, orgUserTokenPair.Token, _globalSettings);
+            return CreateMessage(orgUserTokenPair.OrgUser.Email, orgUserInviteViewModel);
         });
 
         await EnqueueMailAsync(messageModels);
