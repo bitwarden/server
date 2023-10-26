@@ -214,29 +214,12 @@ public class HandlebarsMailService : IMailService
             return new MailQueueMessage(message, "OrganizationUserInvited", model);
         }
 
-        var freeOrgTitle = "A Bitwarden member invited you to an organization. Join now to start securing your passwords!";
-        var messageModels = orgInvitesInfo.Invites.Select(invite => CreateMessage(invite.OrgUser.Email,
-            new OrganizationUserInvitedViewModel
-            {
-                TitleFirst = orgInvitesInfo.IsFreeOrg ? freeOrgTitle : "Join ",
-                TitleSecondBold = orgInvitesInfo.IsFreeOrg ? string.Empty : CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false),
-                TitleThird = orgInvitesInfo.IsFreeOrg ? string.Empty : " on Bitwarden and start securing your passwords!",
-                OrganizationName = CoreHelpers.SanitizeForEmail(orgInvitesInfo.OrganizationName, false) + invite.OrgUser.Status,
-                Email = WebUtility.UrlEncode(invite.OrgUser.Email),
-                OrganizationId = invite.OrgUser.OrganizationId.ToString(),
-                OrganizationUserId = invite.OrgUser.Id.ToString(),
-                Token = WebUtility.UrlEncode(invite.Token.Token),
-                ExpirationDate = $"{invite.Token.ExpirationDate.ToLongDateString()} {invite.Token.ExpirationDate.ToShortTimeString()} UTC",
-                OrganizationNameUrlEncoded = WebUtility.UrlEncode(orgInvitesInfo.OrganizationName),
-                WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
-                SiteName = _globalSettings.SiteName,
-                InitOrganization = orgInvitesInfo.InitOrganization,
-                OrgSsoIdentifier = orgInvitesInfo.OrgSsoIdentifier,
-                OrgSsoEnabled = orgInvitesInfo.OrgSsoEnabled,
-                OrgSsoLoginRequiredPolicyEnabled = orgInvitesInfo.OrgSsoLoginRequiredPolicyEnabled,
-                OrgUserHasExistingUser = orgInvitesInfo.OrgUserHasExistingUserDict[invite.OrgUser.Id]
-            }
-        ));
+        var messageModels = orgInvitesInfo.Invites.Select(invite =>
+        {
+            var orgUserInviteViewModel = OrganizationUserInvitedViewModel.CreateFromInviteInfo(
+                orgInvitesInfo, invite.OrgUser, invite.Token, _globalSettings);
+            return CreateMessage(invite.OrgUser.Email, orgUserInviteViewModel);
+        });
 
         await EnqueueMailAsync(messageModels);
     }
