@@ -888,6 +888,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
+        var orgUsers = new List<OrganizationUser>();
         var limitedCollectionOrgUsers = new List<(OrganizationUser, IEnumerable<CollectionAccessSelection>)>();
         var orgUserGroups = new List<(OrganizationUser, IEnumerable<Guid>)>();
         var orgUserInvitedCount = 0;
@@ -930,7 +931,14 @@ public class OrganizationService : IOrganizationService
                     // grant Manage permission for all assigned collections
                     invite.Collections = ApplyManageCollectionPermissions(orgUser, invite.Collections);
 
-                    limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
+                    if (!orgUser.AccessAll && invite.Collections.Any())
+                    {
+                        limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
+                    }
+                    else
+                    {
+                        orgUsers.Add(orgUser);
+                    }
 
                     if (invite.Groups != null && invite.Groups.Any())
                     {
@@ -955,6 +963,7 @@ public class OrganizationService : IOrganizationService
         var prorationDate = DateTime.UtcNow;
         try
         {
+            await _organizationUserRepository.CreateManyAsync(orgUsers);
             foreach (var (orgUser, collections) in limitedCollectionOrgUsers)
             {
                 await _organizationUserRepository.CreateAsync(orgUser, collections);
@@ -976,7 +985,7 @@ public class OrganizationService : IOrganizationService
                 await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(smSubscriptionUpdate);
             }
             await AutoAddSeatsAsync(organization, newSeatsRequired, prorationDate);
-            await SendInvitesAsync(limitedCollectionOrgUsers.Select(u => u.Item1), organization);
+            await SendInvitesAsync(orgUsers.Concat(limitedCollectionOrgUsers.Select(u => u.Item1)), organization);
 
             await _referenceEventService.RaiseEventAsync(
                 new ReferenceEvent(ReferenceEventType.InvitedUsers, organization, _currentContext)
@@ -987,7 +996,7 @@ public class OrganizationService : IOrganizationService
         catch (Exception e)
         {
             // Revert any added users.
-            var invitedOrgUserIds = limitedCollectionOrgUsers.Select(u => u.Item1.Id);
+            var invitedOrgUserIds = orgUsers.Select(u => u.Id).Concat(limitedCollectionOrgUsers.Select(u => u.Item1.Id));
             await _organizationUserRepository.DeleteManyAsync(invitedOrgUserIds);
             var currentOrganization = await _organizationRepository.GetByIdAsync(organization.Id);
 
@@ -1017,7 +1026,7 @@ public class OrganizationService : IOrganizationService
             throw new AggregateException("One or more errors occurred while inviting users.", exceptions);
         }
 
-        return (limitedCollectionOrgUsers.Select(o => o.Item1).ToList(), events);
+        return (orgUsers, events);
     }
 
     public async Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId,

@@ -76,11 +76,8 @@ public class OrganizationServiceTests
             .CreateAsync(default);
 
         // Create new users
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(expectedNewUsersCount)
-            .CreateAsync(
-                Arg.Is<OrganizationUser>(user => user.Status == OrganizationUserStatusType.Invited
-                                                 && newUsers.Any(u => string.Equals(u.Email, user.Email, StringComparison.InvariantCultureIgnoreCase))),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(org.Name,
             Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), org.PlanType == PlanType.Free);
@@ -129,17 +126,16 @@ public class OrganizationServiceTests
             .UpsertAsync(default);
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
             .CreateAsync(default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAsync(default, default);
 
         // Upserted existing user
         await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
             .UpsertManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == 1));
 
         // Created and invited new users
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(expectedNewUsersCount)
-            .CreateAsync(
-                Arg.Is<OrganizationUser>(user => user.Status == OrganizationUserStatusType.Invited
-                                                 && newUsers.Any(u => string.Equals(u.Email, user.Email, StringComparison.InvariantCultureIgnoreCase))),
-                Arg.Any<IEnumerable<CollectionAccessSelection>>());
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
         await sutProvider.GetDependency<IMailService>().Received(1)
             .BulkSendOrganizationInviteEmailAsync(org.Name,
             Arg.Is<IEnumerable<(OrganizationUser, ExpiringToken)>>(messages => messages.Count() == expectedNewUsersCount), org.PlanType == PlanType.Free);
