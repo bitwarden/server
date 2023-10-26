@@ -1,5 +1,5 @@
 ﻿using System.Security.Claims;
-using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -15,7 +15,7 @@ namespace Bit.Api.Test.Vault.AuthorizationHandlers;
 
 [SutProviderCustomize]
 [FeatureServiceCustomize(FeatureFlagKeys.FlexibleCollections)]
-public class CollectionAuthorizationHandlerTests
+public class GroupAuthorizationHandlerTests
 {
     [Theory]
     [BitAutoData(OrganizationUserType.Admin, false, false, false, false, false, true)]
@@ -30,7 +30,7 @@ public class CollectionAuthorizationHandlerTests
     public async Task CanReadAllAccessAsync_ReturnsExpectedResult(
         OrganizationUserType userType, bool editAnyCollection, bool deleteAnyCollection,
         bool manageGroups, bool manageUsers, bool accessImportExport, bool expectedSuccess,
-        Guid userId, SutProvider<CollectionAuthorizationHandler> sutProvider,
+        Guid userId, SutProvider<GroupAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
         var permissions = new Permissions
@@ -46,7 +46,7 @@ public class CollectionAuthorizationHandlerTests
         organization.Permissions = permissions;
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ReadAll(organization.Id) },
+            new[] { GroupOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
             null);
 
@@ -61,10 +61,10 @@ public class CollectionAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task CanReadAllAccessAsync_WithProviderUser_Success(
         Guid userId,
-        SutProvider<CollectionAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
+        SutProvider<GroupAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ReadAll(organization.Id) },
+            new[] { GroupOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
             null);
 
@@ -83,10 +83,10 @@ public class CollectionAuthorizationHandlerTests
     [Theory, BitAutoData]
     public async Task HandleRequirementAsync_MissingUserId_Failure(
         Guid organizationId,
-        SutProvider<CollectionAuthorizationHandler> sutProvider)
+        SutProvider<GroupAuthorizationHandler> sutProvider)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ReadAll(organizationId) },
+            new[] { GroupOperations.ReadAll(organizationId) },
             new ClaimsPrincipal(),
             null
         );
@@ -102,10 +102,10 @@ public class CollectionAuthorizationHandlerTests
     public async Task HandleRequirementAsync_MissingOrg_Failure(
         Guid userId,
         Guid organizationId,
-        SutProvider<CollectionAuthorizationHandler> sutProvider)
+        SutProvider<GroupAuthorizationHandler> sutProvider)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ReadAll(organizationId) },
+            new[] { GroupOperations.ReadAll(organizationId) },
             new ClaimsPrincipal(),
             null
         );
