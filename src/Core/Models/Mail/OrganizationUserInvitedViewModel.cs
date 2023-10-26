@@ -54,7 +54,7 @@ public class OrganizationUserInvitedViewModel : BaseTitleContactUsMailModel
     public bool OrgSsoLoginRequiredPolicyEnabled { get; set; }
     public bool OrgUserHasExistingUser { get; set; }
 
-  public string Url
+    public string Url
     {
         get
         {
