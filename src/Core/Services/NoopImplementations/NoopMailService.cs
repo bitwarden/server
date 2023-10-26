@@ -54,7 +54,7 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task BulkSendOrganizationInviteEmailAsync(OrganizationInvitesInfo orgInvitesInfo)
+    public Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
         return Task.FromResult(0);
     }

@@ -22,7 +22,7 @@ public interface IMailService
     /// Sends one or many organization invite emails.
     /// </summary>
     /// <param name="orgInvitesInfo">The information required to send the organization invites.</param>
-    Task BulkSendOrganizationInviteEmailAsync(OrganizationInvitesInfo orgInvitesInfo);
+    Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo);
     Task SendOrganizationMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAutoscaledEmailAsync(Organization organization, int initialSeatCount, IEnumerable<string> ownerEmails);
     Task SendOrganizationAcceptedEmailAsync(Organization organization, string userIdentifier, IEnumerable<string> adminEmails);

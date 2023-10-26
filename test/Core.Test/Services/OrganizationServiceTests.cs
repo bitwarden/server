@@ -106,7 +106,7 @@ public class OrganizationServiceTests
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(
+            .SendOrganizationInviteEmailsAsync(
                 Arg.Is<OrganizationInvitesInfo>(info => info.Invites.Count() == expectedNewUsersCount && info.IsFreeOrg == (org.PlanType == PlanType.Free) && info.OrganizationName == org.Name));
 
         // Send events
@@ -185,7 +185,7 @@ public class OrganizationServiceTests
             .CreateManyAsync(Arg.Is<IEnumerable<OrganizationUser>>(users => users.Count() == expectedNewUsersCount));
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.Invites.Count() == expectedNewUsersCount && info.IsFreeOrg == (org.PlanType == PlanType.Free) && info.OrganizationName == org.Name));
 
         // Sent events
@@ -427,7 +427,7 @@ public class OrganizationServiceTests
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) });
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.Invites.Count() == invite.Emails.Distinct().Count() &&
                 info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
                 info.OrganizationName == organization.Name));
@@ -720,7 +720,7 @@ public class OrganizationServiceTests
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, invites);
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.Invites.Count() == invites.SelectMany(i => i.invite.Emails).Count() &&
                 info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
                 info.OrganizationName == organization.Name));
@@ -772,7 +772,7 @@ public class OrganizationServiceTests
         await sutProvider.Sut.InviteUsersAsync(organization.Id, eventSystemUser, invites);
 
         await sutProvider.GetDependency<IMailService>().Received(1)
-            .BulkSendOrganizationInviteEmailAsync(Arg.Is<OrganizationInvitesInfo>(info =>
+            .SendOrganizationInviteEmailsAsync(Arg.Is<OrganizationInvitesInfo>(info =>
                 info.Invites.Count() == invites.SelectMany(i => i.invite.Emails).Count() &&
                 info.IsFreeOrg == (organization.PlanType == PlanType.Free) &&
                 info.OrganizationName == organization.Name));

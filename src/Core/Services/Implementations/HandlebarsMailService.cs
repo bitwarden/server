@@ -206,7 +206,7 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task BulkSendOrganizationInviteEmailAsync(OrganizationInvitesInfo orgInvitesInfo)
+    public async Task SendOrganizationInviteEmailsAsync(OrganizationInvitesInfo orgInvitesInfo)
     {
         MailQueueMessage CreateMessage(string email, object model)
         {
