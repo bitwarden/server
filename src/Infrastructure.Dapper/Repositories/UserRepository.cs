@@ -1,9 +1,14 @@
 ﻿using System.Data;
 using Bit.Core;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tools.Entities;
+using Bit.Core.Vault.Entities;
+using Bit.Infrastructure.Dapper.Tools.Helpers;
+using Bit.Infrastructure.Dapper.Vault.Helpers;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
@@ -173,6 +178,78 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 new { Id = id, RenewalReminderDate = renewalReminderDate },
                 commandType: CommandType.StoredProcedure);
         }
+    }
+
+    public Task UpdateUserKeyAndEncryptedDataAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
+    {
+        // Validation:
+        //   - Request model must have an updated version of every object in each domain containing rotateable data
+        //   - Its ok to have a hardcoded list of domains, but each domain should own the validation logic
+        // Move SQL logic of how to update domain into the domain itself somehow
+        //     - This code doesn't belong in Core
+        //     -
+        // Interface we can call here to update every domain
+
+
+
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            connection.Open();
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    // 1. Update user.
+
+                    using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
+                        cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                        cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
+
+                        if (string.IsNullOrWhiteSpace(user.PrivateKey))
+                        {
+                            cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value;
+                        }
+                        else
+                        {
+                            cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
+                        }
+
+                        cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
+                        cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value = user.AccountRevisionDate;
+                        cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value = user.LastKeyRotationDate;
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 2. Update re-encrypted data.
+
+                    if (ciphers.Any())
+                    {
+                        ciphers.UpdateEncryptedData(user.Id, connection, transaction);
+                    }
+                    if (folders.Any())
+                    {
+                        folders.UpdateEncryptedData(user.Id, connection, transaction);
+                    }
+                    if (sends.Any())
+                    {
+                        sends.UpdateEncryptedData(user.Id, connection, transaction);
+                    }
+
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
+        }
+
+        return Task.FromResult(0);
     }
 
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
