@@ -32,10 +32,9 @@ public class CipherService : ICipherService
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
     private readonly GlobalSettings _globalSettings;
-    private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
+    private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
-    private readonly IFeatureService _featureService;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -51,8 +50,7 @@ public class CipherService : ICipherService
         IPolicyService policyService,
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext,
-        IFeatureService featureService)
+        ICurrentContext currentContext)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -68,7 +66,6 @@ public class CipherService : ICipherService
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
-        _featureService = featureService;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -88,7 +85,7 @@ public class CipherService : ICipherService
                     // Set user ID to limit scope of collection ids in the create sproc
                     cipher.UserId = savingUserId;
                 }
-                await CreateAsync(cipher, collectionIds);
+                await _cipherRepository.CreateAsync(cipher, collectionIds);
 
                 await _referenceEventService.RaiseEventAsync(
                     new ReferenceEvent(ReferenceEventType.CipherCreated, await _organizationRepository.GetByIdAsync(cipher.OrganizationId.Value), _currentContext));
@@ -132,7 +129,7 @@ public class CipherService : ICipherService
                 {
                     throw new BadRequestException("Specified CollectionId does not exist on the specified Organization.");
                 }
-                await CreateAsync(cipher, collectionIds);
+                await _cipherRepository.CreateAsync(cipher, collectionIds);
             }
             else
             {
@@ -653,7 +650,7 @@ public class CipherService : ICipherService
 
         cipher.RevisionDate = DateTime.UtcNow;
 
-        // The sprocs will validate that all collections belong to this org/user and that they have
+        // The sprocs will validate that all collections belong to this org/user and that they have 
         // proper write permissions.
         if (orgAdmin)
         {
@@ -978,8 +975,7 @@ public class CipherService : ICipherService
             return true;
         }
 
-        var useFlexibleCollections = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-        return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id, useFlexibleCollections);
+        return await _cipherRepository.GetCanEditByIdAsync(userId, cipher.Id);
     }
 
     private void ValidateCipherLastKnownRevisionDateAsync(Cipher cipher, DateTime? lastKnownRevisionDate)
@@ -1113,11 +1109,5 @@ public class CipherService : ICipherService
         }
 
         ValidateCipherLastKnownRevisionDateAsync(cipher, lastKnownRevisionDate);
-    }
-
-    private async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
-    {
-        var useFlexibleCollections = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-        await _cipherRepository.CreateAsync(cipher, collectionIds, useFlexibleCollections);
     }
 }
