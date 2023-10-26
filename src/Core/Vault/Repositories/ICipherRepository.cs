@@ -14,7 +14,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections);
     Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
     Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
-    Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
+    Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds, bool useFlexibleCollections);
     Task CreateAsync(CipherDetails cipher);
     Task ReplaceAsync(CipherDetails cipher);
     Task UpsertAsync(CipherDetails cipher);

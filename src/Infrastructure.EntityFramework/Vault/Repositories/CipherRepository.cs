@@ -80,7 +80,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task CreateAsync(Core.Vault.Entities.Cipher cipher, IEnumerable<Guid> collectionIds)
+    public async Task CreateAsync(Core.Vault.Entities.Cipher cipher, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
     {
         cipher = await CreateAsync(cipher);
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -280,7 +280,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -303,7 +303,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
+    public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

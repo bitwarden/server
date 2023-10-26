@@ -35,8 +35,6 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
-    bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -412,7 +410,8 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var cipher = await _cipherRepository.GetByIdAsync(cipherId, emergencyAccess.GrantorId, UseFlexibleCollections);
+        var useFlexibleCollections = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        var cipher = await _cipherRepository.GetByIdAsync(cipherId, emergencyAccess.GrantorId, useFlexibleCollections);
         return await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
     }
 

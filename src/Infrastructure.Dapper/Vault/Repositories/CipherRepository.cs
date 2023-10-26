@@ -66,7 +66,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId)
+    public async Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
     {
         var sprocName = useFlexibleCollections
             ? $"[{Schema}].[Cipher_ReadCanEditByIdUserId_V2]"
@@ -88,7 +88,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         string sprocName = null;
         if (withOrganizations)
         {
-            sprocName = UseFlexibleCollections
+            sprocName = true //UseFlexibleCollections
                 ? $"[{Schema}].[CipherDetails_ReadByUserId_V2]"
                 : $"[{Schema}].[CipherDetails_ReadByUserId]";
         }
@@ -124,9 +124,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds)
+    public async Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
     {
-        var sprocName = UseFlexibleCollections
+        var sprocName = useFlexibleCollections
             ? $"[{Schema}].[Cipher_CreateWithCollections_V2]"
             : $"[{Schema}].[Cipher_CreateWithCollections]";
 
@@ -180,7 +180,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task<bool> ReplaceAsync(Cipher obj, IEnumerable<Guid> collectionIds)
     {
-        var sprocName = UseFlexibleCollections
+        var sprocName = true //UseFlexibleCollections
             ? $"[{Schema}].[Cipher_UpdateWithCollections_V2]"
             : $"[{Schema}].[Cipher_UpdateWithCollections]";
 
@@ -233,7 +233,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = UseFlexibleCollections
+        var sprocName = true //UseFlexibleCollections
             ? $"[{Schema}].[Cipher_Delete_V2]"
             : $"[{Schema}].[Cipher_Delete]";
 
@@ -270,7 +270,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
     {
-        var sprocName = UseFlexibleCollections
+        var sprocName = true //UseFlexibleCollections
             ? $"[{Schema}].[Cipher_Move_V2]"
             : $"[{Schema}].[Cipher_Move]";
 
@@ -660,7 +660,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = UseFlexibleCollections
+        var sprocName = true //UseFlexibleCollections
             ? $"[{Schema}].[Cipher_SoftDelete_V2]"
             : $"[{Schema}].[Cipher_SoftDelete]";
 
@@ -675,7 +675,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 
     public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
     {
-        var sprocName = UseFlexibleCollections
+        var sprocName = true //UseFlexibleCollections
             ? $"[{Schema}].[Cipher_Restore_V2]"
             : $"[{Schema}].[Cipher_Restore]";
 
