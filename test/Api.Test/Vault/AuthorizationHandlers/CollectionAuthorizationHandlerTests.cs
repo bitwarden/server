@@ -185,6 +185,32 @@ public class CollectionAuthorizationHandlerTests
         Assert.True(context.HasFailed);
     }
 
+    [Theory, CollectionCustomization]
+    [BitAutoData(CollectionOperationEnum.Create)]
+    [BitAutoData(CollectionOperationEnum.Delete)]
+    [BitAutoData(CollectionOperationEnum.ModifyAccess)]
+    public async Task HandleRequirementAsync_Provider_Success(
+        CollectionOperationEnum requirementEnum,
+        SutProvider<CollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        var context = new AuthorizationHandlerContext(
+            new[] { GetRequirementFromEnum(requirementEnum) },
+            new ClaimsPrincipal(),
+            collections
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasSucceeded);
+        await sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().ProviderUserForOrgAsync(Arg.Any<Guid>());
+    }
+
     [Theory, BitAutoData, CollectionCustomization]
     public async Task CanManageCollectionAccessAsync_MissingManageCollectionPermission_Failure(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
@@ -220,5 +246,23 @@ public class CollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().GetOrganization(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
             .GetManyByUserIdAsync(default);
+    }
+
+    public enum CollectionOperationEnum
+    {
+        Create,
+        Delete,
+        ModifyAccess
+    }
+
+    private static CollectionOperationRequirement GetRequirementFromEnum(CollectionOperationEnum collectionOperationEnum)
+    {
+        return collectionOperationEnum switch
+        {
+            CollectionOperationEnum.Create => CollectionOperations.Create,
+            CollectionOperationEnum.Delete => CollectionOperations.Delete,
+            CollectionOperationEnum.ModifyAccess => CollectionOperations.ModifyAccess,
+            _ => throw new ArgumentOutOfRangeException(nameof(collectionOperationEnum), collectionOperationEnum, null)
+        };
     }
 }
