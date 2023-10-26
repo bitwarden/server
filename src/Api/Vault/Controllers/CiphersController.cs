@@ -39,7 +39,6 @@ public class CiphersController : Controller
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
-    private readonly IFeatureService _featureService;
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -50,8 +49,7 @@ public class CiphersController : Controller
         IProviderService providerService,
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
-        GlobalSettings globalSettings,
-        IFeatureService featureService)
+        GlobalSettings globalSettings)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -62,7 +60,6 @@ public class CiphersController : Controller
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
-        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -834,7 +831,6 @@ public class CiphersController : Controller
 
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
     {
-        var useFlexibleCollections = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-        return await _cipherRepository.GetByIdAsync(cipherId, userId, useFlexibleCollections);
+        return await _cipherRepository.GetByIdAsync(cipherId, userId, _currentContext);
     }
 }

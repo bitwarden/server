@@ -1,6 +1,9 @@
 ﻿using System.Data;
 using System.Text.Json;
+using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -14,17 +17,24 @@ namespace Bit.Infrastructure.Dapper.Vault.Repositories;
 
 public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 {
-    public CipherRepository(GlobalSettings globalSettings)
+    private readonly IFeatureService _featureService;
+
+    private bool UseFlexibleCollections(ICurrentContext currentContext) =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, currentContext);
+
+    public CipherRepository(GlobalSettings globalSettings, IFeatureService featureService)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    { }
+    {
+        _featureService = featureService;
+    }
 
     public CipherRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, ICurrentContext currentContext)
     {
-        var sprocName = useFlexibleCollections
+        var sprocName = UseFlexibleCollections(currentContext)
             ? $"[{Schema}].[CipherDetails_ReadByIdUserId_V2]"
             : $"[{Schema}].[CipherDetails_ReadByIdUserId]";
 

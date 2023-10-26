@@ -1,7 +1,10 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
+using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Enums;
+using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Models.Data;
@@ -23,9 +26,16 @@ namespace Bit.Infrastructure.EntityFramework.Vault.Repositories;
 
 public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, Guid>, ICipherRepository
 {
-    public CipherRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
+    private readonly IFeatureService _featureService;
+
+    private bool UseFlexibleCollections(ICurrentContext currentContext) =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, currentContext);
+
+    public CipherRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper, IFeatureService featureService)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Ciphers)
-    { }
+    {
+        _featureService = featureService;
+    }
 
     public override async Task<Core.Vault.Entities.Cipher> CreateAsync(Core.Vault.Entities.Cipher cipher)
     {
@@ -292,12 +302,12 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, ICurrentContext currentContext)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var userCipherDetails = new UserCipherDetailsQuery(userId, useFlexibleCollections);
+            var userCipherDetails = new UserCipherDetailsQuery(userId, UseFlexibleCollections(currentContext));
             var data = await userCipherDetails.Run(dbContext).FirstOrDefaultAsync(c => c.Id == id);
             return data;
         }

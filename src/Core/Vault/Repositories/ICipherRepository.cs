@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -8,7 +9,7 @@ namespace Bit.Core.Vault.Repositories;
 
 public interface ICipherRepository : IRepository<Cipher, Guid>
 {
-    Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections);
+    Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, ICurrentContext currentContext);
     Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id);
     Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(Guid organizationId);
     Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
