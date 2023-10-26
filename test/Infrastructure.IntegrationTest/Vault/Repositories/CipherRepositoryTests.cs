@@ -1,7 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
