@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;

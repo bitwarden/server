@@ -45,6 +45,7 @@ public static class FeatureFlagKeys
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string FlexibleCollections = "flexible-collections";
     public const string BulkCollectionAccess = "bulk-collection-access";
+    public const string AutofillOverlay = "autofill-overlay";
 
     public static List<string> GetAllKeys()
     {
