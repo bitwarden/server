@@ -664,7 +664,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task CreateServiceAccountAccessPolicies_MismatchOrgId_NotFound(PermissionType permissionType)
     {
-        var (org, orgUser) = await _organizationHelper.Initialize(true, true, true);
+        var (_, orgUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
         var anotherOrg = await _organizationHelper.CreateSmOrganizationAsync();
 
@@ -928,7 +928,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task CreateServiceAccountGrantedPolicies_Success(PermissionType permissionType)
     {
-        var (org, orgUser) = await _organizationHelper.Initialize(true, true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id);
@@ -1185,9 +1185,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         await LoginAsync(_email);
 
         var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
+        var newOrg = await _organizationHelper.CreateSmOrganizationAsync();
         var group = await _groupRepository.CreateAsync(new Group
         {
-            OrganizationId = Guid.NewGuid(),
+            OrganizationId = newOrg.Id,
             Name = _mockEncryptedString
         });
         request.GroupAccessPolicyRequests = new List<AccessPolicyRequest>
