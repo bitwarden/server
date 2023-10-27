@@ -244,9 +244,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId)
+    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext)
     {
-        var sprocName = false //UseFlexibleCollections
+        var sprocName = UseFlexibleCollections(currentContext)
             ? $"[{Schema}].[Cipher_Delete_V2]"
             : $"[{Schema}].[Cipher_Delete]";
 
@@ -281,9 +281,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId)
+    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, ICurrentContext currentContext)
     {
-        var sprocName = false //UseFlexibleCollections
+        var sprocName = UseFlexibleCollections(currentContext)
             ? $"[{Schema}].[Cipher_Move_V2]"
             : $"[{Schema}].[Cipher_Move]";
 
@@ -671,9 +671,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId)
+    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext)
     {
-        var sprocName = false //UseFlexibleCollections
+        var sprocName = UseFlexibleCollections(currentContext)
             ? $"[{Schema}].[Cipher_SoftDelete_V2]"
             : $"[{Schema}].[Cipher_SoftDelete]";
 
@@ -686,9 +686,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId)
+    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext)
     {
-        var sprocName = false //UseFlexibleCollections
+        var sprocName = UseFlexibleCollections(currentContext)
             ? $"[{Schema}].[Cipher_Restore_V2]"
             : $"[{Schema}].[Cipher_Restore]";
 

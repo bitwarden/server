@@ -24,9 +24,9 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
     Task UpdateAttachmentAsync(CipherAttachment attachment);
     Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
-    Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
+    Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext);
     Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
-    Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId);
+    Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, ICurrentContext currentContext);
     Task DeleteByUserIdAsync(Guid userId);
     Task DeleteByOrganizationIdAsync(Guid organizationId);
     Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
@@ -34,9 +34,9 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
         IEnumerable<CollectionCipher> collectionCiphers);
-    Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
+    Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext);
     Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
-    Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
+    Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext);
     Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
 }

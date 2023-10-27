@@ -32,7 +32,7 @@ public class CipherService : ICipherService
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
     private readonly GlobalSettings _globalSettings;
-    private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
+    private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -421,7 +421,7 @@ public class CipherService : ICipherService
         {
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
-            await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
+            await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, _currentContext);
         }
 
         var events = deletingCiphers.Select(c =>
@@ -473,7 +473,7 @@ public class CipherService : ICipherService
             }
         }
 
-        await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId);
+        await _cipherRepository.MoveAsync(cipherIds, destinationFolderId, movingUserId, _currentContext);
         // push
         await _pushService.PushSyncCiphersAsync(movingUserId);
     }
@@ -650,7 +650,7 @@ public class CipherService : ICipherService
 
         cipher.RevisionDate = DateTime.UtcNow;
 
-        // The sprocs will validate that all collections belong to this org/user and that they have 
+        // The sprocs will validate that all collections belong to this org/user and that they have
         // proper write permissions.
         if (orgAdmin)
         {
@@ -854,7 +854,7 @@ public class CipherService : ICipherService
         {
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
-            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId);
+            await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, _currentContext);
         }
 
         var events = deletingCiphers.Select(c =>
@@ -919,7 +919,7 @@ public class CipherService : ICipherService
         {
             var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId);
             restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
-            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId);
+            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId, _currentContext);
         }
 
         var events = restoringCiphers.Select(c =>
