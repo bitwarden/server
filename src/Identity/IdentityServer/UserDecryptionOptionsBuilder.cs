@@ -27,6 +27,16 @@ public class UserDecryptionOptionsBuilder
         return this;
     }
 
+    public UserDecryptionOptionsBuilder WithSso(SsoConfig ssoConfig)
+    {
+        var ssoConfigurationData = ssoConfig.GetData();
+        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
+        {
+            _options.KeyConnectorOption = new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
+        }
+        return this;
+    }
+
     public UserDecryptionOptions Build()
     {
         return _options;
