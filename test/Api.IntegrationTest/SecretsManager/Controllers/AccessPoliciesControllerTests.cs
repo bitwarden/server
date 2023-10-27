@@ -1144,9 +1144,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         await LoginAsync(_email);
 
         var (serviceAccount, request) = await SetupServiceAccountPeopleRequestAsync(permissionType, organizationUser);
+        var newOrg = await _organizationHelper.CreateSmOrganizationAsync();
         var group = await _groupRepository.CreateAsync(new Group
         {
-            OrganizationId = Guid.NewGuid(),
+            OrganizationId = newOrg.Id,
             Name = _mockEncryptedString
         });
         request.GroupAccessPolicyRequests = new List<AccessPolicyRequest>
