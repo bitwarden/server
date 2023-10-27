@@ -258,5 +258,6 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         UseSecretsManager = license.UseSecretsManager;
         SmSeats = license.SmSeats;
         SmServiceAccounts = license.SmServiceAccounts;
+        LimitCollectionCreationDeletion = license.LimitCollectionCreationDeletion;
     }
 }
