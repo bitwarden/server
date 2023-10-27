@@ -38,7 +38,7 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory, BitAutoData]
-    public void WithSso_WhenKeyConnectorIsEnabled_ShouldReturnKeyConnectorOptions(SsoConfig ssoConfig, SsoConfigurationData configurationData)
+    public void Build_WhenKeyConnectorIsEnabled_ShouldReturnKeyConnectorOptions(SsoConfig ssoConfig, SsoConfigurationData configurationData)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.KeyConnector;
         ssoConfig.Data = configurationData.Serialize();

@@ -9,6 +9,7 @@ using Bit.Identity.Utilities;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using System.Security.Claims;
 using Bit.Core.Auth.Utilities;
+using Amazon.Util;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -35,11 +36,6 @@ public class UserDecryptionOptionsBuilder
 
     public UserDecryptionOptionsBuilder WithSso(Core.Auth.Entities.SsoConfig ssoConfig)
     {
-        var ssoConfigurationData = ssoConfig.GetData();
-        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
-        {
-            _options.KeyConnectorOption = new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
-        }
         _ssoConfig = ssoConfig;
         return this;
     }
@@ -52,12 +48,27 @@ public class UserDecryptionOptionsBuilder
 
     public UserDecryptionOptions Build()
     {
-        BuildTrustedDeviceEncryption();
+        BuildKeyConnectorOptions();
+        BuildTrustedDeviceOptions();
 
         return _options;
     }
 
-    private void BuildTrustedDeviceEncryption()
+    private void BuildKeyConnectorOptions()
+    {
+        if (_ssoConfig == null)
+        {
+            return;
+        }
+
+        var ssoConfigurationData = _ssoConfig.GetData();
+        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
+        {
+            _options.KeyConnectorOption = new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
+        }
+    }
+
+    private void BuildTrustedDeviceOptions()
     {
         if (_device == null || _ssoConfig == null)
         {
