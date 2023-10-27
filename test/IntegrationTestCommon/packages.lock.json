@@ -13,15 +13,6 @@
           "Microsoft.Extensions.Hosting": "6.0.1"
         }
       },
-      "Microsoft.EntityFrameworkCore.InMemory": {
-        "type": "Direct",
-        "requested": "[7.0.5, )",
-        "resolved": "7.0.5",
-        "contentHash": "y3S/A/0uJX7KOhppC3xqyta6Z0PRz0qPLngH5GFu4GZ7/+Sw2u/amf7MavvR5GfZjGabGcohMpsRSahMmpF9gA==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "7.0.5"
-        }
-      },
       "Microsoft.Extensions.Configuration": {
         "type": "Direct",
         "requested": "[6.0.1, )",
