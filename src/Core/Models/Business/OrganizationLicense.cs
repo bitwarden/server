@@ -51,6 +51,7 @@ public class OrganizationLicense : ILicense
         UseSecretsManager = org.UseSecretsManager;
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
+        LimitCollectionCreationDeletion = org.LimitCollectionCreationDeletion;
 
         if (subscriptionInfo?.Subscription == null)
         {
@@ -133,6 +134,7 @@ public class OrganizationLicense : ILicense
     public bool UseSecretsManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; }
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
@@ -145,10 +147,10 @@ public class OrganizationLicense : ILicense
     /// </summary>
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors</remarks>
-    private const int CURRENT_LICENSE_FILE_VERSION = 12;
+    private const int CURRENT_LICENSE_FILE_VERSION = 13;
     private bool ValidLicenseVersion
     {
-        get => Version is >= 1 and <= 13;
+        get => Version is >= 1 and <= 14;
     }
 
     public byte[] GetDataBytes(bool forHash = false)
@@ -186,6 +188,8 @@ public class OrganizationLicense : ILicense
                     (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod))) &&
                     // UseSecretsManager was added in Version 13
                     (Version >= 13 || !p.Name.Equals(nameof(UseSecretsManager))) &&
+                    // LimitCollectionCreationDeletion was added in Version 14
+                    (Version >= 14 || !p.Name.Equals(nameof(LimitCollectionCreationDeletion))) &&
                     (
                         !forHash ||
                         (
@@ -331,6 +335,11 @@ public class OrganizationLicense : ILicense
                 organization.UsePasswordManager == UsePasswordManager &&
                 organization.SmSeats == SmSeats &&
                 organization.SmServiceAccounts == SmServiceAccounts;
+            }
+
+            if (valid && Version >= 14)
+            {
+                valid = organization.LimitCollectionCreationDeletion == LimitCollectionCreationDeletion;
             }
 
             return valid;
