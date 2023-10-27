@@ -1,15 +1,11 @@
 ﻿using Bit.Core;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Services;
 using Bit.Identity.Utilities;
-using Bit.Infrastructure.EntityFramework.Auth.Models;
-using System.Security.Claims;
 using Bit.Core.Auth.Utilities;
-using Amazon.Util;
 using Bit.Core.Repositories;
 
 namespace Bit.Identity.IdentityServer;
