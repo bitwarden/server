@@ -44,12 +44,13 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
         IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IFeatureService featureService,
-        IDistributedCache distributedCache
+        IDistributedCache distributedCache,
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder
         )
         : base(userManager, deviceRepository, deviceService, userService, eventService,
             organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
             applicationCacheService, mailService, logger, currentContext, globalSettings,
-            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, distributedCache)
+            userRepository, policyService, tokenDataFactory, featureService, ssoConfigRepository, distributedCache, userDecryptionOptionsBuilder)
     {
         _assertionOptionsDataProtector = assertionOptionsDataProtector;
     }
