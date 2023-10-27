@@ -13,8 +13,10 @@ namespace Bit.Identity.IdentityServer;
 #nullable enable
 /// <summary>
 /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
+///
+/// Note: Do not use this as an injected service if you intend to build multiple independent UserDecryptionOptions
 /// </summary>
-public class UserDecryptionOptionsBuilder
+public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
 {
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
@@ -39,20 +41,20 @@ public class UserDecryptionOptionsBuilder
         _organizationUserRepository = organizationUserRepository;
     }
 
-    public UserDecryptionOptionsBuilder ForUser(User user)
+    public IUserDecryptionOptionsBuilder ForUser(User user)
     {
         _options.HasMasterPassword = user.HasMasterPassword();
         _user = user;
         return this;
     }
 
-    public UserDecryptionOptionsBuilder WithSso(Core.Auth.Entities.SsoConfig ssoConfig)
+    public IUserDecryptionOptionsBuilder WithSso(Core.Auth.Entities.SsoConfig ssoConfig)
     {
         _ssoConfig = ssoConfig;
         return this;
     }
 
-    public UserDecryptionOptionsBuilder WithDevice(Device device)
+    public IUserDecryptionOptionsBuilder WithDevice(Device device)
     {
         _device = device;
         return this;
