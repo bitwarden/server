@@ -126,8 +126,7 @@ public class UserDecryptionOptionsBuilderTests
     public async Task Build_WhenManageResetPasswordPermissions_ShouldReturnHasManageResetPasswordPermissionTrue(
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
-        CurrentContextOrganization organization,
-        Device device)
+        CurrentContextOrganization organization)
     {
         _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
@@ -136,7 +135,7 @@ public class UserDecryptionOptionsBuilderTests
         _currentContext.Organizations.Returns(new List<CurrentContextOrganization>(new CurrentContextOrganization[] { organization }));
         _currentContext.ManageResetPassword(organization.Id).Returns(true);
 
-        var result = await _builder.WithSso(ssoConfig).WithDevice(device).BuildAsync();
+        var result = await _builder.WithSso(ssoConfig).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
     }
@@ -146,8 +145,7 @@ public class UserDecryptionOptionsBuilderTests
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
         OrganizationUser organizationUser,
-        User user,
-        Device device)
+        User user)
     {
         _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
         configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
@@ -155,7 +153,7 @@ public class UserDecryptionOptionsBuilderTests
         organizationUser.ResetPasswordKey = "resetPasswordKey";
         _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
 
-        var result = await _builder.ForUser(user).WithSso(ssoConfig).WithDevice(device).BuildAsync();
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasAdminApproval);
     }
