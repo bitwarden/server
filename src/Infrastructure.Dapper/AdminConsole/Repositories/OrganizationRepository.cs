@@ -151,4 +151,14 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             return results.ToList();
         }
     }
+
+    public async Task<IEnumerable<string>> GetOwnerEmailAddressesById(Guid organizationId)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+
+        return await connection.QueryAsync<string>(
+            $"[{Schema}].[{Table}_ReadOwnerEmailAddressesById]",
+            new { OrganizationId = organizationId },
+            commandType: CommandType.StoredProcedure);
+    }
 }

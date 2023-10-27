@@ -286,10 +286,21 @@ public class HandlebarsMailService : IMailService
         await _mailDeliveryService.SendEmailAsync(message);
     }
 
-    public async Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
-        List<string> items, bool mentionInvoices)
+    public async Task SendInvoiceUpcoming(
+        string email,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices) => await SendInvoiceUpcoming(new List<string> { email }, amount, dueDate, items, mentionInvoices);
+
+    public async Task SendInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices)
     {
-        var message = CreateDefaultMessage("Your Subscription Will Renew Soon", email);
+        var message = CreateDefaultMessage("Your Subscription Will Renew Soon", emails);
         var model = new InvoiceUpcomingViewModel
         {
             WebVaultUrl = _globalSettings.BaseServiceUri.VaultWithHash,
