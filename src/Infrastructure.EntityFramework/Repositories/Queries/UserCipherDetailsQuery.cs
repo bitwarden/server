@@ -22,7 +22,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
             : Run_Legacy(dbContext);
     }
 
-    public virtual IQueryable<CipherDetails> Run_Legacy(DatabaseContext dbContext)
+    private IQueryable<CipherDetails> Run_Legacy(DatabaseContext dbContext)
     {
         var query = from c in dbContext.Ciphers
 
@@ -88,7 +88,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
         return union;
     }
 
-    public virtual IQueryable<CipherDetails> Run_V2(DatabaseContext dbContext)
+    private IQueryable<CipherDetails> Run_V2(DatabaseContext dbContext)
     {
         var query = from c in dbContext.Ciphers
 
