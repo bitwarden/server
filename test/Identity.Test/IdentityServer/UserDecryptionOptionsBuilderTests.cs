@@ -1,7 +1,6 @@
 ﻿using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -120,5 +119,24 @@ public class UserDecryptionOptionsBuilderTests
         var result = await _builder.ForUser(user).WithSso(ssoConfig).WithDevice(device).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasLoginApprovingDevice);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenManageResetPasswordPermissions_ShouldHasManageResetPasswordPermissionTrue(
+        SsoConfig ssoConfig,
+        SsoConfigurationData configurationData,
+        CurrentContextOrganization organization,
+        Device device)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        ssoConfig.OrganizationId = organization.Id;
+        _currentContext.Organizations.Returns(new List<CurrentContextOrganization>(new CurrentContextOrganization[] { organization }));
+        _currentContext.ManageResetPassword(organization.Id).Returns(true);
+
+        var result = await _builder.WithSso(ssoConfig).WithDevice(device).BuildAsync();
+
+        Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
     }
 }
