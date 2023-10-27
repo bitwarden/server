@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.Tools.Models.Response;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Models.Api.Response;

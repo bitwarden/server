@@ -112,7 +112,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     {
         Subscription = subscription.Subscription != null ? new BillingSubscription(subscription.Subscription) : null;
         UpcomingInvoice = subscription.UpcomingInvoice != null ? new BillingSubscriptionUpcomingInvoice(subscription.UpcomingInvoice) : null;
-        Discount = subscription.Discount != null ? new BillingCustomerDiscount(subscription.Discount) : null;
+        CustomerDiscount = subscription.CustomerDiscount != null ? new BillingCustomerDiscount(subscription.CustomerDiscount) : null;
         Expiration = DateTime.UtcNow.AddYears(1); // Not used, so just give it a value.
 
         if (hideSensitiveData)
@@ -143,7 +143,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
 
     public string StorageName { get; set; }
     public double? StorageGb { get; set; }
-    public BillingCustomerDiscount Discount { get; set; }
+    public BillingCustomerDiscount CustomerDiscount { get; set; }
     public BillingSubscription Subscription { get; set; }
     public BillingSubscriptionUpcomingInvoice UpcomingInvoice { get; set; }
 
