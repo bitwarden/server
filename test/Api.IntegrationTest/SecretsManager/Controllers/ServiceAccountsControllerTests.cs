@@ -704,14 +704,14 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var serviceAccount = await _serviceAccountRepository.CreateAsync(new ServiceAccount
         {
             OrganizationId = org.Id,
-            Name = _mockEncryptedString,
+            Name = _mockEncryptedString
         });
 
         var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
         {
-            ServiceAccountId = org.Id,
+            ServiceAccountId = serviceAccount.Id,
             Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30),
+            ExpireAt = DateTime.UtcNow.AddDays(30)
         });
 
         var request = new RevokeAccessTokensRequest
@@ -753,9 +753,9 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
         var accessToken = await _apiKeyRepository.CreateAsync(new ApiKey
         {
-            ServiceAccountId = org.Id,
+            ServiceAccountId = serviceAccount.Id,
             Name = _mockEncryptedString,
-            ExpireAt = DateTime.UtcNow.AddDays(30),
+            ExpireAt = DateTime.UtcNow.AddDays(30)
         });
 
         var request = new RevokeAccessTokensRequest

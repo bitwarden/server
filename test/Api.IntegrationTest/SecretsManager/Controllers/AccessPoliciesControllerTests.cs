@@ -706,7 +706,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task CreateServiceAccountGrantedPolicies_Success(PermissionType permissionType)
     {
-        var (org, orgUser) = await _organizationHelper.Initialize(true, true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id);
@@ -967,9 +967,10 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         await LoginAsync(_email);
 
         var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
+        var newOrg = await _organizationHelper.CreateSmOrganizationAsync();
         var group = await _groupRepository.CreateAsync(new Group
         {
-            OrganizationId = Guid.NewGuid(),
+            OrganizationId = newOrg.Id,
             Name = _mockEncryptedString
         });
         request.GroupAccessPolicyRequests = new List<AccessPolicyRequest>
@@ -1313,9 +1314,15 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     private async Task<(Guid ProjectId, Guid ServiceAccountId)> CreateProjectAndServiceAccountAsync(Guid organizationId,
         bool misMatchOrganization = false)
     {
+        var newOrg = new Organization();
+        if (misMatchOrganization)
+        {
+            newOrg = await _organizationHelper.CreateSmOrganizationAsync();
+        }
+
         var project = await _projectRepository.CreateAsync(new Project
         {
-            OrganizationId = misMatchOrganization ? Guid.NewGuid() : organizationId,
+            OrganizationId = misMatchOrganization ? newOrg.Id : organizationId,
             Name = _mockEncryptedString,
         });
 
@@ -1354,7 +1361,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     }
 
     private async Task<AccessPoliciesCreateRequest> SetupUserServiceAccountAccessPolicyRequestAsync(
-        PermissionType permissionType, Guid organizationId, Guid userId, Guid serviceAccountId)
+        PermissionType permissionType, Guid userId, Guid serviceAccountId)
     {
         if (permissionType == PermissionType.RunAsUserWithPermission)
         {

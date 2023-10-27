@@ -253,7 +253,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
-        GetPeoplePoliciesByGrantedProjectIdAsync(Guid id)
+        GetPeoplePoliciesByGrantedProjectIdAsync(Guid id, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -264,13 +264,20 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                  ((GroupProjectAccessPolicy)ap).GrantedProjectId == id))
             .Include(ap => ((UserProjectAccessPolicy)ap).OrganizationUser.User)
             .Include(ap => ((GroupProjectAccessPolicy)ap).Group)
+            .Select(ap => new
+            {
+                ap,
+                CurrentUserInGroup = ap is GroupProjectAccessPolicy &&
+                                     ((GroupProjectAccessPolicy)ap).Group.GroupUsers.Any(g =>
+                                         g.OrganizationUser.UserId == userId),
+            })
             .ToListAsync();
 
-        return entities.Select(MapToCore);
+        return entities.Select(e => MapToCore(e.ap, e.CurrentUserInGroup));
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> ReplaceProjectPeopleAsync(
-        ProjectPeopleAccessPolicies peopleAccessPolicies)
+        ProjectPeopleAccessPolicies peopleAccessPolicies, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
@@ -315,12 +322,12 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
             }
         }
 
-        var results = await UpsertPeoplePoliciesAsync(dbContext,
+        await UpsertPeoplePoliciesAsync(dbContext,
             peopleAccessPolicies.ToBaseAccessPolicies().Select(MapToEntity).ToList(), userPolicyEntities,
             groupPolicyEntities);
 
         await dbContext.SaveChangesAsync();
-        return results.Select(MapToCore);
+        return await GetPeoplePoliciesByGrantedProjectIdAsync(peopleAccessPolicies.Id, userId);
     }
 
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>>
@@ -398,11 +405,10 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         return await GetPeoplePoliciesByGrantedServiceAccountIdAsync(peopleAccessPolicies.Id, userId);
     }
 
-    private static async Task<List<BaseAccessPolicy>> UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
+    private static async Task UpsertPeoplePoliciesAsync(DatabaseContext dbContext,
         List<BaseAccessPolicy> policies, IReadOnlyCollection<AccessPolicy> userPolicyEntities,
         IReadOnlyCollection<AccessPolicy> groupPolicyEntities)
     {
-        var results = new List<BaseAccessPolicy>();
         var currentDate = DateTime.UtcNow;
         foreach (var updatedEntity in policies)
         {
@@ -425,17 +431,13 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
                 currentEntity.Read = updatedEntity.Read;
                 currentEntity.Write = updatedEntity.Write;
                 currentEntity.RevisionDate = currentDate;
-                results.Add(currentEntity);
             }
             else
             {
                 updatedEntity.SetNewId();
                 await dbContext.AddAsync(updatedEntity);
-                results.Add(updatedEntity);
             }
         }
-
-        return results;
     }
 
     private Core.SecretsManager.Entities.BaseAccessPolicy MapToCore(

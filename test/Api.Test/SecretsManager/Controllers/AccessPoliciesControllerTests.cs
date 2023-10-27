@@ -809,7 +809,7 @@ public class AccessPoliciesControllerTests
         var result = await sutProvider.Sut.GetProjectPeopleAccessPoliciesAsync(id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>());
 
         Assert.Empty(result.GroupAccessPolicies);
         Assert.Empty(result.UserAccessPolicies);
@@ -830,7 +830,7 @@ public class AccessPoliciesControllerTests
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectPeopleAccessPoliciesAsync(id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>());
+            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -846,13 +846,13 @@ public class AccessPoliciesControllerTests
         sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(default, default, default)
             .Returns((false, false));
 
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeoplePoliciesByGrantedProjectIdAsync(default)
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeoplePoliciesByGrantedProjectIdAsync(default, default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultAccessPolicy });
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectPeopleAccessPoliciesAsync(id));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>());
+            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -883,13 +883,13 @@ public class AccessPoliciesControllerTests
                 break;
         }
 
-        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeoplePoliciesByGrantedProjectIdAsync(default)
+        sutProvider.GetDependency<IAccessPolicyRepository>().GetPeoplePoliciesByGrantedProjectIdAsync(default, default)
             .ReturnsForAnyArgs(new List<BaseAccessPolicy> { resultUserPolicy, resultGroupPolicy });
 
         var result = await sutProvider.Sut.GetProjectPeopleAccessPoliciesAsync(id);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)));
+            .GetPeoplePoliciesByGrantedProjectIdAsync(Arg.Is(AssertHelper.AssertPropertyEqual(id)), Arg.Any<Guid>());
 
         Assert.NotEmpty(result.GroupAccessPolicies);
         Assert.NotEmpty(result.UserAccessPolicies);
@@ -906,7 +906,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutProjectPeopleAccessPoliciesAsync(id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>());
+            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -924,7 +924,7 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutProjectPeopleAccessPoliciesAsync(project.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>());
+            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 
     [Theory]
@@ -944,29 +944,31 @@ public class AccessPoliciesControllerTests
             sutProvider.Sut.PutProjectPeopleAccessPoliciesAsync(project.Id, request));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>());
+            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 
     [Theory]
     [BitAutoData]
     public async void PutProjectPeopleAccessPoliciesAsync_Success(
         SutProvider<AccessPoliciesController> sutProvider,
+        Guid userId,
         Project project,
         PeopleAccessPoliciesRequestModel request)
     {
         sutProvider.GetDependency<IProjectRepository>().GetByIdAsync(default).ReturnsForAnyArgs(project);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
         var peoplePolicies = request.ToProjectPeopleAccessPolicies(project.Id, project.OrganizationId);
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), peoplePolicies,
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
 
-        sutProvider.GetDependency<IAccessPolicyRepository>().ReplaceProjectPeopleAsync(peoplePolicies)
+        sutProvider.GetDependency<IAccessPolicyRepository>().ReplaceProjectPeopleAsync(peoplePolicies, Arg.Any<Guid>())
             .Returns(peoplePolicies.ToBaseAccessPolicies());
 
         await sutProvider.Sut.PutProjectPeopleAccessPoliciesAsync(project.Id, request);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>());
+            .ReplaceProjectPeopleAsync(Arg.Any<ProjectPeopleAccessPolicies>(), Arg.Any<Guid>());
     }
 
     [Theory]
