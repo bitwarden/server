@@ -10,6 +10,7 @@ using Bit.Infrastructure.EntityFramework.Auth.Models;
 using System.Security.Claims;
 using Bit.Core.Auth.Utilities;
 using Amazon.Util;
+using Bit.Core.Repositories;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -21,23 +22,31 @@ public class UserDecryptionOptionsBuilder
 {
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
+    private readonly IDeviceRepository _deviceRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     private UserDecryptionOptions _options = new UserDecryptionOptions();
+    private User? _user;
     private Core.Auth.Entities.SsoConfig? _ssoConfig;
     private Device? _device;
 
     public UserDecryptionOptionsBuilder(
         ICurrentContext currentContext,
-        IFeatureService featureService
+        IFeatureService featureService,
+        IDeviceRepository deviceRepository,
+        IOrganizationUserRepository organizationUserRepository
     )
     {
         _currentContext = currentContext;
         _featureService = featureService;
+        _deviceRepository = deviceRepository;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     public UserDecryptionOptionsBuilder ForUser(User user)
     {
         _options.HasMasterPassword = user.HasMasterPassword();
+        _user = user;
         return this;
     }
 
@@ -53,10 +62,10 @@ public class UserDecryptionOptionsBuilder
         return this;
     }
 
-    public UserDecryptionOptions Build()
+    public async Task<UserDecryptionOptions> BuildAsync()
     {
         BuildKeyConnectorOptions();
-        BuildTrustedDeviceOptions();
+        await BuildTrustedDeviceOptions();
 
         return _options;
     }
@@ -75,14 +84,12 @@ public class UserDecryptionOptionsBuilder
         }
     }
 
-    private void BuildTrustedDeviceOptions()
+    private async Task BuildTrustedDeviceOptions()
     {
         if (_device == null || _ssoConfig == null || !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
         {
             return;
         }
-
-        // TODO: Only add the trusted device specific option when the flag is turned on
 
         var ssoConfigurationData = _ssoConfig.GetData();
         if (ssoConfigurationData is not { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
@@ -90,7 +97,6 @@ public class UserDecryptionOptionsBuilder
             return;
         }
 
-        
         string? encryptedPrivateKey = null;
         string? encryptedUserKey = null;
         if (_device.IsTrusted())
@@ -99,20 +105,24 @@ public class UserDecryptionOptionsBuilder
             encryptedUserKey = _device.EncryptedUserKey;
         }
 
+        var hasLoginApprovingDevice = false;
+        if (_user != null)
+        {
+            var allDevices = await _deviceRepository.GetManyByUserIdAsync(_user.Id);
+            // Checks if the current user has any devices that are capable of approving login with device requests except for
+            // their current device.
+            // NOTE: this doesn't check for if the users have configured the devices to be capable of approving requests as that is a client side setting.
+            hasLoginApprovingDevice = allDevices
+                .Where(d => d.Identifier != _device.Identifier && LoginApprovingDeviceTypes.Types.Contains(d.Type))
+                .Any();
+        }
+
         _options.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
             false,
-            false,
+            hasLoginApprovingDevice,
             false,
             encryptedPrivateKey,
             encryptedUserKey);
-
-        //var allDevices = await _deviceRepository.GetManyByUserIdAsync(user.Id);
-        //// Checks if the current user has any devices that are capable of approving login with device requests except for
-        //// their current device.
-        //// NOTE: this doesn't check for if the users have configured the devices to be capable of approving requests as that is a client side setting.
-        //var hasLoginApprovingDevice = allDevices
-        //    .Where(d => d.Identifier != device.Identifier && LoginApprovingDeviceTypes.Types.Contains(d.Type))
-        //    .Any();
 
         //// Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
         //var hasManageResetPasswordPermission = false;
