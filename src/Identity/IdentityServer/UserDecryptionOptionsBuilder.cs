@@ -117,22 +117,22 @@ public class UserDecryptionOptionsBuilder
                 .Any();
         }
 
+        // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
+        var hasManageResetPasswordPermission = false;
+
+        // when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
+        if (_currentContext.Organizations != null && _currentContext.Organizations.Any(o => o.Id == _ssoConfig.OrganizationId))
+        {
+            // TDE requires single org so grabbing first org & id is fine.
+            hasManageResetPasswordPermission = await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
+        }
+
         _options.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
             false,
             hasLoginApprovingDevice,
-            false,
+            hasManageResetPasswordPermission,
             encryptedPrivateKey,
             encryptedUserKey);
-
-        //// Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
-        //var hasManageResetPasswordPermission = false;
-
-        //// when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
-        //if (CurrentContext.Organizations.Any(o => o.Id == ssoConfiguration!.OrganizationId))
-        //{
-        //    // TDE requires single org so grabbing first org & id is fine.
-        //    hasManageResetPasswordPermission = await CurrentContext.ManageResetPassword(ssoConfiguration!.OrganizationId);
-        //}
 
         //// If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
         //var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(ssoConfiguration!.OrganizationId, user.Id);
