@@ -19,13 +19,20 @@ namespace Bit.Identity.IdentityServer;
 /// </summary>
 public class UserDecryptionOptionsBuilder
 {
-    private readonly UserDecryptionOptions _options = new UserDecryptionOptions();
+    private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
 
+    private UserDecryptionOptions _options = new UserDecryptionOptions();
     private Core.Auth.Entities.SsoConfig? _ssoConfig;
     private Device? _device;
 
-    public UserDecryptionOptionsBuilder()
+    public UserDecryptionOptionsBuilder(
+        ICurrentContext currentContext,
+        IFeatureService featureService
+    )
     {
+        _currentContext = currentContext;
+        _featureService = featureService;
     }
 
     public UserDecryptionOptionsBuilder ForUser(User user)
@@ -70,7 +77,7 @@ public class UserDecryptionOptionsBuilder
 
     private void BuildTrustedDeviceOptions()
     {
-        if (_device == null || _ssoConfig == null)
+        if (_device == null || _ssoConfig == null || !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
         {
             return;
         }
