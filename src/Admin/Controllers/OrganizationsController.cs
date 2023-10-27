@@ -2,6 +2,8 @@
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -205,9 +207,8 @@ public class OrganizationsController : Controller
         var organization = await GetOrganization(id, model);
 
         if (organization.UseSecretsManager &&
-            !organization.SecretsManagerBeta
-            && StaticStore.GetSecretsManagerPlan(organization.PlanType) == null
-            )
+            !organization.SecretsManagerBeta &&
+            !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
         {
             throw new BadRequestException("Plan does not support Secrets Manager");
         }

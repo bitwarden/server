@@ -93,6 +93,18 @@ public class OrganizationDomainRepository : Repository<Core.Entities.Organizatio
         return ssoDetails;
     }
 
+    public async Task<Core.Entities.OrganizationDomain> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var domain = await dbContext.OrganizationDomains
+            .Where(x => x.Id == id && x.OrganizationId == orgId)
+            .AsNoTracking()
+            .FirstOrDefaultAsync();
+
+        return Mapper.Map<Core.Entities.OrganizationDomain>(domain);
+    }
+
     public async Task<Core.Entities.OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
     {
         using var scope = ServiceScopeFactory.CreateScope();

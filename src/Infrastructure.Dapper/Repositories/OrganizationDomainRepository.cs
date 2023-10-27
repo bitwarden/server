@@ -69,6 +69,20 @@ public class OrganizationDomainRepository : Repository<OrganizationDomain, Guid>
         }
     }
 
+    public async Task<OrganizationDomain> GetDomainByIdOrganizationIdAsync(Guid id, Guid orgId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection
+                .QueryAsync<OrganizationDomain>(
+                    $"[{Schema}].[OrganizationDomain_ReadByIdOrganizationId]",
+                    new { Id = id, OrganizationId = orgId },
+                    commandType: CommandType.StoredProcedure);
+
+            return results.SingleOrDefault();
+        }
+    }
+
     public async Task<OrganizationDomain> GetDomainByOrgIdAndDomainNameAsync(Guid orgId, string domainName)
     {
         using (var connection = new SqlConnection(ConnectionString))
