@@ -201,7 +201,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
     public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext)
     {
-        await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete);
+        await ToggleCipherStates(ids, userId, CipherStateAction.HardDelete, currentContext);
     }
 
     public async Task DeleteAttachmentAsync(Guid cipherId, string attachmentId)
@@ -347,15 +347,13 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
-    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
+    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, ICurrentContext currentContext, bool withOrganizations = true)
     {
-        var useFlexibleCollections = false; // TODO
-
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             IQueryable<CipherDetails> cipherDetailsView = withOrganizations ?
-                new UserCipherDetailsQuery(userId, useFlexibleCollections).Run(dbContext) :
+                new UserCipherDetailsQuery(userId, UseFlexibleCollections(currentContext)).Run(dbContext) :
                 new CipherDetailsQuery(userId).Run(dbContext);
             if (!withOrganizations)
             {
@@ -399,8 +397,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
 
     public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, ICurrentContext currentContext)
     {
-        var useFlexibleCollections = false; // TODO
-
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);

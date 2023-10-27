@@ -89,12 +89,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true)
+    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, ICurrentContext currentContext, bool withOrganizations = true)
     {
         string sprocName = null;
         if (withOrganizations)
         {
-            sprocName = false //UseFlexibleCollections
+            sprocName = UseFlexibleCollections(currentContext)
                 ? $"[{Schema}].[CipherDetails_ReadByUserId_V2]"
                 : $"[{Schema}].[CipherDetails_ReadByUserId]";
         }

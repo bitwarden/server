@@ -419,7 +419,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, _currentContext);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
             await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, _currentContext);
         }
@@ -852,7 +852,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, _currentContext);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
             await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, _currentContext);
         }
@@ -917,7 +917,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId, _currentContext);
             restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
             revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId, _currentContext);
         }
@@ -954,7 +954,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, true);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, _currentContext, true);
             orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId);
         }
 

@@ -2,6 +2,7 @@
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -21,19 +22,22 @@ public class UsersController : Controller
     private readonly IPaymentService _paymentService;
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
+    private readonly ICurrentContext _currentContext;
 
     public UsersController(
         IUserRepository userRepository,
         ICipherRepository cipherRepository,
         IPaymentService paymentService,
         GlobalSettings globalSettings,
-        IAccessControlService accessControlService)
+        IAccessControlService accessControlService,
+        ICurrentContext currentContext)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
         _paymentService = paymentService;
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
+        _currentContext = currentContext;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -69,7 +73,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, _currentContext);
         return View(new UserViewModel(user, ciphers));
     }
 
@@ -82,7 +86,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, _currentContext);
         var billingInfo = await _paymentService.GetBillingAsync(user);
         return View(new UserEditModel(user, ciphers, billingInfo, _globalSettings));
     }

@@ -13,7 +13,7 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id);
     Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(Guid organizationId);
     Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
-    Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
+    Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, ICurrentContext currentContext, bool withOrganizations = true);
     Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
     Task CreateAsync(CipherDetails cipher);

@@ -389,7 +389,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, false);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, _currentContext, false);
 
         return new EmergencyAccessViewData
         {

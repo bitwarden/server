@@ -77,7 +77,7 @@ public class CollectController : Controller
                     {
                         cipher = await _cipherRepository.GetByIdAsync(eventModel.CipherId.Value,
                            _currentContext.UserId.Value,
-                           UseFlexibleCollections);
+                           _currentContext);
                     }
                     if (cipher == null)
                     {
