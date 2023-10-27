@@ -1,7 +1,10 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;

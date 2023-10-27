@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities.Provider;
-using Bit.Core.Enums.Provider;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.SharedWeb.Utilities;
 
 namespace Bit.Admin.Models;

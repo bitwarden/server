@@ -5,7 +5,6 @@ using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,7 +25,6 @@ public class ImportCiphersController : Controller
         ICollectionCipherRepository collectionCipherRepository,
         ICipherService cipherService,
         IUserService userService,
-        IProviderService providerService,
         ICurrentContext currentContext,
         ILogger<ImportCiphersController> logger,
         GlobalSettings globalSettings)
