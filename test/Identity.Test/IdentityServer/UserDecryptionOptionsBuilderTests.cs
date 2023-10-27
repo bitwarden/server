@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿using Amazon.Runtime.Internal;
+using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -122,7 +123,7 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory, BitAutoData]
-    public async Task Build_WhenManageResetPasswordPermissions_ShouldHasManageResetPasswordPermissionTrue(
+    public async Task Build_WhenManageResetPasswordPermissions_ShouldReturnHasManageResetPasswordPermissionTrue(
         SsoConfig ssoConfig,
         SsoConfigurationData configurationData,
         CurrentContextOrganization organization,
@@ -138,5 +139,24 @@ public class UserDecryptionOptionsBuilderTests
         var result = await _builder.WithSso(ssoConfig).WithDevice(device).BuildAsync();
 
         Assert.True(result.TrustedDeviceOption?.HasManageResetPasswordPermission);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Build_WhenUserHasEnrolledIntoPasswordReset_ShouldReturnHasAdminApprovalTrue(
+        SsoConfig ssoConfig,
+        SsoConfigurationData configurationData,
+        OrganizationUser organizationUser,
+        User user,
+        Device device)
+    {
+        _featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext).Returns(true);
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        organizationUser.ResetPasswordKey = "resetPasswordKey";
+        _organizationUserRepository.GetByOrganizationAsync(ssoConfig.OrganizationId, user.Id).Returns(organizationUser);
+
+        var result = await _builder.ForUser(user).WithSso(ssoConfig).WithDevice(device).BuildAsync();
+
+        Assert.True(result.TrustedDeviceOption?.HasAdminApproval);
     }
 }

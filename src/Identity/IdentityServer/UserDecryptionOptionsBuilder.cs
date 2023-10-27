@@ -86,7 +86,8 @@ public class UserDecryptionOptionsBuilder
 
     private async Task BuildTrustedDeviceOptions()
     {
-        if (_device == null || _ssoConfig == null || !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
+        // TrustedDeviceEncryption only exists for SSO, if that changes then these guards should change
+        if (_ssoConfig == null || !_featureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, _currentContext))
         {
             return;
         }
@@ -99,14 +100,14 @@ public class UserDecryptionOptionsBuilder
 
         string? encryptedPrivateKey = null;
         string? encryptedUserKey = null;
-        if (_device.IsTrusted())
+        if (_device != null && _device.IsTrusted())
         {
             encryptedPrivateKey = _device.EncryptedPrivateKey;
             encryptedUserKey = _device.EncryptedUserKey;
         }
 
         var hasLoginApprovingDevice = false;
-        if (_user != null)
+        if (_device != null && _user != null)
         {
             var allDevices = await _deviceRepository.GetManyByUserIdAsync(_user.Id);
             // Checks if the current user has any devices that are capable of approving login with device requests except for
@@ -119,7 +120,6 @@ public class UserDecryptionOptionsBuilder
 
         // Determine if user has manage reset password permission as post sso logic requires it for forcing users with this permission to set a MP
         var hasManageResetPasswordPermission = false;
-
         // when a user is being created via JIT provisioning, they will not have any orgs so we can't assume we will have orgs here
         if (_currentContext.Organizations != null && _currentContext.Organizations.Any(o => o.Id == _ssoConfig.OrganizationId))
         {
@@ -127,25 +127,21 @@ public class UserDecryptionOptionsBuilder
             hasManageResetPasswordPermission = await _currentContext.ManageResetPassword(_ssoConfig!.OrganizationId);
         }
 
+        var hasAdminApproval = false;
+        if (_user != null)
+        {
+            // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
+            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(_ssoConfig.OrganizationId, _user.Id);
+
+            // They are only able to be approved by an admin if they have enrolled is reset password
+            hasAdminApproval = organizationUser != null && !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
+        }
+
         _options.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
-            false,
+            hasAdminApproval,
             hasLoginApprovingDevice,
             hasManageResetPasswordPermission,
             encryptedPrivateKey,
             encryptedUserKey);
-
-        //// If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
-        //var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(ssoConfiguration!.OrganizationId, user.Id);
-
-        //// They are only able to be approved by an admin if they have enrolled is reset password
-        //var hasAdminApproval = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);
-
-        //// TrustedDeviceEncryption only exists for SSO, but if that ever changes this value won't always be true
-        //_options.TrustedDeviceOption = new TrustedDeviceUserDecryptionOption(
-        //    hasAdminApproval,
-        //    hasLoginApprovingDevice,
-        //    hasManageResetPasswordPermission,
-        //    encryptedPrivateKey,
-        //    encryptedUserKey);
     }
 }
