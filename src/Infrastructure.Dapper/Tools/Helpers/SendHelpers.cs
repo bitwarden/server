@@ -1,6 +1,5 @@
 using System.Data;
 using Bit.Core.Tools.Entities;
-using Dapper;
 using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Tools.Helpers;
@@ -8,10 +7,9 @@ namespace Bit.Infrastructure.Dapper.Tools.Helpers;
 public static class SendHelpers
 {
 
-    public static DataTable ToTVP(this IEnumerable<Send> sends)
+    public static DataTable ToDataTable(this IEnumerable<Send> sends)
     {
         var sendsTable = new DataTable();
-        sendsTable.SetTypeName("[dbo].[Send]");
 
         var columnData = new List<(string name, Type type, Func<Send, object> getter)>
         {
@@ -52,7 +50,7 @@ public static class SendHelpers
         using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
         {
             bulkCopy.DestinationTableName = "#TempSend";
-            var sendsTable = sends.ToTVP();
+            var sendsTable = sends.ToDataTable();
             foreach (DataColumn col in sendsTable.Columns)
             {
                 bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);

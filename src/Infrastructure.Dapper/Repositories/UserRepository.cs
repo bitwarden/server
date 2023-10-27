@@ -7,6 +7,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
+using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Bit.Infrastructure.Dapper.Tools.Helpers;
 using Bit.Infrastructure.Dapper.Vault.Helpers;
 using Dapper;
@@ -180,18 +181,14 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
         }
     }
 
-    public Task UpdateUserKeyAndEncryptedDataAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
+    public Task UpdateUserKeyAndEncryptedDataAsync(
+        User user,
+        IEnumerable<Cipher> ciphers,
+        IEnumerable<Folder> folders,
+        IEnumerable<Send> sends,
+        IEnumerable<EmergencyAccess> emergencyAccessKeys,
+        IEnumerable<OrganizationUser> accountRecoveryKeys)
     {
-        // Validation:
-        //   - Request model must have an updated version of every object in each domain containing rotateable data
-        //   - Its ok to have a hardcoded list of domains, but each domain should own the validation logic
-        // Move SQL logic of how to update domain into the domain itself somehow
-        //     - This code doesn't belong in Core
-        //     -
-        // Interface we can call here to update every domain
-
-
-
         using (var connection = new SqlConnection(ConnectionString))
         {
             connection.Open();
@@ -237,6 +234,14 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                     if (sends.Any())
                     {
                         sends.UpdateEncryptedData(user.Id, connection, transaction);
+                    }
+                    if (emergencyAccessKeys.Any())
+                    {
+                        emergencyAccessKeys.UpdateEncryptedData(user.Id, connection, transaction);
+                    }
+                    if (accountRecoveryKeys.Any())
+                    {
+                        accountRecoveryKeys.UpdateEncryptedData(user.Id, connection, transaction);
                     }
 
                     transaction.Commit();

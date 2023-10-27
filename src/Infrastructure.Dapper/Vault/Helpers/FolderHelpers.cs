@@ -1,6 +1,5 @@
 using System.Data;
 using Bit.Core.Vault.Entities;
-using Bit.Infrastructure.Dapper;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
@@ -8,7 +7,7 @@ namespace Bit.Infrastructure.Dapper.Vault.Helpers;
 
 public static class FolderHelpers
 {
-    public static DataTable ToTVP(this IEnumerable<Folder> folders)
+    public static DataTable ToDataTable(this IEnumerable<Folder> folders)
     {
         var foldersTable = new DataTable();
         foldersTable.SetTypeName("[dbo].[Folder]");
@@ -42,7 +41,7 @@ public static class FolderHelpers
         using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
         {
             bulkCopy.DestinationTableName = "#TempFolder";
-            var foldersTable = folders.ToTVP();
+            var foldersTable = folders.ToDataTable();
             foreach (DataColumn col in foldersTable.Columns)
             {
                 bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);

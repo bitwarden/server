@@ -8,7 +8,7 @@ namespace Bit.Infrastructure.Dapper.Vault.Helpers;
 public static class CipherHelpers
 {
 
-    public static DataTable ToTVP(this IEnumerable<Cipher> ciphers)
+    public static DataTable ToDataTable(this IEnumerable<Cipher> ciphers)
     {
         var ciphersTable = new DataTable();
         ciphersTable.SetTypeName("[dbo].[Cipher]");
@@ -50,7 +50,7 @@ public static class CipherHelpers
         using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
         {
             bulkCopy.DestinationTableName = "#TempCipher";
-            var ciphersTable = ciphers.ToTVP();
+            var ciphersTable = ciphers.ToDataTable();
             foreach (DataColumn col in ciphersTable.Columns)
             {
                 bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
