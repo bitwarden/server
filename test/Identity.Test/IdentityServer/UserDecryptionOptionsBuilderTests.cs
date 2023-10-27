@@ -38,14 +38,30 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory, BitAutoData]
-    public void WithSso_WhenConfigHasKeyConnector_ShouldReturnKeyConnectorOptions(SsoConfig ssoConfig, SsoConfigurationData configurationData)
+    public void WithSso_WhenKeyConnectorIsEnabled_ShouldReturnKeyConnectorOptions(SsoConfig ssoConfig, SsoConfigurationData configurationData)
     {
-        ssoConfig.Data = configurationData.Serialize();
         configurationData.MemberDecryptionType = MemberDecryptionType.KeyConnector;
+        ssoConfig.Data = configurationData.Serialize();
 
         var result = _builder.WithSso(ssoConfig).Build();
 
         Assert.NotNull(result.KeyConnectorOption);
-        Assert.Equal(configurationData.KeyConnectorUrl, result.KeyConnectorOption?.KeyConnectorUrl);
+        Assert.Equal(configurationData.KeyConnectorUrl, result.KeyConnectorOption!.KeyConnectorUrl);
+    }
+
+    [Theory, BitAutoData]
+    public void Build_WhenTrustedDeviceIsEnabledAndDeviceIsTrusted_ShouldReturnTrustedDeviceOptions(SsoConfig ssoConfig, SsoConfigurationData configurationData, Device device)
+    {
+        configurationData.MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption;
+        ssoConfig.Data = configurationData.Serialize();
+        device.EncryptedPrivateKey = "encryptedPrivateKey";
+        device.EncryptedPublicKey = "encryptedPublicKey";
+        device.EncryptedUserKey = "encryptedUserKey";
+
+        var result = _builder.WithSso(ssoConfig).WithDevice(device).Build();
+
+        Assert.NotNull(result.TrustedDeviceOption);
+        Assert.Equal(device.EncryptedPrivateKey, result.TrustedDeviceOption!.EncryptedPrivateKey);
+        Assert.Equal(device.EncryptedUserKey, result.TrustedDeviceOption!.EncryptedUserKey);
     }
 }
