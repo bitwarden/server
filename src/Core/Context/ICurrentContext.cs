@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Security.Claims;
 using Bit.Core.AdminConsole.Context;
