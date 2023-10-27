@@ -1,7 +1,10 @@
 ﻿using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -82,7 +85,7 @@ public class OrganizationUsersControllerTests
         };
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(orgId,
-            Core.Enums.PolicyType.ResetPassword).Returns(policy);
+            PolicyType.ResetPassword).Returns(policy);
 
         await sutProvider.Sut.Accept(orgId, orgUserId, model);
 
