@@ -7,7 +7,7 @@ public class ProjectPeopleAccessPoliciesResponseModel : ResponseModel
 {
     private const string _objectName = "projectPeopleAccessPolicies";
 
-    public ProjectPeopleAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies)
+    public ProjectPeopleAccessPoliciesResponseModel(IEnumerable<BaseAccessPolicy> baseAccessPolicies, Guid userId)
         : base(_objectName)
     {
         foreach (var baseAccessPolicy in baseAccessPolicies)
@@ -15,7 +15,7 @@ public class ProjectPeopleAccessPoliciesResponseModel : ResponseModel
             switch (baseAccessPolicy)
             {
                 case UserProjectAccessPolicy accessPolicy:
-                    UserAccessPolicies.Add(new UserProjectAccessPolicyResponseModel(accessPolicy));
+                    UserAccessPolicies.Add(new UserProjectAccessPolicyResponseModel(accessPolicy, userId));
                     break;
                 case GroupProjectAccessPolicy accessPolicy:
                     GroupAccessPolicies.Add(new GroupProjectAccessPolicyResponseModel(accessPolicy));

@@ -280,8 +280,8 @@ public class AccessPoliciesController : Controller
     {
         var project = await _projectRepository.GetByIdAsync(id);
         var (_, userId) = await CheckUserHasWriteAccessToProjectAsync(project);
-        var results = await _accessPolicyRepository.GetPeoplePoliciesByGrantedProjectIdAsync(id);
-        return new ProjectPeopleAccessPoliciesResponseModel(results);
+        var results = await _accessPolicyRepository.GetPeoplePoliciesByGrantedProjectIdAsync(id, userId);
+        return new ProjectPeopleAccessPoliciesResponseModel(results, userId);
     }
 
     [HttpPut("/projects/{id}/access-policies/people")]
@@ -303,8 +303,9 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var results = await _accessPolicyRepository.ReplaceProjectPeopleAsync(peopleAccessPolicies);
-        return new ProjectPeopleAccessPoliciesResponseModel(results);
+        var userId = _userService.GetProperUserId(User).Value;
+        var results = await _accessPolicyRepository.ReplaceProjectPeopleAsync(peopleAccessPolicies, userId);
+        return new ProjectPeopleAccessPoliciesResponseModel(results, userId);
     }
 
 
