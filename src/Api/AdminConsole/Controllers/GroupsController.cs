@@ -83,7 +83,7 @@ public class GroupsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            return await Get_FC(orgId);
+            return await Get_vNext(orgId);
         }
 
         // Old pre-flexible collections logic follows
@@ -203,7 +203,7 @@ public class GroupsController : Controller
         await _groupService.DeleteUserAsync(group, new Guid(orgUserId));
     }
 
-    private async Task<ListResponseModel<GroupDetailsResponseModel>> Get_FC(Guid orgId)
+    private async Task<ListResponseModel<GroupDetailsResponseModel>> Get_vNext(Guid orgId)
     {
         var authorized =
             (await _authorizationService.AuthorizeAsync(User, null, GroupOperations.ReadAll(orgId))).Succeeded;

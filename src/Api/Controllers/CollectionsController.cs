@@ -58,7 +58,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            return await Get_FC(id);
+            return await Get_vNext(id);
         }
 
         // Old pre-flexible collections logic follows
@@ -78,7 +78,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            return await GetDetails_FC(id);
+            return await GetDetails_vNext(id);
         }
 
         // Old pre-flexible collections logic follows
@@ -116,7 +116,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            return await GetManyWithDetails_FC(orgId);
+            return await GetManyWithDetails_vNext(orgId);
         }
 
         // Old pre-flexible collections logic follows
@@ -156,7 +156,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            return await GetByOrgId_FC(orgId);
+            return await GetByOrgId_vNext(orgId);
         }
 
         // Old pre-flexible collections logic follows
@@ -180,7 +180,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            return await GetUsers_FC(id);
+            return await GetUsers_vNext(id);
         }
 
         // Old pre-flexible collections logic follows
@@ -217,7 +217,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            return await Put_FC(id, model);
+            return await Put_vNext(id, model);
         }
 
         // Old pre-flexible collections logic follows
@@ -239,7 +239,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            await PutUsers_FC(id, model);
+            await PutUsers_vNext(id, model);
         }
 
         // Old pre-flexible collections logic follows
@@ -286,7 +286,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            await Delete_FC(id);
+            await Delete_vNext(id);
         }
 
         // Old pre-flexible collections logic follows
@@ -342,7 +342,7 @@ public class CollectionsController : Controller
         if (UseFlexibleCollections)
         {
             // New flexible collections logic
-            await DeleteUser_FC(id, orgUserId);
+            await DeleteUser_vNext(id, orgUserId);
         }
 
         // Old pre-flexible collections logic follows
@@ -488,7 +488,7 @@ public class CollectionsController : Controller
         return await _currentContext.ViewAllCollections(orgId) || await _currentContext.ViewAssignedCollections(orgId);
     }
 
-    private async Task<CollectionResponseModel> Get_FC(Guid collectionId)
+    private async Task<CollectionResponseModel> Get_vNext(Guid collectionId)
     {
         var collection = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Read)).Succeeded;
@@ -500,7 +500,7 @@ public class CollectionsController : Controller
         return new CollectionResponseModel(collection);
     }
 
-    private async Task<CollectionAccessDetailsResponseModel> GetDetails_FC(Guid id)
+    private async Task<CollectionAccessDetailsResponseModel> GetDetails_vNext(Guid id)
     {
         // New flexible collections logic
         var (collection, access) = await _collectionRepository.GetByIdWithAccessAsync(id);
@@ -513,7 +513,7 @@ public class CollectionsController : Controller
         return new CollectionAccessDetailsResponseModel(collection, access.Groups, access.Users);
     }
 
-    private async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails_FC(Guid orgId)
+    private async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails_vNext(Guid orgId)
     {
         // We always need to know which collections the current user is assigned to
         var assignedOrgCollections = await _collectionRepository
@@ -543,7 +543,7 @@ public class CollectionsController : Controller
         );
     }
 
-    private async Task<ListResponseModel<CollectionResponseModel>> GetByOrgId_FC(Guid orgId)
+    private async Task<ListResponseModel<CollectionResponseModel>> GetByOrgId_vNext(Guid orgId)
     {
         IEnumerable<Collection> orgCollections;
 
@@ -562,7 +562,7 @@ public class CollectionsController : Controller
         return new ListResponseModel<CollectionResponseModel>(responses);
     }
 
-    private async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers_FC(Guid id)
+    private async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers_vNext(Guid id)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Read)).Succeeded;
@@ -576,7 +576,7 @@ public class CollectionsController : Controller
         return responses;
     }
 
-    private async Task<CollectionResponseModel> Put_FC(Guid id, CollectionRequestModel model)
+    private async Task<CollectionResponseModel> Put_vNext(Guid id, CollectionRequestModel model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Update)).Succeeded;
@@ -591,7 +591,7 @@ public class CollectionsController : Controller
         return new CollectionResponseModel(collection);
     }
 
-    private async Task PutUsers_FC(Guid id, IEnumerable<SelectionReadOnlyRequestModel> model)
+    private async Task PutUsers_vNext(Guid id, IEnumerable<SelectionReadOnlyRequestModel> model)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.ModifyAccess)).Succeeded;
@@ -603,7 +603,7 @@ public class CollectionsController : Controller
         await _collectionRepository.UpdateUsersAsync(collection.Id, model?.Select(g => g.ToSelectionReadOnly()));
     }
 
-    private async Task Delete_FC(Guid id)
+    private async Task Delete_vNext(Guid id)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Delete)).Succeeded;
@@ -615,7 +615,7 @@ public class CollectionsController : Controller
         await _deleteCollectionCommand.DeleteAsync(collection);
     }
 
-    private async Task DeleteUser_FC(Guid id, Guid orgUserId)
+    private async Task DeleteUser_vNext(Guid id, Guid orgUserId)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.ModifyAccess)).Succeeded;
