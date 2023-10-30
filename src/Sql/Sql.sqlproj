@@ -6,8 +6,11 @@
     <ProjectGuid>{58554e52-fdec-4832-aff9-302b01e08dca}</ProjectGuid>
     <DSP>Microsoft.Data.Tools.Schema.Sql.SqlAzureV12DatabaseSchemaProvider</DSP>
     <ModelCollation>1033,CI</ModelCollation>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <ItemGroup>
-    <Build Remove="dbo_future/**/*"/>
+    <Build Remove="dbo_future/**/*" />
   </ItemGroup>
 </Project>
