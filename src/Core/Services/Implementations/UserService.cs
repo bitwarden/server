@@ -96,7 +96,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IStripeSyncService stripeSyncService,
         IWebAuthnCredentialRepository webAuthnRepository,
         IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
         : base(
