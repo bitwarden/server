@@ -59,7 +59,7 @@ public class OrganizationService : IOrganizationService
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IFeatureService _featureService;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -430,7 +430,7 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var flexibleCollectionsIsEnabled =
+        var useFlexibleCollections =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
         var organization = new Organization
@@ -470,7 +470,7 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
-            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled
+            LimitCollectionCreationDeletion = !useFlexibleCollections
         };
 
         if (signup.UseSecretsManager)
@@ -2562,7 +2562,7 @@ public class OrganizationService : IOrganizationService
 
     private IEnumerable<CollectionAccessSelection> ApplyManageCollectionPermissions(OrganizationUser orgUser, IEnumerable<CollectionAccessSelection> collections)
     {
-        if (!FlexibleCollectionsIsEnabled && (orgUser.GetPermissions()?.EditAssignedCollections ?? false))
+        if (!UseFlexibleCollections && (orgUser.GetPermissions()?.EditAssignedCollections ?? false))
         {
             return collections.Select(c =>
             {

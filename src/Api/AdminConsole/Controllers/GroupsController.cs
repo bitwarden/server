@@ -29,7 +29,7 @@ public class GroupsController : Controller
     private readonly IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public GroupsController(
         IGroupRepository groupRepository,
@@ -80,7 +80,7 @@ public class GroupsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<GroupDetailsResponseModel>> Get(Guid orgId)
     {
-        if (FlexibleCollectionsIsEnabled)
+        if (UseFlexibleCollections)
         {
             // New flexible collections logic
             return await Get_FC(orgId);

@@ -38,7 +38,7 @@ public class OrganizationUsersController : Controller
     private readonly IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
 
-    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationUsersController(
         IOrganizationRepository organizationRepository,
@@ -92,7 +92,7 @@ public class OrganizationUsersController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
-        var authorized = FlexibleCollectionsIsEnabled
+        var authorized = UseFlexibleCollections
             ? (await _authorizationService.AuthorizeAsync(User, null, OrganizationUserOperations.ReadAll(orgId))).Succeeded
             : await _currentContext.ViewAllCollections(orgId) ||
               await _currentContext.ViewAssignedCollections(orgId) ||
