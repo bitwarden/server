@@ -25,6 +25,8 @@ using Bit.Core.Auth.Entities;
 using Bit.Api.Auth.Models.Request;
 using Bit.Core.Entities;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.Vault;
+
 
 
 
@@ -153,11 +155,11 @@ public class Startup
         services.AddCoreLocalizationServices();
 
         // Rotation Validators
-        services.AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>();
-        services.AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>();
-        services.AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>>>();
-        services.AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>>();
-        services.AddScoped<IRotationValidator<IEnumerable<AccountRecoveryWithIdRequestModel>, IEnumerable<OrganizationUser>>>();
+        services.AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>, CipherRotationValidator>();
+        services.AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>, FolderRotationValidator>();
+        services.AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>>, SendRotationValidator>();
+        services.AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>, EmergencyAccessRotationValidator>();
+        services.AddScoped<IRotationValidator<IEnumerable<AccountRecoveryWithIdRequestModel>, IEnumerable<OrganizationUser>>, AccountRecoveryRotationValidator>();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
