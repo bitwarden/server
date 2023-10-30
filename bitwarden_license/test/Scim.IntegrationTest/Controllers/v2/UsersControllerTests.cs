@@ -17,7 +17,6 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
     public UsersControllerTests(ScimApplicationFactory factory)
     {
         _factory = factory;
-        _factory.DatabaseName = "test_database_users";
     }
 
     public Task InitializeAsync()
@@ -55,6 +54,8 @@ public class UsersControllerTests : IClassFixture<ScimApplicationFactory>, IAsyn
 
         var responseModel = JsonSerializer.Deserialize<ScimUserResponseModel>(context.Response.Body, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         AssertHelper.AssertPropertyEqual(expectedResponse, responseModel);
+
+        Assert.Contains("application/scim+json", context.Response.Headers.ContentType.ToString());
     }
 
     [Fact]

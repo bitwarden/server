@@ -1,7 +1,7 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Models.Mail;
 
 namespace Bit.Core.Services;
@@ -88,11 +88,19 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
-    public Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate,
-        List<string> items, bool mentionInvoices)
-    {
-        return Task.FromResult(0);
-    }
+    public Task SendInvoiceUpcoming(
+        string email,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices) => Task.FromResult(0);
+
+    public Task SendInvoiceUpcoming(
+        IEnumerable<string> emails,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices) => Task.FromResult(0);
 
     public Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices)
     {
@@ -235,6 +243,19 @@ public class NoopMailService : IMailService
     }
 
     public Task SendUnverifiedOrganizationDomainEmailAsync(IEnumerable<string> adminEmails, string organizationId, string domainName)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendSecretsManagerMaxSeatLimitReachedEmailAsync(Organization organization, int maxSeatCount,
+        IEnumerable<string> ownerEmails)
+    {
+        return Task.FromResult(0);
+    }
+
+    public Task SendSecretsManagerMaxServiceAccountLimitReachedEmailAsync(Organization organization,
+        int maxSeatCount,
+        IEnumerable<string> ownerEmails)
     {
         return Task.FromResult(0);
     }

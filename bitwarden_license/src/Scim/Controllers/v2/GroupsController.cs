@@ -1,6 +1,7 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Scim.Groups.Interfaces;
 using Bit.Scim.Models;
@@ -12,6 +13,7 @@ namespace Bit.Scim.Controllers.v2;
 
 [Authorize("Scim")]
 [Route("v2/{organizationId}/groups")]
+[Produces("application/scim+json")]
 [ExceptionHandlerFilter]
 public class GroupsController : Controller
 {

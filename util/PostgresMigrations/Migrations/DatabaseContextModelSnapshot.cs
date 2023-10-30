@@ -18,7 +18,7 @@ namespace Bit.PostgresMigrations.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("Npgsql:CollationDefinition:postgresIndetermanisticCollation", "en-u-ks-primary,en-u-ks-primary,icu,False")
-                .HasAnnotation("ProductVersion", "6.0.12")
+                .HasAnnotation("ProductVersion", "7.0.5")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -617,6 +617,9 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<int?>("Seats")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("SecretsManagerBeta")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("SelfHost")
                         .HasColumnType("boolean");
@@ -1339,6 +1342,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>
@@ -1503,6 +1508,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("Folders")
+                        .HasColumnType("text");
+                    
+                    b.Property<string>("Key")
                         .HasColumnType("text");
 
                     b.Property<Guid?>("OrganizationId")
@@ -2078,11 +2086,13 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", "GrantedProject")
                         .WithMany("GroupAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
+                        .HasForeignKey("GrantedProjectId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
                         .WithMany()
-                        .HasForeignKey("GroupId");
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("GrantedProject");
 
@@ -2097,7 +2107,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
                         .WithMany()
-                        .HasForeignKey("GroupId");
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("GrantedServiceAccount");
 
@@ -2108,7 +2119,8 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", "GrantedProject")
                         .WithMany("ServiceAccountAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
+                        .HasForeignKey("GrantedProjectId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "ServiceAccount")
                         .WithMany()
@@ -2123,7 +2135,8 @@ namespace Bit.PostgresMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", "GrantedProject")
                         .WithMany("UserAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
+                        .HasForeignKey("GrantedProjectId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
                         .WithMany()

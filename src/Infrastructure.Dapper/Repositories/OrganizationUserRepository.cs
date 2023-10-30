@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -92,6 +93,19 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         {
             var result = await connection.ExecuteScalarAsync<int>(
                 "[dbo].[OrganizationUser_ReadOccupiedSeatCountByOrganizationId]",
+                new { OrganizationId = organizationId },
+                commandType: CommandType.StoredProcedure);
+
+            return result;
+        }
+    }
+
+    public async Task<int> GetOccupiedSmSeatCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var result = await connection.ExecuteScalarAsync<int>(
+                "[dbo].[OrganizationUser_ReadOccupiedSmSeatCountByOrganizationId]",
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
 

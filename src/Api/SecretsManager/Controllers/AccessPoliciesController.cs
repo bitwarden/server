@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -10,14 +11,12 @@ using Bit.Core.SecretsManager.Commands.AccessPolicies.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [Authorize("secrets")]
-[SelfHosted(NotSelfHostedOnly = true)]
 [Route("access-policies")]
 public class AccessPoliciesController : Controller
 {

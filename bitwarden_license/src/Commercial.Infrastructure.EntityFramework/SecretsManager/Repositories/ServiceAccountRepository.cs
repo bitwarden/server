@@ -1,6 +1,7 @@
 ﻿using System.Linq.Expressions;
 using AutoMapper;
 using Bit.Core.Enums;
+using Bit.Core.SecretsManager.Models.Data;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.SecretsManager.Models;
@@ -128,6 +129,54 @@ public class ServiceAccountRepository : Repository<Core.SecretsManager.Entities.
         var policy = await query.FirstOrDefaultAsync();
 
         return policy == null ? (false, false) : (policy.Read, policy.Write);
+    }
+
+    public async Task<int> GetServiceAccountCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.ServiceAccount
+                .CountAsync(ou => ou.OrganizationId == organizationId);
+        }
+    }
+
+    public async Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdWithSecretsDetailsAsync(
+    Guid organizationId, Guid userId, AccessClientType accessType)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var query = from sa in dbContext.ServiceAccount
+                    join ap in dbContext.ServiceAccountProjectAccessPolicy
+                        on sa.Id equals ap.ServiceAccountId into grouping
+                    from ap in grouping.DefaultIfEmpty()
+                    where sa.OrganizationId == organizationId
+                    select new
+                    {
+                        ServiceAccount = sa,
+                        AccessToSecrets = ap.GrantedProject.Secrets.Count(s => s.DeletedDate == null)
+                    };
+
+        query = accessType switch
+        {
+            AccessClientType.NoAccessCheck => query,
+            AccessClientType.User => query.Where(c =>
+                c.ServiceAccount.UserAccessPolicies.Any(ap => ap.OrganizationUser.User.Id == userId && ap.Read) ||
+                c.ServiceAccount.GroupAccessPolicies.Any(ap =>
+                    ap.Group.GroupUsers.Any(gu => gu.OrganizationUser.User.Id == userId && ap.Read))),
+            _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
+        };
+
+        var results = (await query.ToListAsync())
+            .GroupBy(g => g.ServiceAccount)
+            .Select(g =>
+                new ServiceAccountSecretsDetails
+                {
+                    ServiceAccount = Mapper.Map<Core.SecretsManager.Entities.ServiceAccount>(g.Key),
+                    AccessToSecrets = g.Sum(x => x.AccessToSecrets),
+                }).OrderBy(c => c.ServiceAccount.RevisionDate).ToList();
+
+        return results;
     }
 
     private static Expression<Func<ServiceAccount, bool>> UserHasReadAccessToServiceAccount(Guid userId) => sa =>

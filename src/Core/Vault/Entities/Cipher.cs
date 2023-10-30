@@ -21,6 +21,7 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public DateTime RevisionDate { get; set; } = DateTime.UtcNow;
     public DateTime? DeletedDate { get; set; }
     public Enums.CipherRepromptType? Reprompt { get; set; }
+    public string Key { get; set; }
 
     public void SetNewId()
     {
@@ -45,6 +46,10 @@ public class Cipher : ITableObject<Guid>, ICloneable
             foreach (var kvp in _attachmentData)
             {
                 kvp.Value.AttachmentId = kvp.Key;
+                if (kvp.Value.TempMetadata != null)
+                {
+                    kvp.Value.TempMetadata.AttachmentId = kvp.Key;
+                }
             }
             return _attachmentData;
         }
