@@ -8,7 +8,9 @@ public static class GuidUtilities
         {
             guid = new Guid(bytes);
             return true;
-        } catch {
+        }
+        catch
+        {
             guid = Guid.Empty;
             return false;
         }

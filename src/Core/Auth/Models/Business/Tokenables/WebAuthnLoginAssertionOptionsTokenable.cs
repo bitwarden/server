@@ -15,7 +15,7 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
 
     public string Identifier { get; set; } = TokenIdentifier;
     public AssertionOptions Options { get; set; }
-    public WebAuthnLoginAssertionOptionsScope Scope { get; set;  }
+    public WebAuthnLoginAssertionOptionsScope Scope { get; set; }
 
     [JsonConstructor]
     public WebAuthnLoginAssertionOptionsTokenable()

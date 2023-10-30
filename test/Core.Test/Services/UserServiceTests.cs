@@ -4,7 +4,6 @@ using AutoFixture;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -14,7 +13,6 @@ using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
@@ -31,7 +29,6 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using static Fido2NetLib.AuthenticatorAssertionRawResponse;
 
 namespace Bit.Core.Test.Services;
 
@@ -238,7 +235,7 @@ public class UserServiceTests
         // Arrange
         response.Response.UserHandle = user.Id.ToByteArray();
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] {});
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] { });
 
         // Act
         var result = async () => await sutProvider.Sut.CompleteWebAuthLoginAssertionAsync(options, response);
