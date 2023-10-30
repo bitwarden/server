@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Entities;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -185,4 +187,6 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             await dbContext.SaveChangesAsync();
         }
     }
+
+    public Task UpdateUserKeyAndEncryptedDataAsync(Core.Entities.User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Core.Tools.Entities.Send> sends, IEnumerable<EmergencyAccess> emergencyAccessKeys, IEnumerable<Core.Entities.OrganizationUser> accountRecoveryKeys) => throw new NotImplementedException();
 }
