@@ -4,6 +4,7 @@ using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -581,12 +582,20 @@ public class UserService : UserManager<User>, IUserService, IDisposable
 
     public async Task<(User, WebAuthnCredential)> CompleteWebAuthLoginAssertionAsync(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse)
     {
-        var userId = new Guid(assertionResponse.Response.UserHandle);
+        if (!GuidUtilities.TryParseBytes(assertionResponse.Response.UserHandle, out var userId))
+        {
+            throw new BadRequestException("Invalid credential.");
+        }
+
         var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            throw new BadRequestException("Invalid credential.");
+        }
 
         var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
-        var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
-        var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertionId);
+        var assertedCredentialId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
+        var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertedCredentialId);
         if (credential == null)
         {
             throw new BadRequestException("Invalid credential.");
