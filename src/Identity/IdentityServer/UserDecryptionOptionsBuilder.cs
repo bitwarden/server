@@ -7,6 +7,7 @@ using Bit.Core.Services;
 using Bit.Identity.Utilities;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Repositories;
+using Bit.Core.Auth.Entities;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -57,6 +58,15 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     public IUserDecryptionOptionsBuilder WithDevice(Device device)
     {
         _device = device;
+        return this;
+    }
+
+    public IUserDecryptionOptionsBuilder WithWebAuthnLoginCredential(WebAuthnCredential credential)
+    {
+        if (credential.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
+        {
+            _options.WebAuthnPrfOptions = new WebAuthnPrfDecryptionOption(credential.EncryptedPrivateKey, credential.EncryptedUserKey);
+        }
         return this;
     }
 

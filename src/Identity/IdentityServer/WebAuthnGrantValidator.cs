@@ -77,12 +77,14 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
             return;
         }
 
-        var user = await _userService.CompleteWebAuthLoginAssertionAsync(token.Options, deviceResponse);
+        var (user, credential) = await _userService.CompleteWebAuthLoginAssertionAsync(token.Options, deviceResponse);
         var validatorContext = new CustomValidatorRequestContext
         {
             User = user,
             KnownDevice = await KnownDeviceAsync(user, context.Request)
         };
+
+        UserDecryptionOptionsBuilder.WithWebAuthnLoginCredential(credential);
 
         await ValidateAsync(context, context.Request, validatorContext);
     }

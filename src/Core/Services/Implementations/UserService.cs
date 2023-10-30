@@ -584,7 +584,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return Task.FromResult(options);
     }
 
-    public async Task<User> CompleteWebAuthLoginAssertionAsync(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse)
+    public async Task<(User, WebAuthnCredential)> CompleteWebAuthLoginAssertionAsync(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse)
     {
         var userId = new Guid(assertionResponse.Response.UserHandle);
         var user = await _userRepository.GetByIdAsync(userId);
@@ -594,7 +594,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertionId);
         if (credential == null)
         {
-            return null;
+            throw new BadRequestException("Invalid credential.");
         }
 
         // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
@@ -607,14 +607,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         credential.Counter = (int)assertionVerificationResult.Counter;
         await _webAuthnCredentialRepository.ReplaceAsync(credential);
 
-        if (assertionVerificationResult.Status == "ok")
+        if (assertionVerificationResult.Status != "ok")
         {
-            return user;
+            throw new BadRequestException("Invalid credential.");
         }
-        else
-        {
-            return null;
-        }
+
+        return (user, credential);
     }
 
     public async Task SendEmailVerificationAsync(User user)
