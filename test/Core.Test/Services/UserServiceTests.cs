@@ -274,8 +274,7 @@ public class UserServiceTests
             sutProvider.GetDependency<IOrganizationService>(),
             sutProvider.GetDependency<IProviderUserRepository>(),
             sutProvider.GetDependency<IStripeSyncService>(),
-            sutProvider.GetDependency<IWebAuthnCredentialRepository>(),
-            sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginTokenable>>()
+            sutProvider.GetDependency<IWebAuthnCredentialRepository>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);
