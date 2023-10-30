@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Request;
-using Bit.Core.Context;
 using Bit.Core.Services;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -35,7 +34,7 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<ICipherRepository>()
-            .GetByIdAsync(cipherId, userId, sutProvider.GetDependency<ICurrentContext>())
+            .GetByIdAsync(cipherId, userId, Arg.Any<bool>())
             .Returns(Task.FromResult(cipherDetails));
 
         var result = await sutProvider.Sut.PutPartial(cipherId, new CipherPartialRequestModel { Favorite = isFavorite, FolderId = folderId.ToString() });

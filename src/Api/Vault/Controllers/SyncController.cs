@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
@@ -31,6 +32,10 @@ public class SyncController : Controller
     private readonly ISendRepository _sendRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
+
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public SyncController(
         IUserService userService,
@@ -43,7 +48,8 @@ public class SyncController : Controller
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
         GlobalSettings globalSettings,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IFeatureService featureService)
     {
         _userService = userService;
         _folderRepository = folderRepository;
@@ -56,6 +62,7 @@ public class SyncController : Controller
         _sendRepository = sendRepository;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
+        _featureService = featureService;
     }
 
     [HttpGet("")]
@@ -76,7 +83,7 @@ public class SyncController : Controller
                 ProviderUserStatusType.Confirmed);
         var hasEnabledOrgs = organizationUserDetails.Any(o => o.Enabled);
         var folders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, _currentContext, hasEnabledOrgs);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections, hasEnabledOrgs);
         var sends = await _sendRepository.GetManyByUserIdAsync(user.Id);
 
         IEnumerable<CollectionDetails> collections = null;

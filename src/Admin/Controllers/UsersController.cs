@@ -2,6 +2,7 @@
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
@@ -23,6 +24,10 @@ public class UsersController : Controller
     private readonly GlobalSettings _globalSettings;
     private readonly IAccessControlService _accessControlService;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
+
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public UsersController(
         IUserRepository userRepository,
@@ -30,7 +35,8 @@ public class UsersController : Controller
         IPaymentService paymentService,
         GlobalSettings globalSettings,
         IAccessControlService accessControlService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IFeatureService featureService)
     {
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
@@ -38,6 +44,7 @@ public class UsersController : Controller
         _globalSettings = globalSettings;
         _accessControlService = accessControlService;
         _currentContext = currentContext;
+        _featureService = featureService;
     }
 
     [RequirePermission(Permission.User_List_View)]
@@ -73,7 +80,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, _currentContext);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, UseFlexibleCollections);
         return View(new UserViewModel(user, ciphers));
     }
 
@@ -86,7 +93,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, _currentContext);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, UseFlexibleCollections);
         var billingInfo = await _paymentService.GetBillingAsync(user);
         return View(new UserEditModel(user, ciphers, billingInfo, _globalSettings));
     }

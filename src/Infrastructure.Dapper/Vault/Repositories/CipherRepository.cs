@@ -1,9 +1,6 @@
 ﻿using System.Data;
 using System.Text.Json;
-using Bit.Core;
-using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -17,24 +14,17 @@ namespace Bit.Infrastructure.Dapper.Vault.Repositories;
 
 public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
 {
-    private readonly IFeatureService _featureService;
-
-    private bool UseFlexibleCollections(ICurrentContext currentContext) =>
-        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, currentContext);
-
-    public CipherRepository(GlobalSettings globalSettings, IFeatureService featureService)
+    public CipherRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
-    {
-        _featureService = featureService;
-    }
+    { }
 
     public CipherRepository(string connectionString, string readOnlyConnectionString)
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, ICurrentContext currentContext)
+    public async Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
     {
-        var sprocName = UseFlexibleCollections(currentContext)
+        var sprocName = useFlexibleCollections
             ? $"[{Schema}].[CipherDetails_ReadByIdUserId_V2]"
             : $"[{Schema}].[CipherDetails_ReadByIdUserId]";
 
@@ -89,12 +79,12 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, ICurrentContext currentContext, bool withOrganizations = true)
+    public async Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true)
     {
         string sprocName = null;
         if (withOrganizations)
         {
-            sprocName = UseFlexibleCollections(currentContext)
+            sprocName = useFlexibleCollections
                 ? $"[{Schema}].[CipherDetails_ReadByUserId_V2]"
                 : $"[{Schema}].[CipherDetails_ReadByUserId]";
         }
@@ -244,9 +234,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext)
+    public async Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
     {
-        var sprocName = UseFlexibleCollections(currentContext)
+        var sprocName = useFlexibleCollections
             ? $"[{Schema}].[Cipher_Delete_V2]"
             : $"[{Schema}].[Cipher_Delete]";
 
@@ -281,9 +271,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, ICurrentContext currentContext)
+    public async Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, bool useFlexibleCollections)
     {
-        var sprocName = UseFlexibleCollections(currentContext)
+        var sprocName = useFlexibleCollections
             ? $"[{Schema}].[Cipher_Move_V2]"
             : $"[{Schema}].[Cipher_Move]";
 
@@ -671,9 +661,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext)
+    public async Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
     {
-        var sprocName = UseFlexibleCollections(currentContext)
+        var sprocName = useFlexibleCollections
             ? $"[{Schema}].[Cipher_SoftDelete_V2]"
             : $"[{Schema}].[Cipher_SoftDelete]";
 
@@ -686,9 +676,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
-    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, ICurrentContext currentContext)
+    public async Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections)
     {
-        var sprocName = UseFlexibleCollections(currentContext)
+        var sprocName = useFlexibleCollections
             ? $"[{Schema}].[Cipher_Restore_V2]"
             : $"[{Schema}].[Cipher_Restore]";
 

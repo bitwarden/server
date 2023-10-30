@@ -1,5 +1,4 @@
-﻿using Bit.Core.Context;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -615,10 +614,9 @@ public class CipherServiceTests
             cipher.RevisionDate = previousRevisionDate;
         }
 
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId, currentContext).Returns(ciphers);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId, Arg.Any<bool>()).Returns(ciphers);
         var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
-        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId, currentContext).Returns(revisionDate);
+        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId, Arg.Any<bool>()).Returns(revisionDate);
 
         await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
 

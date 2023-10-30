@@ -39,6 +39,7 @@ public class AccountsControllerTests : IDisposable
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
 
     public AccountsControllerTests()
     {
@@ -56,6 +57,7 @@ public class AccountsControllerTests : IDisposable
         _captchaValidationService = Substitute.For<ICaptchaValidationService>();
         _policyService = Substitute.For<IPolicyService>();
         _currentContext = Substitute.For<ICurrentContext>();
+        _featureService = Substitute.For<IFeatureService>();
         _sut = new AccountsController(
             _globalSettings,
             _cipherRepository,
@@ -70,7 +72,8 @@ public class AccountsControllerTests : IDisposable
             _sendService,
             _captchaValidationService,
             _policyService,
-            _currentContext
+            _currentContext,
+            _featureService
         );
     }
 

@@ -6,7 +6,6 @@ using Bit.Api.Vault.Models.Response;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -107,7 +106,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, sutProvider.GetDependency<ICurrentContext>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -198,7 +197,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, sutProvider.GetDependency<ICurrentContext>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -272,7 +271,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, sutProvider.GetDependency<ICurrentContext>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);

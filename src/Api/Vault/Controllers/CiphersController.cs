@@ -40,6 +40,10 @@ public class CiphersController : Controller
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
     private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
+    private readonly IFeatureService _featureService;
+
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -50,7 +54,8 @@ public class CiphersController : Controller
         IProviderService providerService,
         ICurrentContext currentContext,
         ILogger<CiphersController> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -61,6 +66,7 @@ public class CiphersController : Controller
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -110,7 +116,7 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var hasOrgs = _currentContext.Organizations?.Any() ?? false;
         // TODO: Use hasOrgs proper for cipher listing here?
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, _currentContext, true || hasOrgs);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, UseFlexibleCollections, true || hasOrgs);
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict = null;
         if (hasOrgs)
         {
@@ -523,7 +529,7 @@ public class CiphersController : Controller
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, _currentContext, false);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, UseFlexibleCollections, false);
         var ciphersDict = ciphers.ToDictionary(c => c.Id);
 
         var shareCiphers = new List<(Cipher, DateTime?)>();
@@ -832,6 +838,6 @@ public class CiphersController : Controller
 
     private async Task<CipherDetails> GetByIdAsync(Guid cipherId, Guid userId)
     {
-        return await _cipherRepository.GetByIdAsync(cipherId, userId, _currentContext);
+        return await _cipherRepository.GetByIdAsync(cipherId, userId, UseFlexibleCollections);
     }
 }

@@ -49,6 +49,10 @@ public class AccountsController : Controller
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
+
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -64,7 +68,8 @@ public class AccountsController : Controller
         ISendService sendService,
         ICaptchaValidationService captchaValidationService,
         IPolicyService policyService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -80,6 +85,7 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
         _policyService = policyService;
         _currentContext = currentContext;
+        _featureService = featureService;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -376,7 +382,7 @@ public class AccountsController : Controller
         var ciphers = new List<Cipher>();
         if (model.Ciphers.Any())
         {
-            var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, _currentContext);
+            var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
             ciphers.AddRange(existingCiphers
                 .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing)));
         }

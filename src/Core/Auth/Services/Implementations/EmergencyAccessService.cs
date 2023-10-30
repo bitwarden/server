@@ -33,6 +33,10 @@ public class EmergencyAccessService : IEmergencyAccessService
     private readonly IOrganizationService _organizationService;
     private readonly IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> _dataProtectorTokenizer;
     private readonly ICurrentContext _currentContext;
+    private readonly IFeatureService _featureService;
+
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public EmergencyAccessService(
         IEmergencyAccessRepository emergencyAccessRepository,
@@ -47,7 +51,8 @@ public class EmergencyAccessService : IEmergencyAccessService
         GlobalSettings globalSettings,
         IOrganizationService organizationService,
         IDataProtectorTokenFactory<EmergencyAccessInviteTokenable> dataProtectorTokenizer,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IFeatureService featureService)
     {
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -62,6 +67,7 @@ public class EmergencyAccessService : IEmergencyAccessService
         _organizationService = organizationService;
         _dataProtectorTokenizer = dataProtectorTokenizer;
         _currentContext = currentContext;
+        _featureService = featureService;
     }
 
     public async Task<EmergencyAccess> InviteAsync(User invitingUser, string email, EmergencyAccessType type, int waitTime)
@@ -389,7 +395,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, _currentContext, false);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(emergencyAccess.GrantorId, UseFlexibleCollections, false);
 
         return new EmergencyAccessViewData
         {
@@ -407,7 +413,7 @@ public class EmergencyAccessService : IEmergencyAccessService
             throw new BadRequestException("Emergency Access not valid.");
         }
 
-        var cipher = await _cipherRepository.GetByIdAsync(cipherId, emergencyAccess.GrantorId, _currentContext);
+        var cipher = await _cipherRepository.GetByIdAsync(cipherId, emergencyAccess.GrantorId, UseFlexibleCollections);
         return await _cipherService.GetAttachmentDownloadDataAsync(cipher, attachmentId);
     }
 
