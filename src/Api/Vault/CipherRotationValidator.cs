@@ -1,9 +1,11 @@
-
+﻿
 using Bit.Api.Auth;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Exceptions;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
+
+namespace Bit.Api.Vault;
 
 public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>
 {
