@@ -1,13 +1,13 @@
 ﻿using Bit.Core;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
+using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Identity.Utilities;
-using Bit.Core.Auth.Utilities;
-using Bit.Core.Repositories;
-using Bit.Core.Auth.Entities;
 
 namespace Bit.Identity.IdentityServer;
 

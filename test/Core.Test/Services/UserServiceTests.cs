@@ -33,7 +33,6 @@ using NSubstitute;
 using NSubstitute.ReceivedExtensions;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using static Fido2NetLib.AuthenticatorAssertionRawResponse;
 
 namespace Bit.Core.Test.Services;
 
@@ -240,7 +239,7 @@ public class UserServiceTests
         // Arrange
         response.Response.UserHandle = user.Id.ToByteArray();
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] {});
+        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] { });
 
         // Act
         var result = async () => await sutProvider.Sut.CompleteWebAuthLoginAssertionAsync(options, response);
