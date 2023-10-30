@@ -592,7 +592,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             throw new BadRequestException("Invalid credential.");
         }
 
-        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
+        // Always return true, since we've already filtered the credentials after user id
         IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
         var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
         var assertionVerificationResult = await _fido2.MakeAssertionAsync(
