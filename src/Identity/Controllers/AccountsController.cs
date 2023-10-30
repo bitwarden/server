@@ -13,7 +13,6 @@ using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using Fido2NetLib;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
@@ -86,16 +85,8 @@ public class AccountsController : Controller
     [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
     // TODO: Add tests
-    // TODO: Create proper models for this call
     public async Task<WebAuthnLoginAssertionOptionsResponseModel> PostWebAuthnLoginAssertionOptions(WebAuthnLoginAssertionOptionsRequestModel model)
     {
-        //var user = await _userRepository.GetByEmailAsync(model.Email);
-        //if (user == null)
-        //{
-        //    // TODO: return something? possible enumeration attacks with this response
-        //    return new AssertionOptions();
-        //}
-
         var options = await _userService.StartWebAuthnLoginAssertionAsync();
 
         var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.Authentication, options);
@@ -107,21 +98,4 @@ public class AccountsController : Controller
             Token = token
         };
     }
-
-    // TODO: Remove, this will move to the grant validator
-    //[HttpPost("webauthn-assertion")]
-    //[RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
-    //// TODO: Create proper models for this call
-    //public async Task<string> PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
-    //{
-    //    var user = await _userRepository.GetByEmailAsync(model.Email);
-    //    if (user == null)
-    //    {
-    //        // TODO: proper response here?
-    //        throw new BadRequestException();
-    //    }
-
-    //    var token = await _userService.CompleteWebAuthLoginAssertionAsync(null, user);
-    //    return token;
-    //}
 }
