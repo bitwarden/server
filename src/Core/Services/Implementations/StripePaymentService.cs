@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.BitStripe;
 using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -667,7 +668,7 @@ public class StripePaymentService : IPaymentService
 
             if (!stripePaymentMethod && subInvoiceMetadata.Any())
             {
-                var invoices = await _stripeAdapter.InvoiceListAsync(new Stripe.InvoiceListOptions
+                var invoices = await _stripeAdapter.InvoiceListAsync(new StripeInvoiceListOptions
                 {
                     Subscription = subscription.Id
                 });
@@ -1850,34 +1851,25 @@ public class StripePaymentService : IPaymentService
             return null;
         }
 
-        return (await Collect())
-            .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
-            .OrderByDescending(invoice => invoice.Created)
-            .Select(invoice => new BillingInfo.BillingInvoice(invoice));
-
-        async Task<List<Stripe.Invoice>> Collect()
+        var options = new StripeInvoiceListOptions
         {
-            var collected = new List<Stripe.Invoice>();
-            var hasMore = true;
+            Customer = customer.Id,
+            SelectAll = true
+        };
 
-            while (hasMore)
-            {
-                var invoiceListOptions = new Stripe.InvoiceListOptions { Customer = customer.Id, Limit = 100 };
+        try
+        {
+            var invoices = await _stripeAdapter.InvoiceListAsync(options);
 
-                if (collected.Any())
-                {
-                    var lastInvoiceId = collected.Last().Id;
-                    invoiceListOptions.StartingAfter = lastInvoiceId;
-                }
-
-                var invoices = await _stripeAdapter.InvoiceListAsync(invoiceListOptions);
-
-                collected.AddRange(invoices);
-
-                hasMore = invoices.HasMore;
-            }
-
-            return collected;
+            return invoices
+                .Where(invoice => invoice.Status != "void" && invoice.Status != "draft")
+                .OrderByDescending(invoice => invoice.Created)
+                .Select(invoice => new BillingInfo.BillingInvoice(invoice));
+        }
+        catch (Stripe.StripeException exception)
+        {
+            _logger.LogError(exception, "An error occurred while listing Stripe invoices");
+            throw new GatewayException("Failed to retrieve current invoices", exception);
         }
     }
 
