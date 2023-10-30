@@ -30,9 +30,9 @@ public record Families2019Plan : Models.StaticStore.Plan
     {
         public Families2019PasswordManagerFeatures()
         {
-            BaseSeats = 5;
+            BaseSeats = 6;
             BaseStorageGb = 1;
-            MaxSeats = 5;
+            MaxSeats = 6;
 
             HasAdditionalStorageOption = true;
             HasPremiumAccessOption = true;

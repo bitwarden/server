@@ -1869,13 +1869,12 @@ public class StripePaymentService : IPaymentService
         {
             return "";
         }
-        else if (subscriberName.Length <= 30)
+
+        if (subscriberName.Length <= 30)
         {
             return subscriberName;
         }
-        else
-        {
-            return subscriberName.Substring(0, 30);
-        }
+
+        return subscriberName.Substring(0, 30);
     }
 }

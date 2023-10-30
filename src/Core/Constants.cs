@@ -47,6 +47,7 @@ public static class FeatureFlagKeys
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string AutofillOverlay = "autofill-overlay";
     public const string BillingPlansUpgrade = "billing-plans-upgrade";
+    public const string BillingStarterPlan = "billing-starter-plan";
 
     public static List<string> GetAllKeys()
     {
