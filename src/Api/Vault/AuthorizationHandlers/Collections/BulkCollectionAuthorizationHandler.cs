@@ -131,7 +131,15 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             return;
         }
 
-        await CheckCollectionPermissionsAsync(context, requirement, targetCollections, org, requireManagePermission: false);
+        var canManageCollections = await CanManageCollectionsAsync(targetCollections, org, requireManagePermission: false);
+        if (canManageCollections)
+        {
+            context.Succeed(requirement);
+        }
+        else
+        {
+            context.Fail();
+        }
     }
 
     private async Task CanDeleteAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
@@ -154,7 +162,15 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             return;
         }
 
-        await CheckCollectionPermissionsAsync(context, requirement, targetCollections, org, requireManagePermission: true);
+        var canManageCollections = await CanManageCollectionsAsync(targetCollections, org, requireManagePermission: true);
+        if (canManageCollections)
+        {
+            context.Succeed(requirement);
+        }
+        else
+        {
+            context.Fail();
+        }
     }
 
     /// <summary>
@@ -173,12 +189,18 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             return;
         }
 
-        await CheckCollectionPermissionsAsync(context, requirement, targetCollections, org, requireManagePermission: true);
+        var canManageCollections = await CanManageCollectionsAsync(targetCollections, org, requireManagePermission: true);
+        if (canManageCollections)
+        {
+            context.Succeed(requirement);
+        }
+        else
+        {
+            context.Fail();
+        }
     }
 
-    private async Task CheckCollectionPermissionsAsync(
-        AuthorizationHandlerContext context,
-        IAuthorizationRequirement requirement,
+    private async Task<bool> CanManageCollectionsAsync(
         ICollection<Collection> targetCollections,
         CurrentContextOrganization org,
         bool requireManagePermission)
@@ -193,13 +215,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             .Select(c => c.Id)
             .ToHashSet();
 
-        // The acting user does not have permissions for all target collections, fail
-        if (targetCollections.Any(tc => !manageableCollectionIds.Contains(tc.Id)))
-        {
-            context.Fail();
-            return;
-        }
-
-        context.Succeed(requirement);
+        // Check if the acting user has access to all target collections
+        return targetCollections.All(tc => manageableCollectionIds.Contains(tc.Id));
     }
 }
