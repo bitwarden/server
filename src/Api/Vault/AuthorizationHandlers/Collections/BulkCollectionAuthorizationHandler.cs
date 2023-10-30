@@ -84,6 +84,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
                 break;
 
             case not null when requirement == CollectionOperations.Read:
+            case not null when requirement == CollectionOperations.ReadAccess:
                 await CanReadAsync(context, requirement, resources, org);
                 break;
 

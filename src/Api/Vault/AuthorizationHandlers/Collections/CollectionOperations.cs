@@ -19,6 +19,7 @@ public static class CollectionOperations
 {
     public static readonly CollectionOperationRequirement Create = new() { Name = nameof(Create) };
     public static readonly CollectionOperationRequirement Read = new() { Name = nameof(Read) };
+    public static readonly CollectionOperationRequirement ReadAccess = new() { Name = nameof(ReadAccess) };
     public static CollectionOperationRequirement ReadAll(Guid organizationId)
     {
         return new CollectionOperationRequirement(nameof(ReadAll), organizationId);

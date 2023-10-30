@@ -566,7 +566,7 @@ public class CollectionsController : Controller
     private async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers_vNext(Guid id)
     {
         var collection = await _collectionRepository.GetByIdAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Read)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.ReadAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();
