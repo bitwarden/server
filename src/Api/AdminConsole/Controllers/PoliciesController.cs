@@ -103,7 +103,7 @@ public class PoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var orgUser = await _organizationUserRepository.GetByIdAsync(orgId);
+        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
         if (orgUser == null || orgUser.OrganizationId != orgId)
         {
             throw new NotFoundException();
