@@ -1,16 +1,24 @@
-﻿using Bit.Api.AdminConsole.Models.Response;
+﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.Auth;
+using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
+using Bit.Api.Tools.Models.Request;
 using Bit.Api.Utilities;
+using Bit.Api.Vault.Models.Request;
 using Bit.Core;
+using Bit.Core.Auth.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.UserKey.Interfaces;
 using Bit.Core.Auth.Utilities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;
@@ -47,6 +55,13 @@ public class AccountsController : Controller
     private readonly ISendService _sendService;
     private readonly ICaptchaValidationService _captchaValidationService;
     private readonly IPolicyService _policyService;
+    private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+
+    private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
+    private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
+    private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>> _sendValidator;
+    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>> _emergencyAccessValidator;
+    private readonly IRotationValidator<IEnumerable<AccountRecoveryWithIdRequestModel>, IEnumerable<OrganizationUser>> _accountRecoveryValidator;
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -61,7 +76,8 @@ public class AccountsController : Controller
         ISendRepository sendRepository,
         ISendService sendService,
         ICaptchaValidationService captchaValidationService,
-        IPolicyService policyService)
+        IPolicyService policyService,
+        IRotateUserKeyCommand rotateUserKeyCommand)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -76,6 +92,7 @@ public class AccountsController : Controller
         _sendService = sendService;
         _captchaValidationService = captchaValidationService;
         _policyService = policyService;
+        _rotateUserKeyCommand = rotateUserKeyCommand;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -346,6 +363,43 @@ public class AccountsController : Controller
 
         var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
             model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value, model.KdfMemory, model.KdfParallelism);
+        if (result.Succeeded)
+        {
+            return;
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+
+        await Task.Delay(2000);
+        throw new BadRequestException(ModelState);
+    }
+
+    [HttpPost("rotate-key")]
+    public async Task PostKey([FromBody] RotateUserKeyRequestModel model)
+    {
+        var user = await _userService.GetUserByPrincipalAsync(User);
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException();
+        }
+
+        var dataModel = new RotateUserKeyData
+        {
+            MasterPasswordHash = model.MasterPasswordHash,
+            Key = model.Key,
+            PrivateKey = model.PrivateKey,
+            Ciphers = await _cipherValidator.ValidateAsync(user.Id, model.Ciphers),
+            Folders = await _folderValidator.ValidateAsync(user.Id, model.Folders),
+            Sends = await _sendValidator.ValidateAsync(user.Id, model.Sends),
+            EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user.Id, model.EmergencyAccessKeys),
+            AccountRecoveryKeys = await _accountRecoveryValidator.ValidateAsync(user.Id, model.AccountRecoveryKeys),
+        };
+
+        var result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);
+
         if (result.Succeeded)
         {
             return;

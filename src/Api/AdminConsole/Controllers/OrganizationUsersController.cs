@@ -317,7 +317,7 @@ public class OrganizationUsersController : Controller
     }
 
     [HttpPut("{userId}/reset-password-enrollment")]
-    public async Task PutResetPasswordEnrollment(Guid orgId, Guid userId, [FromBody] OrganizationUserResetPasswordEnrollmentRequestModel model)
+    public async Task PutResetPasswordEnrollment(Guid orgId, Guid userId, [FromBody] AccountRecoveryEnrollmentRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)

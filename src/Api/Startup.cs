@@ -16,6 +16,21 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Api.Tools.Models.Request;
+using Bit.Core.Tools.Entities;
+using Bit.Api.Auth;
+using Bit.Core.Vault.Entities;
+using Bit.Api.Vault.Models.Request;
+using Bit.Core.Auth.Entities;
+using Bit.Api.Auth.Models.Request;
+using Bit.Core.Entities;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
+
+
+
+
+
+
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -136,6 +151,13 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
+
+        // Rotation Validators
+        services.AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>();
+        services.AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>();
+        services.AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>>>();
+        services.AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>>();
+        services.AddScoped<IRotationValidator<IEnumerable<AccountRecoveryWithIdRequestModel>, IEnumerable<OrganizationUser>>>();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();
