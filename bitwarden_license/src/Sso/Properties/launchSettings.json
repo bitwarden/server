@@ -3,7 +3,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iisExpress": {
-      "applicationUrl": "http://0.0.0.0:51822",
+      "applicationUrl": "http://localhost:51822",
       "sslPort": 0
     }
   },
@@ -16,7 +16,7 @@
     },
     "Sso": {
       "commandName": "Project",
-      "applicationUrl": "http://0.0.0.0:51822",
+      "applicationUrl": "http://localhost:51822",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
