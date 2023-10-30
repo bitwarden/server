@@ -168,12 +168,6 @@ public static class ServiceCollectionExtensions
                 SsoTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<SsoTokenable>>>()));
-        services.AddSingleton<IDataProtectorTokenFactory<WebAuthnLoginTokenable>>(serviceProvider =>
-            new DataProtectorTokenFactory<WebAuthnLoginTokenable>(
-                WebAuthnLoginTokenable.ClearTextPrefix,
-                WebAuthnLoginTokenable.DataProtectorPurpose,
-                serviceProvider.GetDataProtectionProvider(),
-                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<WebAuthnLoginTokenable>>>()));
         services.AddSingleton<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>(
                 WebAuthnCredentialCreateOptionsTokenable.ClearTextPrefix,

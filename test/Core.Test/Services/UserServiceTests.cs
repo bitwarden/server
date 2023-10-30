@@ -14,7 +14,6 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Tokens;
 using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
@@ -278,8 +277,7 @@ public class UserServiceTests
             sutProvider.GetDependency<IProviderUserRepository>(),
             sutProvider.GetDependency<IStripeSyncService>(),
             new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
-            sutProvider.GetDependency<IWebAuthnCredentialRepository>(),
-            sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginTokenable>>()
+            sutProvider.GetDependency<IWebAuthnCredentialRepository>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);

@@ -61,9 +61,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
-    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
-    private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
+    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
 
     public UserService(
         IUserRepository userRepository,
@@ -96,8 +95,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IProviderUserRepository providerUserRepository,
         IStripeSyncService stripeSyncService,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
-        IWebAuthnCredentialRepository webAuthnRepository,
-        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
+        IWebAuthnCredentialRepository webAuthnRepository)
         : base(
               store,
               optionsAccessor,
@@ -136,7 +134,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _stripeSyncService = stripeSyncService;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _webAuthnCredentialRepository = webAuthnRepository;
-        _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
