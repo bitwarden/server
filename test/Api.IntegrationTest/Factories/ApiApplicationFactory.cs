@@ -2,17 +2,22 @@
 using Bit.IntegrationTestCommon.Factories;
 using IdentityServer4.AccessTokenValidation;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Data.Sqlite;
 
 namespace Bit.Api.IntegrationTest.Factories;
 
 public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 {
     private readonly IdentityApplicationFactory _identityApplicationFactory;
+    private const string _connectionString = "DataSource=:memory:";
 
     public ApiApplicationFactory()
     {
+        SqliteConnection = new SqliteConnection(_connectionString);
+        SqliteConnection.Open();
+
         _identityApplicationFactory = new IdentityApplicationFactory();
-        _identityApplicationFactory.DatabaseName = DatabaseName;
+        _identityApplicationFactory.SqliteConnection = SqliteConnection;
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -52,5 +57,11 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     public async Task<(string Token, string RefreshToken)> LoginAsync(string email = "integration-test@bitwarden.com", string masterPasswordHash = "master_password_hash")
     {
         return await _identityApplicationFactory.TokenFromPasswordAsync(email, masterPasswordHash);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        SqliteConnection.Dispose();
     }
 }
