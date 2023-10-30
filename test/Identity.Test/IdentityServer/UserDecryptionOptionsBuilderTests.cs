@@ -52,6 +52,32 @@ public class UserDecryptionOptionsBuilderTests
     }
 
     [Theory, BitAutoData]
+    public async Task WithWebAuthnLoginCredential_WhenCredentialDoesNotContainPrfKeys_ShouldNotReturnPrfOption(WebAuthnCredential credential)
+    {
+        credential.EncryptedPrivateKey = null;
+        credential.EncryptedPublicKey = null;
+        credential.EncryptedUserKey = null;
+
+        var result = await _builder.WithWebAuthnLoginCredential(credential).BuildAsync();
+
+        Assert.Null(result.WebAuthnPrfOptions);
+    }
+
+    [Theory, BitAutoData]
+    public async Task WithWebAuthnLoginCredential_WhenCredentialContainsPrfKeys_ShouldReturnPrfOption(WebAuthnCredential credential)
+    {
+        credential.EncryptedPrivateKey = "encryptedPrivateKey";
+        credential.EncryptedPublicKey = "encryptedPublicKey";
+        credential.EncryptedUserKey = "encryptedUserKey";
+
+        var result = await _builder.WithWebAuthnLoginCredential(credential).BuildAsync();
+
+        Assert.NotNull(result.WebAuthnPrfOptions);
+        Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOptions!.EncryptedPrivateKey);
+        Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOptions!.EncryptedUserKey);
+    }
+
+    [Theory, BitAutoData]
     public async Task Build_WhenKeyConnectorIsEnabled_ShouldReturnKeyConnectorOptions(SsoConfig ssoConfig, SsoConfigurationData configurationData)
     {
         configurationData.MemberDecryptionType = MemberDecryptionType.KeyConnector;

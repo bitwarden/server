@@ -45,13 +45,13 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
     private readonly IDistributedCache _distributedCache;
     private readonly DistributedCacheEntryOptions _cacheEntryOptions;
-    private readonly IUserDecryptionOptionsBuilder _userDecryptionOptionsBuilder;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
     protected IFeatureService FeatureService { get; }
     protected ISsoConfigRepository SsoConfigRepository { get; }
     protected IUserService _userService { get; }
+    protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -101,7 +101,7 @@ public abstract class BaseRequestValidator<T> where T : class
             // Email TOTP.
             AbsoluteExpirationRelativeToNow = new TimeSpan(0, 15, 0)
         };
-        _userDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
+        UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -614,7 +614,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, Device device, ClaimsPrincipal subject)
     {
         var ssoConfig = await GetSsoConfigurationDataAsync(subject);
-        return await _userDecryptionOptionsBuilder
+        return await UserDecryptionOptionsBuilder
             .ForUser(user)
             .WithDevice(device)
             .WithSso(ssoConfig)
