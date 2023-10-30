@@ -338,7 +338,7 @@ public class CollectionsController : Controller
 
     [HttpDelete("{id}/user/{orgUserId}")]
     [HttpPost("{id}/delete-user/{orgUserId}")]
-    public async Task Delete(Guid orgId, Guid id, Guid orgUserId)
+    public async Task DeleteUser(Guid orgId, Guid id, Guid orgUserId)
     {
         if (UseFlexibleCollections)
         {
