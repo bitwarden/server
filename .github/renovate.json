@@ -8,9 +8,9 @@
     ":pinAllExceptPeerDependencies",
     ":prConcurrentLimit10",
     ":rebaseStalePrs",
-    ":separateMajorReleases"
+    ":separateMajorReleases",
     "group:monorepos",
-    "schedule:weekends",
+    "schedule:weekends"
   ],
   "enabledManagers": [
     "dockerfile",
