@@ -278,7 +278,6 @@ public class UserServiceTests
             sutProvider.GetDependency<IProviderUserRepository>(),
             sutProvider.GetDependency<IStripeSyncService>(),
             new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
-            sutProvider.GetDependency<IStripeSyncService>(),
             sutProvider.GetDependency<IWebAuthnCredentialRepository>(),
             sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginTokenable>>()
             );
