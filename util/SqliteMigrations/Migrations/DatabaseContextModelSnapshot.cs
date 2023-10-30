@@ -15,7 +15,7 @@ namespace Bit.SqliteMigrations.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "6.0.12");
+            modelBuilder.HasAnnotation("ProductVersion", "7.0.5");
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
                 {
@@ -604,6 +604,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("Seats")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("SecretsManagerBeta")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("SelfHost")
@@ -1326,6 +1329,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("AccessPolicy", (string)null);
 
                     b.HasDiscriminator<string>("Discriminator").HasValue("AccessPolicy");
+
+                    b.UseTphMappingStrategy();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ApiKey", b =>
@@ -1490,6 +1495,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Folders")
+                        .HasColumnType("TEXT");
+                    
+                    b.Property<string>("Key")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("OrganizationId")
@@ -2065,11 +2073,13 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", "GrantedProject")
                         .WithMany("GroupAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
+                        .HasForeignKey("GrantedProjectId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
                         .WithMany()
-                        .HasForeignKey("GroupId");
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("GrantedProject");
 
@@ -2084,7 +2094,8 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.Group", "Group")
                         .WithMany()
-                        .HasForeignKey("GroupId");
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("GrantedServiceAccount");
 
@@ -2095,7 +2106,8 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", "GrantedProject")
                         .WithMany("ServiceAccountAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
+                        .HasForeignKey("GrantedProjectId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.ServiceAccount", "ServiceAccount")
                         .WithMany()
@@ -2110,7 +2122,8 @@ namespace Bit.SqliteMigrations.Migrations
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.SecretsManager.Models.Project", "GrantedProject")
                         .WithMany("UserAccessPolicies")
-                        .HasForeignKey("GrantedProjectId");
+                        .HasForeignKey("GrantedProjectId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.OrganizationUser", "OrganizationUser")
                         .WithMany()

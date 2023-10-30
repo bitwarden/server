@@ -5,14 +5,17 @@ root = true
 
 # Don't use tabs for indentation.
 [*]
-end_of_line = lf
 indent_style = space
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+guidelines = 120
 # (Please don't specify an indent_size here; that has too many unintended consequences.)
 
 # Code files
 [*.{cs,csx,vb,vbx}]
 indent_size = 4
-insert_final_newline = true
 charset = utf-8-bom
 
 # Xml project files
@@ -120,7 +123,3 @@ csharp_style_namespace_declarations = file_scoped:warning
 # Switch expression
 dotnet_diagnostic.CS8509.severity = error # missing switch case for named enum value
 dotnet_diagnostic.CS8524.severity = none # missing switch case for unnamed enum value
-
-# All files
-[*]
-guidelines = 120

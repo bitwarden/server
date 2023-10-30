@@ -3,6 +3,9 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Cryptography.X509Certificates;
 using AspNetCoreRateLimit;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.AdminConsole.Services.Implementations;
+using Bit.Core.AdminConsole.Services.NoopImplementations;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
@@ -18,6 +21,8 @@ using Bit.Core.IdentityServer;
 using Bit.Core.OrganizationFeatures;
 using Bit.Core.Repositories;
 using Bit.Core.Resources;
+using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -329,6 +334,9 @@ public static class ServiceCollectionExtensions
     public static void AddOosServices(this IServiceCollection services)
     {
         services.AddScoped<IProviderService, NoopProviderService>();
+        services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
+        services.AddScoped<ISecretRepository, NoopSecretRepository>();
+        services.AddScoped<IProjectRepository, NoopProjectRepository>();
     }
 
     public static void AddNoopServices(this IServiceCollection services)

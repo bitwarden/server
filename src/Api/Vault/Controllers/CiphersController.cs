@@ -6,6 +6,7 @@ using Bit.Api.Utilities;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -27,6 +28,8 @@ namespace Bit.Api.Vault.Controllers;
 [Authorize("Application")]
 public class CiphersController : Controller
 {
+    private static readonly Version _fido2KeyCipherMinimumVersion = new Version(Constants.Fido2KeyCipherMinimumVersion);
+
     private readonly ICipherRepository _cipherRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly ICipherService _cipherService;
@@ -36,6 +39,7 @@ public class CiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<CiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
+    private readonly Version _cipherKeyEncryptionMinimumVersion = new Version(Constants.CipherKeyEncryptionMinimumVersion);
 
     public CiphersController(
         ICipherRepository cipherRepository,
@@ -177,6 +181,9 @@ public class CiphersController : Controller
             throw new NotFoundException();
         }
 
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
+
         var collectionIds = (await _collectionCipherRepository.GetManyByUserIdCipherIdAsync(userId, id)).Select(c => c.CollectionId).ToList();
         var modelOrgId = string.IsNullOrWhiteSpace(model.OrganizationId) ?
             (Guid?)null : new Guid(model.OrganizationId);
@@ -198,6 +205,10 @@ public class CiphersController : Controller
     {
         var userId = _userService.GetProperUserId(User).Value;
         var cipher = await _cipherRepository.GetOrganizationDetailsByIdAsync(id);
+
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
+
         if (cipher == null || !cipher.OrganizationId.HasValue ||
             !await _currentContext.EditAnyCollection(cipher.OrganizationId.Value))
         {
@@ -260,6 +271,9 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
+
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
+        ValidateClientVersionForFido2CredentialSupport(cipher);
 
         var original = cipher.Clone();
         await _cipherService.ShareAsync(original, model.Cipher.ToCipher(cipher), new Guid(model.Cipher.OrganizationId),
@@ -451,7 +465,7 @@ public class CiphersController : Controller
     }
 
     [HttpPut("restore")]
-    public async Task<ListResponseModel<CipherResponseModel>> PutRestoreMany([FromBody] CipherBulkRestoreRequestModel model)
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutRestoreMany([FromBody] CipherBulkRestoreRequestModel model)
     {
         if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
         {
@@ -461,12 +475,30 @@ public class CiphersController : Controller
         var userId = _userService.GetProperUserId(User).Value;
         var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId);
-        var restoringCiphers = ciphers.Where(c => cipherIdsToRestore.Contains(c.Id) && c.Edit);
+        var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId);
+        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
+    }
 
-        await _cipherService.RestoreManyAsync(restoringCiphers, userId);
-        var responses = restoringCiphers.Select(c => new CipherResponseModel(c, _globalSettings));
-        return new ListResponseModel<CipherResponseModel>(responses);
+    [HttpPut("restore-admin")]
+    public async Task<ListResponseModel<CipherMiniResponseModel>> PutRestoreManyAdmin([FromBody] CipherBulkRestoreRequestModel model)
+    {
+        if (!_globalSettings.SelfHosted && model.Ids.Count() > 500)
+        {
+            throw new BadRequestException("You can only restore up to 500 items at a time.");
+        }
+
+        if (model == null || model.OrganizationId == default || !await _currentContext.EditAnyCollection(model.OrganizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        var userId = _userService.GetProperUserId(User).Value;
+        var cipherIdsToRestore = new HashSet<Guid>(model.Ids.Select(i => new Guid(i)));
+
+        var restoredCiphers = await _cipherService.RestoreManyAsync(cipherIdsToRestore, userId, model.OrganizationId, true);
+        var responses = restoredCiphers.Select(c => new CipherMiniResponseModel(c, _globalSettings, c.OrganizationUseTotp));
+        return new ListResponseModel<CipherMiniResponseModel>(responses);
     }
 
     [HttpPut("move")]
@@ -505,7 +537,12 @@ public class CiphersController : Controller
                 throw new BadRequestException("Trying to move ciphers that you do not own.");
             }
 
-            shareCiphers.Add((cipher.ToCipher(ciphersDict[cipher.Id.Value]), cipher.LastKnownRevisionDate));
+            var existingCipher = ciphersDict[cipher.Id.Value];
+
+            ValidateClientVersionForItemLevelEncryptionSupport(existingCipher);
+            ValidateClientVersionForFido2CredentialSupport(existingCipher);
+
+            shareCiphers.Add((cipher.ToCipher(existingCipher), cipher.LastKnownRevisionDate));
         }
 
         await _cipherService.ShareManyAsync(shareCiphers, organizationId,
@@ -557,6 +594,8 @@ public class CiphersController : Controller
         {
             throw new NotFoundException();
         }
+
+        ValidateClientVersionForItemLevelEncryptionSupport(cipher);
 
         if (request.FileSize > CipherService.MAX_FILE_SIZE)
         {
@@ -696,7 +735,7 @@ public class CiphersController : Controller
 
         await Request.GetFileAsync(async (stream, fileName, key) =>
         {
-            await _cipherService.CreateAttachmentShareAsync(cipher, stream,
+            await _cipherService.CreateAttachmentShareAsync(cipher, stream, fileName, key,
                 Request.ContentLength.GetValueOrDefault(0), attachmentId, organizationId);
         });
     }
@@ -775,6 +814,26 @@ public class CiphersController : Controller
         if (!Request?.ContentType.Contains("multipart/") ?? true)
         {
             throw new BadRequestException("Invalid content.");
+        }
+    }
+
+    private void ValidateClientVersionForItemLevelEncryptionSupport(Cipher cipher)
+    {
+        if (cipher.Key != null && _currentContext.ClientVersion < _cipherKeyEncryptionMinimumVersion)
+        {
+            throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
+        }
+    }
+
+    private void ValidateClientVersionForFido2CredentialSupport(Cipher cipher)
+    {
+        if (cipher.Type == Core.Vault.Enums.CipherType.Login)
+        {
+            var loginData = JsonSerializer.Deserialize<CipherLoginData>(cipher.Data);
+            if (loginData?.Fido2Credentials != null && _currentContext.ClientVersion < _fido2KeyCipherMinimumVersion)
+            {
+                throw new BadRequestException("Cannot edit item. Update to the latest version of Bitwarden and try again.");
+            }
         }
     }
 }

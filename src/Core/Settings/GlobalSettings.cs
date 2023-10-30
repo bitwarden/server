@@ -483,6 +483,7 @@ public class GlobalSettings : IGlobalSettings
     {
         public string ApplicationCacheTopicName { get; set; }
         public string ApplicationCacheSubscriptionName { get; set; }
+        public string WebSiteInstanceId { get; set; }
     }
 
     public class AppleIapSettings

@@ -11,18 +11,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{DD5BD056-4
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{458155D3-BCBC-481D-B37A-40D2ED10F0A4}"
 	ProjectSection(SolutionItems) = preProject
-		.editorconfig = .editorconfig
-		.gitignore = .gitignore
-		build.sh = build.sh
-		.github\workflows\build.yml = .github\workflows\build.yml
 		Directory.Build.props = Directory.Build.props
-		dotnet-tools.json = dotnet-tools.json
-		LICENSE.txt = LICENSE.txt
-		LICENSE_AGPL.txt = LICENSE_AGPL.txt
-		LICENSE_BITWARDEN.txt = LICENSE_BITWARDEN.txt
-		NuGet.Config = NuGet.Config
+		global.json = global.json
+		.gitignore = .gitignore
 		README.md = README.md
+		.editorconfig = .editorconfig
+		TRADEMARK_GUIDELINES.md = TRADEMARK_GUIDELINES.md
 		SECURITY.md = SECURITY.md
+		NuGet.Config = NuGet.Config
+		LICENSE_FAQ.md = LICENSE_FAQ.md
+		LICENSE_BITWARDEN.txt = LICENSE_BITWARDEN.txt
+		LICENSE_AGPL.txt = LICENSE_AGPL.txt
+		LICENSE.txt = LICENSE.txt
+		CONTRIBUTING.md = CONTRIBUTING.md
+		.dockerignore = .dockerignore
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "src\Core\Core.csproj", "{3973D21B-A692-4B60-9B70-3631C057423A}"

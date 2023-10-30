@@ -6,11 +6,13 @@ BEGIN
     SET NOCOUNT ON
 
 SELECT
-    ar.*, ou.[Email], ou.[Id] AS [OrganizationUserId]
+    ar.*, u.[Email], ou.[Id] AS [OrganizationUserId]
 FROM
     [dbo].[AuthRequestView] ar
     INNER JOIN
         [dbo].[OrganizationUser] ou ON ou.[UserId] = ar.[UserId] AND ou.[OrganizationId] = ar.[OrganizationId]
+    INNER JOIN
+        [dbo].[User] u ON u.[Id] = ar.[UserId]
     WHERE
         ar.[OrganizationId] = @OrganizationId
     AND

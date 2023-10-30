@@ -1,6 +1,4 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.AccessPolicies;
-using Bit.Commercial.Core.Test.SecretsManager.Enums;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
@@ -25,14 +23,20 @@ public class CreateAccessPoliciesCommandTests
         foreach (var ap in userProjectAccessPolicies)
         {
             ap.GrantedProjectId = grantedProjectId;
+            ap.GrantedProject = null;
+            ap.User = null;
         }
         foreach (var ap in groupProjectAccessPolicies)
         {
             ap.GrantedProjectId = grantedProjectId;
+            ap.GrantedProject = null;
+            ap.Group = null;
         }
         foreach (var ap in serviceAccountProjectAccessPolicies)
         {
             ap.GrantedProjectId = grantedProjectId;
+            ap.GrantedProject = null;
+            ap.ServiceAccount = null;
         }
         data.AddRange(userProjectAccessPolicies);
         data.AddRange(groupProjectAccessPolicies);
@@ -47,114 +51,23 @@ public class CreateAccessPoliciesCommandTests
         foreach (var ap in userServiceAccountAccessPolicies)
         {
             ap.GrantedServiceAccountId = grantedServiceAccountId;
+            ap.GrantedServiceAccount = null;
+            ap.User = null;
         }
         foreach (var ap in groupServiceAccountAccessPolicies)
         {
             ap.GrantedServiceAccountId = grantedServiceAccountId;
+            ap.GrantedServiceAccount = null;
+            ap.Group = null;
         }
         data.AddRange(userServiceAccountAccessPolicies);
         data.AddRange(groupServiceAccountAccessPolicies);
         return data;
     }
 
-    private static List<BaseAccessPolicy> MakeDuplicate(List<BaseAccessPolicy> data, AccessPolicyType accessPolicyType)
-    {
-        switch (accessPolicyType)
-        {
-            case AccessPolicyType.UserProjectAccessPolicy:
-                {
-                    var mockAccessPolicy = new UserProjectAccessPolicy
-                    {
-                        OrganizationUserId = Guid.NewGuid(),
-                        GrantedProjectId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-            case AccessPolicyType.GroupProjectAccessPolicy:
-                {
-                    var mockAccessPolicy = new GroupProjectAccessPolicy
-                    {
-                        GroupId = Guid.NewGuid(),
-                        GrantedProjectId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-            case AccessPolicyType.ServiceAccountProjectAccessPolicy:
-                {
-                    var mockAccessPolicy = new ServiceAccountProjectAccessPolicy
-                    {
-                        ServiceAccountId = Guid.NewGuid(),
-                        GrantedProjectId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-            case AccessPolicyType.UserServiceAccountAccessPolicy:
-                {
-                    var mockAccessPolicy = new UserServiceAccountAccessPolicy
-                    {
-                        OrganizationUserId = Guid.NewGuid(),
-                        GrantedServiceAccountId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-            case AccessPolicyType.GroupServiceAccountAccessPolicy:
-                {
-                    var mockAccessPolicy = new GroupServiceAccountAccessPolicy
-                    {
-                        GroupId = Guid.NewGuid(),
-                        GrantedServiceAccountId = Guid.NewGuid(),
-                    };
-                    data.Add(mockAccessPolicy);
-
-                    // Add a duplicate policy
-                    data.Add(mockAccessPolicy);
-                    break;
-                }
-        }
-
-        return data;
-    }
-
-    private static void SetupPermission(SutProvider<CreateAccessPoliciesCommand> sutProvider,
-        PermissionType permissionType, Project project, Guid userId)
-    {
-        if (permissionType == PermissionType.RunAsUserWithPermission)
-        {
-            sutProvider.GetDependency<IProjectRepository>().AccessToProjectAsync(project.Id, userId, AccessClientType.User)
-                .Returns((true, true));
-        }
-    }
-
-    private static void SetupPermission(SutProvider<CreateAccessPoliciesCommand> sutProvider,
-        PermissionType permissionType, ServiceAccount serviceAccount, Guid userId)
-    {
-        if (permissionType == PermissionType.RunAsUserWithPermission)
-        {
-            sutProvider.GetDependency<IServiceAccountRepository>()
-                .UserHasWriteAccessToServiceAccount(serviceAccount.Id, userId).Returns(true);
-        }
-    }
-
     [Theory]
     [BitAutoData]
     public async Task CreateMany_AlreadyExists_Throws_BadRequestException(
-        Guid userId,
         Project project,
         ServiceAccount serviceAccount,
         List<UserProjectAccessPolicy> userProjectAccessPolicies,
@@ -173,83 +86,34 @@ public class CreateAccessPoliciesCommandTests
             .Returns(true);
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.CreateManyAsync(data, userId, AccessClientType.NoAccessCheck));
+            sutProvider.Sut.CreateManyAsync(data));
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs().CreateManyAsync(default!);
     }
 
     [Theory]
-    [BitAutoData(AccessPolicyType.UserProjectAccessPolicy)]
-    [BitAutoData(AccessPolicyType.GroupProjectAccessPolicy)]
-    [BitAutoData(AccessPolicyType.ServiceAccountProjectAccessPolicy)]
-    [BitAutoData(AccessPolicyType.UserServiceAccountAccessPolicy)]
-    [BitAutoData(AccessPolicyType.GroupServiceAccountAccessPolicy)]
-    public async Task CreateMany_NotUnique_ThrowsException(
-        AccessPolicyType accessPolicyType,
-        Guid userId,
-        Project project,
-        ServiceAccount serviceAccount,
-        List<UserProjectAccessPolicy> userProjectAccessPolicies,
-        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
-        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
-        List<UserServiceAccountAccessPolicy> userServiceAccountAccessPolicies,
-        List<GroupServiceAccountAccessPolicy> groupServiceAccountAccessPolicies,
-        SutProvider<CreateAccessPoliciesCommand> sutProvider
-    )
+    [BitAutoData]
+    public async Task CreateMany_ClearsReferences(SutProvider<CreateAccessPoliciesCommand> sutProvider, Guid projectId)
     {
-        var data = MakeGrantedProjectAccessPolicies(project.Id, userProjectAccessPolicies, groupProjectAccessPolicies,
-            serviceAccountProjectAccessPolicies);
-        var saData = MakeGrantedServiceAccountAccessPolicies(serviceAccount.Id, userServiceAccountAccessPolicies, groupServiceAccountAccessPolicies);
-        data = data.Concat(saData).ToList();
-        data = MakeDuplicate(data, accessPolicyType);
-
-        await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.CreateManyAsync(data, userId, AccessClientType.NoAccessCheck));
-
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
-    }
-
-    [Theory]
-    [BitAutoData(PermissionType.RunAsAdmin)]
-    [BitAutoData(PermissionType.RunAsUserWithPermission)]
-    public async Task CreateMany_Success(
-        PermissionType permissionType,
-        Guid userId,
-        Project project,
-        ServiceAccount serviceAccount,
-        List<UserProjectAccessPolicy> userProjectAccessPolicies,
-        List<GroupProjectAccessPolicy> groupProjectAccessPolicies,
-        List<ServiceAccountProjectAccessPolicy> serviceAccountProjectAccessPolicies,
-        List<UserServiceAccountAccessPolicy> userServiceAccountAccessPolicies,
-        List<GroupServiceAccountAccessPolicy> groupServiceAccountAccessPolicies,
-        SutProvider<CreateAccessPoliciesCommand> sutProvider)
-    {
-        var data = MakeGrantedProjectAccessPolicies(project.Id, userProjectAccessPolicies, groupProjectAccessPolicies,
-            serviceAccountProjectAccessPolicies);
-        var saData = MakeGrantedServiceAccountAccessPolicies(serviceAccount.Id, userServiceAccountAccessPolicies, groupServiceAccountAccessPolicies);
-        data = data.Concat(saData).ToList();
-
-        SetupPermission(sutProvider, permissionType, serviceAccount, userId);
-        SetupPermission(sutProvider, permissionType, project, userId);
-
-        if (permissionType == PermissionType.RunAsAdmin)
+        var userProjectAp = new UserProjectAccessPolicy
         {
-            await sutProvider.Sut.CreateManyAsync(data, userId, AccessClientType.NoAccessCheck);
-        }
-        else if (permissionType == PermissionType.RunAsUserWithPermission)
-        {
-            await sutProvider.Sut.CreateManyAsync(data, userId, AccessClientType.User);
-        }
+            GrantedProjectId = projectId,
+            OrganizationUserId = new Guid(),
+        };
+        var data = new List<BaseAccessPolicy>() { userProjectAp, };
+
+        userProjectAp.GrantedProject = new Project() { Id = new Guid() };
+        var expectedCall = new List<BaseAccessPolicy>() { userProjectAp, };
+
+        await sutProvider.Sut.CreateManyAsync(data);
 
         await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
-            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
+            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual(expectedCall)));
     }
 
     [Theory]
     [BitAutoData]
-    public async Task CreateMany_UserWithoutPermission_Throws(
-        Guid userId,
+    public async Task CreateMany_Success(
         Project project,
         ServiceAccount serviceAccount,
         List<UserProjectAccessPolicy> userProjectAccessPolicies,
@@ -264,10 +128,9 @@ public class CreateAccessPoliciesCommandTests
         var saData = MakeGrantedServiceAccountAccessPolicies(serviceAccount.Id, userServiceAccountAccessPolicies, groupServiceAccountAccessPolicies);
         data = data.Concat(saData).ToList();
 
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            sutProvider.Sut.CreateManyAsync(data, userId, AccessClientType.User));
+        await sutProvider.Sut.CreateManyAsync(data);
 
-        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
-            .CreateManyAsync(Arg.Any<List<BaseAccessPolicy>>());
+        await sutProvider.GetDependency<IAccessPolicyRepository>().Received(1)
+            .CreateManyAsync(Arg.Is(AssertHelper.AssertPropertyEqual(data)));
     }
 }

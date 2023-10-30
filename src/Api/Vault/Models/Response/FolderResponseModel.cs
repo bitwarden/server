@@ -13,12 +13,12 @@ public class FolderResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(folder));
         }
 
-        Id = folder.Id.ToString();
+        Id = folder.Id;
         Name = folder.Name;
         RevisionDate = folder.RevisionDate;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
     public DateTime RevisionDate { get; set; }
 }

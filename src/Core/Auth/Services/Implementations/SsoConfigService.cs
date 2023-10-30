@@ -63,16 +63,28 @@ public class SsoConfigService : ISsoConfigService
             throw new BadRequestException("Key Connector cannot be disabled at this moment.");
         }
 
-        // Automatically enable reset password policy if trusted device encryption is selected
+        // Automatically enable account recovery, SSO required, and single org policies if trusted device encryption is selected
         if (config.GetData().MemberDecryptionType == MemberDecryptionType.TrustedDeviceEncryption)
         {
+            var singleOrgPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.SingleOrg) ??
+                                  new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.SingleOrg };
+
+            singleOrgPolicy.Enabled = true;
+
+            await _policyService.SaveAsync(singleOrgPolicy, _userService, _organizationService, null);
+
             var resetPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.ResetPassword) ??
                               new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.ResetPassword, };
 
             resetPolicy.Enabled = true;
             resetPolicy.SetDataModel(new ResetPasswordDataModel { AutoEnrollEnabled = true });
-
             await _policyService.SaveAsync(resetPolicy, _userService, _organizationService, null);
+
+            var ssoRequiredPolicy = await _policyRepository.GetByOrganizationIdTypeAsync(config.OrganizationId, PolicyType.RequireSso) ??
+                              new Policy { OrganizationId = config.OrganizationId, Type = PolicyType.RequireSso, };
+
+            ssoRequiredPolicy.Enabled = true;
+            await _policyService.SaveAsync(ssoRequiredPolicy, _userService, _organizationService, null);
         }
 
         await LogEventsAsync(config, oldConfig);

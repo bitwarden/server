@@ -1,15 +1,17 @@
-﻿using Bit.Api.Auth.Models.Request.Accounts;
+﻿using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;
 using Bit.Core.Models.Business;
@@ -879,10 +881,6 @@ public class AccountsController : Controller
     public async Task PostRequestOTP()
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user is not { UsesKeyConnector: true })
-        {
-            throw new UnauthorizedAccessException();
-        }
 
         await _userService.SendOTPAsync(user);
     }
@@ -891,10 +889,6 @@ public class AccountsController : Controller
     public async Task VerifyOTP([FromBody] VerifyOTPRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user is not { UsesKeyConnector: true })
-        {
-            throw new UnauthorizedAccessException();
-        }
 
         if (!await _userService.VerifyOTPAsync(user, model.OTP))
         {

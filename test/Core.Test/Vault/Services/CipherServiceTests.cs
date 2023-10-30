@@ -1,7 +1,10 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -44,7 +47,12 @@ public class CipherServiceTests
         Organization organization, List<Guid> collectionIds)
     {
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
         var lastKnownRevisionDate = cipher.RevisionDate.AddDays(-1);
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [Guid.NewGuid().ToString()] = new CipherAttachment.MetaData { }
+        });
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
@@ -105,9 +113,436 @@ public class CipherServiceTests
         cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [Guid.NewGuid().ToString()] = new CipherAttachment.MetaData { }
+        });
         await sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
             lastKnownRevisionDate);
         await cipherRepository.Received(1).ReplaceAsync(cipher, collectionIds);
+    }
+
+    [Theory]
+    [BitAutoData("Correct Time")]
+    public async Task ShareAsync_FailReplace_Throws(string revisionDateString,
+        SutProvider<CipherService> sutProvider, Cipher cipher, Organization organization, List<Guid> collectionIds)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
+        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(false);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [Guid.NewGuid().ToString()] = new CipherAttachment.MetaData { }
+        });
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
+            lastKnownRevisionDate));
+        Assert.Contains("Unable to save", exception.Message);
+    }
+
+    [Theory]
+    [BitAutoData("Correct Time")]
+    public async Task ShareAsync_HasV0Attachments_ReplaceAttachmentMetadataWithNewOneBeforeSavingCipher(string revisionDateString,
+        SutProvider<CipherService> sutProvider, Cipher cipher, Organization organization, List<Guid> collectionIds)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var originalCipher = CoreHelpers.CloneObject(cipher);
+        var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
+        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        var pushNotificationService = sutProvider.GetDependency<IPushNotificationService>();
+
+        var v0AttachmentId = Guid.NewGuid().ToString();
+        var anotherAttachmentId = Guid.NewGuid().ToString();
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [v0AttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted"
+            },
+            [anotherAttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = anotherAttachmentId,
+                Key = "AwesomeKey",
+                FileName = "AnotherFilename",
+                ContainerName = "attachments",
+                Size = 300,
+                Validated = true
+            }
+        });
+
+        originalCipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [v0AttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey",
+                    Key = "NewAttachmentKey"
+                }
+            },
+            [anotherAttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = anotherAttachmentId,
+                Key = "AwesomeKey",
+                FileName = "AnotherFilename",
+                ContainerName = "attachments",
+                Size = 300,
+                Validated = true
+            }
+        });
+
+        await sutProvider.Sut.ShareAsync(originalCipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
+            lastKnownRevisionDate);
+
+        await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
+                c.GetAttachments()[v0AttachmentId].Key == "NewAttachmentKey"
+                &&
+                c.GetAttachments()[v0AttachmentId].FileName == "AFileNameRe-EncryptedWithOrgKey")
+            , collectionIds);
+
+        await pushNotificationService.Received(1).PushSyncCipherUpdateAsync(cipher, collectionIds);
+    }
+
+    [Theory]
+    [BitAutoData("Correct Time")]
+    public async Task ShareAsync_HasV0Attachments_StartSharingThoseAttachments(string revisionDateString,
+        SutProvider<CipherService> sutProvider, Cipher cipher, Organization organization, List<Guid> collectionIds)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var originalCipher = CoreHelpers.CloneObject(cipher);
+        var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
+        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
+
+        var v0AttachmentId = Guid.NewGuid().ToString();
+        var anotherAttachmentId = Guid.NewGuid().ToString();
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [v0AttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey",
+                    Key = "NewAttachmentKey"
+                }
+            },
+            [anotherAttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = anotherAttachmentId,
+                Key = "AwesomeKey",
+                FileName = "AnotherFilename",
+                ContainerName = "attachments",
+                Size = 300,
+                Validated = true
+            }
+        });
+
+        originalCipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [v0AttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey",
+                    Key = "NewAttachmentKey"
+                }
+            },
+            [anotherAttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = anotherAttachmentId,
+                Key = "AwesomeKey",
+                FileName = "AnotherFilename",
+                ContainerName = "attachments",
+                Size = 300,
+                Validated = true
+            }
+        });
+
+        await sutProvider.Sut.ShareAsync(originalCipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
+            lastKnownRevisionDate);
+
+        await attachmentStorageService.Received().StartShareAttachmentAsync(cipher.Id,
+            organization.Id,
+            Arg.Is<CipherAttachment.MetaData>(m => m.Key == "NewAttachmentKey" && m.FileName == "AFileNameRe-EncryptedWithOrgKey"));
+
+        await attachmentStorageService.Received(0).StartShareAttachmentAsync(cipher.Id,
+            organization.Id,
+            Arg.Is<CipherAttachment.MetaData>(m => m.Key == "AwesomeKey" && m.FileName == "AnotherFilename"));
+
+        await attachmentStorageService.Received().CleanupAsync(cipher.Id);
+    }
+
+    [Theory]
+    [BitAutoData("Correct Time")]
+    public async Task ShareAsync_HasV0Attachments_StartShareThrows_PerformsRollback_Rethrows(string revisionDateString,
+        SutProvider<CipherService> sutProvider, Cipher cipher, Organization organization, List<Guid> collectionIds)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var originalCipher = CoreHelpers.CloneObject(cipher);
+        var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
+        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
+        var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
+            Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
+            {
+                new CollectionCipher
+                {
+                    CipherId = cipher.Id,
+                    CollectionId = collectionIds[0]
+                },
+                new CollectionCipher
+                {
+                    CipherId = cipher.Id,
+                    CollectionId = Guid.NewGuid()
+                }
+            }));
+
+        var v0AttachmentId = Guid.NewGuid().ToString();
+        var anotherAttachmentId = Guid.NewGuid().ToString();
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [v0AttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey",
+                    Key = "NewAttachmentKey"
+                }
+            },
+            [anotherAttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = anotherAttachmentId,
+                Key = "AwesomeKey",
+                FileName = "AnotherFilename",
+                ContainerName = "attachments",
+                Size = 300,
+                Validated = true
+            }
+        });
+
+        originalCipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [v0AttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey",
+                    Key = "NewAttachmentKey"
+                }
+            },
+            [anotherAttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = anotherAttachmentId,
+                Key = "AwesomeKey",
+                FileName = "AnotherFilename",
+                ContainerName = "attachments",
+                Size = 300,
+                Validated = true
+            }
+        });
+
+        attachmentStorageService.StartShareAttachmentAsync(cipher.Id,
+            organization.Id,
+            Arg.Is<CipherAttachment.MetaData>(m => m.AttachmentId == v0AttachmentId))
+            .Returns(Task.FromException(new InvalidOperationException("ex from StartShareAttachmentAsync")));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
+            lastKnownRevisionDate));
+        Assert.Contains("ex from StartShareAttachmentAsync", exception.Message);
+
+        await collectionCipherRepository.Received().UpdateCollectionsAsync(cipher.Id, cipher.UserId.Value,
+            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]));
+
+        await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
+                c.GetAttachments()[v0AttachmentId].Key == null
+                &&
+                c.GetAttachments()[v0AttachmentId].FileName == "AFileNameEncrypted"
+                &&
+                c.GetAttachments()[v0AttachmentId].TempMetadata == null)
+        );
+    }
+
+    [Theory]
+    [BitAutoData("Correct Time")]
+    public async Task ShareAsync_HasSeveralV0Attachments_StartShareThrowsOnSecondOne_PerformsRollback_Rethrows(string revisionDateString,
+        SutProvider<CipherService> sutProvider, Cipher cipher, Organization organization, List<Guid> collectionIds)
+    {
+        var lastKnownRevisionDate = string.IsNullOrEmpty(revisionDateString) ? (DateTime?)null : cipher.RevisionDate;
+        var originalCipher = CoreHelpers.CloneObject(cipher);
+        var cipherRepository = sutProvider.GetDependency<ICipherRepository>();
+        cipherRepository.ReplaceAsync(cipher, collectionIds).Returns(true);
+        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
+        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
+        var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
+            Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
+            {
+                new CollectionCipher
+                {
+                    CipherId = cipher.Id,
+                    CollectionId = collectionIds[0]
+                },
+                new CollectionCipher
+                {
+                    CipherId = cipher.Id,
+                    CollectionId = Guid.NewGuid()
+                }
+            }));
+
+        var v0AttachmentId1 = Guid.NewGuid().ToString();
+        var v0AttachmentId2 = Guid.NewGuid().ToString();
+        var anotherAttachmentId = Guid.NewGuid().ToString();
+        cipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [v0AttachmentId1] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId1,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId1,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey",
+                    Key = "NewAttachmentKey"
+                }
+            },
+            [v0AttachmentId2] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId2,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted2",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId2,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey2",
+                    Key = "NewAttachmentKey2"
+                }
+            },
+            [anotherAttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = anotherAttachmentId,
+                Key = "AwesomeKey",
+                FileName = "AnotherFilename",
+                ContainerName = "attachments",
+                Size = 300,
+                Validated = true
+            }
+        });
+
+        originalCipher.SetAttachments(new Dictionary<string, CipherAttachment.MetaData>
+        {
+            [v0AttachmentId1] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId1,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId1,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey",
+                    Key = "NewAttachmentKey"
+                }
+            },
+            [v0AttachmentId2] = new CipherAttachment.MetaData
+            {
+                AttachmentId = v0AttachmentId2,
+                ContainerName = "attachments",
+                FileName = "AFileNameEncrypted2",
+                TempMetadata = new CipherAttachment.MetaData
+                {
+                    AttachmentId = v0AttachmentId2,
+                    ContainerName = "attachments",
+                    FileName = "AFileNameRe-EncryptedWithOrgKey2",
+                    Key = "NewAttachmentKey2"
+                }
+            },
+            [anotherAttachmentId] = new CipherAttachment.MetaData
+            {
+                AttachmentId = anotherAttachmentId,
+                Key = "AwesomeKey",
+                FileName = "AnotherFilename",
+                ContainerName = "attachments",
+                Size = 300,
+                Validated = true
+            }
+        });
+
+        attachmentStorageService.StartShareAttachmentAsync(cipher.Id,
+            organization.Id,
+            Arg.Is<CipherAttachment.MetaData>(m => m.AttachmentId == v0AttachmentId2))
+            .Returns(Task.FromException(new InvalidOperationException("ex from StartShareAttachmentAsync")));
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => sutProvider.Sut.ShareAsync(cipher, cipher, organization.Id, collectionIds, cipher.UserId.Value,
+            lastKnownRevisionDate));
+        Assert.Contains("ex from StartShareAttachmentAsync", exception.Message);
+
+        await collectionCipherRepository.Received().UpdateCollectionsAsync(cipher.Id, cipher.UserId.Value,
+            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]));
+
+        await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
+                c.GetAttachments()[v0AttachmentId1].Key == null
+                &&
+                c.GetAttachments()[v0AttachmentId1].FileName == "AFileNameEncrypted"
+                &&
+                c.GetAttachments()[v0AttachmentId1].TempMetadata == null)
+        );
+
+        await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
+                c.GetAttachments()[v0AttachmentId2].Key == null
+                &&
+                c.GetAttachments()[v0AttachmentId2].FileName == "AFileNameEncrypted2"
+                &&
+                c.GetAttachments()[v0AttachmentId2].TempMetadata == null)
+        );
+
+        await userRepository.UpdateStorageAsync(cipher.UserId.Value);
+        await organizationRepository.UpdateStorageAsync(organization.Id);
+
+        await attachmentStorageService.Received().RollbackShareAttachmentAsync(cipher.Id, organization.Id,
+            Arg.Is<CipherAttachment.MetaData>(m => m.AttachmentId == v0AttachmentId1), Arg.Any<string>());
+
+        await attachmentStorageService.Received().CleanupAsync(cipher.Id);
     }
 
     [Theory]
@@ -167,27 +602,81 @@ public class CipherServiceTests
 
     [Theory]
     [BitAutoData]
-    public async Task RestoreManyAsync_UpdatesCiphers(IEnumerable<CipherDetails> ciphers,
+    public async Task RestoreManyAsync_UpdatesCiphers(ICollection<CipherDetails> ciphers,
         SutProvider<CipherService> sutProvider)
     {
+        var cipherIds = ciphers.Select(c => c.Id).ToArray();
         var restoringUserId = ciphers.First().UserId.Value;
         var previousRevisionDate = DateTime.UtcNow;
         foreach (var cipher in ciphers)
         {
+            cipher.Edit = true;
             cipher.RevisionDate = previousRevisionDate;
         }
 
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(restoringUserId).Returns(ciphers);
         var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
-        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId)
-            .Returns(revisionDate);
+        sutProvider.GetDependency<ICipherRepository>().RestoreAsync(Arg.Any<IEnumerable<Guid>>(), restoringUserId).Returns(revisionDate);
 
-        await sutProvider.Sut.RestoreManyAsync(ciphers, restoringUserId);
+        await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
 
         foreach (var cipher in ciphers)
         {
             Assert.Null(cipher.DeletedDate);
             Assert.Equal(revisionDate, cipher.RevisionDate);
         }
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RestoreManyAsync_WithOrgAdmin_UpdatesCiphers(Guid organizationId, ICollection<CipherOrganizationDetails> ciphers,
+        SutProvider<CipherService> sutProvider)
+    {
+        var cipherIds = ciphers.Select(c => c.Id).ToArray();
+        var restoringUserId = ciphers.First().UserId.Value;
+        var previousRevisionDate = DateTime.UtcNow;
+        foreach (var cipher in ciphers)
+        {
+            cipher.RevisionDate = previousRevisionDate;
+            cipher.OrganizationId = organizationId;
+        }
+
+        sutProvider.GetDependency<ICipherRepository>().GetManyOrganizationDetailsByOrganizationIdAsync(organizationId).Returns(ciphers);
+        var revisionDate = previousRevisionDate + TimeSpan.FromMinutes(1);
+        sutProvider.GetDependency<ICipherRepository>().RestoreByIdsOrganizationIdAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.All(i => cipherIds.Contains(i))), organizationId).Returns(revisionDate);
+
+        await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId, organizationId, true);
+
+        foreach (var cipher in ciphers)
+        {
+            Assert.Null(cipher.DeletedDate);
+            Assert.Equal(revisionDate, cipher.RevisionDate);
+        }
+
+        await sutProvider.GetDependency<IEventService>().Received(1).LogCipherEventsAsync(Arg.Is<IEnumerable<Tuple<Cipher, EventType, DateTime?>>>(events => events.All(e => cipherIds.Contains(e.Item1.Id))));
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncCiphersAsync(restoringUserId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RestoreManyAsync_WithEmptyCipherIdsArray_DoesNothing(Guid restoringUserId,
+        SutProvider<CipherService> sutProvider)
+    {
+        var cipherIds = Array.Empty<Guid>();
+
+        await sutProvider.Sut.RestoreManyAsync(cipherIds, restoringUserId);
+
+        await AssertNoActionsAsync(sutProvider);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RestoreManyAsync_WithNullCipherIdsArray_DoesNothing(Guid restoringUserId,
+        SutProvider<CipherService> sutProvider)
+    {
+        await sutProvider.Sut.RestoreManyAsync(null, restoringUserId);
+
+        await AssertNoActionsAsync(sutProvider);
     }
 
     [Theory, BitAutoData]
@@ -232,5 +721,16 @@ public class CipherServiceTests
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
             Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
+    }
+
+    private async Task AssertNoActionsAsync(SutProvider<CipherService> sutProvider)
+    {
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetManyOrganizationDetailsByOrganizationIdAsync(default);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreByIdsOrganizationIdAsync(default, default);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreByIdsOrganizationIdAsync(default, default);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().RestoreAsync(default, default);
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs().LogCipherEventsAsync(default);
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs().PushSyncCiphersAsync(default);
     }
 }

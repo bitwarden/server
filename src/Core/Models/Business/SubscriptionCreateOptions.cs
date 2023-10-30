@@ -1,11 +1,13 @@
 ﻿using Bit.Core.Entities;
 using Stripe;
+using Plan = Bit.Core.Models.StaticStore.Plan;
 
 namespace Bit.Core.Models.Business;
 
 public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOptions
 {
-    public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats, int additionalStorageGb, bool premiumAccessAddon)
+    public OrganizationSubscriptionOptionsBase(Organization org, StaticStore.Plan plan, TaxInfo taxInfo, int additionalSeats,
+        int additionalStorageGb, bool premiumAccessAddon, int additionalSmSeats, int additionalServiceAccounts)
     {
         Items = new List<SubscriptionItemOptions>();
         Metadata = new Dictionary<string, string>
@@ -13,45 +15,79 @@ public class OrganizationSubscriptionOptionsBase : Stripe.SubscriptionCreateOpti
             [org.GatewayIdField()] = org.Id.ToString()
         };
 
-        if (plan.StripePlanId != null)
+        AddPlanIdToSubscription(plan);
+
+        if (org.UseSecretsManager)
         {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.StripePlanId,
-                Quantity = 1
-            });
+            AddSecretsManagerSeat(plan, additionalSmSeats);
+            AddServiceAccount(plan, additionalServiceAccounts);
         }
 
-        if (additionalSeats > 0 && plan.StripeSeatPlanId != null)
-        {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.StripeSeatPlanId,
-                Quantity = additionalSeats
-            });
-        }
-
-        if (additionalStorageGb > 0)
-        {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.StripeStoragePlanId,
-                Quantity = additionalStorageGb
-            });
-        }
-
-        if (premiumAccessAddon && plan.StripePremiumAccessPlanId != null)
-        {
-            Items.Add(new SubscriptionItemOptions
-            {
-                Plan = plan.StripePremiumAccessPlanId,
-                Quantity = 1
-            });
-        }
+        AddPremiumAccessAddon(plan, premiumAccessAddon);
+        AddPasswordManagerSeat(plan, additionalSeats);
+        AddAdditionalStorage(plan, additionalStorageGb);
 
         if (!string.IsNullOrWhiteSpace(taxInfo?.StripeTaxRateId))
         {
             DefaultTaxRates = new List<string> { taxInfo.StripeTaxRateId };
+        }
+    }
+
+    private void AddSecretsManagerSeat(Plan plan, int additionalSmSeats)
+    {
+        if (additionalSmSeats > 0 && plan.SecretsManager.StripeSeatPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions
+            { Plan = plan.SecretsManager.StripeSeatPlanId, Quantity = additionalSmSeats });
+        }
+    }
+
+    private void AddPasswordManagerSeat(Plan plan, int additionalSeats)
+    {
+        if (additionalSeats > 0 && plan.PasswordManager.StripeSeatPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions
+            { Plan = plan.PasswordManager.StripeSeatPlanId, Quantity = additionalSeats });
+        }
+    }
+
+    private void AddServiceAccount(StaticStore.Plan plan, int additionalServiceAccounts)
+    {
+        if (additionalServiceAccounts > 0 && plan.SecretsManager.StripeServiceAccountPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions
+            {
+                Plan = plan.SecretsManager.StripeServiceAccountPlanId,
+                Quantity = additionalServiceAccounts
+            });
+        }
+    }
+
+    private void AddAdditionalStorage(StaticStore.Plan plan, int additionalStorageGb)
+    {
+        if (additionalStorageGb > 0)
+        {
+            Items.Add(new SubscriptionItemOptions
+            {
+                Plan = plan.PasswordManager.StripeStoragePlanId,
+                Quantity = additionalStorageGb
+            });
+        }
+    }
+
+    private void AddPremiumAccessAddon(StaticStore.Plan plan, bool premiumAccessAddon)
+    {
+        if (premiumAccessAddon && plan.PasswordManager.StripePremiumAccessPlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions { Plan = plan.PasswordManager.StripePremiumAccessPlanId, Quantity = 1 });
+        }
+    }
+
+    private void AddPlanIdToSubscription(StaticStore.Plan plan)
+    {
+        if (plan.PasswordManager.StripePlanId != null)
+        {
+            Items.Add(new SubscriptionItemOptions { Plan = plan.PasswordManager.StripePlanId, Quantity = 1 });
         }
     }
 }
@@ -60,9 +96,10 @@ public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionO
 {
     public OrganizationPurchaseSubscriptionOptions(
         Organization org, StaticStore.Plan plan,
-        TaxInfo taxInfo, int additionalSeats = 0,
-        int additionalStorageGb = 0, bool premiumAccessAddon = false) :
-        base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+        TaxInfo taxInfo, int additionalSeats,
+        int additionalStorageGb, bool premiumAccessAddon,
+        int additionalSmSeats, int additionalServiceAccounts) :
+        base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon, additionalSmSeats, additionalServiceAccounts)
     {
         OffSession = true;
         TrialPeriodDays = plan.TrialPeriodDays;
@@ -73,10 +110,10 @@ public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOp
 {
     public OrganizationUpgradeSubscriptionOptions(
         string customerId, Organization org,
-        StaticStore.Plan plan, TaxInfo taxInfo,
-        int additionalSeats = 0, int additionalStorageGb = 0,
-        bool premiumAccessAddon = false) :
-        base(org, plan, taxInfo, additionalSeats, additionalStorageGb, premiumAccessAddon)
+        StaticStore.Plan plan, OrganizationUpgrade upgrade) :
+        base(org, plan, upgrade.TaxInfo, upgrade.AdditionalSeats, upgrade.AdditionalStorageGb,
+        upgrade.PremiumAccessAddon, upgrade.AdditionalSmSeats.GetValueOrDefault(),
+        upgrade.AdditionalServiceAccounts.GetValueOrDefault())
     {
         Customer = customerId;
     }

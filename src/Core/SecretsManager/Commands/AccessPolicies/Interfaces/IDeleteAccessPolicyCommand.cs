@@ -2,5 +2,5 @@
 
 public interface IDeleteAccessPolicyCommand
 {
-    Task DeleteAsync(Guid id, Guid userId);
+    Task DeleteAsync(Guid id);
 }
