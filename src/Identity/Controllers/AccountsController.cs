@@ -82,10 +82,8 @@ public class AccountsController : Controller
     }
 
     [HttpPost("webauthn/assertion-options")]
-    [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
     [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
-    // TODO: Add tests
-    public async Task<WebAuthnLoginAssertionOptionsResponseModel> PostWebAuthnLoginAssertionOptions(WebAuthnLoginAssertionOptionsRequestModel model)
+    public async Task<WebAuthnLoginAssertionOptionsResponseModel> PostWebAuthnLoginAssertionOptions()
     {
         var options = await _userService.StartWebAuthnLoginAssertionAsync();
 
