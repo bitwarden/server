@@ -55,6 +55,10 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
             case not null when requirement.Name == nameof(CollectionOperations.ReadAll):
                 await CanReadAllAsync(context, requirement, org);
                 break;
+
+            case not null when requirement.Name == nameof(CollectionOperations.ReadAllWithAccess):
+                await CanReadAllWithAccessAsync(context, requirement, org);
+                break;
         }
     }
 
@@ -70,6 +74,36 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
                   org.Permissions.EditAnyCollection ||
                   org.Permissions.DeleteAnyCollection ||
                   org.Permissions.AccessImportExport)
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+        else
+        {
+            // Check if acting user is a provider user for the target organization
+            if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+
+        // Acting user is neither a member of the target organization or a provider user, fail
+        context.Fail();
+    }
+
+    private async Task CanReadAllWithAccessAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
+        CurrentContextOrganization org)
+    {
+        if (org != null)
+        {
+            // Acting user is a member of the target organization, check permissions
+            if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
+                org.Permissions.ManageGroups ||
+                org.Permissions.ManageUsers ||
+                org.Permissions.EditAnyCollection ||
+                org.Permissions.DeleteAnyCollection)
             {
                 context.Succeed(requirement);
                 return;

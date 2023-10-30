@@ -521,7 +521,7 @@ public class CollectionsController : Controller
             .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
 
         var readAllAuthorized =
-            (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAll(orgId))).Succeeded;
+            (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAllWithAccess(orgId))).Succeeded;
         if (readAllAuthorized)
         {
             // The user can view all collections, but they may not always be assigned to all of them

@@ -100,7 +100,7 @@ public class CollectionsControllerTests
                 Arg.Any<object>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
                     requirements.Cast<CollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(CollectionOperations.ReadAll)
+                        operation.Name == nameof(CollectionOperations.ReadAllWithAccess)
                         && operation.OrganizationId == organization.Id)))
             .Returns(AuthorizationResult.Success());
 
@@ -121,7 +121,7 @@ public class CollectionsControllerTests
                 Arg.Any<object>(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(requirements =>
                     requirements.Cast<CollectionOperationRequirement>().All(operation =>
-                        operation.Name == nameof(CollectionOperations.ReadAll)
+                        operation.Name == nameof(CollectionOperations.ReadAllWithAccess)
                         && operation.OrganizationId == organization.Id)))
             .Returns(AuthorizationResult.Failed());
 
