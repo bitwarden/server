@@ -17,7 +17,6 @@ public class GroupsControllerTests : IClassFixture<ScimApplicationFactory>, IAsy
     public GroupsControllerTests(ScimApplicationFactory factory)
     {
         _factory = factory;
-        _factory.DatabaseName = "test_database_groups";
     }
 
     public Task InitializeAsync()
