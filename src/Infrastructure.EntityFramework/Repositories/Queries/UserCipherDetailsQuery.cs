@@ -18,11 +18,11 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
     public virtual IQueryable<CipherDetails> Run(DatabaseContext dbContext)
     {
         return _useFlexibleCollections
-            ? Run_V2(dbContext)
-            : Run_Legacy(dbContext);
+            ? Run_VNext(dbContext)
+            : Run_VCurrent(dbContext);
     }
 
-    private IQueryable<CipherDetails> Run_Legacy(DatabaseContext dbContext)
+    private IQueryable<CipherDetails> Run_VCurrent(DatabaseContext dbContext)
     {
         var query = from c in dbContext.Ciphers
 
@@ -88,7 +88,7 @@ public class UserCipherDetailsQuery : IQuery<CipherDetails>
         return union;
     }
 
-    private IQueryable<CipherDetails> Run_V2(DatabaseContext dbContext)
+    private IQueryable<CipherDetails> Run_VNext(DatabaseContext dbContext)
     {
         var query = from c in dbContext.Ciphers
 
