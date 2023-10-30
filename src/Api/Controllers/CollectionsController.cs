@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.Context;
@@ -520,7 +521,7 @@ public class CollectionsController : Controller
             .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
 
         var readAllAuthorized =
-            (await _authorizationService.AuthorizeAsync(User, null, CollectionOperations.ReadAll(orgId))).Succeeded;
+            (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAll(orgId))).Succeeded;
         if (readAllAuthorized)
         {
             // The user can view all collections, but they may not always be assigned to all of them
@@ -547,7 +548,7 @@ public class CollectionsController : Controller
     {
         IEnumerable<Collection> orgCollections;
 
-        var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, null, CollectionOperations.ReadAll(orgId))).Succeeded;
+        var readAllAuthorized = (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadAll(orgId))).Succeeded;
         if (readAllAuthorized)
         {
             orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);

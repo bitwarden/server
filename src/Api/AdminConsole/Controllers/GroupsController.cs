@@ -1,6 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Models.Request;
 using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.Groups;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
@@ -206,7 +207,7 @@ public class GroupsController : Controller
     private async Task<ListResponseModel<GroupDetailsResponseModel>> Get_vNext(Guid orgId)
     {
         var authorized =
-            (await _authorizationService.AuthorizeAsync(User, null, GroupOperations.ReadAll(orgId))).Succeeded;
+            (await _authorizationService.AuthorizeAsync(User, GroupOperations.ReadAll(orgId))).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();

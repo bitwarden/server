@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Utilities;
 using Bit.Api.Vault.AuthorizationHandlers.OrganizationUsers;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -93,7 +94,7 @@ public class OrganizationUsersController : Controller
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> Get(Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
         var authorized = UseFlexibleCollections
-            ? (await _authorizationService.AuthorizeAsync(User, null, OrganizationUserOperations.ReadAll(orgId))).Succeeded
+            ? (await _authorizationService.AuthorizeAsync(User, OrganizationUserOperations.ReadAll(orgId))).Succeeded
             : await _currentContext.ViewAllCollections(orgId) ||
               await _currentContext.ViewAssignedCollections(orgId) ||
               await _currentContext.ManageGroups(orgId) ||
