@@ -77,7 +77,13 @@ public class AccountsController : Controller
         ISendService sendService,
         ICaptchaValidationService captchaValidationService,
         IPolicyService policyService,
-        IRotateUserKeyCommand rotateUserKeyCommand)
+        IRotateUserKeyCommand rotateUserKeyCommand,
+        IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
+        IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
+        IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>> sendValidator,
+        IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>> emergencyAccessValidator,
+        IRotationValidator<IEnumerable<AccountRecoveryWithIdRequestModel>, IEnumerable<OrganizationUser>> accountRecoveryValidator
+    )
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -93,6 +99,11 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
         _policyService = policyService;
         _rotateUserKeyCommand = rotateUserKeyCommand;
+        _cipherValidator = cipherValidator;
+        _folderValidator = folderValidator;
+        _sendValidator = sendValidator;
+        _emergencyAccessValidator = emergencyAccessValidator;
+        _accountRecoveryValidator = accountRecoveryValidator;
     }
 
     #region DEPRECATED (Moved to Identity Service)
