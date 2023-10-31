@@ -41,6 +41,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.PlanType = planType;
+        organization.Seats = 400;
         organization.SmSeats = 10;
         organization.MaxAutoscaleSmSeats = 20;
         organization.SmServiceAccounts = 200;
