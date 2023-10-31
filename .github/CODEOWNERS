@@ -42,3 +42,4 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 
 # Multiple Owners
 **/packages.lock.json
+Directory.Build.props
