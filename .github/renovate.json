@@ -100,7 +100,7 @@
     },
     {
       "matchPackageNames": ["CommandDotNet", "dbup-sqlserver", "YamlDotNet"],
-      "description": "Devops owned dependencies",
+      "description": "DevOps owned dependencies",
       "reviewers": ["team:team-devops"]
     },
     {
@@ -124,7 +124,7 @@
         "Npgsql.EntityFrameworkCore.PostgreSQL",
         "Pomelo.EntityFrameworkCore.MySql"
       ],
-      "description": "Secrets Manager owned dependencies",
+      "description": "SM owned dependencies",
       "reviewers": ["team:team-secrets-manager-dev"]
     },
     {
