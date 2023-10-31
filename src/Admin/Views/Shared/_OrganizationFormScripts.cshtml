@@ -1,3 +1,5 @@
+@inject IWebHostEnvironment HostingEnvironment
+@using Bit.Admin.Utilities
 @model OrganizationEditModel
 
 <script>
@@ -15,10 +17,11 @@
                 return;
             }
             if (gateway.value === '@((byte)GatewayType.Stripe)') {
-                window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
+                const url = `@(HostingEnvironment.GetStripeUrl())/customers/${customerId.value}/`;
+                window.open(url, '_blank');
             } else if (gateway.value === '@((byte)GatewayType.Braintree)') {
-                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/'
-                    + customerId.value, '_blank');
+                const url = `@(HostingEnvironment.GetBraintreeMerchantUrl())/@Model.BraintreeMerchantId/${customerId.value}`;
+                window.open(url, '_blank');
             }
         });
         document.getElementById('gateway-subscription-link')?.addEventListener('click', () => {
@@ -28,10 +31,11 @@
                 return;
             }
             if (gateway.value === '@((byte)GatewayType.Stripe)') {
-                window.open('https://dashboard.stripe.com/subscriptions/' + subId.value, '_blank');
+                const url = `@(HostingEnvironment.GetStripeUrl())/subscriptions/${subId.value}/`;
+                window.open(url, '_blank');
             } else if (gateway.value === '@((byte)GatewayType.Braintree)') {
-                window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
-                    'subscriptions/' + subId.value, '_blank');
+                const url = `@(HostingEnvironment.GetBraintreeMerchantUrl())/@Model.BraintreeMerchantId/subscriptions/${subId.value}`;
+                window.open(url, '_blank');
             }
         });
         document.getElementById('@(nameof(Model.UseSecretsManager))').addEventListener('change', (event) => {
