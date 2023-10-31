@@ -1,5 +1,6 @@
 using Bit.Api.Auth;
 using Bit.Api.Tools.Models.Request;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Repositories;
@@ -18,14 +19,14 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
         _sendRepository = sendRepository;
     }
 
-    public async Task<IEnumerable<Send>> ValidateAsync(Guid userId, IEnumerable<SendWithIdRequestModel> sends)
+    public async Task<IEnumerable<Send>> ValidateAsync(User user, IEnumerable<SendWithIdRequestModel> sends)
     {
         if (!sends.Any())
         {
             return null;
         }
 
-        var existingSends = await _sendRepository.GetManyByUserIdAsync(userId);
+        var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
         var result = new List<Send>();
 
         foreach (var existing in existingSends)

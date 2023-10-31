@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Vault;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
@@ -15,24 +16,24 @@ namespace Bit.Api.Test.Vault.Validators;
 public class CipherRotationValidatorTests
 {
     [Theory, BitAutoData]
-    public async Task ValidateAsync_MissingCipher_Throws(SutProvider<CipherRotationValidator> sutProvider, Guid userId, IEnumerable<CipherWithIdRequestModel> ciphers)
+    public async Task ValidateAsync_MissingCipher_Throws(SutProvider<CipherRotationValidator> sutProvider, User user, IEnumerable<CipherWithIdRequestModel> ciphers)
     {
         var userCiphers = ciphers.Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type }).ToList();
         userCiphers.Add(new CipherDetails { Id = Guid.NewGuid(), Type = Core.Vault.Enums.CipherType.Login });
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(userId).Returns(userCiphers);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id).Returns(userCiphers);
 
 
-        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(userId, ciphers));
+        await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, ciphers));
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_CipherDoesNotBelongToUser_NotIncluded(SutProvider<CipherRotationValidator> sutProvider, Guid userId, IEnumerable<CipherWithIdRequestModel> ciphers)
+    public async Task ValidateAsync_CipherDoesNotBelongToUser_NotIncluded(SutProvider<CipherRotationValidator> sutProvider, User user, IEnumerable<CipherWithIdRequestModel> ciphers)
     {
         var userCiphers = ciphers.Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type }).ToList();
         userCiphers.RemoveAt(0);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(userId).Returns(userCiphers);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id).Returns(userCiphers);
 
-        var result = await sutProvider.Sut.ValidateAsync(userId, ciphers);
+        var result = await sutProvider.Sut.ValidateAsync(user, ciphers);
 
         Assert.DoesNotContain(result, c => c.Id == ciphers.First().Id);
     }

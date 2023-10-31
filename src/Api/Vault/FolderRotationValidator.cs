@@ -1,6 +1,7 @@
 ﻿
 using Bit.Api.Auth;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
@@ -16,14 +17,14 @@ public class FolderRotationValidator : IRotationValidator<IEnumerable<FolderWith
         _folderRepository = folderRepository;
     }
 
-    public async Task<IEnumerable<Folder>> ValidateAsync(Guid userId, IEnumerable<FolderWithIdRequestModel> folders)
+    public async Task<IEnumerable<Folder>> ValidateAsync(User user, IEnumerable<FolderWithIdRequestModel> folders)
     {
         if (!folders.Any())
         {
             return null;
         }
 
-        var existingFolders = await _folderRepository.GetManyByUserIdAsync(userId);
+        var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
         var result = new List<Folder>();
 
         foreach (var existing in existingFolders)

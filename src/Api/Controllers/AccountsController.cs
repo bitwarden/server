@@ -391,11 +391,11 @@ public class AccountsController : Controller
             MasterPasswordHash = model.MasterPasswordHash,
             Key = model.Key,
             PrivateKey = model.PrivateKey,
-            Ciphers = await _cipherValidator.ValidateAsync(user.Id, model.Ciphers),
-            Folders = await _folderValidator.ValidateAsync(user.Id, model.Folders),
-            Sends = await _sendValidator.ValidateAsync(user.Id, model.Sends),
-            EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user.Id, model.EmergencyAccessKeys),
-            AccountRecoveryKeys = await _accountRecoveryValidator.ValidateAsync(user.Id, model.AccountRecoveryKeys),
+            Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
+            Folders = await _folderValidator.ValidateAsync(user, model.Folders),
+            Sends = await _sendValidator.ValidateAsync(user, model.Sends),
+            EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
+            AccountRecoveryKeys = await _accountRecoveryValidator.ValidateAsync(user, model.AccountRecoveryKeys),
         };
 
         var result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);

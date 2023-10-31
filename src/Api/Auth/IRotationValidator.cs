@@ -1,6 +1,7 @@
+using Bit.Core.Entities;
 
 namespace Bit.Api.Auth;
 public interface IRotationValidator<T, R>
 {
-    Task<R> ValidateAsync(Guid userId, T data);
+    Task<R> ValidateAsync(User user, T data);
 }

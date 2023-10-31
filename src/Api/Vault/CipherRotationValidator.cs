@@ -1,6 +1,7 @@
 ﻿
 using Bit.Api.Auth;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
@@ -16,14 +17,14 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
         _cipherRepository = cipherRepository;
     }
 
-    public async Task<IEnumerable<Cipher>> ValidateAsync(Guid userId, IEnumerable<CipherWithIdRequestModel> ciphers)
+    public async Task<IEnumerable<Cipher>> ValidateAsync(User user, IEnumerable<CipherWithIdRequestModel> ciphers)
     {
         if (!ciphers.Any())
         {
             return null;
         }
 
-        var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(userId);
+        var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
         var result = new List<Cipher>();
 
         foreach (var existing in existingCiphers)
