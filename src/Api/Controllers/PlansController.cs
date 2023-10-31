@@ -45,6 +45,10 @@ public class PlansController : Controller
                 {
                     plan.LegacyYear = null;
                 }
+                else if (plansUpgradeIsEnabled && plan.Type is <= PlanType.EnterpriseAnnually2020 and >= PlanType.TeamsMonthly2020)
+                {
+                    plan.LegacyYear = 2023;
+                }
                 return new PlanResponseModel(plan);
             });
         return new ListResponseModel<PlanResponseModel>(responses);
