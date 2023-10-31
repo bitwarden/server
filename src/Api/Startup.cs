@@ -7,6 +7,7 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using Bit.Api.AdminConsole;
 using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
@@ -149,11 +150,21 @@ public class Startup
         services.AddCoreLocalizationServices();
 
         // Rotation Validators
-        services.AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>, CipherRotationValidator>();
-        services.AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>, FolderRotationValidator>();
-        services.AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>>, SendRotationValidator>();
-        services.AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>, EmergencyAccessRotationValidator>();
-        services.AddScoped<IRotationValidator<IEnumerable<AccountRecoveryWithIdRequestModel>, IEnumerable<OrganizationUser>>, AccountRecoveryRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>,
+                CipherRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>,
+                FolderRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<SendWithIdRequestModel>, IEnumerable<Send>>,
+                SendRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
+                EmergencyAccessRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<AccountRecoveryWithIdRequestModel>, IEnumerable<OrganizationUser>>
+                , AccountRecoveryRotationValidator>();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();

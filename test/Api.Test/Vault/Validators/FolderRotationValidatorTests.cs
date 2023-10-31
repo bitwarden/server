@@ -1,5 +1,4 @@
-﻿
-using Bit.Api.Vault;
+﻿using Bit.Api.Vault;
 using Bit.Api.Vault.Models.Request;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
@@ -15,19 +14,22 @@ namespace Bit.Api.Test.Vault.Validators;
 [SutProviderCustomize]
 public class FolderRotationValidatorTests
 {
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_MissingFolder_Throws(SutProvider<FolderRotationValidator> sutProvider, User user, IEnumerable<FolderWithIdRequestModel> folders)
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_MissingFolder_Throws(SutProvider<FolderRotationValidator> sutProvider, User user,
+        IEnumerable<FolderWithIdRequestModel> folders)
     {
         var userFolders = folders.Select(f => f.ToFolder(new Folder())).ToList();
         userFolders.Add(new Folder { Id = Guid.NewGuid(), Name = "Missing Folder" });
         sutProvider.GetDependency<IFolderRepository>().GetManyByUserIdAsync(user.Id).Returns(userFolders);
 
-
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, folders));
     }
 
-    [Theory, BitAutoData]
-    public async Task ValidateAsync_FolderDoesNotBelongToUser_NotIncluded(SutProvider<FolderRotationValidator> sutProvider, User user, IEnumerable<FolderWithIdRequestModel> folders)
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_FolderDoesNotBelongToUser_NotReturned(
+        SutProvider<FolderRotationValidator> sutProvider, User user, IEnumerable<FolderWithIdRequestModel> folders)
     {
         var userFolders = folders.Select(f => f.ToFolder(new Folder())).ToList();
         userFolders.RemoveAt(0);
