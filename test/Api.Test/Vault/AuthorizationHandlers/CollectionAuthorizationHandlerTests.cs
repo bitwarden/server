@@ -201,14 +201,15 @@ public class CollectionAuthorizationHandlerTests
             new ClaimsPrincipal(),
             collections
         );
+        var orgId = collections.First().OrganizationId;
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization)null);
         sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.True(context.HasSucceeded);
-        await sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().ProviderUserForOrgAsync(Arg.Any<Guid>());
+        await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(orgId);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
