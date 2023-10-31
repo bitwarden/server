@@ -17,6 +17,12 @@ public class UserDecryptionOptions : ResponseModel
     public bool HasMasterPassword { get; set; }
 
     /// <summary>
+    /// Gets or sets the WebAuthn PRF decryption keys.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public WebAuthnPrfDecryptionOption? WebAuthnPrfOptions { get; set; }
+
+    /// <summary>
     /// Gets or sets information regarding this users trusted device decryption setup.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -27,6 +33,20 @@ public class UserDecryptionOptions : ResponseModel
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public KeyConnectorUserDecryptionOption? KeyConnectorOption { get; set; }
+}
+
+public class WebAuthnPrfDecryptionOption
+{
+    public string EncryptedPrivateKey { get; }
+    public string EncryptedUserKey { get; }
+
+    public WebAuthnPrfDecryptionOption(
+        string encryptedPrivateKey,
+        string encryptedUserKey)
+    {
+        EncryptedPrivateKey = encryptedPrivateKey;
+        EncryptedUserKey = encryptedUserKey;
+    }
 }
 
 public class TrustedDeviceUserDecryptionOption
