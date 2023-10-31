@@ -46,6 +46,7 @@ public static class FeatureFlagKeys
     public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string AutofillOverlay = "autofill-overlay";
+    public const string ItemShare = "item-share";
 
     public static List<string> GetAllKeys()
     {
