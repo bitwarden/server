@@ -19,6 +19,8 @@
     "npm",
     "nuget"
   ],
+  "commitMessagePrefix": "[deps]:",
+  "commitMessageTopic": "{{depName}}",
   "packageRules": [
     {
       "groupName": "dockerfile minor",
@@ -38,6 +40,7 @@
     {
       "matchPackageNames": ["DnsClient", "Quartz"],
       "description": "Admin Console owned dependencies",
+      "commitMessagePrefix": "[deps] AC:",
       "reviewers": ["team:team-admin-console-dev"]
     },
     {
@@ -66,6 +69,7 @@
         "YubicoDotNetClient"
       ],
       "description": "Auth owned dependencies",
+      "commitMessagePrefix": "[deps] Auth:",
       "reviewers": ["team:team-auth-dev"]
     },
     {
@@ -96,11 +100,13 @@
         "xunit.runner.visualstudio"
       ],
       "description": "Billing owned dependencies",
+      "commitMessagePrefix": "[deps] Billing:",
       "reviewers": ["team:team-billing-dev"]
     },
     {
       "matchPackageNames": ["CommandDotNet", "dbup-sqlserver", "YamlDotNet"],
       "description": "DevOps owned dependencies",
+      "commitMessagePrefix": "[deps] DevOps:",
       "reviewers": ["team:team-devops"]
     },
     {
@@ -110,6 +116,7 @@
         "Microsoft.Data.SqlClient"
       ],
       "description": "Platform owned dependencies",
+      "commitMessagePrefix": "[deps] Platform:",
       "reviewers": ["team:team-platform-dev"]
     },
     {
@@ -124,7 +131,8 @@
         "Npgsql.EntityFrameworkCore.PostgreSQL",
         "Pomelo.EntityFrameworkCore.MySql"
       ],
-      "description": "SM owned dependencies",
+      "description": "Secrets Manager owned dependencies",
+      "commitMessagePrefix": "[deps] SM:",
       "reviewers": ["team:team-secrets-manager-dev"]
     },
     {
@@ -146,6 +154,7 @@
         "SendGrid"
       ],
       "description": "Tools owned dependencies",
+      "commitMessagePrefix": "[deps] Tools:",
       "reviewers": ["team:team-tools-dev"]
     },
     {
@@ -160,6 +169,7 @@
         "AspNetCore.HealthChecks.Uris"
       ],
       "description": "Vault owned dependencies",
+      "commitMessagePrefix": "[deps] Vault:",
       "reviewers": ["team:team-vault-dev"]
     }
   ],
