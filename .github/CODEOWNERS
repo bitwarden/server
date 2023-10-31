@@ -39,3 +39,6 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/*stripe* @bitwarden/team-billing-dev
 **/*subscription* @bitwarden/team-billing-dev
 **/Billing @bitwarden/team-billing-dev
+
+# Multiple Owners
+**/packages.lock.json
