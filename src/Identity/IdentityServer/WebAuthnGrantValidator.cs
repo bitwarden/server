@@ -115,6 +115,10 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         return context.Result.Subject;
     }
 
+    protected override Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request) {
+        return Task.FromResult(new Tuple<bool, Organization>(false, null));
+    }
+
     protected override void SetTwoFactorResult(ExtensionGrantValidationContext context,
         Dictionary<string, object> customResponse)
     {

@@ -96,7 +96,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _distributedCache = distributedCache;
         _cacheEntryOptions = new DistributedCacheEntryOptions
         {
-            // This sets the time an item is cached to 15 minutes. This value is hard coded 
+            // This sets the time an item is cached to 15 minutes. This value is hard coded
             // to 15 because to it covers all time-out windows for both Authenticators and
             // Email TOTP.
             AbsoluteExpirationRelativeToNow = new TimeSpan(0, 15, 0)
@@ -334,7 +334,7 @@ public abstract class BaseRequestValidator<T> where T : class
     protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
     protected abstract ClaimsPrincipal GetSubject(T context);
 
-    private async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
+    protected virtual async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
     {
         if (request.GrantType == "client_credentials")
         {
