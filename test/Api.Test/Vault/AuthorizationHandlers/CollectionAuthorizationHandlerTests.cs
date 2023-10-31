@@ -143,7 +143,7 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_TargetCollectionsMultipleOrgs_Failure(
+    public async Task HandleRequirementAsync_TargetCollectionsMultipleOrgs_Exception(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         IList<Collection> collections)
     {
@@ -166,7 +166,7 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_MissingOrg_Failure(
+    public async Task HandleRequirementAsync_MissingOrg_NoSuccess(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
@@ -182,7 +182,7 @@ public class CollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, CollectionCustomization]
@@ -212,7 +212,7 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_MissingManageCollectionPermission_Failure(
+    public async Task CanManageCollectionAccessAsync_MissingManageCollectionPermission_NoSuccess(
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         ICollection<CollectionDetails> collectionDetails,
@@ -242,7 +242,7 @@ public class CollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
         sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().GetOrganization(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
             .GetManyByUserIdAsync(default);
