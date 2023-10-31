@@ -35,20 +35,12 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
         }
 
-        if (!_currentContext.UserId.HasValue)
+        if (!_currentContext.UserId.HasValue || requirement.OrganizationId == default)
         {
-            context.Fail();
             return;
         }
 
-        var targetOrganizationId = requirement.OrganizationId;
-        if (targetOrganizationId == default)
-        {
-            context.Fail();
-            return;
-        }
-
-        var org = _currentContext.GetOrganization(targetOrganizationId);
+        var org = _currentContext.GetOrganization(requirement.OrganizationId);
 
         switch (requirement)
         {
@@ -79,18 +71,12 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
                 return;
             }
         }
-        else
-        {
+
             // Check if acting user is a provider user for the target organization
             if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
             {
                 context.Succeed(requirement);
-                return;
             }
-        }
-
-        // Acting user is neither a member of the target organization or a provider user, fail
-        context.Fail();
     }
 
     private async Task CanReadAllWithAccessAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
@@ -109,17 +95,12 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
                 return;
             }
         }
-        else
-        {
+
             // Check if acting user is a provider user for the target organization
             if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
             {
                 context.Succeed(requirement);
-                return;
             }
-        }
 
-        // Acting user is neither a member of the target organization or a provider user, fail
-        context.Fail();
     }
 }

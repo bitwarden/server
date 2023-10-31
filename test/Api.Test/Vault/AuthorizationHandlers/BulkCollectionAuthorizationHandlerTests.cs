@@ -216,7 +216,7 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
         sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().GetOrganization(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
             .GetManyByUserIdAsync(default);

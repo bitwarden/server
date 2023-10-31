@@ -55,7 +55,7 @@ public class CollectionAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
-        Assert.True(expectedSuccess ? context.HasSucceeded : context.HasFailed);
+        Assert.Equal(expectedSuccess, context.HasSucceeded);
     }
 
     [Theory, BitAutoData]
@@ -95,7 +95,7 @@ public class CollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData]
@@ -114,6 +114,6 @@ public class CollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
     }
 }

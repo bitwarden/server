@@ -116,10 +116,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
             context.Succeed(requirement);
-            return;
         }
-
-        context.Fail();
     }
 
     private async Task CanReadAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
@@ -132,14 +129,10 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             return;
         }
 
-        var canManageCollections = await CanManageCollectionsAsync(targetCollections, org, requireManagePermission: false);
+        var canManageCollections = await HasCollectionAccessAsync(targetCollections, org, requireManagePermission: false);
         if (canManageCollections)
         {
             context.Succeed(requirement);
-        }
-        else
-        {
-            context.Fail();
         }
     }
 
@@ -163,14 +156,10 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             return;
         }
 
-        var canManageCollections = await CanManageCollectionsAsync(targetCollections, org, requireManagePermission: true);
+        var canManageCollections = await HasCollectionAccessAsync(targetCollections, org, requireManagePermission: true);
         if (canManageCollections)
         {
             context.Succeed(requirement);
-        }
-        else
-        {
-            context.Fail();
         }
     }
 
@@ -190,18 +179,14 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             return;
         }
 
-        var canManageCollections = await CanManageCollectionsAsync(targetCollections, org, requireManagePermission: true);
+        var canManageCollections = await HasCollectionAccessAsync(targetCollections, org, requireManagePermission: true);
         if (canManageCollections)
         {
             context.Succeed(requirement);
         }
-        else
-        {
-            context.Fail();
-        }
     }
 
-    private async Task<bool> CanManageCollectionsAsync(
+    private async Task<bool> HasCollectionAccessAsync(
         ICollection<Collection> targetCollections,
         CurrentContextOrganization org,
         bool requireManagePermission)
