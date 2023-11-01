@@ -58,6 +58,7 @@ public class OrganizationService : IOrganizationService
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IProviderRepository _providerRepository;
+    private readonly IFeatureService _featureService;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -87,7 +88,8 @@ public class OrganizationService : IOrganizationService
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
-        IProviderRepository providerRepository)
+        IProviderRepository providerRepository,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -117,6 +119,7 @@ public class OrganizationService : IOrganizationService
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _providerRepository = providerRepository;
+        _featureService = featureService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -428,6 +431,9 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
+        var flexibleCollectionsIsEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription..
@@ -465,6 +471,7 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
+            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled
         };
 
         if (signup.UseSecretsManager)
@@ -2106,7 +2113,7 @@ public class OrganizationService : IOrganizationService
 
     private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
     {
-        if (permissions == null || await _currentContext.OrganizationOwner(organizationId) || await _currentContext.OrganizationAdmin(organizationId))
+        if (permissions == null || await _currentContext.OrganizationAdmin(organizationId))
         {
             return true;
         }
@@ -2151,16 +2158,6 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.CreateNewCollections && !await _currentContext.CreateNewCollections(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.DeleteAnyCollection && !await _currentContext.DeleteAnyCollection(organizationId))
-        {
-            return false;
-        }
-
         if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
         {
             return false;
@@ -2177,6 +2174,22 @@ public class OrganizationService : IOrganizationService
         }
 
         if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
+        {
+            return false;
+        }
+
+        var org = _currentContext.GetOrganization(organizationId);
+        if (org == null)
+        {
+            return false;
+        }
+
+        if (permissions.CreateNewCollections && !org.Permissions.CreateNewCollections)
+        {
+            return false;
+        }
+
+        if (permissions.DeleteAnyCollection && !org.Permissions.DeleteAnyCollection)
         {
             return false;
         }
