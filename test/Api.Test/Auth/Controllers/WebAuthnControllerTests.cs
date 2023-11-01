@@ -155,8 +155,6 @@ public class WebAuthnControllerTests
         Assert.Contains("Passkeys cannot be created for your account. SSO login is required", exception.Message);
     }
 
-
-
     [Theory, BitAutoData]
     public async Task Delete_UserNotFound_ThrowsUnauthorizedAccessException(Guid credentialId, SecretVerificationRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
