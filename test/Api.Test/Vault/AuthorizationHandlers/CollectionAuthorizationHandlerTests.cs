@@ -185,31 +185,37 @@ public class CollectionAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
-    [Theory, CollectionCustomization]
-    [BitAutoData(CollectionOperationEnum.Create)]
-    [BitAutoData(CollectionOperationEnum.Delete)]
-    [BitAutoData(CollectionOperationEnum.ModifyAccess)]
+    [Theory, BitAutoData, CollectionCustomization]
     public async Task HandleRequirementAsync_Provider_Success(
-        CollectionOperationEnum requirementEnum,
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
-        var actingUserId = Guid.NewGuid();
+        var operationsToTest = new[]
+        {
+            CollectionOperations.Create, CollectionOperations.Delete, CollectionOperations.ModifyAccess
+        };
 
-        var context = new AuthorizationHandlerContext(
-            new[] { GetRequirementFromEnum(requirementEnum) },
-            new ClaimsPrincipal(),
-            collections
-        );
-        var orgId = collections.First().OrganizationId;
+        foreach (var op in operationsToTest)
+        {
+            var actingUserId = Guid.NewGuid();
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections
+            );
+            var orgId = collections.First().OrganizationId;
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization)null);
-        sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization)null);
+            sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
 
-        await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasSucceeded);
-        await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(orgId);
+            await sutProvider.Sut.HandleAsync(context);
+            Assert.True(context.HasSucceeded);
+            await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(orgId);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -247,23 +253,5 @@ public class CollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().GetOrganization(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
             .GetManyByUserIdAsync(default);
-    }
-
-    public enum CollectionOperationEnum
-    {
-        Create,
-        Delete,
-        ModifyAccess
-    }
-
-    private static CollectionOperationRequirement GetRequirementFromEnum(CollectionOperationEnum collectionOperationEnum)
-    {
-        return collectionOperationEnum switch
-        {
-            CollectionOperationEnum.Create => CollectionOperations.Create,
-            CollectionOperationEnum.Delete => CollectionOperations.Delete,
-            CollectionOperationEnum.ModifyAccess => CollectionOperations.ModifyAccess,
-            _ => throw new ArgumentOutOfRangeException(nameof(collectionOperationEnum), collectionOperationEnum, null)
-        };
     }
 }
