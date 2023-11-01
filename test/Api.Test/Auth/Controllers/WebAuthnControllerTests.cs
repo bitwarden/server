@@ -3,6 +3,7 @@ using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -22,7 +23,7 @@ public class WebAuthnControllerTests
     [Theory, BitAutoData]
     public async Task Get_UserNotFound_ThrowsUnauthorizedAccessException(SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange 
+        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
 
         // Act
@@ -35,7 +36,7 @@ public class WebAuthnControllerTests
     [Theory, BitAutoData]
     public async Task PostOptions_UserNotFound_ThrowsUnauthorizedAccessException(SecretVerificationRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange 
+        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
 
         // Act
@@ -60,9 +61,24 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PostOptions_RequireSsoPolicyApplicable_ThrowsBadRequestException(
+        SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso).ReturnsForAnyArgs(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostOptions(requestModel));
+        Assert.Contains("Passkeys cannot be created for your account. SSO login is required", exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task Post_UserNotFound_ThrowsUnauthorizedAccessException(WebAuthnCredentialRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange 
+        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
 
         // Act
@@ -114,9 +130,35 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task Post_RequireSsoPolicyApplicable_ThrowsBadRequestException(
+        WebAuthnCredentialRequestModel requestModel,
+        CredentialCreateOptions createOptions,
+        User user,
+        SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(default)
+            .ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>()
+            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>())
+            .Returns(true);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
+            .Unprotect(requestModel.Token)
+            .Returns(token);
+        sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso).ReturnsForAnyArgs(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.Post(requestModel));
+        Assert.Contains("Passkeys cannot be created for your account. SSO login is required", exception.Message);
+    }
+
+    [Theory, BitAutoData]
     public async Task Delete_UserNotFound_ThrowsUnauthorizedAccessException(Guid credentialId, SecretVerificationRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange 
+        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
 
         // Act
