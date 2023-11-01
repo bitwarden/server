@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Utilities;
 
-namespace Bit.Api.Auth.Models.Request;
+namespace Bit.Api.AdminConsole.Models.Request;
 
 public class AdminAuthRequestUpdateRequestModel
 {
