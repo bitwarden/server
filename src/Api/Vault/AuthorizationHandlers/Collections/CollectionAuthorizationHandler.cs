@@ -72,11 +72,11 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
             }
         }
 
-            // Check if acting user is a provider user for the target organization
-            if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
-            {
-                context.Succeed(requirement);
-            }
+        // Check if acting user is a provider user for the target organization
+        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+        {
+            context.Succeed(requirement);
+        }
     }
 
     private async Task CanReadAllWithAccessAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
@@ -96,11 +96,11 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
             }
         }
 
-            // Check if acting user is a provider user for the target organization
-            if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
-            {
-                context.Succeed(requirement);
-            }
+        // Check if acting user is a provider user for the target organization
+        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
+        {
+            context.Succeed(requirement);
+        }
 
     }
 }

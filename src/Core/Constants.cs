@@ -48,6 +48,7 @@ public static class FeatureFlagKeys
     public const string FlexibleCollections = "flexible-collections";
     public const string BulkCollectionAccess = "bulk-collection-access";
     public const string AutofillOverlay = "autofill-overlay";
+    public const string ItemShare = "item-share";
 
     public static List<string> GetAllKeys()
     {

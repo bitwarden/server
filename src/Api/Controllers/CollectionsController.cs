@@ -127,7 +127,8 @@ public class CollectionsController : Controller
         }
 
         // We always need to know which collections the current user is assigned to
-        var assignedOrgCollections = await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
+        var assignedOrgCollections =
+            await _collectionRepository.GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);
 
         if (await _currentContext.ViewAllCollections(orgId) || await _currentContext.ManageUsers(orgId))
         {
@@ -241,6 +242,7 @@ public class CollectionsController : Controller
         {
             // New flexible collections logic
             await PutUsers_vNext(id, model);
+            return;
         }
 
         // Old pre-flexible collections logic follows
@@ -288,6 +290,7 @@ public class CollectionsController : Controller
         {
             // New flexible collections logic
             await Delete_vNext(id);
+            return;
         }
 
         // Old pre-flexible collections logic follows
@@ -344,6 +347,7 @@ public class CollectionsController : Controller
         {
             // New flexible collections logic
             await DeleteUser_vNext(id, orgUserId);
+            return;
         }
 
         // Old pre-flexible collections logic follows
