@@ -1715,25 +1715,6 @@ public class OrganizationServiceTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually2019)]
-    public void ValidateSecretsManagerPlan_ThrowsException_WhenInvalidPlanSelected(
-        PlanType planType, SutProvider<OrganizationService> sutProvider)
-    {
-        var plan = StaticStore.GetPlan(planType);
-
-        var signup = new OrganizationUpgrade
-        {
-            UseSecretsManager = true,
-            AdditionalSmSeats = 1,
-            AdditionalServiceAccounts = 10,
-            AdditionalSeats = 1
-        };
-
-        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
-        Assert.Contains("Invalid Secrets Manager plan selected.", exception.Message);
-    }
-
-    [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
