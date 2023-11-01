@@ -73,7 +73,8 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
                             {
                                 Id = c.CollectionId,
                                 HidePasswords = c.HidePasswords,
-                                ReadOnly = c.ReadOnly
+                                ReadOnly = c.ReadOnly,
+                                Manage = c.Manage
                             }
                             ).ToList() ?? new List<CollectionAccessSelection>())
                 ).ToList();
@@ -141,7 +142,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Group_CreateWithCollections]",
+                $"[{Schema}].[Group_CreateWithCollections_V2]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
@@ -155,7 +156,7 @@ public class GroupRepository : Repository<Group, Guid>, IGroupRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.ExecuteAsync(
-                $"[{Schema}].[Group_UpdateWithCollections]",
+                $"[{Schema}].[Group_UpdateWithCollections_V2]",
                 objWithCollections,
                 commandType: CommandType.StoredProcedure);
         }
