@@ -724,14 +724,6 @@
         "resolved": "7.0.5",
         "contentHash": "yMLM/aK1MikVqpjxd7PJ1Pjgztd3VAd26ZHxyjxG3RPeM9cHjvS5tCg9kAAayR6eHmBg0ffZsHdT28WfA5tTlA=="
       },
-      "Microsoft.EntityFrameworkCore.InMemory": {
-        "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "y3S/A/0uJX7KOhppC3xqyta6Z0PRz0qPLngH5GFu4GZ7/+Sw2u/amf7MavvR5GfZjGabGcohMpsRSahMmpF9gA==",
-        "dependencies": {
-          "Microsoft.EntityFrameworkCore": "7.0.5"
-        }
-      },
       "Microsoft.EntityFrameworkCore.Relational": {
         "type": "Transitive",
         "resolved": "7.0.5",
@@ -3123,25 +3115,25 @@
           "AspNetCore.HealthChecks.SqlServer": "[6.0.2, )",
           "AspNetCore.HealthChecks.Uris": "[6.0.3, )",
           "Azure.Messaging.EventGrid": "[4.10.0, )",
-          "Commercial.Core": "[2023.9.1, )",
-          "Commercial.Infrastructure.EntityFramework": "[2023.9.1, )",
-          "Core": "[2023.9.1, )",
-          "SharedWeb": "[2023.9.1, )",
+          "Commercial.Core": "[2023.10.0, )",
+          "Commercial.Infrastructure.EntityFramework": "[2023.10.0, )",
+          "Core": "[2023.10.0, )",
+          "SharedWeb": "[2023.10.0, )",
           "Swashbuckle.AspNetCore": "[6.5.0, )"
         }
       },
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.9.1, )"
+          "Core": "[2023.10.0, )"
         }
       },
       "commercial.infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.9.1, )",
-          "Infrastructure.EntityFramework": "[2023.9.1, )"
+          "Core": "[2023.10.0, )",
+          "Infrastructure.EntityFramework": "[2023.10.0, )"
         }
       },
       "common": {
@@ -3149,7 +3141,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2023.9.1, )",
+          "Core": "[2023.10.0, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -3200,15 +3192,15 @@
       "identity": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.9.1, )",
-          "SharedWeb": "[2023.9.1, )",
+          "Core": "[2023.10.0, )",
+          "SharedWeb": "[2023.10.0, )",
           "Swashbuckle.AspNetCore.SwaggerGen": "[6.5.0, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.9.1, )",
+          "Core": "[2023.10.0, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -3216,7 +3208,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.9.1, )",
+          "Core": "[2023.10.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -3228,19 +3220,18 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2023.9.1, )",
-          "Identity": "[2023.9.1, )",
+          "Common": "[2023.10.0, )",
+          "Identity": "[2023.10.0, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[6.0.5, )",
-          "Microsoft.EntityFrameworkCore.InMemory": "[7.0.5, )",
           "Microsoft.Extensions.Configuration": "[6.0.1, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.9.1, )",
-          "Infrastructure.Dapper": "[2023.9.1, )",
-          "Infrastructure.EntityFramework": "[2023.9.1, )"
+          "Core": "[2023.10.0, )",
+          "Infrastructure.Dapper": "[2023.10.0, )",
+          "Infrastructure.EntityFramework": "[2023.10.0, )"
         }
       }
     }
