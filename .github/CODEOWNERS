@@ -34,10 +34,15 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 
 # Billing Team
 **/*billing* @bitwarden/team-billing-dev
-**/*subscription* @bitwarden/team-billing-dev
-**/*stripe* @bitwarden/team-billing-dev
-**/*paypal* @bitwarden/team-billing-dev
-**/*braintree* @bitwarden/team-billing-dev
 **/*bitpay* @bitwarden/team-billing-dev
+**/*braintree* @bitwarden/team-billing-dev
 **/*freshdesk* @bitwarden/team-billing-dev
 **/*freshsales* @bitwarden/team-billing-dev
+**/*paypal* @bitwarden/team-billing-dev
+**/*stripe* @bitwarden/team-billing-dev
+**/*subscription* @bitwarden/team-billing-dev
+**/Billing @bitwarden/team-billing-dev
+
+# Multiple Owners
+**/packages.lock.json
+Directory.Build.props
