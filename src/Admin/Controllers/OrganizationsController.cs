@@ -215,7 +215,10 @@ public class OrganizationsController : Controller
 
         try
         {
-            await _stripeSyncService.UpdateCustomerEmailAddress(organization.GatewayCustomerId, organization.BillingEmail);
+            if (!string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && !string.IsNullOrWhiteSpace(organization.BillingEmail))
+            {
+                await _stripeSyncService.UpdateCustomerEmailAddress(organization.GatewayCustomerId, organization.BillingEmail);
+            }
         }
         catch (StripeException stripeException)
         {
