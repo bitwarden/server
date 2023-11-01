@@ -5,6 +5,7 @@ using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -22,15 +23,18 @@ public class WebAuthnController : Controller
     private readonly IUserService _userService;
     private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> _createOptionsDataProtector;
+    private readonly IPolicyService _policyService;
 
     public WebAuthnController(
         IUserService userService,
         IWebAuthnCredentialRepository credentialRepository,
-        IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> createOptionsDataProtector)
+        IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> createOptionsDataProtector,
+        IPolicyService policyService)
     {
         _userService = userService;
         _credentialRepository = credentialRepository;
         _createOptionsDataProtector = createOptionsDataProtector;
+        _policyService = policyService;
     }
 
     [HttpGet("")]
@@ -46,6 +50,7 @@ public class WebAuthnController : Controller
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> PostOptions([FromBody] SecretVerificationRequestModel model)
     {
         var user = await VerifyUserAsync(model);
+        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
         var options = await _userService.StartWebAuthnLoginRegistrationAsync(user);
 
         var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
@@ -62,7 +67,9 @@ public class WebAuthnController : Controller
     public async Task Post([FromBody] WebAuthnCredentialRequestModel model)
     {
         var user = await GetUserAsync();
+        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
         var tokenable = _createOptionsDataProtector.Unprotect(model.Token);
+
         if (!tokenable.TokenIsValid(user))
         {
             throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
@@ -72,6 +79,16 @@ public class WebAuthnController : Controller
         if (!success)
         {
             throw new BadRequestException("Unable to complete WebAuthn registration.");
+        }
+    }
+
+    private async Task ValidateRequireSsoPolicyDisabledOrNotApplicable(Guid userId)
+    {
+        var requireSsoLogin = await _policyService.AnyPoliciesApplicableToUserAsync(userId, PolicyType.RequireSso);
+
+        if (requireSsoLogin)
+        {
+            throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
         }
     }
 
