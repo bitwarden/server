@@ -1,4 +1,8 @@
-﻿using System.Security.Claims;
+﻿#nullable enable
+
+using System.Security.Claims;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -39,9 +43,7 @@ public interface ICurrentContext
     Task<bool> AccessEventLogs(Guid orgId);
     Task<bool> AccessImportExport(Guid orgId);
     Task<bool> AccessReports(Guid orgId);
-    Task<bool> CreateNewCollections(Guid orgId);
     Task<bool> EditAnyCollection(Guid orgId);
-    Task<bool> DeleteAnyCollection(Guid orgId);
     Task<bool> ViewAllCollections(Guid orgId);
     Task<bool> EditAssignedCollections(Guid orgId);
     Task<bool> DeleteAssignedCollections(Guid orgId);
@@ -72,4 +74,5 @@ public interface ICurrentContext
 
     Task<Guid?> ProviderIdForOrg(Guid orgId);
     bool AccessSecretsManager(Guid organizationId);
+    CurrentContextOrganization? GetOrganization(Guid orgId);
 }

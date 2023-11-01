@@ -1,4 +1,5 @@
 ﻿using Azure.Messaging.ServiceBus;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;

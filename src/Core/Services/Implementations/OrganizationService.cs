@@ -1,7 +1,9 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
@@ -9,13 +11,11 @@ using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Enums;
@@ -57,6 +57,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IFeatureService _featureService;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -85,7 +86,8 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
-        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand)
+        IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -114,6 +116,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _featureService = featureService;
     }
 
     public async Task ReplacePaymentMethodAsync(Guid organizationId, string paymentToken,
@@ -425,6 +428,9 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
+        var flexibleCollectionsIsEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription..
@@ -462,6 +468,7 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
+            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled
         };
 
         if (signup.UseSecretsManager)
@@ -2095,7 +2102,7 @@ public class OrganizationService : IOrganizationService
 
     private async Task<bool> ValidateCustomPermissionsGrant(Guid organizationId, Permissions permissions)
     {
-        if (permissions == null || await _currentContext.OrganizationOwner(organizationId) || await _currentContext.OrganizationAdmin(organizationId))
+        if (permissions == null || await _currentContext.OrganizationAdmin(organizationId))
         {
             return true;
         }
@@ -2140,16 +2147,6 @@ public class OrganizationService : IOrganizationService
             return false;
         }
 
-        if (permissions.CreateNewCollections && !await _currentContext.CreateNewCollections(organizationId))
-        {
-            return false;
-        }
-
-        if (permissions.DeleteAnyCollection && !await _currentContext.DeleteAnyCollection(organizationId))
-        {
-            return false;
-        }
-
         if (permissions.DeleteAssignedCollections && !await _currentContext.DeleteAssignedCollections(organizationId))
         {
             return false;
@@ -2166,6 +2163,22 @@ public class OrganizationService : IOrganizationService
         }
 
         if (permissions.ManageResetPassword && !await _currentContext.ManageResetPassword(organizationId))
+        {
+            return false;
+        }
+
+        var org = _currentContext.GetOrganization(organizationId);
+        if (org == null)
+        {
+            return false;
+        }
+
+        if (permissions.CreateNewCollections && !org.Permissions.CreateNewCollections)
+        {
+            return false;
+        }
+
+        if (permissions.DeleteAnyCollection && !org.Permissions.DeleteAnyCollection)
         {
             return false;
         }
