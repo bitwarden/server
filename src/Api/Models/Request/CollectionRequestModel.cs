@@ -34,8 +34,7 @@ public class CollectionRequestModel
 public class CollectionBulkDeleteRequestModel
 {
     [Required]
-    public IEnumerable<string> Ids { get; set; }
-    public string OrganizationId { get; set; }
+    public IEnumerable<Guid> Ids { get; set; }
 }
 
 public class CollectionWithIdRequestModel : CollectionRequestModel

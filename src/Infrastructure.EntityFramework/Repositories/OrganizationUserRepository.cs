@@ -33,6 +33,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 OrganizationUserId = organizationUser.Id,
                 ReadOnly = y.ReadOnly,
                 HidePasswords = y.HidePasswords,
+                Manage = y.Manage
             });
             await dbContext.CollectionUsers.AddRangeAsync(collectionUsers);
             await dbContext.SaveChangesAsync();
@@ -146,6 +147,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 Id = cu.CollectionId,
                 ReadOnly = cu.ReadOnly,
                 HidePasswords = cu.HidePasswords,
+                Manage = cu.Manage,
             });
             return new Tuple<Core.Entities.OrganizationUser, ICollection<CollectionAccessSelection>>(
                 organizationUser, collections.ToList());
@@ -240,6 +242,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 Id = cu.CollectionId,
                 ReadOnly = cu.ReadOnly,
                 HidePasswords = cu.HidePasswords,
+                Manage = cu.Manage
             }).ToListAsync();
             return new Tuple<OrganizationUserUserDetails, ICollection<CollectionAccessSelection>>(organizationUserUserDetails, collections);
         }
@@ -365,7 +368,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         {
                             Id = cu.CollectionId,
                             ReadOnly = cu.ReadOnly,
-                            HidePasswords = cu.HidePasswords
+                            HidePasswords = cu.HidePasswords,
+                            Manage = cu.Manage,
                         }).ToList() ?? new List<CollectionAccessSelection>();
                 }
             }
@@ -445,6 +449,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         OrganizationUserId = obj.Id,
                         HidePasswords = requestedCollection.HidePasswords,
                         ReadOnly = requestedCollection.ReadOnly,
+                        Manage = requestedCollection.Manage
                     });
                     continue;
                 }
@@ -452,6 +457,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                 // It already exists, update it
                 existingCollectionUser.HidePasswords = requestedCollection.HidePasswords;
                 existingCollectionUser.ReadOnly = requestedCollection.ReadOnly;
+                existingCollectionUser.Manage = requestedCollection.Manage;
                 dbContext.CollectionUsers.Update(existingCollectionUser);
             }
 
