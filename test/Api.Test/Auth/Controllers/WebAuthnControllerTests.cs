@@ -150,9 +150,6 @@ public class WebAuthnControllerTests
         sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso).ReturnsForAnyArgs(true);
 
         // Act & Assert
-        sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso).ReturnsForAnyArgs(true);
-
-        // Act & Assert
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.Post(requestModel));
         Assert.Contains("Passkeys cannot be created for your account. SSO login is required", exception.Message);
