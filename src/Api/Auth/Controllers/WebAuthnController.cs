@@ -50,6 +50,7 @@ public class WebAuthnController : Controller
     public async Task<WebAuthnCredentialCreateOptionsResponseModel> PostOptions([FromBody] SecretVerificationRequestModel model)
     {
         var user = await VerifyUserAsync(model);
+        await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
         var options = await _userService.StartWebAuthnLoginRegistrationAsync(user);
 
         var tokenable = new WebAuthnCredentialCreateOptionsTokenable(user, options);
