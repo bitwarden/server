@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
 using Bit.Infrastructure.EntityFramework.Models;
@@ -59,6 +60,7 @@ public class DatabaseContext : DbContext
     public DbSet<User> Users { get; set; }
     public DbSet<AuthRequest> AuthRequests { get; set; }
     public DbSet<OrganizationDomain> OrganizationDomains { get; set; }
+    public DbSet<WebAuthnCredential> WebAuthnCredentials { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -98,6 +100,7 @@ public class DatabaseContext : DbContext
         var eOrganizationApiKey = builder.Entity<OrganizationApiKey>();
         var eOrganizationConnection = builder.Entity<OrganizationConnection>();
         var eOrganizationDomain = builder.Entity<OrganizationDomain>();
+        var aWebAuthnCredential = builder.Entity<WebAuthnCredential>();
 
         eCipher.Property(c => c.Id).ValueGeneratedNever();
         eCollection.Property(c => c.Id).ValueGeneratedNever();
@@ -107,6 +110,9 @@ public class DatabaseContext : DbContext
         eGroup.Property(c => c.Id).ValueGeneratedNever();
         eInstallation.Property(c => c.Id).ValueGeneratedNever();
         eOrganization.Property(c => c.Id).ValueGeneratedNever();
+        eOrganization.Property(c => c.LimitCollectionCreationDeletion)
+            .ValueGeneratedNever()
+            .HasDefaultValue(true);
         eOrganizationSponsorship.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationUser.Property(c => c.Id).ValueGeneratedNever();
         ePolicy.Property(c => c.Id).ValueGeneratedNever();
@@ -119,6 +125,7 @@ public class DatabaseContext : DbContext
         eOrganizationApiKey.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationConnection.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationDomain.Property(ar => ar.Id).ValueGeneratedNever();
+        aWebAuthnCredential.Property(ar => ar.Id).ValueGeneratedNever();
 
         eCollectionCipher.HasKey(cc => new { cc.CollectionId, cc.CipherId });
         eCollectionUser.HasKey(cu => new { cu.CollectionId, cu.OrganizationUserId });
@@ -170,6 +177,7 @@ public class DatabaseContext : DbContext
         eOrganizationApiKey.ToTable(nameof(OrganizationApiKey));
         eOrganizationConnection.ToTable(nameof(OrganizationConnection));
         eOrganizationDomain.ToTable(nameof(OrganizationDomain));
+        aWebAuthnCredential.ToTable(nameof(WebAuthnCredential));
 
         ConfigureDateTimeUtcQueries(builder);
     }
