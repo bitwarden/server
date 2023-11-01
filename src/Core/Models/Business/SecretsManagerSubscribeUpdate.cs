@@ -44,7 +44,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Price = _plan.SecretsManager.StripeSeatPlanId,
+                Plan = _plan.SecretsManager.StripeSeatPlanId,
                 Quantity = _additionalSeats
             });
         }
@@ -53,7 +53,7 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
         {
             updatedItems.Add(new SubscriptionItemOptions
             {
-                Price = _plan.SecretsManager.StripeServiceAccountPlanId,
+                Plan = _plan.SecretsManager.StripeServiceAccountPlanId,
                 Quantity = _additionalServiceAccounts
             });
         }
@@ -63,14 +63,14 @@ public class SecretsManagerSubscribeUpdate : SubscriptionUpdate
     {
         updatedItems.Add(new SubscriptionItemOptions
         {
-            Price = _plan.SecretsManager.StripeSeatPlanId,
+            Plan = _plan.SecretsManager.StripeSeatPlanId,
             Quantity = _previousSeats,
             Deleted = _previousSeats == 0 ? true : (bool?)null,
         });
 
         updatedItems.Add(new SubscriptionItemOptions
         {
-            Price = _plan.SecretsManager.StripeServiceAccountPlanId,
+            Plan = _plan.SecretsManager.StripeServiceAccountPlanId,
             Quantity = _previousServiceAccounts,
             Deleted = _previousServiceAccounts == 0 ? true : (bool?)null,
         });
