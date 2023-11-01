@@ -10,10 +10,10 @@ public class StaticStoreTests
     [Fact]
     public void StaticStore_Initialization_Success()
     {
-        var plans = StaticStore.Plans;
+        var plans = StaticStore.Plans.ToList();
         Assert.NotNull(plans);
         Assert.NotEmpty(plans);
-        Assert.Equal(12, plans.Count());
+        Assert.Equal(16, plans.Count);
     }
 
     [Theory]
