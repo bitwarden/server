@@ -389,7 +389,8 @@ public class AccountsController : Controller
     }
 
     [HttpPost("rotate-key")]
-    public async Task PostKey([FromBody] RotateUserKeyRequestModel model)
+    [RequireFeature(FeatureFlagKeys.KeyRotationImprovements)]
+    public async Task RotateKey([FromBody] RotateUserKeyRequestModel model)
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
         if (user == null)
