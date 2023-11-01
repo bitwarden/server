@@ -88,7 +88,6 @@ public class WebAuthnController : Controller
 
         if (requireSsoLogin)
         {
-            // User is not an admin or owner of this org and the org requires SSO login so do not allow passkey creation.
             throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
         }
     }
