@@ -45,6 +45,8 @@ public static class FeatureFlagKeys
     public const string Fido2VaultCredentials = "fido2-vault-credentials";
     public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
+    public const string FlexibleCollections = "flexible-collections";
+    public const string BulkCollectionAccess = "bulk-collection-access";
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
 

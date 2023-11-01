@@ -282,6 +282,9 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<bool>("HidePasswords")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("Manage")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("ReadOnly")
                         .HasColumnType("INTEGER");
 
@@ -301,6 +304,9 @@ namespace Bit.SqliteMigrations.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("HidePasswords")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Manage")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ReadOnly")
@@ -561,6 +567,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("LimitCollectionCreationDeletion")
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
 
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("INTEGER");
