@@ -17,6 +17,7 @@ public record Families2019Plan : Models.StaticStore.Plan
 
         HasSelfHost = true;
         HasTotp = true;
+        UsersGetPremium = true;
 
         UpgradeSortOrder = 1;
         DisplaySortOrder = 1;
