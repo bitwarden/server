@@ -61,8 +61,6 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         {
             // Acting user is a member of the target organization, check permissions
             if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-                  org.Permissions.ManageGroups ||
-                  org.Permissions.ManageUsers ||
                   org.Permissions.EditAnyCollection ||
                   org.Permissions.DeleteAnyCollection ||
                   org.Permissions.AccessImportExport)
@@ -86,8 +84,6 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         {
             // Acting user is a member of the target organization, check permissions
             if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-                org.Permissions.ManageGroups ||
-                org.Permissions.ManageUsers ||
                 org.Permissions.EditAnyCollection ||
                 org.Permissions.DeleteAnyCollection)
             {
@@ -101,6 +97,5 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         {
             context.Succeed(requirement);
         }
-
     }
 }

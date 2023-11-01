@@ -42,21 +42,13 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
         }
 
         // Establish pattern of authorization handler null checking passed resources
-        if (resources == null)
+        if (resources == null || !resources.Any() || !_currentContext.UserId.HasValue)
         {
             context.Fail();
             return;
         }
 
-        if (!_currentContext.UserId.HasValue)
-        {
-            context.Fail();
-            return;
-        }
-
-        var targetOrganizationId = requirement.OrganizationId != default
-            ? requirement.OrganizationId : resources.FirstOrDefault()?.OrganizationId ?? default;
-
+        var targetOrganizationId = resources.FirstOrDefault()?.OrganizationId ?? default;
         if (targetOrganizationId == default)
         {
             context.Fail();
@@ -123,6 +115,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
         ICollection<Collection> targetCollections, CurrentContextOrganization org)
     {
         if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
+            org.Permissions.EditAnyCollection || org.Permissions.DeleteAnyCollection ||
             await _currentContext.ProviderUserForOrgAsync(org.Id))
         {
             context.Succeed(requirement);
