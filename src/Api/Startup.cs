@@ -28,6 +28,8 @@ using Bit.Core.Entities;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Vault;
 using Bit.Api.Tools;
+using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.Auth.UserFeatures.UserKey.Interfaces;
 
 #if !OSS
 using Bit.Commercial.Core.SecretsManager;
@@ -149,7 +151,8 @@ public class Startup
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
 
-        // Rotation Validators
+        // Rotation
+        services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
         services
             .AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>,
                 CipherRotationValidator>();
