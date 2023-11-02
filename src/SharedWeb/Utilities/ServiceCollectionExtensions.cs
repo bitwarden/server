@@ -32,6 +32,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Services;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
+using Bit.SharedWeb.Health;
 using DnsClient;
 using IdentityModel;
 using IdentityServer4.AccessTokenValidation;
@@ -44,6 +45,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.MiddlewareAnalysis;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.StackExchangeRedis;
@@ -52,6 +54,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Serilog.Context;
 using StackExchange.Redis;
 using NoopRepos = Bit.Core.Repositories.Noop;
@@ -202,6 +206,22 @@ public static class ServiceCollectionExtensions
         services.AddWebAuthn(globalSettings);
         // Required for HTTP calls
         services.AddHttpClient();
+
+        // Add open telemetry
+        var diagnosticsConfig = DiagnosticsConfig.For(globalSettings);
+        services.AddSingleton(diagnosticsConfig.ActivitySource);
+        services.AddMiddlewareAnalysis();
+        services.Insert(0, ServiceDescriptor.Transient<IStartupFilter, AnalysisStartupFilter>()); // Insert at beginning to catch all middleware
+        services.AddOpenTelemetry().WithTracing(tracerProviderBuilder =>
+                tracerProviderBuilder
+                    .AddSource(diagnosticsConfig.ActivitySource.Name)
+                    .ConfigureResource(resource => resource
+                        .AddService(diagnosticsConfig.ServiceName))
+                    .AddAspNetCoreInstrumentation()
+                    .AddSqlClientInstrumentation()
+                    .AddEntityFrameworkCoreInstrumentation()
+                    .AddHttpClientInstrumentation()
+                    .AddOtlpExporter());
 
         services.AddSingleton<IStripeAdapter, StripeAdapter>();
         services.AddSingleton<Braintree.IBraintreeGateway>((serviceProvider) =>

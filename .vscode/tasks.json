@@ -38,6 +38,18 @@
             "problemMatcher": "$msCompile"
         },
         {
+            "label": "buildEvents",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Events/Events.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
             "label": "buildEventsProcessor",
             "command": "dotnet",
             "type": "process",

@@ -36,6 +36,7 @@
             "configurations": [
                 "Admin",
                 "API",
+                "Events",
                 "EventsProcessor",
                 "Identity",
                 "Sso",
@@ -191,6 +192,28 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
+            "name": "Events",
+            "presentation": {
+                "hidden": false,
+                "group": "cloud",
+                "order": 89
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "buildEvents",
+            "program": "${workspaceFolder}/src/Events/bin/Debug/net6.0/Events.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Events",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
@@ -385,6 +408,30 @@
             }
         },
         {
+            "name": "Events-SelfHost",
+            "presentation": {
+                "hidden": true,
+                "group": "self-host",
+                "order": 999
+            },
+            "requireExactSource": true,
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "buildEvents",
+            "program": "${workspaceFolder}/src/Events/bin/Debug/net6.0/Events.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Events",
+            "stopAtEntry": false,
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://localhost:46274",
+                "developSelfHosted": "true"
+            },
+            "sourceFileMap": {
+                "/Views": "${workspaceFolder}/Views"
+            }
+        },
+        {
             "name": "EventsProcessor-SelfHost",
             "presentation": {
                 "hidden": true,
@@ -401,8 +448,8 @@
             "stopAtEntry": false,
             "env": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "ASPNETCORE_URLS": "http://localhost:46274",
-                "developSelfHosted": "true",
+                "ASPNETCORE_URLS": "http://localhost:54104",
+                "developSelfHosted": "true"
             },
             "sourceFileMap": {
                 "/Views": "${workspaceFolder}/Views"
