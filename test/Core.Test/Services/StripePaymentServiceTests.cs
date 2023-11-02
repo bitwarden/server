@@ -40,7 +40,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -56,7 +56,7 @@ public class StripePaymentServiceTests
             .BaseServiceUri.CloudRegion
             .Returns("US");
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans, 0, 0, false, taxInfo, provider);
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo, provider);
 
         Assert.Null(result);
         Assert.Equal(GatewayType.Stripe, organization.Gateway);
@@ -95,8 +95,8 @@ public class StripePaymentServiceTests
     public async void PurchaseOrganizationAsync_SM_Stripe_ProviderOrg_Coupon_Add(SutProvider<StripePaymentService> sutProvider, Organization organization,
         string paymentToken, TaxInfo taxInfo, bool provider = true)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
-
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -112,7 +112,7 @@ public class StripePaymentServiceTests
             .BaseServiceUri.CloudRegion
             .Returns("US");
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans, 1, 1,
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 1, 1,
             false, taxInfo, provider, 1, 1);
 
         Assert.Null(result);
@@ -151,8 +151,8 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
-
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -167,7 +167,7 @@ public class StripePaymentServiceTests
             .BaseServiceUri.CloudRegion
             .Returns("US");
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans, 0, 0
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0
             , false, taxInfo, false, 8, 10);
 
         Assert.Null(result);
@@ -207,7 +207,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe_PM(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.PasswordManagerPlans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -224,7 +224,7 @@ public class StripePaymentServiceTests
             .BaseServiceUri.CloudRegion
             .Returns("US");
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans, 0, 0, false, taxInfo);
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
 
         Assert.Null(result);
         Assert.Equal(GatewayType.Stripe, organization.Gateway);
@@ -264,7 +264,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe_TaxRate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -280,7 +280,7 @@ public class StripePaymentServiceTests
                 t.Country == taxInfo.BillingAddressCountry && t.PostalCode == taxInfo.BillingAddressPostalCode))
             .Returns(new List<TaxRate> { new() { Id = "T-1" } });
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans, 0, 0, false, taxInfo);
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
 
         Assert.Null(result);
 
@@ -293,7 +293,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe_TaxRate_SM(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -309,7 +309,7 @@ public class StripePaymentServiceTests
                 t.Country == taxInfo.BillingAddressCountry && t.PostalCode == taxInfo.BillingAddressPostalCode))
             .Returns(new List<TaxRate> { new() { Id = "T-1" } });
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans, 2, 2,
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 2, 2,
             false, taxInfo, false, 2, 2);
 
         Assert.Null(result);
@@ -323,7 +323,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plan = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -356,7 +356,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_SM_Stripe_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plan = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -390,7 +390,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -412,7 +412,7 @@ public class StripePaymentServiceTests
             },
         });
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans, 0, 0, false, taxInfo);
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan, 0, 0, false, taxInfo);
 
         Assert.Equal("clientSecret", result);
         Assert.False(organization.Enabled);
@@ -421,7 +421,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_SM_Stripe_RequiresAction(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -443,7 +443,7 @@ public class StripePaymentServiceTests
             },
         });
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plans,
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.Card, paymentToken, plan,
             10, 10, false, taxInfo, false, 10, 10);
 
         Assert.Equal("clientSecret", result);
@@ -453,7 +453,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
@@ -480,7 +480,7 @@ public class StripePaymentServiceTests
         var braintreeGateway = sutProvider.GetDependency<IBraintreeGateway>();
         braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
 
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plans, 0, 0, false, taxInfo);
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plan, 0, 0, false, taxInfo);
 
         Assert.Null(result);
         Assert.Equal(GatewayType.Stripe, organization.Gateway);
@@ -517,10 +517,8 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_SM_Paypal(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
-        var passwordManagerPlan = plans.Single(p => p.BitwardenProduct == BitwardenProductType.PasswordManager);
-        var secretsManagerPlan = plans.Single(p => p.BitwardenProduct == BitwardenProductType.SecretsManager);
-
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        organization.UseSecretsManager = true;
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
         stripeAdapter.CustomerCreateAsync(default).ReturnsForAnyArgs(new Stripe.Customer
         {
@@ -550,7 +548,7 @@ public class StripePaymentServiceTests
         var additionalSeats = 10;
         var additionalSmSeats = 5;
         var additionalServiceAccounts = 20;
-        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plans,
+        var result = await sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plan,
             additionalStorage, additionalSeats, false, taxInfo, false, additionalSmSeats, additionalServiceAccounts);
 
         Assert.Null(result);
@@ -582,17 +580,17 @@ public class StripePaymentServiceTests
             s.Expand[0] == "latest_invoice.payment_intent" &&
             s.Metadata[organization.GatewayIdField()] == organization.Id.ToString() &&
             s.Items.Count == 4 &&
-            s.Items.Count(i => i.Plan == passwordManagerPlan.StripeSeatPlanId && i.Quantity == additionalSeats) == 1 &&
-            s.Items.Count(i => i.Plan == passwordManagerPlan.StripeStoragePlanId && i.Quantity == additionalStorage) == 1 &&
-            s.Items.Count(i => i.Plan == secretsManagerPlan.StripeSeatPlanId && i.Quantity == additionalSmSeats) == 1 &&
-            s.Items.Count(i => i.Plan == secretsManagerPlan.StripeServiceAccountPlanId && i.Quantity == additionalServiceAccounts) == 1
+            s.Items.Count(i => i.Plan == plan.PasswordManager.StripeSeatPlanId && i.Quantity == additionalSeats) == 1 &&
+            s.Items.Count(i => i.Plan == plan.PasswordManager.StripeStoragePlanId && i.Quantity == additionalStorage) == 1 &&
+            s.Items.Count(i => i.Plan == plan.SecretsManager.StripeSeatPlanId && i.Quantity == additionalSmSeats) == 1 &&
+            s.Items.Count(i => i.Plan == plan.SecretsManager.StripeServiceAccountPlanId && i.Quantity == additionalServiceAccounts) == 1
         ));
     }
 
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var customerResult = Substitute.For<Result<Customer>>();
         customerResult.IsSuccess().Returns(false);
@@ -601,7 +599,7 @@ public class StripePaymentServiceTests
         braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
 
         var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plans, 0, 0, false, taxInfo));
+            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plan, 0, 0, false, taxInfo));
 
         Assert.Equal("Failed to create PayPal customer record.", exception.Message);
     }
@@ -609,7 +607,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_SM_Paypal_FailedCreate(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var customerResult = Substitute.For<Result<Customer>>();
         customerResult.IsSuccess().Returns(false);
@@ -618,7 +616,7 @@ public class StripePaymentServiceTests
         braintreeGateway.Customer.CreateAsync(default).ReturnsForAnyArgs(customerResult);
 
         var exception = await Assert.ThrowsAsync<GatewayException>(
-            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plans,
+            () => sutProvider.Sut.PurchaseOrganizationAsync(organization, PaymentMethodType.PayPal, paymentToken, plan,
                 1, 1, false, taxInfo, false, 8, 8));
 
         Assert.Equal("Failed to create PayPal customer record.", exception.Message);
@@ -627,7 +625,7 @@ public class StripePaymentServiceTests
     [Theory, BitAutoData]
     public async void PurchaseOrganizationAsync_PayPal_Declined(SutProvider<StripePaymentService> sutProvider, Organization organization, string paymentToken, TaxInfo taxInfo)
     {
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plans = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
         paymentToken = "pm_" + paymentToken;
 
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
@@ -689,7 +687,7 @@ public class StripePaymentServiceTests
         });
         stripeAdapter.SubscriptionCreateAsync(default).ReturnsForAnyArgs(new Stripe.Subscription { });
 
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
 
         var upgrade = new OrganizationUpgrade()
         {
@@ -700,7 +698,7 @@ public class StripePaymentServiceTests
             AdditionalSmSeats = 0,
             AdditionalServiceAccounts = 0
         };
-        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plans, upgrade);
+        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, upgrade);
 
         Assert.Null(result);
     }
@@ -736,9 +734,305 @@ public class StripePaymentServiceTests
             AdditionalServiceAccounts = 50
         };
 
-        var plans = StaticStore.Plans.Where(p => p.Type == PlanType.EnterpriseAnnually).ToList();
-        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plans, upgrade);
+        var plan = StaticStore.GetPlan(PlanType.EnterpriseAnnually);
+        var result = await sutProvider.Sut.UpgradeFreeOrganizationAsync(organization, plan, upgrade);
 
         Assert.Null(result);
     }
+
+    [Theory, BitAutoData]
+    public async Task PreviewUpcomingInvoiceAndPayAsync_WithInAppPaymentMethod_ThrowsBadRequestException(SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber, List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions)
+    {
+        var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
+        stripeAdapter.CustomerGetAsync(Arg.Any<string>(), Arg.Any<Stripe.CustomerGetOptions>())
+            .Returns(new Stripe.Customer { Metadata = new Dictionary<string, string> { { "appleReceipt", "dummyData" } } });
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PreviewUpcomingInvoiceAndPayAsync(subscriber, subItemOptions));
+        Assert.Equal("Cannot perform this action with in-app purchase payment method. Contact support.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async void PreviewUpcomingInvoiceAndPayAsync_UpcomingInvoiceBelowThreshold_DoesNotInvoiceNow(SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber, List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions)
+    {
+        var prorateThreshold = 50000;
+        var invoiceAmountBelowThreshold = prorateThreshold - 100;
+        var customer = MockStripeCustomer(subscriber);
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(default, default).ReturnsForAnyArgs(customer);
+        var invoiceItem = MockInoviceItemList(subscriber, "planId", invoiceAmountBelowThreshold, customer);
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceItemListAsync(new Stripe.InvoiceItemListOptions
+        {
+            Customer = subscriber.GatewayCustomerId
+        }).ReturnsForAnyArgs(invoiceItem);
+
+        var invoiceLineItem = CreateInvoiceLineTime(subscriber, "planId", invoiceAmountBelowThreshold);
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
+        {
+            Customer = subscriber.GatewayCustomerId,
+            Subscription = subscriber.GatewaySubscriptionId,
+            SubscriptionItems = subItemOptions
+        }).ReturnsForAnyArgs(invoiceLineItem);
+
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceCreateAsync(Arg.Is<Stripe.InvoiceCreateOptions>(options =>
+            options.CollectionMethod == "send_invoice" &&
+            options.DaysUntilDue == 1 &&
+            options.Customer == subscriber.GatewayCustomerId &&
+            options.Subscription == subscriber.GatewaySubscriptionId &&
+            options.DefaultPaymentMethod == customer.InvoiceSettings.DefaultPaymentMethod.Id
+        )).ReturnsForAnyArgs(new Stripe.Invoice
+        {
+            Id = "mockInvoiceId",
+            CollectionMethod = "send_invoice",
+            DueDate = DateTime.Now.AddDays(1),
+            Customer = customer,
+            Subscription = new Stripe.Subscription
+            {
+                Id = "mockSubscriptionId",
+                Customer = customer,
+                Status = "active",
+                CurrentPeriodStart = DateTime.UtcNow,
+                CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1),
+                CollectionMethod = "charge_automatically",
+            },
+            DefaultPaymentMethod = customer.InvoiceSettings.DefaultPaymentMethod,
+            AmountDue = invoiceAmountBelowThreshold,
+            Currency = "usd",
+            Status = "draft",
+        });
+
+        var result = await sutProvider.Sut.PreviewUpcomingInvoiceAndPayAsync(subscriber, new List<Stripe.InvoiceSubscriptionItemOptions>(), prorateThreshold);
+
+        Assert.False(result.IsInvoicedNow);
+        Assert.Null(result.PaymentIntentClientSecret);
+    }
+
+    [Theory, BitAutoData]
+    public async void PreviewUpcomingInvoiceAndPayAsync_NoPaymentMethod_ThrowsBadRequestException(SutProvider<StripePaymentService> sutProvider,
+       Organization subscriber, List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, string planId)
+    {
+        var prorateThreshold = 120000;
+        var invoiceAmountBelowThreshold = prorateThreshold;
+        var customer = new Stripe.Customer
+        {
+            Metadata = new Dictionary<string, string>(),
+            Id = subscriber.GatewayCustomerId,
+            DefaultSource = null,
+            InvoiceSettings = new Stripe.CustomerInvoiceSettings
+            {
+                DefaultPaymentMethod = null
+            }
+        };
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(default, default).ReturnsForAnyArgs(customer);
+        var invoiceItem = MockInoviceItemList(subscriber, planId, invoiceAmountBelowThreshold, customer);
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceItemListAsync(new Stripe.InvoiceItemListOptions
+        {
+            Customer = subscriber.GatewayCustomerId
+        }).ReturnsForAnyArgs(invoiceItem);
+
+        var invoiceLineItem = CreateInvoiceLineTime(subscriber, planId, invoiceAmountBelowThreshold);
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
+        {
+            Customer = subscriber.GatewayCustomerId,
+            Subscription = subscriber.GatewaySubscriptionId,
+            SubscriptionItems = subItemOptions
+        }).ReturnsForAnyArgs(invoiceLineItem);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.PreviewUpcomingInvoiceAndPayAsync(subscriber, subItemOptions));
+        Assert.Equal("No payment method is available.", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async void PreviewUpcomingInvoiceAndPayAsync_UpcomingInvoiceAboveThreshold_DoesInvoiceNow(SutProvider<StripePaymentService> sutProvider,
+        Organization subscriber, List<Stripe.InvoiceSubscriptionItemOptions> subItemOptions, string planId)
+    {
+        var prorateThreshold = 50000;
+        var invoiceAmountBelowThreshold = 100000;
+        var customer = MockStripeCustomer(subscriber);
+        sutProvider.GetDependency<IStripeAdapter>().CustomerGetAsync(default, default).ReturnsForAnyArgs(customer);
+        var invoiceItem = MockInoviceItemList(subscriber, planId, invoiceAmountBelowThreshold, customer);
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceItemListAsync(new Stripe.InvoiceItemListOptions
+        {
+            Customer = subscriber.GatewayCustomerId
+        }).ReturnsForAnyArgs(invoiceItem);
+
+        var invoiceLineItem = CreateInvoiceLineTime(subscriber, planId, invoiceAmountBelowThreshold);
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceUpcomingAsync(new Stripe.UpcomingInvoiceOptions
+        {
+            Customer = subscriber.GatewayCustomerId,
+            Subscription = subscriber.GatewaySubscriptionId,
+            SubscriptionItems = subItemOptions
+        }).ReturnsForAnyArgs(invoiceLineItem);
+
+        var invoice = MockInVoice(customer, invoiceAmountBelowThreshold);
+        sutProvider.GetDependency<IStripeAdapter>().InvoiceCreateAsync(Arg.Is<Stripe.InvoiceCreateOptions>(options =>
+            options.CollectionMethod == "send_invoice" &&
+            options.DaysUntilDue == 1 &&
+            options.Customer == subscriber.GatewayCustomerId &&
+            options.Subscription == subscriber.GatewaySubscriptionId &&
+            options.DefaultPaymentMethod == customer.InvoiceSettings.DefaultPaymentMethod.Id
+        )).ReturnsForAnyArgs(invoice);
+
+        var result = await sutProvider.Sut.PreviewUpcomingInvoiceAndPayAsync(subscriber, new List<Stripe.InvoiceSubscriptionItemOptions>(), prorateThreshold);
+
+        await sutProvider.GetDependency<IStripeAdapter>().Received(1).InvoicePayAsync(invoice.Id,
+            Arg.Is<Stripe.InvoicePayOptions>((options =>
+                options.OffSession == true
+                )));
+
+
+        Assert.True(result.IsInvoicedNow);
+        Assert.Null(result.PaymentIntentClientSecret);
+    }
+
+    private static Stripe.Invoice MockInVoice(Stripe.Customer customer, int invoiceAmountBelowThreshold) =>
+        new()
+        {
+            Id = "mockInvoiceId",
+            CollectionMethod = "send_invoice",
+            DueDate = DateTime.Now.AddDays(1),
+            Customer = customer,
+            Subscription = new Stripe.Subscription
+            {
+                Id = "mockSubscriptionId",
+                Customer = customer,
+                Status = "active",
+                CurrentPeriodStart = DateTime.UtcNow,
+                CurrentPeriodEnd = DateTime.UtcNow.AddMonths(1),
+                CollectionMethod = "charge_automatically",
+            },
+            DefaultPaymentMethod = customer.InvoiceSettings.DefaultPaymentMethod,
+            AmountDue = invoiceAmountBelowThreshold,
+            Currency = "usd",
+            Status = "draft",
+        };
+
+    private static List<Stripe.InvoiceItem> MockInoviceItemList(Organization subscriber, string planId, int invoiceAmountBelowThreshold, Stripe.Customer customer) =>
+        new()
+        {
+            new Stripe.InvoiceItem
+            {
+                Id = "ii_1234567890",
+                Amount = invoiceAmountBelowThreshold,
+                Currency = "usd",
+                CustomerId = subscriber.GatewayCustomerId,
+                Description = "Sample invoice item 1",
+                Date = DateTime.UtcNow,
+                Discountable = true,
+                InvoiceId = "548458365"
+            },
+            new Stripe.InvoiceItem
+            {
+                Id = "ii_0987654321",
+                Amount = invoiceAmountBelowThreshold,
+                Currency = "usd",
+                CustomerId =  customer.Id,
+                Description = "Sample invoice item 2",
+                Date = DateTime.UtcNow.AddDays(-5),
+                Discountable = false,
+                InvoiceId = null,
+                Proration = true,
+                Plan = new Stripe.Plan
+                {
+                    Id = planId,
+                    Amount = invoiceAmountBelowThreshold,
+                    Currency = "usd",
+                    Interval = "month",
+                    IntervalCount = 1,
+                },
+            }
+        };
+
+    private static Stripe.Customer MockStripeCustomer(Organization subscriber)
+    {
+        var customer = new Stripe.Customer
+        {
+            Metadata = new Dictionary<string, string>(),
+            Id = subscriber.GatewayCustomerId,
+            DefaultSource = new Stripe.Card
+            {
+                Id = "card_12345",
+                Last4 = "1234",
+                Brand = "Visa",
+                ExpYear = 2025,
+                ExpMonth = 12
+            },
+            InvoiceSettings = new Stripe.CustomerInvoiceSettings
+            {
+                DefaultPaymentMethod = new Stripe.PaymentMethod
+                {
+                    Id = "pm_12345",
+                    Type = "card",
+                    Card = new Stripe.PaymentMethodCard
+                    {
+                        Last4 = "1234",
+                        Brand = "Visa",
+                        ExpYear = 2025,
+                        ExpMonth = 12
+                    }
+                }
+            }
+        };
+        return customer;
+    }
+
+    private static Stripe.Invoice CreateInvoiceLineTime(Organization subscriber, string planId, int invoiceAmountBelowThreshold) =>
+        new()
+        {
+            AmountDue = invoiceAmountBelowThreshold,
+            AmountPaid = 0,
+            AmountRemaining = invoiceAmountBelowThreshold,
+            CustomerId = subscriber.GatewayCustomerId,
+            SubscriptionId = subscriber.GatewaySubscriptionId,
+            ApplicationFeeAmount = 0,
+            Currency = "usd",
+            Description = "Upcoming Invoice",
+            Discount = null,
+            DueDate = DateTime.UtcNow.AddDays(1),
+            EndingBalance = 0,
+            Number = "INV12345",
+            Paid = false,
+            PeriodStart = DateTime.UtcNow,
+            PeriodEnd = DateTime.UtcNow.AddMonths(1),
+            ReceiptNumber = null,
+            StartingBalance = 0,
+            Status = "draft",
+            Id = "ii_0987654321",
+            Total = invoiceAmountBelowThreshold,
+            Lines = new Stripe.StripeList<Stripe.InvoiceLineItem>
+            {
+                Data = new List<Stripe.InvoiceLineItem>
+                {
+                    new Stripe.InvoiceLineItem
+                    {
+                        Amount = invoiceAmountBelowThreshold,
+                        Currency = "usd",
+                        Description = "Sample line item",
+                        Id = "ii_0987654321",
+                        Livemode = false,
+                        Object = "line_item",
+                        Discountable = false,
+                        Period = new Stripe.InvoiceLineItemPeriod()
+                        {
+                            Start = DateTime.UtcNow,
+                            End = DateTime.UtcNow.AddMonths(1)
+                        },
+                        Plan = new Stripe.Plan
+                        {
+                            Id = planId,
+                            Amount = invoiceAmountBelowThreshold,
+                            Currency = "usd",
+                            Interval = "month",
+                            IntervalCount = 1,
+                        },
+                        Proration = true,
+                        Quantity = 1,
+                        Subscription = subscriber.GatewaySubscriptionId,
+                        SubscriptionItem = "si_12345",
+                        Type = "subscription",
+                        UnitAmountExcludingTax = invoiceAmountBelowThreshold,
+                    }
+                }
+            }
+        };
 }

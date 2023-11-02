@@ -10,46 +10,49 @@ public class PayPalIpnClient
 {
     private readonly HttpClient _httpClient = new HttpClient();
     private readonly Uri _ipnUri;
+    private readonly ILogger<PayPalIpnClient> _logger;
 
-    public PayPalIpnClient(IOptions<BillingSettings> billingSettings)
+    public PayPalIpnClient(IOptions<BillingSettings> billingSettings, ILogger<PayPalIpnClient> logger)
     {
         var bSettings = billingSettings?.Value;
+        _logger = logger;
         _ipnUri = new Uri(bSettings.PayPal.Production ? "https://www.paypal.com/cgi-bin/webscr" :
             "https://www.sandbox.paypal.com/cgi-bin/webscr");
     }
 
     public async Task<bool> VerifyIpnAsync(string ipnBody)
     {
+        _logger.LogInformation("Verifying IPN with PayPal at {Timestamp}: {VerificationUri}", DateTime.UtcNow, _ipnUri);
         if (ipnBody == null)
         {
+            _logger.LogError("No IPN body.");
             throw new ArgumentException("No IPN body.");
         }
 
-        var request = new HttpRequestMessage
-        {
-            Method = HttpMethod.Post,
-            RequestUri = _ipnUri
-        };
+        var request = new HttpRequestMessage { Method = HttpMethod.Post, RequestUri = _ipnUri };
         var cmdIpnBody = string.Concat("cmd=_notify-validate&", ipnBody);
         request.Content = new StringContent(cmdIpnBody, Encoding.UTF8, "application/x-www-form-urlencoded");
         var response = await _httpClient.SendAsync(request);
         if (!response.IsSuccessStatusCode)
         {
+            _logger.LogError("Failed to receive a successful response from PayPal IPN verification service. Response: {Response}", response);
             throw new Exception("Failed to verify IPN, status: " + response.StatusCode);
         }
+
         var responseContent = await response.Content.ReadAsStringAsync();
         if (responseContent.Equals("VERIFIED"))
         {
             return true;
         }
-        else if (responseContent.Equals("INVALID"))
+
+        if (responseContent.Equals("INVALID"))
         {
+            _logger.LogWarning("Received an INVALID response from PayPal: {ResponseContent}", responseContent);
             return false;
         }
-        else
-        {
-            throw new Exception("Failed to verify IPN.");
-        }
+
+        _logger.LogError("Failed to verify IPN: {ResponseContent}", responseContent);
+        throw new Exception("Failed to verify IPN.");
     }
 
     public class IpnTransaction

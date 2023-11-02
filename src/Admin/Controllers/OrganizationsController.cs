@@ -3,6 +3,8 @@ using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -20,6 +22,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 
 namespace Bit.Admin.Controllers;
 
@@ -48,6 +51,7 @@ public class OrganizationsController : Controller
     private readonly ISecretRepository _secretRepository;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IStripeSyncService _stripeSyncService;
 
     public OrganizationsController(
         IOrganizationService organizationService,
@@ -71,7 +75,8 @@ public class OrganizationsController : Controller
         ICurrentContext currentContext,
         ISecretRepository secretRepository,
         IProjectRepository projectRepository,
-        IServiceAccountRepository serviceAccountRepository)
+        IServiceAccountRepository serviceAccountRepository,
+        IStripeSyncService stripeSyncService)
     {
         _organizationService = organizationService;
         _organizationRepository = organizationRepository;
@@ -95,6 +100,7 @@ public class OrganizationsController : Controller
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
         _serviceAccountRepository = serviceAccountRepository;
+        _stripeSyncService = stripeSyncService;
     }
 
     [RequirePermission(Permission.Org_List_View)]
@@ -203,11 +209,23 @@ public class OrganizationsController : Controller
         var organization = await GetOrganization(id, model);
 
         if (organization.UseSecretsManager &&
-            !organization.SecretsManagerBeta
-            && StaticStore.GetSecretsManagerPlan(organization.PlanType) == null
-            )
+            !organization.SecretsManagerBeta &&
+            !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
         {
             throw new BadRequestException("Plan does not support Secrets Manager");
+        }
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(organization.GatewayCustomerId) && !string.IsNullOrWhiteSpace(organization.BillingEmail))
+            {
+                await _stripeSyncService.UpdateCustomerEmailAddress(organization.GatewayCustomerId, organization.BillingEmail);
+            }
+        }
+        catch (StripeException stripeException)
+        {
+            _logger.LogError(stripeException, "Failed to update billing email address in Stripe for Organization with ID '{organizationId}'", organization.Id);
+            throw;
         }
 
         await _organizationRepository.ReplaceAsync(organization);
@@ -217,6 +235,7 @@ public class OrganizationsController : Controller
             EventRaisedByUser = _userService.GetUserName(User),
             SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
         });
+
         return RedirectToAction("Edit", new { id });
     }
 

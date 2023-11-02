@@ -52,9 +52,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
-            .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
+            .AdjustSmSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
 
@@ -96,9 +96,9 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
 
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(x => x.Type == organization.PlanType);
+        var plan = StaticStore.GetPlan(organization.PlanType);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
-            .AdjustSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
+            .AdjustSmSeatsAsync(organization, plan, update.SmSeatsExcludingBase);
         await sutProvider.GetDependency<IPaymentService>().Received(1)
             .AdjustServiceAccountsAsync(organization, plan, update.SmServiceAccountsExcludingBase);
 
@@ -213,11 +213,11 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     public async Task AdjustServiceAccountsAsync_WithEnterpriseOrTeamsPlans_Success(PlanType planType, Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        var plan = StaticStore.SecretManagerPlans.FirstOrDefault(p => p.Type == planType);
+        var plan = StaticStore.GetPlan(planType);
 
-        var organizationSeats = plan.BaseSeats + 10;
+        var organizationSeats = plan.SecretsManager.BaseSeats + 10;
         var organizationMaxAutoscaleSeats = 20;
-        var organizationServiceAccounts = plan.BaseServiceAccount.GetValueOrDefault() + 10;
+        var organizationServiceAccounts = plan.SecretsManager.BaseServiceAccount + 10;
         var organizationMaxAutoscaleServiceAccounts = 300;
 
         var organization = new Organization
@@ -235,7 +235,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         var smServiceAccountsAdjustment = 10;
         var expectedSmServiceAccounts = organizationServiceAccounts + smServiceAccountsAdjustment;
-        var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.BaseServiceAccount.GetValueOrDefault();
+        var expectedSmServiceAccountsExcludingBase = expectedSmServiceAccounts - plan.SecretsManager.BaseServiceAccount;
 
         var update = new SecretsManagerSubscriptionUpdate(organization, false).AdjustServiceAccounts(10);
 
@@ -375,6 +375,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        organization.SmSeats = 8;
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
             SmSeats = 7,
@@ -598,7 +599,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     private static async Task VerifyDependencyNotCalledAsync(SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
-            .AdjustSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
+            .AdjustSmSeatsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         await sutProvider.GetDependency<IPaymentService>().DidNotReceive()
             .AdjustServiceAccountsAsync(Arg.Any<Organization>(), Arg.Any<Plan>(), Arg.Any<int>());
         // TODO: call ReferenceEventService - see AC-1481

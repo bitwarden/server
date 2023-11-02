@@ -3,7 +3,6 @@ using Bit.Core.Enums;
 using Bit.Core.Settings;
 using Bit.Infrastructure.Dapper;
 using Bit.Infrastructure.EntityFramework;
-using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -65,7 +64,7 @@ public class DatabaseDataAttribute : DataAttribute
                 };
                 dapperSqlServerCollection.AddSingleton(globalSettings);
                 dapperSqlServerCollection.AddSingleton<IGlobalSettings>(globalSettings);
-                dapperSqlServerCollection.AddSingleton<ITestDatabaseHelper>(_ => new DapperSqlServerTestDatabaseHelper(database));
+                dapperSqlServerCollection.AddSingleton(database);
                 dapperSqlServerCollection.AddDataProtection();
                 yield return dapperSqlServerCollection.BuildServiceProvider();
             }
@@ -75,7 +74,7 @@ public class DatabaseDataAttribute : DataAttribute
                 efCollection.AddLogging(configureLogging);
                 efCollection.SetupEntityFramework(database.ConnectionString, database.Type);
                 efCollection.AddPasswordManagerEFRepositories(SelfHosted);
-                efCollection.AddTransient<ITestDatabaseHelper>(sp => new EfTestDatabaseHelper(sp.GetRequiredService<DatabaseContext>(), database));
+                efCollection.AddSingleton(database);
                 efCollection.AddDataProtection();
                 yield return efCollection.BuildServiceProvider();
             }

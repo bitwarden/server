@@ -1,5 +1,6 @@
 @using Bit.SharedWeb.Utilities
 @using Bit.Admin.Enums;
+@using Bit.Core.AdminConsole.Enums.Provider
 @using System.Net
 @inject Bit.Admin.Services.IAccessControlService AccessControlService;
 
@@ -259,7 +260,7 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="ExpirationDate"></label>
-                    <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)'>
+                    <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)' step="1">
                 </div>
             </div>
         </div>
@@ -278,7 +279,13 @@
                     }
                     else
                     {
-                        <input type="email" class="form-control" asp-for="BillingEmail" readonly='@(!canEditBilling)'>
+                        <input
+                            type="text"
+                            class="form-control"
+                            asp-for="BillingEmail"
+                            readonly='@(!canEditBilling)'
+                            pattern="@(@"[^@\s]+@[^@\s]+\.[^@\s]+")"
+                            title="Email address must be in the format 'address@domain.com'.">
                     }
                 </div>
             </div>
