@@ -44,6 +44,9 @@ public interface IUserService
     Task<IdentityResult> UpdateTempPasswordAsync(User user, string newMasterPassword, string key, string hint);
     Task<IdentityResult> ChangeKdfAsync(User user, string masterPassword, string newMasterPassword, string key,
         KdfType kdf, int kdfIterations, int? kdfMemory, int? kdfParallelism);
+
+    // TODO (Jake): Update with tech debt to remove
+    [Obsolete("Leaving for backwards compatibility")]
     Task<IdentityResult> UpdateKeyAsync(User user, string masterPassword, string key, string privateKey,
         IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
     Task<IdentityResult> RefreshSecurityStampAsync(User user, string masterPasswordHash);

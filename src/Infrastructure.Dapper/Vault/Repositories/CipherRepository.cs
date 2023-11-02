@@ -294,6 +294,9 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
     }
 
+
+    // TODO (Jake): Update with tech debt to remove
+    [Obsolete("Leaving for backwards compatibility")]
     public Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
     {
         using (var connection = new SqlConnection(ConnectionString))

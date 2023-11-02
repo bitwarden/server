@@ -426,6 +426,8 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
+    // TODO (Jake): Update with tech debt to remove
+    [Obsolete("Leaving for backwards compatibility")]
     [HttpPost("key")]
     public async Task PostKey([FromBody] UpdateKeyRequestModel model)
     {

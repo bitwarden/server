@@ -815,6 +815,8 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
         }
     }
 
+    // TODO (Jake): Update with tech debt to remove
+    [Obsolete("Leaving for backwards compatibility")]
     public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders, IEnumerable<Core.Tools.Entities.Send> sends)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

@@ -28,6 +28,9 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId);
     Task DeleteByUserIdAsync(Guid userId);
     Task DeleteByOrganizationIdAsync(Guid organizationId);
+
+    // TODO (Jake): Update with tech debt to remove
+    [Obsolete("Leaving for backwards compatibility")]
     Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
