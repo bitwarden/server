@@ -30,7 +30,6 @@ public class PayPalIpnClient
         }
 
         var request = new HttpRequestMessage { Method = HttpMethod.Post, RequestUri = _ipnUri };
-        _httpClient.DefaultRequestHeaders.Add("User-Agent", "CSharp-IPN-VerificationScript");
         var cmdIpnBody = string.Concat("cmd=_notify-validate&", ipnBody);
         request.Content = new StringContent(cmdIpnBody, Encoding.UTF8, "application/x-www-form-urlencoded");
         var response = await _httpClient.SendAsync(request);
