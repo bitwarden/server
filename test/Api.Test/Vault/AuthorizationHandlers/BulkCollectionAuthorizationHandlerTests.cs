@@ -750,6 +750,8 @@ public class BulkCollectionAuthorizationHandlerTests
             new List<Collection>()
         );
 
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(new Guid());
+
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.False(context.HasSucceeded);
@@ -757,7 +759,7 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_MissingUserId_NoSuccessOrFailure(
+    public async Task HandleRequirementAsync_MissingUserId_Failure(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
@@ -771,8 +773,7 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.False(context.HasSucceeded);
-        Assert.False(context.HasFailed);
+        Assert.True(context.HasFailed);
         sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs();
     }
 

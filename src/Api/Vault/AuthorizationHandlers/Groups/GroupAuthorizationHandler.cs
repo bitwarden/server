@@ -35,20 +35,19 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
         }
 
+        // Acting user is not authenticated, fail
         if (!_currentContext.UserId.HasValue)
         {
             context.Fail();
             return;
         }
 
-        var targetOrganizationId = requirement.OrganizationId;
-        if (targetOrganizationId == default)
+        if (requirement.OrganizationId == default)
         {
-            context.Fail();
             return;
         }
 
-        var org = _currentContext.GetOrganization(targetOrganizationId);
+        var org = _currentContext.GetOrganization(requirement.OrganizationId);
 
         switch (requirement)
         {
@@ -72,7 +71,6 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
                 org.Permissions.AccessImportExport)
             {
                 context.Succeed(requirement);
-                return;
             }
         }
         else
@@ -81,11 +79,7 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
             if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
             {
                 context.Succeed(requirement);
-                return;
             }
         }
-
-        // Acting user is neither a member of the target organization or a provider user, fail
-        context.Fail();
     }
 }

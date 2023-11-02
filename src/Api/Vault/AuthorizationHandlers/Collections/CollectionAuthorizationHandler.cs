@@ -35,7 +35,14 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
         }
 
-        if (!_currentContext.UserId.HasValue || requirement.OrganizationId == default)
+        // Acting user is not authenticated, fail
+        if (!_currentContext.UserId.HasValue)
+        {
+            context.Fail();
+            return;
+        }
+
+        if (requirement.OrganizationId == default)
         {
             return;
         }

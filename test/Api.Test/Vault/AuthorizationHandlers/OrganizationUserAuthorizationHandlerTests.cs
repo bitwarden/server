@@ -18,30 +18,15 @@ namespace Bit.Api.Test.Vault.AuthorizationHandlers;
 public class OrganizationUserAuthorizationHandlerTests
 {
     [Theory]
-    [BitAutoData(OrganizationUserType.Admin, false, false, false, false, true)]
-    [BitAutoData(OrganizationUserType.Owner, false, false, false, false, true)]
-    [BitAutoData(OrganizationUserType.User, false, false, false, false, false)]
-    [BitAutoData(OrganizationUserType.Custom, true, false, false, false, true)]
-    [BitAutoData(OrganizationUserType.Custom, false, true, false, false, true)]
-    [BitAutoData(OrganizationUserType.Custom, false, false, true, false, true)]
-    [BitAutoData(OrganizationUserType.Custom, false, false, false, true, true)]
-    [BitAutoData(OrganizationUserType.Custom, false, false, false, false, false)]
-    public async Task CanReadAllAccessAsync_ReturnsExpectedResult(
-        OrganizationUserType userType, bool editAnyCollection, bool deleteAnyCollection,
-        bool manageGroups, bool manageUsers, bool expectedSuccess,
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanReadAllAsync_WhenAdminOrOwner_Success(
+        OrganizationUserType userType,
         Guid userId, SutProvider<OrganizationUserAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
-        var permissions = new Permissions
-        {
-            EditAnyCollection = editAnyCollection,
-            DeleteAnyCollection = deleteAnyCollection,
-            ManageGroups = manageGroups,
-            ManageUsers = manageUsers
-        };
-
         organization.Type = userType;
-        organization.Permissions = permissions;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserOperations.ReadAll(organization.Id) },
@@ -53,11 +38,11 @@ public class OrganizationUserAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
-        Assert.True(expectedSuccess ? context.HasSucceeded : context.HasFailed);
+        Assert.True(context.HasSucceeded);
     }
 
     [Theory, BitAutoData]
-    public async Task CanReadAllAccessAsync_WithProviderUser_Success(
+    public async Task CanReadAllAsync_WithProviderUser_Success(
         Guid userId,
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
@@ -78,6 +63,73 @@ public class OrganizationUserAuthorizationHandlerTests
         Assert.True(context.HasSucceeded);
     }
 
+    [Theory]
+    [BitAutoData(true, false, false, false)]
+    [BitAutoData(false, true, false, false)]
+    [BitAutoData(false, false, true, false)]
+    [BitAutoData(false, false, false, true)]
+    public async Task CanReadAllAsync_WhenCustomUserWithRequiredPermissions_Success(
+        bool editAnyCollection, bool deleteAnyCollection, bool manageGroups, bool manageUsers,
+        SutProvider<OrganizationUserAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection,
+            DeleteAnyCollection = deleteAnyCollection,
+            ManageGroups = manageGroups,
+            ManageUsers = manageUsers
+        };
+
+        var context = new AuthorizationHandlerContext(
+            new[] { OrganizationUserOperations.ReadAll(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanReadAllAsync_WhenMissingAccess_Failure(
+        OrganizationUserType userType,
+        SutProvider<OrganizationUserAuthorizationHandler> sutProvider,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManageUsers = false,
+            AccessImportExport = false
+        };
+
+        var context = new AuthorizationHandlerContext(
+            new[] { OrganizationUserOperations.ReadAll(organization.Id) },
+            new ClaimsPrincipal(),
+            null);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
     [Theory, BitAutoData]
     public async Task HandleRequirementAsync_MissingUserId_Failure(
         Guid organizationId,
@@ -93,7 +145,7 @@ public class OrganizationUserAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData]
@@ -112,6 +164,24 @@ public class OrganizationUserAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleRequirementAsync_NoSpecifiedOrgId_NoSuccessOrFailure(
+        SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { OrganizationUserOperations.ReadAll(default) },
+            new ClaimsPrincipal(),
+            null
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(new Guid());
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+        Assert.False(context.HasFailed);
     }
 }

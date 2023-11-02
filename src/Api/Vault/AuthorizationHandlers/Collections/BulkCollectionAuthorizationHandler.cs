@@ -41,8 +41,15 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
         }
 
+        // Acting user is not authenticated, fail
+        if (!_currentContext.UserId.HasValue)
+        {
+            context.Fail();
+            return;
+        }
+
         // Establish pattern of authorization handler null checking passed resources
-        if (resources == null || !resources.Any() || !_currentContext.UserId.HasValue)
+        if (resources == null || !resources.Any())
         {
             return;
         }

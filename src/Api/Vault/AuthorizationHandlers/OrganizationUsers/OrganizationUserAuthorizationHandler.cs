@@ -41,14 +41,12 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
             return;
         }
 
-        var targetOrganizationId = requirement.OrganizationId;
-        if (targetOrganizationId == default)
+        if (requirement.OrganizationId == default)
         {
-            context.Fail();
             return;
         }
 
-        var org = _currentContext.GetOrganization(targetOrganizationId);
+        var org = _currentContext.GetOrganization(requirement.OrganizationId);
 
         switch (requirement)
         {
@@ -71,7 +69,6 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
                 org.Permissions.DeleteAnyCollection)
             {
                 context.Succeed(requirement);
-                return;
             }
         }
         else
@@ -80,11 +77,7 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
             if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
             {
                 context.Succeed(requirement);
-                return;
             }
         }
-
-        // Acting user is neither a member of the target organization or a provider user, fail
-        context.Fail();
     }
 }
