@@ -328,6 +328,11 @@ public class OrganizationLicense : ILicense
                 valid = organization.UseCustomPermissions == UseCustomPermissions;
             }
 
+            if (valid && Version >= 12)
+            {
+                valid = organization.ExpirationDate == ExpirationWithoutGracePeriod;
+            }
+
             if (valid && Version >= 13)
             {
                 valid = organization.UseSecretsManager == UseSecretsManager &&
