@@ -39,7 +39,7 @@
     <PackageReference Include="AspNetCore.HealthChecks.SendGrid" Version="6.0.2" />
     <PackageReference Include="AspNetCore.HealthChecks.SqlServer" Version="6.0.2" />
     <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="6.0.3" />
-    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.10.0" />
+    <PackageReference Include="Azure.Messaging.EventGrid" Version="4.20.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
   
