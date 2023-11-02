@@ -6,7 +6,7 @@ using Bit.Core.Models.StaticStore.Plans;
 
 namespace Bit.Core.Utilities;
 
-public class StaticStore
+public static class StaticStore
 {
     static StaticStore()
     {
@@ -112,6 +112,11 @@ public class StaticStore
             new EnterprisePlan(false),
             new TeamsPlan(true),
             new TeamsPlan(false),
+
+            new Enterprise2020Plan(true),
+            new Enterprise2020Plan(false),
+            new Teams2020Plan(true),
+            new Teams2020Plan(false),
             new FamiliesPlan(),
             new FreePlan(),
             new CustomPlan(),
@@ -139,8 +144,7 @@ public class StaticStore
             }
         };
 
-    public static Models.StaticStore.Plan GetPlan(PlanType planType) =>
-        Plans.SingleOrDefault(p => p.Type == planType);
+    public static Plan GetPlan(PlanType planType) => Plans.SingleOrDefault(p => p.Type == planType);
 
 
     public static SponsoredPlan GetSponsoredPlan(PlanSponsorshipType planSponsorshipType) =>
