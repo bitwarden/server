@@ -184,8 +184,11 @@ public class OrganizationLicense : ILicense
                     (Version >= 11 || !p.Name.Equals(nameof(UseCustomPermissions))) &&
                     // ExpirationWithoutGracePeriod was added in Version 12
                     (Version >= 12 || !p.Name.Equals(nameof(ExpirationWithoutGracePeriod))) &&
-                    // UseSecretsManager was added in Version 13
+                    // UseSecretsManager, UsePasswordManager, SmSeats, and SmServiceAccounts were added in Version 13
                     (Version >= 13 || !p.Name.Equals(nameof(UseSecretsManager))) &&
+                    (Version >= 13 || !p.Name.Equals(nameof(UsePasswordManager))) &&
+                    (Version >= 13 || !p.Name.Equals(nameof(SmSeats))) &&
+                    (Version >= 13 || !p.Name.Equals(nameof(SmServiceAccounts))) &&
                     (
                         !forHash ||
                         (

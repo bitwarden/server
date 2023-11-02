@@ -11,6 +11,8 @@ using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
@@ -19,7 +21,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.Policies;
-using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -319,8 +320,16 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var result = await _upgradeOrganizationPlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
-        return new PaymentResponseModel { Success = result.Item1, PaymentIntentClientSecret = result.Item2 };
+        var (success, paymentIntentClientSecret) = await _upgradeOrganizationPlanCommand.UpgradePlanAsync(orgIdGuid, model.ToOrganizationUpgrade());
+
+        if (model.UseSecretsManager && success)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+
+            await TryGrantOwnerAccessToSecretsManagerAsync(orgIdGuid, userId);
+        }
+
+        return new PaymentResponseModel { Success = success, PaymentIntentClientSecret = paymentIntentClientSecret };
     }
 
     [HttpPost("{id}/subscription")]
@@ -373,6 +382,9 @@ public class OrganizationsController : Controller
             model.AdditionalServiceAccounts);
 
         var userId = _userService.GetProperUserId(User).Value;
+
+        await TryGrantOwnerAccessToSecretsManagerAsync(organization.Id, userId);
+
         var organizationDetails = await _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id,
             OrganizationUserStatusType.Confirmed);
 
@@ -784,5 +796,16 @@ public class OrganizationsController : Controller
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization), eventType: EventType.Organization_CollectionManagement_Updated);
         return new OrganizationResponseModel(organization);
+    }
+
+    private async Task TryGrantOwnerAccessToSecretsManagerAsync(Guid organizationId, Guid userId)
+    {
+        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organizationId, userId);
+
+        if (organizationUser != null)
+        {
+            organizationUser.AccessSecretsManager = true;
+            await _organizationUserRepository.ReplaceAsync(organizationUser);
+        }
     }
 }

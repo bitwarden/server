@@ -78,15 +78,15 @@ public record TeamsPlan : Models.StaticStore.Plan
             if (isAnnual)
             {
                 StripeStoragePlanId = "storage-gb-annually";
-                StripeSeatPlanId = "2020-teams-org-seat-annually";
-                SeatPrice = 36;
+                StripeSeatPlanId = "2023-teams-org-seat-annually";
+                SeatPrice = 48;
                 AdditionalStoragePricePerGb = 4;
             }
             else
             {
-                StripeSeatPlanId = "2020-teams-org-seat-monthly";
+                StripeSeatPlanId = "2023-teams-org-seat-monthly";
                 StripeStoragePlanId = "storage-gb-monthly";
-                SeatPrice = 4;
+                SeatPrice = 5;
                 AdditionalStoragePricePerGb = 0.5M;
             }
         }

@@ -1,28 +1,29 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
-using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
-using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Stripe;
 
@@ -35,7 +36,6 @@ public class OrganizationService : IOrganizationService
     private readonly ICollectionRepository _collectionRepository;
     private readonly IUserRepository _userRepository;
     private readonly IGroupRepository _groupRepository;
-    private readonly IDataProtector _dataProtector;
     private readonly IMailService _mailService;
     private readonly IPushNotificationService _pushNotificationService;
     private readonly IPushRegistrationService _pushRegistrationService;
@@ -57,6 +57,8 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
 
     public OrganizationService(
@@ -65,7 +67,6 @@ public class OrganizationService : IOrganizationService
         ICollectionRepository collectionRepository,
         IUserRepository userRepository,
         IGroupRepository groupRepository,
-        IDataProtectionProvider dataProtectionProvider,
         IMailService mailService,
         IPushNotificationService pushNotificationService,
         IPushRegistrationService pushRegistrationService,
@@ -86,6 +87,8 @@ public class OrganizationService : IOrganizationService
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderUserRepository providerUserRepository,
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
+        IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IFeatureService featureService)
     {
@@ -94,7 +97,6 @@ public class OrganizationService : IOrganizationService
         _collectionRepository = collectionRepository;
         _userRepository = userRepository;
         _groupRepository = groupRepository;
-        _dataProtector = dataProtectionProvider.CreateProtector("OrganizationServiceDataProtector");
         _mailService = mailService;
         _pushNotificationService = pushNotificationService;
         _pushRegistrationService = pushRegistrationService;
@@ -116,6 +118,8 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
     }
 
@@ -1060,176 +1064,33 @@ public class OrganizationService : IOrganizationService
 
     private async Task SendInvitesAsync(IEnumerable<OrganizationUser> orgUsers, Organization organization)
     {
-        string MakeToken(OrganizationUser orgUser) =>
-            _dataProtector.Protect($"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {CoreHelpers.ToEpocMilliseconds(DateTime.UtcNow)}");
+        (OrganizationUser, ExpiringToken) MakeOrgUserExpiringTokenPair(OrganizationUser orgUser)
+        {
+            var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
+            var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+            return (orgUser, new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate));
+        }
 
-        await _mailService.BulkSendOrganizationInviteEmailAsync(organization.Name,
-            orgUsers.Select(o => (o, new ExpiringToken(MakeToken(o), DateTime.UtcNow.AddDays(5)))), organization.PlanType == PlanType.Free);
+        var orgUsersWithExpTokens = orgUsers.Select(MakeOrgUserExpiringTokenPair);
+
+        await _mailService.BulkSendOrganizationInviteEmailAsync(
+            organization.Name,
+            orgUsersWithExpTokens,
+            organization.PlanType == PlanType.Free
+        );
     }
 
     private async Task SendInviteAsync(OrganizationUser orgUser, Organization organization, bool initOrganization)
     {
-        var now = DateTime.UtcNow;
-        var nowMillis = CoreHelpers.ToEpocMilliseconds(now);
-        var token = _dataProtector.Protect(
-            $"OrganizationUserInvite {orgUser.Id} {orgUser.Email} {nowMillis}");
-        await _mailService.SendOrganizationInviteEmailAsync(organization.Name, orgUser, new ExpiringToken(token, now.AddDays(5)), organization.PlanType == PlanType.Free, initOrganization);
-    }
-
-    public async Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token,
-        IUserService userService)
-    {
-        var orgUser = await _organizationUserRepository.GetByIdAsync(organizationUserId);
-        if (orgUser == null)
-        {
-            throw new BadRequestException("User invalid.");
-        }
-
-        if (!CoreHelpers.UserInviteTokenIsValid(_dataProtector, token, user.Email, orgUser.Id, _globalSettings))
-        {
-            throw new BadRequestException("Invalid token.");
-        }
-
-        var existingOrgUserCount = await _organizationUserRepository.GetCountByOrganizationAsync(
-            orgUser.OrganizationId, user.Email, true);
-        if (existingOrgUserCount > 0)
-        {
-            if (orgUser.Status == OrganizationUserStatusType.Accepted)
-            {
-                throw new BadRequestException("Invitation already accepted. You will receive an email when your organization membership is confirmed.");
-            }
-            throw new BadRequestException("You are already part of this organization.");
-        }
-
-        if (string.IsNullOrWhiteSpace(orgUser.Email) ||
-            !orgUser.Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase))
-        {
-            throw new BadRequestException("User email does not match invite.");
-        }
-
-        var organizationUser = await AcceptUserAsync(orgUser, user, userService);
-
-        if (user.EmailVerified == false)
-        {
-            user.EmailVerified = true;
-            await _userRepository.ReplaceAsync(user);
-        }
-
-        return organizationUser;
-    }
-
-    public async Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService)
-    {
-        var org = await _organizationRepository.GetByIdentifierAsync(orgIdentifier);
-        if (org == null)
-        {
-            throw new BadRequestException("Organization invalid.");
-        }
-
-        var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
-        if (orgUser == null)
-        {
-            throw new BadRequestException("User not found within organization.");
-        }
-
-        return await AcceptUserAsync(orgUser, user, userService);
-    }
-
-    public async Task<OrganizationUser> AcceptUserAsync(Guid organizationId, User user, IUserService userService)
-    {
-        var org = await _organizationRepository.GetByIdAsync(organizationId);
-        if (org == null)
-        {
-            throw new BadRequestException("Organization invalid.");
-        }
-
-        var usersOrgs = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var orgUser = usersOrgs.FirstOrDefault(u => u.OrganizationId == org.Id);
-        if (orgUser == null)
-        {
-            throw new BadRequestException("User not found within organization.");
-        }
-
-        return await AcceptUserAsync(orgUser, user, userService);
-    }
-
-    private async Task<OrganizationUser> AcceptUserAsync(OrganizationUser orgUser, User user,
-        IUserService userService)
-    {
-        if (orgUser.Status == OrganizationUserStatusType.Revoked)
-        {
-            throw new BadRequestException("Your organization access has been revoked.");
-        }
-
-        if (orgUser.Status != OrganizationUserStatusType.Invited)
-        {
-            throw new BadRequestException("Already accepted.");
-        }
-
-        if (orgUser.Type == OrganizationUserType.Owner || orgUser.Type == OrganizationUserType.Admin)
-        {
-            var org = await GetOrgById(orgUser.OrganizationId);
-            if (org.PlanType == PlanType.Free)
-            {
-                var adminCount = await _organizationUserRepository.GetCountByFreeOrganizationAdminUserAsync(
-                    user.Id);
-                if (adminCount > 0)
-                {
-                    throw new BadRequestException("You can only be an admin of one free organization.");
-                }
-            }
-        }
-
-        // Enforce Single Organization Policy of organization user is trying to join
-        var allOrgUsers = await _organizationUserRepository.GetManyByUserAsync(user.Id);
-        var hasOtherOrgs = allOrgUsers.Any(ou => ou.OrganizationId != orgUser.OrganizationId);
-        var invitedSingleOrgPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg, OrganizationUserStatusType.Invited);
-
-        if (hasOtherOrgs && invitedSingleOrgPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-        {
-            throw new BadRequestException("You may not join this organization until you leave or remove " +
-                "all other organizations.");
-        }
-
-        // Enforce Single Organization Policy of other organizations user is a member of
-        var anySingleOrgPolicies = await _policyService.AnyPoliciesApplicableToUserAsync(user.Id,
-            PolicyType.SingleOrg);
-        if (anySingleOrgPolicies)
-        {
-            throw new BadRequestException("You cannot join this organization because you are a member of " +
-                "another organization which forbids it");
-        }
-
-        // Enforce Two Factor Authentication Policy of organization user is trying to join
-        if (!await userService.TwoFactorIsEnabledAsync(user))
-        {
-            var invitedTwoFactorPolicies = await _policyService.GetPoliciesApplicableToUserAsync(user.Id,
-                PolicyType.TwoFactorAuthentication, OrganizationUserStatusType.Invited);
-            if (invitedTwoFactorPolicies.Any(p => p.OrganizationId == orgUser.OrganizationId))
-            {
-                throw new BadRequestException("You cannot join this organization until you enable " +
-                    "two-step login on your user account.");
-            }
-        }
-
-        orgUser.Status = OrganizationUserStatusType.Accepted;
-        orgUser.UserId = user.Id;
-        orgUser.Email = null;
-
-        await _organizationUserRepository.ReplaceAsync(orgUser);
-
-        var admins = await _organizationUserRepository.GetManyByMinimumRoleAsync(orgUser.OrganizationId, OrganizationUserType.Admin);
-        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-
-        if (adminEmails.Count > 0)
-        {
-            var organization = await _organizationRepository.GetByIdAsync(orgUser.OrganizationId);
-            await _mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
-        }
-
-        return orgUser;
+        var orgUserInviteTokenable = _orgUserInviteTokenableFactory.CreateToken(orgUser);
+        var protectedToken = _orgUserInviteTokenDataFactory.Protect(orgUserInviteTokenable);
+        await _mailService.SendOrganizationInviteEmailAsync(
+            organization.Name,
+            orgUser,
+            new ExpiringToken(protectedToken, orgUserInviteTokenable.ExpirationDate),
+            organization.PlanType == PlanType.Free,
+            initOrganization
+        );
     }
 
     public async Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
