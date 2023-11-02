@@ -16,12 +16,9 @@ public class SsoEmail2faSessionTokenable : ExpiringTokenable
     public const string DataProtectorPurpose = "SsoEmail2faSessionTokenDataProtector";
 
     public const string TokenIdentifier = "SsoEmail2faSessionToken";
-
     public string Identifier { get; set; } = TokenIdentifier;
     public Guid Id { get; set; }
     public string Email { get; set; }
-
-
     [JsonConstructor]
     public SsoEmail2faSessionTokenable()
     {
@@ -33,14 +30,12 @@ public class SsoEmail2faSessionTokenable : ExpiringTokenable
         Id = user?.Id ?? default;
         Email = user?.Email;
     }
-
     public bool TokenIsValid(User user)
     {
         if (Id == default || Email == default || user == null)
         {
             return false;
         }
-
         return Id == user.Id &&
                Email.Equals(user.Email, StringComparison.InvariantCultureIgnoreCase);
     }
