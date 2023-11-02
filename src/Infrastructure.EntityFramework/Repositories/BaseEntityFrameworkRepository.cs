@@ -115,6 +115,8 @@ public abstract class BaseEntityFrameworkRepository
         }
     }
 
+    // TODO (Jake): Update with tech debt to remove
+    [Obsolete("Leaving for backwards compatibility")]
     protected async Task UserUpdateKeys(User user)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
