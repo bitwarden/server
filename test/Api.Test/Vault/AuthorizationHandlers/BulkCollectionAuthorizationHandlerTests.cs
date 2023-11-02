@@ -35,7 +35,10 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.Permissions.CreateNewCollections = createNewCollection;
+        organization.Permissions = new Permissions
+        {
+            CreateNewCollections = createNewCollection
+        };
         organization.LimitCollectionCreationDeletion = limitCollectionCreateDelete;
 
         var context = new AuthorizationHandlerContext(
@@ -60,7 +63,10 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
-        organization.Permissions.CreateNewCollections = false;
+        organization.Permissions = new Permissions
+        {
+            CreateNewCollections = false
+        };
         organization.LimitCollectionCreationDeletion = true;
 
         var context = new AuthorizationHandlerContext(
@@ -89,7 +95,10 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.Permissions.CreateNewCollections = false;
+        organization.Permissions = new Permissions
+        {
+            CreateNewCollections = false
+        };
         organization.LimitCollectionCreationDeletion = true;
 
         var context = new AuthorizationHandlerContext(
@@ -117,6 +126,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Read },
@@ -140,6 +150,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Read },
@@ -167,8 +178,11 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.Permissions.EditAnyCollection = editAnyCollection;
-        organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection,
+            DeleteAnyCollection = deleteAnyCollection
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Read },
@@ -192,6 +206,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Read },
@@ -219,8 +234,11 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.Permissions.EditAnyCollection = false;
-        organization.Permissions.DeleteAnyCollection = false;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Read },
@@ -247,6 +265,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAccess },
@@ -270,6 +289,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAccess },
@@ -297,8 +317,11 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.Permissions.EditAnyCollection = editAnyCollection;
-        organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection,
+            DeleteAnyCollection = deleteAnyCollection
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAccess },
@@ -322,6 +345,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAccess },
@@ -349,8 +373,11 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.Permissions.EditAnyCollection = false;
-        organization.Permissions.DeleteAnyCollection = false;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAccess },
@@ -385,7 +412,10 @@ public class BulkCollectionAuthorizationHandlerTests
         }
 
         organization.Type = userType;
-        organization.Permissions.EditAnyCollection = editAnyCollection;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Update },
@@ -410,7 +440,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
-        organization.Permissions.EditAnyCollection = false;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Update },
@@ -444,7 +474,10 @@ public class BulkCollectionAuthorizationHandlerTests
 
         // Ensure the user is not an owner/admin and does not have edit any collection permission
         organization.Type = OrganizationUserType.User;
-        organization.Permissions.EditAnyCollection = false;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Update },
@@ -483,7 +516,10 @@ public class BulkCollectionAuthorizationHandlerTests
         }
 
         organization.Type = userType;
-        organization.Permissions.EditAnyCollection = editAnyCollection;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ModifyAccess },
@@ -508,7 +544,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
-        organization.Permissions.EditAnyCollection = false;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ModifyAccess },
@@ -542,7 +578,10 @@ public class BulkCollectionAuthorizationHandlerTests
 
         // Ensure the user is not an owner/admin and does not have edit any collection permission
         organization.Type = OrganizationUserType.User;
-        organization.Permissions.EditAnyCollection = false;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ModifyAccess },
@@ -580,7 +619,10 @@ public class BulkCollectionAuthorizationHandlerTests
         }
 
         organization.Type = userType;
-        organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
+        organization.Permissions = new Permissions
+        {
+            DeleteAnyCollection = deleteAnyCollection
+        };
         organization.LimitCollectionCreationDeletion = limitCollectionCreateDelete;
 
         var context = new AuthorizationHandlerContext(
@@ -606,7 +648,10 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
-        organization.Permissions.DeleteAnyCollection = false;
+        organization.Permissions = new Permissions
+        {
+            DeleteAnyCollection = false
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Delete },
@@ -631,7 +676,10 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.Permissions.DeleteAnyCollection = true;
+        organization.Permissions = new Permissions
+        {
+            DeleteAnyCollection = true
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Delete },
@@ -658,7 +706,10 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.Permissions.DeleteAnyCollection = false;
+        organization.Permissions = new Permissions
+        {
+            DeleteAnyCollection = false
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.Delete },
@@ -674,7 +725,39 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_MissingUserId_Failure(
+    public async Task HandleRequirementAsync_NullResource_NoSuccessOrFailure(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.Create },
+            new ClaimsPrincipal(),
+            null
+        );
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+        Assert.False(context.HasFailed);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task HandleRequirementAsync_EmptyResourceList_NoSuccessOrFailure(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { CollectionOperations.Create },
+            new ClaimsPrincipal(),
+            new List<Collection>()
+        );
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+        Assert.False(context.HasFailed);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task HandleRequirementAsync_MissingUserId_NoSuccessOrFailure(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
@@ -688,7 +771,8 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
 
         await sutProvider.Sut.HandleAsync(context);
-        Assert.True(context.HasFailed);
+        Assert.False(context.HasSucceeded);
+        Assert.False(context.HasFailed);
         sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs();
     }
 

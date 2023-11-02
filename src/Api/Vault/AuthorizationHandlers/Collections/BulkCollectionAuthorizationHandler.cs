@@ -44,14 +44,12 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
         // Establish pattern of authorization handler null checking passed resources
         if (resources == null || !resources.Any() || !_currentContext.UserId.HasValue)
         {
-            context.Fail();
             return;
         }
 
         var targetOrganizationId = resources.FirstOrDefault()?.OrganizationId ?? default;
         if (targetOrganizationId == default)
         {
-            context.Fail();
             return;
         }
 

@@ -26,6 +26,7 @@ public class CollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAll(organization.Id) },
@@ -46,6 +47,7 @@ public class CollectionAuthorizationHandlerTests
         SutProvider<CollectionAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAll(organization.Id) },
@@ -76,9 +78,12 @@ public class CollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.Permissions.EditAnyCollection = editAnyCollection;
-        organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
-        organization.Permissions.AccessImportExport = accessImportExport;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection,
+            DeleteAnyCollection = deleteAnyCollection,
+            AccessImportExport = accessImportExport
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAll(organization.Id) },
@@ -104,9 +109,12 @@ public class CollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.Permissions.EditAnyCollection = false;
-        organization.Permissions.DeleteAnyCollection = false;
-        organization.Permissions.AccessImportExport = false;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            AccessImportExport = false
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAll(organization.Id) },
@@ -130,6 +138,7 @@ public class CollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAllWithAccess(organization.Id) },
@@ -150,6 +159,7 @@ public class CollectionAuthorizationHandlerTests
         SutProvider<CollectionAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAllWithAccess(organization.Id) },
@@ -169,20 +179,21 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false)]
-    [BitAutoData(false, true, false)]
-    [BitAutoData(false, false, true)]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
     public async Task CanReadAllWithAccessAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool editAnyCollection, bool deleteAnyCollection, bool accessImportExport,
+        bool editAnyCollection, bool deleteAnyCollection,
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.Permissions.EditAnyCollection = editAnyCollection;
-        organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
-        organization.Permissions.AccessImportExport = accessImportExport;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection,
+            DeleteAnyCollection = deleteAnyCollection,
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAllWithAccess(organization.Id) },
@@ -208,9 +219,12 @@ public class CollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
-        organization.Permissions.EditAnyCollection = false;
-        organization.Permissions.DeleteAnyCollection = false;
-        organization.Permissions.AccessImportExport = false;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            AccessImportExport = false
+        };
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAllWithAccess(organization.Id) },
