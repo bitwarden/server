@@ -13,6 +13,7 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
         int additionalSeats,
         int additionalStorageGb,
         bool premiumAccessAddon,
+        bool useSecretsManager,
         int additionalSmSeats,
         int additionalServiceAccounts)
     {
@@ -24,7 +25,7 @@ public class OrganizationSubscriptionOptionsBase : SubscriptionCreateOptions
 
         AddPlanIdToSubscription(plan);
 
-        if (org.UseSecretsManager)
+        if (useSecretsManager)
         {
             AddSecretsManagerSeat(plan, additionalSmSeats);
             AddServiceAccount(plan, additionalServiceAccounts);
@@ -126,7 +127,8 @@ public class OrganizationPurchaseSubscriptionOptions : OrganizationSubscriptionO
         int additionalServiceAccounts) :
         base(org, plan, taxInfo, additionalSeats,
             additionalStorageGb, premiumAccessAddon,
-            additionalSmSeats, additionalServiceAccounts)
+            org.UseSecretsManager, additionalSmSeats,
+            additionalServiceAccounts)
     {
         OffSession = true;
         TrialPeriodDays = plan.TrialPeriodDays;
@@ -142,7 +144,8 @@ public class OrganizationUpgradeSubscriptionOptions : OrganizationSubscriptionOp
         OrganizationUpgrade upgrade) :
         base(org, plan, upgrade.TaxInfo, upgrade.AdditionalSeats,
             upgrade.AdditionalStorageGb, upgrade.PremiumAccessAddon,
-            upgrade.AdditionalSmSeats.GetValueOrDefault(), upgrade.AdditionalServiceAccounts.GetValueOrDefault())
+            upgrade.UseSecretsManager, upgrade.AdditionalSmSeats.GetValueOrDefault(),
+            upgrade.AdditionalServiceAccounts.GetValueOrDefault())
     {
         Customer = customerId;
     }
