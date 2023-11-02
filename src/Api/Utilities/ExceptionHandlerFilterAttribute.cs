@@ -82,6 +82,11 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
             errorMessage = "Resource not found.";
             context.HttpContext.Response.StatusCode = 404;
         }
+        else if (exception is FeatureUnavailableException)
+        {
+            errorMessage = "This feature is not available.";
+            context.HttpContext.Response.StatusCode = 404;
+        }
         else if (exception is SecurityTokenValidationException)
         {
             errorMessage = "Invalid token.";
