@@ -258,7 +258,7 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="ExpirationDate"></label>
-                    <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)'>
+                    <input type="datetime-local" class="form-control" asp-for="ExpirationDate" readonly='@(!canEditLicensing)' step="1">
                 </div>
             </div>
         </div>
