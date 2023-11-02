@@ -14,6 +14,7 @@ using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -36,6 +37,7 @@ public class OrganizationUsersController : Controller
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
     private readonly IUpdateOrganizationUserGroupsCommand _updateOrganizationUserGroupsCommand;
+    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
 
@@ -53,6 +55,7 @@ public class OrganizationUsersController : Controller
         ICountNewSmSeatsRequiredQuery countNewSmSeatsRequiredQuery,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
         IUpdateOrganizationUserGroupsCommand updateOrganizationUserGroupsCommand,
+        IAcceptOrgUserCommand acceptOrgUserCommand,
         IFeatureService featureService,
         IAuthorizationService authorizationService)
     {
@@ -67,6 +70,7 @@ public class OrganizationUsersController : Controller
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
         _updateOrganizationUserGroupsCommand = updateOrganizationUserGroupsCommand;
+        _acceptOrgUserCommand = acceptOrgUserCommand;
         _featureService = featureService;
         _authorizationService = authorizationService;
     }
@@ -212,7 +216,7 @@ public class OrganizationUsersController : Controller
         }
 
         await _organizationService.InitPendingOrganization(user.Id, orgId, model.Keys.PublicKey, model.Keys.EncryptedPrivateKey, model.CollectionName);
-        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+        await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
         await _organizationService.ConfirmUserAsync(orgId, organizationUserId, model.Key, user.Id, _userService);
     }
 
@@ -234,7 +238,7 @@ public class OrganizationUsersController : Controller
             throw new BadRequestException(string.Empty, "Master Password reset is required, but not provided.");
         }
 
-        await _organizationService.AcceptUserAsync(organizationUserId, user, model.Token, _userService);
+        await _acceptOrgUserCommand.AcceptOrgUserByEmailTokenAsync(organizationUserId, user, model.Token, _userService);
 
         if (useMasterPasswordPolicy)
         {
@@ -345,7 +349,7 @@ public class OrganizationUsersController : Controller
         var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, user.Id);
         if (orgUser.Status == OrganizationUserStatusType.Invited)
         {
-            await _organizationService.AcceptUserAsync(orgId, user, _userService);
+            await _acceptOrgUserCommand.AcceptOrgUserByOrgIdAsync(orgId, user, _userService);
         }
     }
 

@@ -10,6 +10,7 @@ using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
@@ -18,6 +19,7 @@ using Bit.Core.Tools.Services;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Fakes;
 using Bit.Test.Common.Helpers;
 using Fido2NetLib;
 using Microsoft.AspNetCore.DataProtection;
@@ -272,9 +274,10 @@ public class UserServiceTests
             sutProvider.GetDependency<IFido2>(),
             sutProvider.GetDependency<ICurrentContext>(),
             sutProvider.GetDependency<IGlobalSettings>(),
-            sutProvider.GetDependency<IOrganizationService>(),
+            sutProvider.GetDependency<IAcceptOrgUserCommand>(),
             sutProvider.GetDependency<IProviderUserRepository>(),
             sutProvider.GetDependency<IStripeSyncService>(),
+            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
             sutProvider.GetDependency<IWebAuthnCredentialRepository>(),
             sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnLoginTokenable>>()
             );
