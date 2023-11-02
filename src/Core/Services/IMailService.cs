@@ -24,7 +24,17 @@ public interface IMailService
     Task SendOrganizationConfirmedEmailAsync(string organizationName, string email);
     Task SendOrganizationUserRemovedForPolicyTwoStepEmailAsync(string organizationName, string email);
     Task SendPasswordlessSignInAsync(string returnUrl, string token, string email);
-    Task SendInvoiceUpcomingAsync(string email, decimal amount, DateTime dueDate, List<string> items,
+    Task SendInvoiceUpcoming(
+        string email,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
+        bool mentionInvoices);
+    Task SendInvoiceUpcoming(
+        IEnumerable<string> email,
+        decimal amount,
+        DateTime dueDate,
+        List<string> items,
         bool mentionInvoices);
     Task SendPaymentFailedAsync(string email, decimal amount, bool mentionInvoices);
     Task SendAddedCreditAsync(string email, decimal amount);
