@@ -495,6 +495,7 @@ public static class CoreHelpers
         return string.Concat("Custom_", type.ToString());
     }
 
+    // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
     public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
         Guid orgUserId, IGlobalSettings globalSettings)
     {
