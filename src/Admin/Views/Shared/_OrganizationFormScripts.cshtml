@@ -70,6 +70,7 @@
             case '@((byte)PlanType.TeamsAnnually2020)':
             case '@((byte)PlanType.TeamsMonthly)':
             case '@((byte)PlanType.TeamsAnnually)':
+            case '@((byte)PlanType.TeamsStarter)':
                 document.getElementById('@(nameof(Model.UsePolicies))').checked = false;
                 document.getElementById('@(nameof(Model.UseSso))').checked = false;
                 document.getElementById('@(nameof(Model.UseGroups))').checked = true;

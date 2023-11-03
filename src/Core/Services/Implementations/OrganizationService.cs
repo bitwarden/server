@@ -2025,7 +2025,10 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan does not allow additional Service Accounts.");
         }
 
-        if (upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats)
+        if ((plan.Product == ProductType.TeamsStarter &&
+            upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
+            (plan.Product != ProductType.TeamsStarter &&
+             upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
