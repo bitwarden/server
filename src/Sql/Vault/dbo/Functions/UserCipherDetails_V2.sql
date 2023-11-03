@@ -4,7 +4,7 @@ AS RETURN
 WITH [CTE] AS (
     SELECT
         [Id],
-        [OrganizationId],
+        [OrganizationId]
     FROM
         [OrganizationUser]
     WHERE
