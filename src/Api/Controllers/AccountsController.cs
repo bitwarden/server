@@ -391,7 +391,7 @@ public class AccountsController : Controller
         var ciphers = new List<Cipher>();
         if (model.Ciphers.Any())
         {
-            var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, UseFlexibleCollections);
+            var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: UseFlexibleCollections);
             ciphers.AddRange(existingCiphers
                 .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing)));
         }

@@ -106,7 +106,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -197,7 +197,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -271,7 +271,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -334,7 +334,7 @@ public class SyncControllerTests
             .GetManyByUserIdAsync(default);
 
         await cipherRepository.ReceivedWithAnyArgs(1)
-            .GetManyByUserIdAsync(default, default);
+            .GetManyByUserIdAsync(default, useFlexibleCollections: default);
 
         await sendRepository.ReceivedWithAnyArgs(1)
             .GetManyByUserIdAsync(default);

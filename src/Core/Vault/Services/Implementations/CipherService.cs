@@ -425,7 +425,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, UseFlexibleCollections);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, useFlexibleCollections: UseFlexibleCollections);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
 
             await _cipherRepository.DeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, UseFlexibleCollections);
@@ -859,7 +859,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, UseFlexibleCollections);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(deletingUserId, useFlexibleCollections: UseFlexibleCollections);
             deletingCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(x => (Cipher)x).ToList();
 
             await _cipherRepository.SoftDeleteAsync(deletingCiphers.Select(c => c.Id), deletingUserId, UseFlexibleCollections);
@@ -925,7 +925,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId, UseFlexibleCollections);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId, useFlexibleCollections: UseFlexibleCollections);
             restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
 
             revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId, UseFlexibleCollections);
@@ -963,7 +963,7 @@ public class CipherService : ICipherService
         }
         else
         {
-            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, UseFlexibleCollections, true);
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(userId, useFlexibleCollections: UseFlexibleCollections, withOrganizations: true);
             orgCiphers = ciphers.Where(c => c.OrganizationId == organizationId);
         }
 

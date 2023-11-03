@@ -80,7 +80,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
         return View(new UserViewModel(user, ciphers));
     }
 
@@ -93,7 +93,7 @@ public class UsersController : Controller
             return RedirectToAction("Index");
         }
 
-        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, UseFlexibleCollections);
+        var ciphers = await _cipherRepository.GetManyByUserIdAsync(id, useFlexibleCollections: UseFlexibleCollections);
         var billingInfo = await _paymentService.GetBillingAsync(user);
         return View(new UserEditModel(user, ciphers, billingInfo, _globalSettings));
     }
