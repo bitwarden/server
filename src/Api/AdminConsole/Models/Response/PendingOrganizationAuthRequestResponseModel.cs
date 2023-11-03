@@ -3,7 +3,7 @@ using System.Reflection;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Models.Api;
 
-namespace Bit.Api.Auth.Models.Response;
+namespace Bit.Api.AdminConsole.Models.Response;
 
 public class PendingOrganizationAuthRequestResponseModel : ResponseModel
 {
