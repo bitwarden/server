@@ -10,6 +10,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Services;
+using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -50,6 +51,7 @@ public class AccountsController : Controller
     private readonly IPolicyService _policyService;
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
+    private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
 
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
@@ -69,7 +71,9 @@ public class AccountsController : Controller
         ICaptchaValidationService captchaValidationService,
         IPolicyService policyService,
         ICurrentContext currentContext,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand
+        )
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -86,6 +90,7 @@ public class AccountsController : Controller
         _policyService = policyService;
         _currentContext = currentContext;
         _featureService = featureService;
+        _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -263,8 +268,12 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var result = await _userService.SetPasswordAsync(model.ToUser(user), model.MasterPasswordHash, model.Key,
+        var result = await _setInitialMasterPasswordCommand.SetInitialMasterPasswordAsync(
+            model.ToUser(user),
+            model.MasterPasswordHash,
+            model.Key,
             model.OrgIdentifier);
+
         if (result.Succeeded)
         {
             return;
@@ -466,8 +475,13 @@ public class AccountsController : Controller
         var providerUserOrganizationDetails =
             await _providerUserRepository.GetManyOrganizationDetailsByUserAsync(user.Id,
                 ProviderUserStatusType.Confirmed);
+
+        var twoFactorEnabled = await _userService.TwoFactorIsEnabledAsync(user);
+        var hasPremiumFromOrg = await _userService.HasPremiumFromOrganization(user);
+
         var response = new ProfileResponseModel(user, organizationUserDetails, providerUserDetails,
-            providerUserOrganizationDetails, await _userService.TwoFactorIsEnabledAsync(user), await _userService.HasPremiumFromOrganization(user));
+            providerUserOrganizationDetails, twoFactorEnabled,
+            hasPremiumFromOrg);
         return response;
     }
 
