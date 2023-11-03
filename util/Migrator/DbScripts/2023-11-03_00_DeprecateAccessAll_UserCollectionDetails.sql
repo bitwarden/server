@@ -163,8 +163,8 @@ BEGIN
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId
 
     DROP TABLE #Temp
-GO
 END
+GO
 
 -- Cipher_Move_V2
 CREATE OR ALTER PROCEDURE [dbo].[Cipher_Move_V2]
@@ -267,8 +267,8 @@ BEGIN
     DROP TABLE #Temp
 
     SELECT @UtcNow
-GO
 END
+GO
 
 -- Cipher_SoftDelete_V2
 CREATE OR ALTER PROCEDURE [dbo].[Cipher_SoftDelete_V2]
