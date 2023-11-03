@@ -1943,9 +1943,9 @@ public class OrganizationService : IOrganizationService
 
     private static void ValidatePlan(Models.StaticStore.Plan plan, int additionalSeats, string productType)
     {
-        if (plan is not { LegacyYear: null })
+        if (plan is null)
         {
-            throw new BadRequestException($"Invalid {productType} plan selected.");
+            throw new BadRequestException($"{productType} Plan was null.");
         }
 
         if (plan.Disabled)
@@ -1961,6 +1961,11 @@ public class OrganizationService : IOrganizationService
 
     public void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
+        if (plan is not { LegacyYear: null })
+        {
+            throw new BadRequestException("Invalid Password Manager plan selected.");
+        }
+
         ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
 
         if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
