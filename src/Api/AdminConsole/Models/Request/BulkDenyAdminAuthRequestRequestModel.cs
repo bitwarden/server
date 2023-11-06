@@ -1,4 +1,4 @@
-﻿namespace Bit.Api.Auth.Models.Request;
+﻿namespace Bit.Api.AdminConsole.Models.Request;
 
 public class BulkDenyAdminAuthRequestRequestModel
 {
