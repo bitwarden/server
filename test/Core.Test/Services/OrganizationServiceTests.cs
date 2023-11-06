@@ -1355,10 +1355,14 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.Custom, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.EnterpriseAnnually, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.EnterpriseAnnually, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.EnterpriseAnnually2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.EnterpriseAnnually2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.EnterpriseMonthly, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.EnterpriseMonthly, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.EnterpriseMonthly2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.EnterpriseMonthly2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.FamiliesAnnually, OrganizationUserType.Admin)]
@@ -1367,10 +1371,14 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.FamiliesAnnually2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsAnnually, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsAnnually, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.TeamsAnnually2020, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.TeamsAnnually2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsAnnually2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsAnnually2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsMonthly, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsMonthly, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.TeamsMonthly2020, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.TeamsMonthly2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsMonthly2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsMonthly2019, OrganizationUserType.Owner)]
     public async Task ConfirmUserToNonFree_AlreadyFreeAdminOrOwner_DoesNotThrow(PlanType planType, OrganizationUserType orgUserType, Organization org, OrganizationUser confirmingUser,
@@ -1789,27 +1797,9 @@ public class OrganizationServiceTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually2019)]
-    public void ValidateSecretsManagerPlan_ThrowsException_WhenInvalidPlanSelected(
-        PlanType planType, SutProvider<OrganizationService> sutProvider)
-    {
-        var plan = StaticStore.GetPlan(planType);
-
-        var signup = new OrganizationUpgrade
-        {
-            UseSecretsManager = true,
-            AdditionalSmSeats = 1,
-            AdditionalServiceAccounts = 10,
-            AdditionalSeats = 1
-        };
-
-        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
-        Assert.Contains("Invalid Secrets Manager plan selected.", exception.Message);
-    }
-
-    [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenNoSecretsManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
@@ -1882,6 +1872,7 @@ public class OrganizationServiceTests
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingServiceAccounts(
@@ -1921,6 +1912,7 @@ public class OrganizationServiceTests
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ValidPlan_NoExceptionThrown(
