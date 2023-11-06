@@ -38,7 +38,7 @@ configure_other_vars() {
     echo "Identity Server Dev: $IDENTITY_SERVER_FINGERPRINT"
     echo "Data Protection Dev: $DATA_PROTECTION_FINGERPRINT"
     jq \
-        ".globalSettings.sqlServer.connectionString = \"Server=localhost;Database=vault_dev;User Id=SA;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True\" |
+        ".globalSettings.sqlServer.connectionString = \"$SQL_CONNECTION_STRING\" |
         .globalSettings.postgreSql.connectionString = \"Host=localhost;Username=postgres;Password=$DB_PASSWORD;Database=vault_dev;Include Error Detail=true\" |
         .globalSettings.mySql.connectionString = \"server=localhost;uid=root;pwd=$DB_PASSWORD;database=vault_dev\" |
         .globalSettings.identityServer.certificateThumbprint = \"$IDENTITY_SERVER_FINGERPRINT\" |
