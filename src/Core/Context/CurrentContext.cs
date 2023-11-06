@@ -224,7 +224,7 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (claimsDict.ContainsKey(Claims.OrganizationManager))
+        if (!UseFlexibleCollections && claimsDict.ContainsKey(Claims.OrganizationManager))
         {
             organizations.AddRange(claimsDict[Claims.OrganizationManager].Select(c =>
                 new CurrentContextOrganization

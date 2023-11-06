@@ -824,6 +824,26 @@ public class OrganizationServiceTests
         });
     }
 
+    [Theory, BitAutoData]
+    public async Task InviteUser_WithFCEnabled_WhenInvitingManager_Throws(Organization organization, OrganizationUserInvite invite,
+        OrganizationUser invitor, SutProvider<OrganizationService> sutProvider)
+    {
+        invite.Type = OrganizationUserType.Manager;
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManageUsers(organization.Id)
+            .Returns(true);
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new (OrganizationUserInvite, string)[] { (invite, null) }));
+
+        Assert.Contains("manager role is deprecated", exception.Message.ToLowerInvariant());
+    }
+
     private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
     SutProvider<OrganizationService> sutProvider)
     {
@@ -1102,6 +1122,38 @@ public class OrganizationServiceTests
         var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SaveUserAsync(newUserData, oldUserData.UserId, collections, groups));
         Assert.Contains("custom users can not manage admins or owners", exception.Message.ToLowerInvariant());
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveUser_WithFCEnabled_WhenUpgradingToManager_Throws(
+        Organization organization,
+        [OrganizationUser(type: OrganizationUserType.User)] OrganizationUser oldUserData,
+        [OrganizationUser(type: OrganizationUserType.Manager)] OrganizationUser newUserData,
+        IEnumerable<CollectionAccessSelection> collections,
+        IEnumerable<Guid> groups,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>())
+            .Returns(true);
+
+        sutProvider.GetDependency<ICurrentContext>()
+            .ManageUsers(organization.Id)
+            .Returns(true);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByIdAsync(oldUserData.Id)
+            .Returns(oldUserData);
+
+        newUserData.Id = oldUserData.Id;
+        newUserData.UserId = oldUserData.UserId;
+        newUserData.OrganizationId = oldUserData.OrganizationId = organization.Id;
+        newUserData.Permissions = CoreHelpers.ClassToJsonData(new Permissions());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SaveUserAsync(newUserData, oldUserData.UserId, collections, groups));
+
+        Assert.Contains("manager role is deprecated", exception.Message.ToLowerInvariant());
     }
 
     [Theory, BitAutoData]
