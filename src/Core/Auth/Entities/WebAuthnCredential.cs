@@ -36,15 +36,16 @@ public class WebAuthnCredential : ITableObject<Guid>
 
     public WebAuthnPrfStatus GetPrfStatus()
     {
-        if (SupportsPrf && EncryptedUserKey != null && EncryptedPrivateKey != null && EncryptedPublicKey != null)
+        if (!SupportsPrf)
+        {
+            return WebAuthnPrfStatus.Unsupported;
+        }
+
+        if (EncryptedUserKey != null && EncryptedPrivateKey != null && EncryptedPublicKey != null)
         {
             return WebAuthnPrfStatus.Enabled;
         }
-        else if (SupportsPrf)
-        {
-            return WebAuthnPrfStatus.Supported;
-        }
 
-        return WebAuthnPrfStatus.Unsupported;
+        return WebAuthnPrfStatus.Supported;
     }
 }
