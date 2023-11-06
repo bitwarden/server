@@ -10,11 +10,12 @@ using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Queues.Models;
+using Bit.Core.AdminConsole.Context;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Identity;
 using Bit.Core.Settings;
 using IdentityModel;
@@ -494,6 +495,7 @@ public static class CoreHelpers
         return string.Concat("Custom_", type.ToString());
     }
 
+    // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
     public static bool UserInviteTokenIsValid(IDataProtector protector, string token, string userEmail,
         Guid orgUserId, IGlobalSettings globalSettings)
     {
