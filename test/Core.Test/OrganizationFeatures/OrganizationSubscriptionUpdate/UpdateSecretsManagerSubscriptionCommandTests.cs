@@ -22,16 +22,26 @@ namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 public class UpdateSecretsManagerSubscriptionCommandTests
 {
     [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpdateSubscriptionAsync_UpdateEverything_ValidInput_Passes(
         PlanType planType,
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.PlanType = planType;
+        organization.Seats = 400;
         organization.SmSeats = 10;
         organization.MaxAutoscaleSmSeats = 20;
         organization.SmServiceAccounts = 200;
@@ -77,6 +87,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     [BitAutoData(PlanType.EnterpriseMonthly)]
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpdateSubscriptionAsync_ValidInput_WithNullMaxAutoscale_Passes(
         PlanType planType,
         Organization organization,
@@ -168,10 +179,19 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpdateSubscriptionAsync_PaidPlan_NullGatewayCustomerId_ThrowsException(
         PlanType planType,
         Organization organization,
@@ -187,10 +207,19 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpdateSubscriptionAsync_PaidPlan_NullGatewaySubscriptionId_ThrowsException(
         PlanType planType,
         Organization organization,
@@ -206,10 +235,19 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task AdjustServiceAccountsAsync_WithEnterpriseOrTeamsPlans_Success(PlanType planType, Guid organizationId,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
@@ -501,10 +539,19 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     }
 
     [Theory]
+    [BitAutoData(PlanType.EnterpriseAnnually2019)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
+    [BitAutoData(PlanType.EnterpriseMonthly2019)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
+    [BitAutoData(PlanType.TeamsMonthly2019)]
+    [BitAutoData(PlanType.TeamsMonthly2020)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsAnnually2019)]
+    [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpdateSmServiceAccounts_WhenCurrentServiceAccountsIsGreaterThanNew_ThrowsBadRequestException(
         PlanType planType,
         Organization organization,

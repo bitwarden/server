@@ -12,5 +12,7 @@ public enum ProductType : byte
     Teams = 2,
     [Display(Name = "Enterprise")]
     Enterprise = 3,
+    [Display(Name = "Teams Starter")]
+    TeamsStarter = 4,
 }
 

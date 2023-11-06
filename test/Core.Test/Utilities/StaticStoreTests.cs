@@ -10,10 +10,10 @@ public class StaticStoreTests
     [Fact]
     public void StaticStore_Initialization_Success()
     {
-        var plans = StaticStore.Plans;
+        var plans = StaticStore.Plans.ToList();
         Assert.NotNull(plans);
         Assert.NotEmpty(plans);
-        Assert.Equal(12, plans.Count());
+        Assert.Equal(17, plans.Count);
     }
 
     [Theory]
@@ -21,6 +21,7 @@ public class StaticStoreTests
     [InlineData(PlanType.EnterpriseMonthly)]
     [InlineData(PlanType.TeamsMonthly)]
     [InlineData(PlanType.TeamsAnnually)]
+    [InlineData(PlanType.TeamsStarter)]
     public void StaticStore_GetPlan_Success(PlanType planType)
     {
         var plan = StaticStore.GetPlan(planType);
