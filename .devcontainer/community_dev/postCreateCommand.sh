@@ -24,6 +24,7 @@ configure_other_vars() {
     IDENTITY_SERVER_FINGERPRINT="$(echo $CERT_OUTPUT | awk -F 'Identity Server Dev: ' '{match($2, /[[:alnum:]]+/); print substr($2, RSTART, RLENGTH)}')"
     #shellcheck disable=SC2086
     DATA_PROTECTION_FINGERPRINT="$(echo $CERT_OUTPUT | awk -F 'Data Protection Dev: ' '{match($2, /[[:alnum:]]+/); print substr($2, RSTART, RLENGTH)}')"
+    SQL_CONNECTION_STRING="Server=localhost;Database=vault_dev;User Id=SA;Password=$DB_PASSWORD;Encrypt=True;TrustServerCertificate=True"
     echo "Identity Server Dev: $IDENTITY_SERVER_FINGERPRINT"
     echo "Data Protection Dev: $DATA_PROTECTION_FINGERPRINT"
     jq \
@@ -50,6 +51,11 @@ Proceed? [y/N] " response
         pushd ./dev >/dev/null || exit
         pwsh ./setup_secrets.ps1 || true
         popd >/dev/null || exit
+                
+        echo "Running migrations..."
+        sleep 5 # wait for DB container to start
+        dotnet run --project ./util/MsSqlMigratorUtility "$SQL_CONNECTION_STRING"
+
     fi
 }
 

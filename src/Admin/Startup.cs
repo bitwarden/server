@@ -110,7 +110,7 @@ public class Startup
         // Jobs service
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
-        if (globalSettings.SelfHosted || Environment.IsDevelopment())
+        if (globalSettings.SelfHosted)
         {
             services.AddHostedService<HostedServices.DatabaseMigrationHostedService>();
         }
