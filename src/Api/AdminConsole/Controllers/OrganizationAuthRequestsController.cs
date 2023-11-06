@@ -1,5 +1,5 @@
-﻿using Bit.Api.Auth.Models.Request;
-using Bit.Api.Auth.Models.Response;
+﻿using Bit.Api.AdminConsole.Models.Request;
+using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
