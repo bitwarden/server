@@ -82,7 +82,7 @@
                     <label asp-for="PlanType"></label>
                     @{
                         var planTypes = Enum.GetValues<PlanType>()
-                            .Where(p => Model.Provider == null || p is >= PlanType.TeamsMonthly and <= PlanType.EnterpriseAnnually)
+                            .Where(p => Model.Provider == null || p is >= PlanType.TeamsMonthly and <= PlanType.TeamsStarter)
                             .Select(e => new SelectListItem
                             {
                                 Value = ((int)e).ToString(),
