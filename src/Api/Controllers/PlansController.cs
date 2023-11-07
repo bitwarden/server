@@ -33,9 +33,12 @@ public class PlansController : Controller
     public ListResponseModel<PlanResponseModel> Get()
     {
         var plansUpgradeIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.BillingPlansUpgrade, _currentContext);
-        var data = StaticStore.Plans;
-        var responses = data
-            .Where(plan => plansUpgradeIsEnabled || plan.Type <= PlanType.EnterpriseAnnually2020)
+        var teamsStarterPlanIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.BillingStarterPlan, _currentContext);
+        var responses = StaticStore.Plans
+            // If plans upgrade is disabled, return only the original plans. Otherwise, return everything
+            .Where(plan => plansUpgradeIsEnabled || plan.Type <= PlanType.EnterpriseAnnually2020 || plan.Type == PlanType.TeamsStarter)
+            // If teams starter is disabled, don't return that plan, otherwise return everything
+            .Where(plan => teamsStarterPlanIsEnabled || plan.Product != ProductType.TeamsStarter)
             .Select(plan =>
             {
                 if (!plansUpgradeIsEnabled && plan.Type is <= PlanType.EnterpriseAnnually2020 and >= PlanType.TeamsMonthly2020)

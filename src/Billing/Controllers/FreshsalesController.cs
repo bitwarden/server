@@ -164,6 +164,7 @@ public class FreshsalesController : Controller
             case PlanType.TeamsMonthly:
             case PlanType.TeamsMonthly2020:
             case PlanType.TeamsMonthly2019:
+            case PlanType.TeamsStarter:
                 planName = "Teams";
                 return true;
             case PlanType.EnterpriseAnnually:
