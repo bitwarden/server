@@ -22,7 +22,7 @@ public class WebAuthnControllerTests
     [Theory, BitAutoData]
     public async Task Get_UserNotFound_ThrowsUnauthorizedAccessException(SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange 
+        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
 
         // Act
@@ -35,7 +35,7 @@ public class WebAuthnControllerTests
     [Theory, BitAutoData]
     public async Task PostOptions_UserNotFound_ThrowsUnauthorizedAccessException(SecretVerificationRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange 
+        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
 
         // Act
@@ -62,7 +62,7 @@ public class WebAuthnControllerTests
     [Theory, BitAutoData]
     public async Task Post_UserNotFound_ThrowsUnauthorizedAccessException(WebAuthnCredentialRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange 
+        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
 
         // Act
@@ -100,7 +100,7 @@ public class WebAuthnControllerTests
             .GetUserByPrincipalAsync(default)
             .ReturnsForAnyArgs(user);
         sutProvider.GetDependency<IUserService>()
-            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>())
+            .CompleteWebAuthLoginRegistrationAsync(user, requestModel.Name, createOptions, Arg.Any<AuthenticatorAttestationRawResponse>(), requestModel.SupportsPrf, requestModel.EncryptedUserKey, requestModel.EncryptedPublicKey, requestModel.EncryptedPrivateKey)
             .Returns(true);
         sutProvider.GetDependency<IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable>>()
             .Unprotect(requestModel.Token)
@@ -116,7 +116,7 @@ public class WebAuthnControllerTests
     [Theory, BitAutoData]
     public async Task Delete_UserNotFound_ThrowsUnauthorizedAccessException(Guid credentialId, SecretVerificationRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
-        // Arrange 
+        // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
 
         // Act

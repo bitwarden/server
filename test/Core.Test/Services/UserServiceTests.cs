@@ -193,7 +193,7 @@ public class UserServiceTests
         sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(existingCredentials);
 
         // Act
-        var result = await sutProvider.Sut.CompleteWebAuthLoginRegistrationAsync(user, "name", false, null, null, null, options, response);
+        var result = await sutProvider.Sut.CompleteWebAuthLoginRegistrationAsync(user, "name", options, response, false, null, null, null);
 
         // Assert
         Assert.False(result);
