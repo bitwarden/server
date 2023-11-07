@@ -23,16 +23,19 @@ public class EmergencyAccessRotationValidator : IRotationValidator<IEnumerable<E
     public async Task<IEnumerable<EmergencyAccess>> ValidateAsync(User user,
         IEnumerable<EmergencyAccessWithIdRequestModel> emergencyAccessKeys)
     {
-        if (!emergencyAccessKeys.Any())
+        var result = new List<EmergencyAccess>();
+        if (emergencyAccessKeys == null || !emergencyAccessKeys.Any())
         {
-            return null;
+            return result;
         }
 
         var existing = await _emergencyAccessRepository.GetManyDetailsByGrantorIdAsync(user.Id);
+        if (existing == null || !existing.Any())
+        {
+            return result;
+        }
         // Exclude any emergency access that has not been confirmed yet.
         existing = existing.Where(ea => ea.KeyEncrypted != null).ToList();
-
-        var result = new List<EmergencyAccess>();
 
         foreach (var ea in existing)
         {

@@ -10,5 +10,5 @@ namespace Bit.Core.Auth.UserFeatures.UserKey.Interfaces;
 /// </summary>
 public interface IRotateUserKeyCommand
 {
-    Task<IdentityResult> RotateUserKeyAsync(RotateUserKeyData model);
+    Task<IdentityResult> RotateUserKeyAsync(User user, RotateUserKeyData model);
 }

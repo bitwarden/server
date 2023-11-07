@@ -121,6 +121,5 @@ public class OrganizationUserBulkRequestModel
 
 public class AccountRecoveryWithIdRequestModel : AccountRecoveryEnrollmentRequestModel
 {
-    [Required]
-    public Guid Id { get; set; }
+    [Required] public Guid OrgId { get; set; }
 }

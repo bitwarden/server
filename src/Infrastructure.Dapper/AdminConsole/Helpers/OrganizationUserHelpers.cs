@@ -40,19 +40,19 @@ public static class OrganizationUserHelpers
                 UPDATE
                     [dbo].[OrganizationUser]
                 SET
-                    [ResetPasswordKey] = AR.[KeyEncrypted],
+                    [ResetPasswordKey] = AR.[ResetPasswordKey]
                 FROM
                     [dbo].[OrganizationUser] OU
                 INNER JOIN
                     @AccountRecoveryKeys AR ON OU.Id = AR.Id
                 WHERE
-                    S.[UserId] = @UserId";
+                    OU.[UserId] = @UserId";
 
         var accountRecoveryTVP = accountRecoveryKeys.ToTvp();
 
         connection.Execute(
             sql,
-            new { AccountRecoveryKeys = accountRecoveryTVP },
+            new { UserId = userId, AccountRecoveryKeys = accountRecoveryTVP },
             transaction: transaction,
             commandType: CommandType.Text);
     }

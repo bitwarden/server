@@ -1,4 +1,5 @@
 using Bit.Core.Auth.UserFeatures.UserKey.Interfaces;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
@@ -22,34 +23,35 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
 
     }
 
-    public async Task<IdentityResult> RotateUserKeyAsync(RotateUserKeyData model)
+    public async Task<IdentityResult> RotateUserKeyAsync(User user, RotateUserKeyData model)
     {
-        if (model.User == null)
+        if (user == null)
         {
-            throw new ArgumentNullException(nameof(model.User));
+            throw new ArgumentNullException(nameof(user));
         }
 
-        if (!await _userService.CheckPasswordAsync(model.User, model.MasterPasswordHash))
+        if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
             return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
         }
 
         var now = DateTime.UtcNow;
-        model.User.RevisionDate = model.User.AccountRevisionDate = now;
-        model.User.LastKeyRotationDate = now;
-        model.User.SecurityStamp = Guid.NewGuid().ToString();
-        model.User.Key = model.Key;
-        model.User.PrivateKey = model.PrivateKey;
+        user.RevisionDate = user.AccountRevisionDate = now;
+        user.LastKeyRotationDate = now;
+        user.SecurityStamp = Guid.NewGuid().ToString();
+        user.Key = model.Key;
+        user.PrivateKey = model.PrivateKey;
         if (model.Ciphers.Any() || model.Folders.Any() || model.Sends.Any() || model.EmergencyAccessKeys.Any() || model.AccountRecoveryKeys.Any())
         {
-            await _userRepository.UpdateUserKeyAndEncryptedDataAsync(model.User, model.Ciphers, model.Folders, model.Sends, model.EmergencyAccessKeys, model.AccountRecoveryKeys);
+            await _userRepository.UpdateUserKeyAndEncryptedDataAsync(user, model.Ciphers, model.Folders, model.Sends,
+                model.EmergencyAccessKeys, model.AccountRecoveryKeys);
         }
         else
         {
-            await _userRepository.ReplaceAsync(model.User);
+            await _userRepository.ReplaceAsync(user);
         }
 
-        await _pushService.PushLogOutAsync(model.User.Id, excludeCurrentContextFromPush: true);
+        await _pushService.PushLogOutAsync(user.Id, excludeCurrentContextFromPush: true);
         return IdentityResult.Success;
     }
 }

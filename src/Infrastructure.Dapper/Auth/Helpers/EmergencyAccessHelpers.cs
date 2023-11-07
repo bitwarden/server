@@ -60,19 +60,19 @@ public static class EmergencyAccessHelpers
                 UPDATE
                     [dbo].[EmergencyAccess]
                 SET
-                    [KeyEncrypted] = TE.[KeyEncrypted],
+                    [KeyEncrypted] = TE.[KeyEncrypted]
                 FROM
                     [dbo].[EmergencyAccess] E
                 INNER JOIN
                     #TempEmergencyAccess TE ON E.Id = TE.Id
                 WHERE
-                    S.[UserId] = @UserId
+                    E.[GrantorId] = @GrantorId
 
                 DROP TABLE #TempEmergencyAccess";
 
         using (var cmd = new SqlCommand(sql, connection, transaction))
         {
-            cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = userId;
+            cmd.Parameters.Add("@GrantorId", SqlDbType.UniqueIdentifier).Value = userId;
             cmd.ExecuteNonQuery();
         }
 

@@ -15,12 +15,36 @@ public class AccountRecoveryRotationValidatorTests
 {
     [Theory]
     [BitAutoData]
+    public async Task ValidateAsync_Success_ReturnsValid(
+        SutProvider<AccountRecoveryRotationValidator> sutProvider, User user,
+        IEnumerable<AccountRecoveryWithIdRequestModel> accountRecoveryKeys)
+    {
+        var existingUserAccountRecovery = accountRecoveryKeys
+            .Select(a =>
+                new OrganizationUser
+                {
+                    Id = new Guid(), ResetPasswordKey = a.ResetPasswordKey, OrganizationId = a.OrgId
+                }).ToList();
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
+            .Returns(existingUserAccountRecovery);
+
+        var result = await sutProvider.Sut.ValidateAsync(user, accountRecoveryKeys);
+
+        Assert.Equal(result.Select(r => r.OrganizationId), accountRecoveryKeys.Select(a => a.OrgId));
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task ValidateAsync_MissingAccountRecovery_Throws(
         SutProvider<AccountRecoveryRotationValidator> sutProvider, User user,
         IEnumerable<AccountRecoveryWithIdRequestModel> accountRecoveryKeys)
     {
         var existingUserAccountRecovery = accountRecoveryKeys
-            .Select(a => new OrganizationUser { Id = a.Id, ResetPasswordKey = a.ResetPasswordKey }).ToList();
+            .Select(a =>
+                new OrganizationUser
+                {
+                    Id = new Guid(), ResetPasswordKey = a.ResetPasswordKey, OrganizationId = a.OrgId
+                }).ToList();
         existingUserAccountRecovery.Add(new OrganizationUser
         {
             Id = Guid.NewGuid(), ResetPasswordKey = "Missing AccountRecoveryKey"
@@ -40,14 +64,18 @@ public class AccountRecoveryRotationValidatorTests
         IEnumerable<AccountRecoveryWithIdRequestModel> accountRecoveryKeys)
     {
         var existingUserAccountRecovery = accountRecoveryKeys
-            .Select(a => new OrganizationUser { Id = a.Id, ResetPasswordKey = a.ResetPasswordKey }).ToList();
+            .Select(a =>
+                new OrganizationUser
+                {
+                    Id = new Guid(), ResetPasswordKey = a.ResetPasswordKey, OrganizationId = a.OrgId
+                }).ToList();
         existingUserAccountRecovery.RemoveAt(0);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
             .Returns(existingUserAccountRecovery);
 
         var result = await sutProvider.Sut.ValidateAsync(user, accountRecoveryKeys);
 
-        Assert.DoesNotContain(result, c => c.Id == accountRecoveryKeys.First().Id);
+        Assert.DoesNotContain(result, c => c.Id == accountRecoveryKeys.First().OrgId);
     }
 
     [Theory]
@@ -57,7 +85,11 @@ public class AccountRecoveryRotationValidatorTests
         IEnumerable<AccountRecoveryWithIdRequestModel> accountRecoveryKeys)
     {
         var existingUserAccountRecovery = accountRecoveryKeys
-            .Select(a => new OrganizationUser { Id = a.Id, ResetPasswordKey = a.ResetPasswordKey }).ToList();
+            .Select(a =>
+                new OrganizationUser
+                {
+                    Id = new Guid(), ResetPasswordKey = a.ResetPasswordKey, OrganizationId = a.OrgId
+                }).ToList();
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
             .Returns(existingUserAccountRecovery);
         accountRecoveryKeys.First().ResetPasswordKey = null;

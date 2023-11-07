@@ -410,7 +410,7 @@ public class AccountsController : Controller
             AccountRecoveryKeys = await _accountRecoveryValidator.ValidateAsync(user, model.AccountRecoveryKeys),
         };
 
-        var result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);
+        var result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
 
         if (result.Succeeded)
         {

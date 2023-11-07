@@ -17,19 +17,25 @@ public class AccountRecoveryRotationValidator : IRotationValidator<IEnumerable<A
     public async Task<IEnumerable<OrganizationUser>> ValidateAsync(User user,
         IEnumerable<AccountRecoveryWithIdRequestModel> accountRecoveryKeys)
     {
-        if (!accountRecoveryKeys.Any())
+        var result = new List<OrganizationUser>();
+        if (accountRecoveryKeys == null || !accountRecoveryKeys.Any())
         {
-            return null;
+            return result;
         }
 
         var existing = await _organizationUserRepository.GetManyByUserAsync(user.Id);
+        if (existing == null || !existing.Any())
+        {
+            return result;
+        }
+
+        // Exclude any account recovery that do not have a key.
         existing = existing.Where(o => o.ResetPasswordKey != null).ToList();
 
-        var result = new List<OrganizationUser>();
 
         foreach (var ou in existing)
         {
-            var accountRecovery = accountRecoveryKeys.FirstOrDefault(a => a.Id == ou.Id);
+            var accountRecovery = accountRecoveryKeys.FirstOrDefault(a => a.OrgId == ou.OrganizationId);
             if (accountRecovery == null)
             {
                 throw new BadRequestException("All existing account recovery keys must be included in the rotation.");
