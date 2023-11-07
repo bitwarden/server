@@ -21,13 +21,17 @@ public class SendRotationValidator : IRotationValidator<IEnumerable<SendWithIdRe
 
     public async Task<IEnumerable<Send>> ValidateAsync(User user, IEnumerable<SendWithIdRequestModel> sends)
     {
-        if (!sends.Any())
+        var result = new List<Send>();
+        if (sends == null || !sends.Any())
         {
-            return null;
+            return result;
         }
 
         var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
-        var result = new List<Send>();
+        if (existingSends == null || !existingSends.Any())
+        {
+            return result;
+        }
 
         foreach (var existing in existingSends)
         {
