@@ -75,9 +75,11 @@ public class ImportCiphersController : Controller
 
         var orgId = new Guid(organizationId);
         var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
+
+        //An User is allowed to import if CanCreate Collections or has AccessToImportExport
         var authorized = FlexibleCollectionsIsEnabled
-            ? (await _authorizationService.AuthorizeAsync(User, collections, CollectionOperations.Create)).Succeeded
-            : !await _currentContext.AccessImportExport(orgId);
+            ? (await _authorizationService.AuthorizeAsync(User, collections, CollectionOperations.Create)).Succeeded || await _currentContext.AccessImportExport(orgId)
+            : await _currentContext.AccessImportExport(orgId);
 
         if (!authorized)
         {
