@@ -306,7 +306,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id, Arg.Any<bool>()).Returns(
             Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
             {
                 new CollectionCipher
@@ -411,7 +411,7 @@ public class CipherServiceTests
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id, Arg.Any<bool>()).Returns(
             Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
             {
                 new CollectionCipher
