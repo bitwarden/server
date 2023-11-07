@@ -115,7 +115,7 @@ public class SyncControllerTests
 
         // Returns for methods only called if we have enabled orgs
         collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
 
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
@@ -280,7 +280,7 @@ public class SyncControllerTests
 
         // Returns for methods only called if we have enabled orgs
         collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
 
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
@@ -345,7 +345,7 @@ public class SyncControllerTests
             await collectionRepository.ReceivedWithAnyArgs(1)
                 .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(1)
-                .GetManyByUserIdAsync(default);
+                .GetManyByUserIdAsync(default, default);
         }
         else
         {
@@ -353,7 +353,7 @@ public class SyncControllerTests
             await collectionRepository.ReceivedWithAnyArgs(0)
                 .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(0)
-                .GetManyByUserIdAsync(default);
+                .GetManyByUserIdAsync(default, default);
         }
 
         await userService.ReceivedWithAnyArgs(1)

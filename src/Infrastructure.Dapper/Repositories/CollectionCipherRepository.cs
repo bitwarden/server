@@ -17,12 +17,16 @@ public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepos
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
     {
+        var sprocName = useFlexibleCollections
+            ? "[dbo].[CollectionCipher_ReadByUserId_V2]"
+            : "[dbo].[CollectionCipher_ReadByUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionCipher>(
-                "[dbo].[CollectionCipher_ReadByUserId]",
+                sprocName,
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
