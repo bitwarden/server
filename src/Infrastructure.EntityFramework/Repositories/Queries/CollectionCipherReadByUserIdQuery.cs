@@ -21,7 +21,7 @@ public class CollectionCipherReadByUserIdQuery : IQuery<CollectionCipher>
             : Run_VCurrent(dbContext);
     }
 
-    private IQueryable<CollectionCipher> Run_VCurrent(DatabaseContext dbContext)
+    private IQueryable<CollectionCipher> Run_VNext(DatabaseContext dbContext)
     {
         var query = from cc in dbContext.CollectionCiphers
 
@@ -33,13 +33,13 @@ public class CollectionCipherReadByUserIdQuery : IQuery<CollectionCipher>
                            new { ou.OrganizationId, ou.UserId }
 
                     join cu in dbContext.CollectionUsers
-                        on new { ou.AccessAll, CollectionId = c.Id, OrganizationUserId = ou.Id } equals
-                           new { AccessAll = false, cu.CollectionId, cu.OrganizationUserId } into cu_g
+                        on new { CollectionId = c.Id, OrganizationUserId = ou.Id } equals
+                           new { cu.CollectionId, cu.OrganizationUserId } into cu_g
                     from cu in cu_g.DefaultIfEmpty()
 
                     join gu in dbContext.GroupUsers
-                        on new { CollectionId = (Guid?)cu.CollectionId, ou.AccessAll, OrganizationUserId = ou.Id } equals
-                           new { CollectionId = (Guid?)null, AccessAll = false, gu.OrganizationUserId } into gu_g
+                        on new { CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                           new { CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
                     from gu in gu_g.DefaultIfEmpty()
 
                     join g in dbContext.Groups
@@ -47,17 +47,17 @@ public class CollectionCipherReadByUserIdQuery : IQuery<CollectionCipher>
                     from g in g_g.DefaultIfEmpty()
 
                     join cg in dbContext.CollectionGroups
-                        on new { g.AccessAll, CollectionId = c.Id, gu.GroupId } equals
-                           new { AccessAll = false, cg.CollectionId, cg.GroupId } into cg_g
+                        on new { CollectionId = c.Id, gu.GroupId } equals
+                           new { cg.CollectionId, cg.GroupId } into cg_g
                     from cg in cg_g.DefaultIfEmpty()
 
                     where ou.Status == OrganizationUserStatusType.Confirmed &&
-                        (ou.AccessAll || cu.CollectionId != null || g.AccessAll || cg.CollectionId != null)
+                        (cu.CollectionId != null || cg.CollectionId != null)
                     select cc;
         return query;
     }
 
-    private IQueryable<CollectionCipher> Run_VNext(DatabaseContext dbContext)
+    private IQueryable<CollectionCipher> Run_VCurrent(DatabaseContext dbContext)
     {
         var query = from cc in dbContext.CollectionCiphers
 
