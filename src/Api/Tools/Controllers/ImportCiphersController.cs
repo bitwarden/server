@@ -1,5 +1,7 @@
 ﻿using Bit.Api.Tools.Models.Request.Accounts;
 using Bit.Api.Tools.Models.Request.Organizations;
+using Bit.Api.Vault.AuthorizationHandlers.Collections;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -20,6 +22,8 @@ public class ImportCiphersController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<ImportCiphersController> _logger;
     private readonly GlobalSettings _globalSettings;
+    private readonly IAuthorizationService _authorizationService;
+    private readonly IFeatureService _featureService;
 
     public ImportCiphersController(
         ICollectionCipherRepository collectionCipherRepository,
@@ -27,14 +31,20 @@ public class ImportCiphersController : Controller
         IUserService userService,
         ICurrentContext currentContext,
         ILogger<ImportCiphersController> logger,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IAuthorizationService authorizationService,
+        IFeatureService featureService)
     {
         _cipherService = cipherService;
         _userService = userService;
         _currentContext = currentContext;
         _logger = logger;
         _globalSettings = globalSettings;
+        _authorizationService = authorizationService;
+        _featureService = featureService;
     }
+
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     [HttpPost("import")]
     public async Task PostImport([FromBody] ImportCiphersRequestModel model)
@@ -64,13 +74,17 @@ public class ImportCiphersController : Controller
         }
 
         var orgId = new Guid(organizationId);
-        if (!await _currentContext.AccessImportExport(orgId))
+        var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
+        var authorized = FlexibleCollectionsIsEnabled
+            ? (await _authorizationService.AuthorizeAsync(User, collections, CollectionOperations.Create)).Succeeded
+            : !await _currentContext.AccessImportExport(orgId);
+
+        if (!authorized)
         {
             throw new NotFoundException();
         }
 
         var userId = _userService.GetProperUserId(User).Value;
-        var collections = model.Collections.Select(c => c.ToCollection(orgId)).ToList();
         var ciphers = model.Ciphers.Select(l => l.ToOrganizationCipherDetails(orgId)).ToList();
         await _cipherService.ImportCiphersAsync(collections, ciphers, model.CollectionRelationships, userId);
     }
