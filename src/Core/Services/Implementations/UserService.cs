@@ -552,9 +552,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return options;
     }
 
-    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name,
-        CredentialCreateOptions options,
-        AuthenticatorAttestationRawResponse attestationResponse)
+    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, CredentialCreateOptions options,
+        AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf,
+        string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
     {
         var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existingCredentials.Count >= 5)
@@ -575,7 +575,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             Type = success.Result.CredType,
             AaGuid = success.Result.Aaguid,
             Counter = (int)success.Result.Counter,
-            UserId = user.Id
+            UserId = user.Id,
+            SupportsPrf = supportsPrf,
+            EncryptedUserKey = encryptedUserKey,
+            EncryptedPublicKey = encryptedPublicKey,
+            EncryptedPrivateKey = encryptedPrivateKey
         };
 
         await _webAuthnCredentialRepository.CreateAsync(credential);
