@@ -70,7 +70,7 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
-    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds)
+    public async Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -81,7 +81,36 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                 .Select(c => c.OrganizationId)
                 .FirstAsync();
 
-            var availableCollections = await (from c in dbContext.Collections
+            List<Guid> availableCollections;
+            if (useFlexibleCollections)
+            {
+                availableCollections = await (from c in dbContext.Collections
+                                              join o in dbContext.Organizations on c.OrganizationId equals o.Id
+                                              join ou in dbContext.OrganizationUsers
+                                                 on new { OrganizationId = o.Id, UserId = (Guid?)userId } equals
+                                                 new { ou.OrganizationId, ou.UserId }
+                                              join cu in dbContext.CollectionUsers
+                                                 on new { CollectionId = c.Id, OrganizationUserId = ou.Id } equals
+                                                 new { cu.CollectionId, cu.OrganizationUserId } into cu_g
+                                              from cu in cu_g.DefaultIfEmpty()
+                                              join gu in dbContext.GroupUsers
+                                                 on new { CollectionId = (Guid?)cu.CollectionId, OrganizationUserId = ou.Id } equals
+                                                 new { CollectionId = (Guid?)null, gu.OrganizationUserId } into gu_g
+                                              from gu in gu_g.DefaultIfEmpty()
+                                              join g in dbContext.Groups on gu.GroupId equals g.Id into g_g
+                                              from g in g_g.DefaultIfEmpty()
+                                              join cg in dbContext.CollectionGroups
+                                                 on new { CollectionId = c.Id, gu.GroupId } equals
+                                                 new { cg.CollectionId, cg.GroupId } into cg_g
+                                              from cg in cg_g.DefaultIfEmpty()
+                                              where o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed
+                                                 && (!cu.ReadOnly || !cg.ReadOnly)
+                                              select c.Id).ToListAsync();
+
+            }
+            else
+            {
+                availableCollections = await (from c in dbContext.Collections
                                               join o in dbContext.Organizations on c.OrganizationId equals o.Id
                                               join ou in dbContext.OrganizationUsers
                                                  on new { OrganizationId = o.Id, UserId = (Guid?)userId } equals
@@ -103,6 +132,8 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                               where o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed
                                                  && (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly)
                                               select c.Id).ToListAsync();
+
+            }
 
             var collectionCiphers = await (from cc in dbContext.CollectionCiphers
                                            where cc.CipherId == cipherId
