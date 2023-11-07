@@ -46,24 +46,24 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var data = await new CollectionCipherReadByUserIdQuery(userId)
+            var data = await new CollectionCipherReadByUserIdQuery(userId, useFlexibleCollections)
                 .Run(dbContext)
                 .ToArrayAsync();
             return data;
         }
     }
 
-    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId)
+    public async Task<ICollection<CollectionCipher>> GetManyByUserIdCipherIdAsync(Guid userId, Guid cipherId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId)
+            var data = await new CollectionCipherReadByUserIdCipherIdQuery(userId, cipherId, useFlexibleCollections)
                 .Run(dbContext)
                 .ToArrayAsync();
             return data;
