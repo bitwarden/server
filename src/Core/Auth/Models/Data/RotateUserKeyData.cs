@@ -15,5 +15,5 @@ public class RotateUserKeyData
     public IEnumerable<Folder> Folders { get; set; }
     public IEnumerable<Send> Sends { get; set; }
     public IEnumerable<EmergencyAccess> EmergencyAccessKeys { get; set; }
-    public IEnumerable<OrganizationUser> AccountRecoveryKeys { get; set; }
+    public IEnumerable<OrganizationUser> ResetPasswordKeys { get; set; }
 }

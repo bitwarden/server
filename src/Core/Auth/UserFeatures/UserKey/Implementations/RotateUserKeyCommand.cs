@@ -41,10 +41,10 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
         model.User.Key = model.Key;
         model.User.PrivateKey = model.PrivateKey;
         if (model.Ciphers.Any() || model.Folders.Any() || model.Sends.Any() || model.EmergencyAccessKeys.Any() ||
-            model.AccountRecoveryKeys.Any())
+            model.ResetPasswordKeys.Any())
         {
             await _userRepository.UpdateUserKeyAndEncryptedDataAsync(model.User, model.Ciphers, model.Folders,
-                model.Sends, model.EmergencyAccessKeys, model.AccountRecoveryKeys);
+                model.Sends, model.EmergencyAccessKeys, model.ResetPasswordKeys);
         }
         else
         {
