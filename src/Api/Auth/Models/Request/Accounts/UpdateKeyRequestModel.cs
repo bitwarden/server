@@ -10,8 +10,10 @@ public class UpdateKeyRequestModel
     [Required]
     [StringLength(300)]
     public string MasterPasswordHash { get; set; }
-    [Required] public string Key { get; set; }
-    [Required] public string PrivateKey { get; set; }
+    [Required]
+    public string Key { get; set; }
+    [Required]
+    public string PrivateKey { get; set; }
     public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
     public IEnumerable<FolderWithIdRequestModel> Folders { get; set; }
     public IEnumerable<SendWithIdRequestModel> Sends { get; set; }

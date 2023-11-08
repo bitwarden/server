@@ -397,7 +397,9 @@ public class AccountsController : Controller
         {
             var dataModel = new RotateUserKeyData
             {
-                MasterPasswordHash = model.MasterPasswordHash, Key = model.Key, PrivateKey = model.PrivateKey,
+                MasterPasswordHash = model.MasterPasswordHash,
+                Key = model.Key,
+                PrivateKey = model.PrivateKey,
                 // Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
                 // Folders = await _folderValidator.ValidateAsync(user, model.Folders),
                 // Sends = await _sendValidator.ValidateAsync(user, model.Sends),
