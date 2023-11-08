@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Billing.Public.Controllers;
 
-[Route("public/organizationsubscriptions")]
+[Route("public/organizations")]
 [Authorize("Organization")]
 public class OrganizationSubscriptionsController : Controller
 {
@@ -34,44 +34,19 @@ public class OrganizationSubscriptionsController : Controller
     }
 
     /// <summary>
-    /// Set Max Seats Autoscale and Current Seats for Password Manager.
+    /// Set Max Seats Autoscale, ServiceAccounts Autoscale, Current Seats,ServiceAccounts and storage for Password Manager and Secrets Manager.
     /// </summary>
     /// <remarks>
-    /// Set Max Seats Autoscale and Current Seats from an external system.
+    /// Set Max Seats Autoscale,ServiceAccounts Autoscale, Current Seats,ServiceAccounts and storage from an external system.
     /// </remarks>
     /// <param name="id">The identifier of the member to be updated.</param>
     /// <param name="model">The request model.</param>
-    [HttpPost("{id}/pm-subscription")]
+    [HttpPut("{id}/subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> PostSubscription(string id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
-    {
-        var orgIdGuid = new Guid(id);
-        if (!await _currentContext.EditSubscription(orgIdGuid))
-        {
-            throw new NotFoundException();
-        }
-        await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
-
-        return new OkResult();
-    }
-
-    /// <summary>
-    /// Set Max Seats or ServiceAccounts Autoscale and Current Seats or ServiceAccounts for Secrets Manager.
-    /// </summary>
-    /// <remarks>
-    /// Set Max Seats or ServiceAccounts Autoscale and Current Seats or ServiceAccounts from an external system.
-    /// </remarks>
-    /// <param name="id">The identifier of the member to be updated.</param>
-    /// <param name="model">The request model.</param>
-    [HttpPost("{id}/sm-subscription")]
-    [SelfHosted(NotSelfHostedOnly = true)]
-    [ProducesResponseType((int)HttpStatusCode.OK)]
-    [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
-    [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
+    public async Task<IActionResult> PostSubscriptionAsync(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(id);
         if (organization == null)
@@ -79,13 +54,41 @@ public class OrganizationSubscriptionsController : Controller
             throw new NotFoundException();
         }
 
-        if (!await _currentContext.EditSubscription(id))
+        if (model.SecretsManager != null)
         {
-            throw new NotFoundException();
+            var requestModel = SecretsManagerSubscriptionUpdateRequestModel(model);
+            var organizationUpdate = requestModel.ToSecretsManagerSubscriptionUpdate(organization);
+            await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
         }
 
-        var organizationUpdate = model.ToSecretsManagerSubscriptionUpdate(organization);
-        await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
+        if (model.PasswordManager != null)
+        {
+            await UpdatePasswordManagerSubscriptionAsync(id, model);
+        }
+
         return new OkResult();
+    }
+
+    private async Task UpdatePasswordManagerSubscriptionAsync(Guid id, OrganizationSubscriptionUpdateRequestModel model)
+    {
+        await _organizationService.UpdateSubscription(id, model.PasswordManager.Seats,
+            model.PasswordManager.MaxAutoScaleSeats);
+        if (model.PasswordManager.Storage != 0)
+        {
+            await _organizationService.AdjustStorageAsync(id, model.PasswordManager.Storage);
+        }
+    }
+
+    private static SecretsManagerSubscriptionUpdateRequestModel SecretsManagerSubscriptionUpdateRequestModel(
+        OrganizationSubscriptionUpdateRequestModel model)
+    {
+        var requestModel = new SecretsManagerSubscriptionUpdateRequestModel
+        {
+            SeatAdjustment = model.SecretsManager.Seats,
+            MaxAutoscaleSeats = model.SecretsManager.MaxAutoScaleSeats,
+            ServiceAccountAdjustment = model.SecretsManager.ServiceAccounts,
+            MaxAutoscaleServiceAccounts = model.SecretsManager.MaxAutoScaleServiceAccounts
+        };
+        return requestModel;
     }
 }
