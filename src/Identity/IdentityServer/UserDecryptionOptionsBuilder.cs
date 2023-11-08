@@ -65,7 +65,7 @@ public class UserDecryptionOptionsBuilder : IUserDecryptionOptionsBuilder
     {
         if (credential.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
         {
-            _options.WebAuthnPrfOptions = new WebAuthnPrfDecryptionOption(credential.EncryptedPrivateKey, credential.EncryptedUserKey);
+            _options.WebAuthnPrfOption = new WebAuthnPrfDecryptionOption(credential.EncryptedPrivateKey, credential.EncryptedUserKey);
         }
         return this;
     }

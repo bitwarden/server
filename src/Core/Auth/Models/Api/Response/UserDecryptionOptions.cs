@@ -20,7 +20,7 @@ public class UserDecryptionOptions : ResponseModel
     /// Gets or sets the WebAuthn PRF decryption keys.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public WebAuthnPrfDecryptionOption? WebAuthnPrfOptions { get; set; }
+    public WebAuthnPrfDecryptionOption? WebAuthnPrfOption { get; set; }
 
     /// <summary>
     /// Gets or sets information regarding this users trusted device decryption setup.

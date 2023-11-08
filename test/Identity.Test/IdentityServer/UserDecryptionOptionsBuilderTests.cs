@@ -60,7 +60,7 @@ public class UserDecryptionOptionsBuilderTests
 
         var result = await _builder.WithWebAuthnLoginCredential(credential).BuildAsync();
 
-        Assert.Null(result.WebAuthnPrfOptions);
+        Assert.Null(result.WebAuthnPrfOption);
     }
 
     [Theory, BitAutoData]
@@ -72,9 +72,9 @@ public class UserDecryptionOptionsBuilderTests
 
         var result = await _builder.WithWebAuthnLoginCredential(credential).BuildAsync();
 
-        Assert.NotNull(result.WebAuthnPrfOptions);
-        Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOptions!.EncryptedPrivateKey);
-        Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOptions!.EncryptedUserKey);
+        Assert.NotNull(result.WebAuthnPrfOption);
+        Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOption!.EncryptedPrivateKey);
+        Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOption!.EncryptedUserKey);
     }
 
     [Theory, BitAutoData]
