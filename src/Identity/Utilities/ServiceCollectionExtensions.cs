@@ -6,7 +6,6 @@ using Bit.SharedWeb.Utilities;
 using IdentityServer4.ResponseHandling;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using StackExchange.Redis;
 
 namespace Bit.Identity.Utilities;

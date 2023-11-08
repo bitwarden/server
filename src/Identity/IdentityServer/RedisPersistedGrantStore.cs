@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
 using StackExchange.Redis;
@@ -67,7 +67,7 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
 
         foreach (var entry in grantHashEntries)
         {
-            switch(entry.Name)
+            switch (entry.Name)
             {
                 case nameof(PersistedGrant.Type):
                     persistedGrant.Type = entry.Value;
