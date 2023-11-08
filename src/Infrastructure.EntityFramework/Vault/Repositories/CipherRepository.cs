@@ -837,7 +837,6 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
             var sendEntities = Mapper.Map<List<Send>>(sends);
             await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, sendEntities);
-
             await dbContext.SaveChangesAsync();
         }
     }
