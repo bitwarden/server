@@ -20,7 +20,7 @@ public class RotateUserKeyCommandTests
 
         var result = await sutProvider.Sut.RotateUserKeyAsync(model);
 
-        Assert.Equal(result, IdentityResult.Success);
+        Assert.Equal(IdentityResult.Success, result);
     }
 
     [Theory, BitAutoData]
@@ -32,7 +32,7 @@ public class RotateUserKeyCommandTests
 
         var result = await sutProvider.Sut.RotateUserKeyAsync(model);
 
-        Assert.Equal(result.Succeeded, false);
+        Assert.Equal(false, result.Succeeded);
     }
 
     [Theory, BitAutoData]
