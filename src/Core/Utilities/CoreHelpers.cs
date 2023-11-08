@@ -692,12 +692,18 @@ public static class CoreHelpers
                         break;
                 }
 
-                // Secrets Manager
                 foreach (var org in group)
                 {
+                    // Secrets Manager
                     if (org.AccessSecretsManager)
                     {
                         claims.Add(new KeyValuePair<string, string>(Claims.SecretsManagerAccess, org.Id.ToString()));
+                    }
+
+                    // Affects user's ability within the organization to create/delete collections
+                    if (org.LimitCollectionCreationDeletion)
+                    {
+                        claims.Add(new KeyValuePair<string, string>(Claims.LimitCollectionCreationDeletion, org.Id.ToString()));
                     }
                 }
             }
