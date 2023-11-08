@@ -78,6 +78,10 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     public int? MaxAutoscaleSmSeats { get; set; }
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
     public bool SecretsManagerBeta { get; set; }
+    /// <summary>
+    /// Refers to the ability for an organization to limit collection creation and deletion to owners and admins only
+    /// </summary>
+    public bool LimitCollectionCreationDeletion { get; set; }
 
     public void SetNewId()
     {
@@ -250,5 +254,9 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
         ExpirationDate = license.Expires;
         LicenseKey = license.LicenseKey;
         RevisionDate = DateTime.UtcNow;
+        UsePasswordManager = license.UsePasswordManager;
+        UseSecretsManager = license.UseSecretsManager;
+        SmSeats = license.SmSeats;
+        SmServiceAccounts = license.SmServiceAccounts;
     }
 }

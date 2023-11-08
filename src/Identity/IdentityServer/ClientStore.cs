@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Security.Claims;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -100,7 +101,7 @@ public class ClientStore : IClientStore
         {
             case ServiceAccountApiKeyDetails key:
                 var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
-                if (!org.UseSecretsManager)
+                if (!org.UseSecretsManager || !org.Enabled)
                 {
                     return null;
                 }
