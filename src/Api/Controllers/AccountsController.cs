@@ -14,6 +14,7 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;
@@ -29,6 +30,7 @@ using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Controllers;
@@ -52,6 +54,8 @@ public class AccountsController : Controller
     private readonly IPolicyService _policyService;
     private readonly ISetInitialMasterPasswordCommand _setInitialMasterPasswordCommand;
     private readonly IRotateUserKeyCommand _rotateUserKeyCommand;
+    private readonly IFeatureService _featureService;
+    private readonly ICurrentContext _currentContext;
 
 
     public AccountsController(
@@ -68,11 +72,12 @@ public class AccountsController : Controller
         ISendService sendService,
         ICaptchaValidationService captchaValidationService,
         IPolicyService policyService,
+        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
-        ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand
+        IFeatureService featureService,
+        ICurrentContext currentContext
         )
     {
-        _rotateUserKeyCommand = rotateUserKeyCommand;
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
         _globalSettings = globalSettings;
@@ -87,6 +92,9 @@ public class AccountsController : Controller
         _captchaValidationService = captchaValidationService;
         _policyService = policyService;
         _setInitialMasterPasswordCommand = setInitialMasterPasswordCommand;
+        _rotateUserKeyCommand = rotateUserKeyCommand;
+        _featureService = featureService;
+        _currentContext = currentContext;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -375,45 +383,6 @@ public class AccountsController : Controller
         throw new BadRequestException(ModelState);
     }
 
-    [HttpPost("rotate-key")]
-    [RequireFeature(FeatureFlagKeys.KeyRotationImprovements)]
-    [Obsolete("Intended for future key rotation enhancements. Do not use.")]
-    public async Task RotateKey([FromBody] RotateUserKeyRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var dataModel = new RotateUserKeyData
-        {
-            // MasterPasswordHash = model.MasterPasswordHash,
-            // Key = model.Key,
-            // PrivateKey = model.PrivateKey,
-            // Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
-            // Folders = await _folderValidator.ValidateAsync(user, model.Folders),
-            // Sends = await _sendValidator.ValidateAsync(user, model.Sends),
-            // EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-            // AccountRecoveryKeys = await _accountRecoveryValidator.ValidateAsync(user, model.AccountRecoveryKeys),
-        };
-
-        var result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);
-
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
-    }
-
     [HttpPost("key")]
     public async Task PostKey([FromBody] UpdateKeyRequestModel model)
     {
@@ -423,38 +392,57 @@ public class AccountsController : Controller
             throw new UnauthorizedAccessException();
         }
 
-        var ciphers = new List<Cipher>();
-        if (model.Ciphers.Any())
+        IdentityResult result;
+        if (_featureService.IsEnabled(FeatureFlagKeys.KeyRotationImprovements, _currentContext))
         {
-            var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
-            ciphers.AddRange(existingCiphers
-                .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing)));
+            var dataModel = new RotateUserKeyData
+            {
+                MasterPasswordHash = model.MasterPasswordHash, Key = model.Key, PrivateKey = model.PrivateKey,
+                // Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
+                // Folders = await _folderValidator.ValidateAsync(user, model.Folders),
+                // Sends = await _sendValidator.ValidateAsync(user, model.Sends),
+                // EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
+                // AccountRecoveryKeys = await _accountRecoveryValidator.ValidateAsync(user, model.AccountRecoveryKeys),
+            };
+
+            result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);
+        }
+        else
+        {
+            var ciphers = new List<Cipher>();
+            if (model.Ciphers.Any())
+            {
+                var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
+                ciphers.AddRange(existingCiphers
+                    .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing)));
+            }
+
+            var folders = new List<Folder>();
+            if (model.Folders.Any())
+            {
+                var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
+                folders.AddRange(existingFolders
+                    .Join(model.Folders, f => f.Id, f => f.Id, (existing, f) => f.ToFolder(existing)));
+            }
+
+            var sends = new List<Send>();
+            if (model.Sends?.Any() == true)
+            {
+                var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
+                sends.AddRange(existingSends
+                    .Join(model.Sends, s => s.Id, s => s.Id, (existing, s) => s.ToSend(existing, _sendService)));
+            }
+
+            result = await _userService.UpdateKeyAsync(
+                user,
+                model.MasterPasswordHash,
+                model.Key,
+                model.PrivateKey,
+                ciphers,
+                folders,
+                sends);
         }
 
-        var folders = new List<Folder>();
-        if (model.Folders.Any())
-        {
-            var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-            folders.AddRange(existingFolders
-                .Join(model.Folders, f => f.Id, f => f.Id, (existing, f) => f.ToFolder(existing)));
-        }
-
-        var sends = new List<Send>();
-        if (model.Sends?.Any() == true)
-        {
-            var existingSends = await _sendRepository.GetManyByUserIdAsync(user.Id);
-            sends.AddRange(existingSends
-                .Join(model.Sends, s => s.Id, s => s.Id, (existing, s) => s.ToSend(existing, _sendService)));
-        }
-
-        var result = await _userService.UpdateKeyAsync(
-            user,
-            model.MasterPasswordHash,
-            model.Key,
-            model.PrivateKey,
-            ciphers,
-            folders,
-            sends);
 
         if (result.Succeeded)
         {
