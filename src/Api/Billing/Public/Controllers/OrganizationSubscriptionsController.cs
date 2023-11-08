@@ -1,6 +1,6 @@
 ﻿using System.Net;
-using Bit.Api.Billing.Public.Models;
 using Bit.Api.Models.Public.Response;
+using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -9,6 +9,7 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OrganizationSubscriptionUpdateRequestModel = Bit.Api.Billing.Public.Models.OrganizationSubscriptionUpdateRequestModel;
 
 namespace Bit.Api.Billing.Public.Controllers;
 
