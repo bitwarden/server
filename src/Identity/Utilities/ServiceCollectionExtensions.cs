@@ -1,10 +1,13 @@
 ﻿using Bit.Core.IdentityServer;
 using Bit.Core.Settings;
+using Bit.Core.Utilities;
 using Bit.Identity.IdentityServer;
 using Bit.SharedWeb.Utilities;
 using IdentityServer4.ResponseHandling;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using StackExchange.Redis;
 
 namespace Bit.Identity.Utilities;
 
@@ -42,9 +45,32 @@ public static class ServiceCollectionExtensions
             .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
             .AddProfileService<ProfileService>()
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
-            .AddPersistedGrantStore<PersistedGrantStore>()
             .AddClientStore<ClientStore>()
             .AddIdentityServerCertificate(env, globalSettings);
+
+        if (CoreHelpers.SettingHasValue(globalSettings.Grants.RedisConnectionString))
+        {
+            // If we have redis, prefer it
+
+            // Add the original persisted grant store via it's implementation type
+            // so we can inject it right after.
+            services.AddSingleton<PersistedGrantStore>();
+
+            services.AddTransient<IPersistedGrantStore>(sp =>
+            {
+                return new RedisPersistedGrantStore(
+                    // TODO: This should be done through DI where CM is a singleton
+                    ConnectionMultiplexer.Connect(globalSettings.Grants.RedisConnectionString),
+                    sp.GetRequiredService<ILogger<RedisPersistedGrantStore>>(),
+                    sp.GetRequiredService<PersistedGrantStore>()
+                );
+            });
+        }
+        else
+        {
+            // Use the original grant store
+            identityServerBuilder.AddPersistedGrantStore<PersistedGrantStore>();
+        }
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;

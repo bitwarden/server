@@ -57,6 +57,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual ConnectionStringSettings Events { get; set; } = new ConnectionStringSettings();
     public virtual IConnectionStringSettings Redis { get; set; } = new ConnectionStringSettings();
     public virtual NotificationsSettings Notifications { get; set; } = new NotificationsSettings();
+    public virtual GrantsSettings Grants { get; set; } = new GrantsSettings();
     public virtual IFileStorageSettings Attachment { get; set; }
     public virtual FileStorageSettings Send { get; set; }
     public virtual IdentityServerSettings IdentityServer { get; set; } = new IdentityServerSettings();
@@ -364,6 +365,11 @@ public class GlobalSettings : IGlobalSettings
         public string RedisConnectionString { get; set; }
     }
 
+    public class GrantsSettings
+    {
+        public string RedisConnectionString { get; set; }
+    }
+
     public class SyslogSettings
     {
         /// <summary>
@@ -401,7 +407,7 @@ public class GlobalSettings : IGlobalSettings
         /// <value></value>
         public string CertificatePassword { get; set; }
         /// <summary>
-        /// The thumbprint of the certificate in the X.509 certificate store for personal certificates for the user account running Bitwarden. 
+        /// The thumbprint of the certificate in the X.509 certificate store for personal certificates for the user account running Bitwarden.
         /// </summary>
         /// <value></value>
         public string CertificateThumbprint { get; set; }
