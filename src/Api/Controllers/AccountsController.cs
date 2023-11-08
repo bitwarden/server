@@ -402,7 +402,7 @@ public class AccountsController : Controller
                 // Folders = await _folderValidator.ValidateAsync(user, model.Folders),
                 // Sends = await _sendValidator.ValidateAsync(user, model.Sends),
                 // EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-                // AccountRecoveryKeys = await _accountRecoveryValidator.ValidateAsync(user, model.AccountRecoveryKeys),
+                // ResetPasswordKeys = await _accountRecoveryValidator.ValidateAsync(user, model.ResetPasswordKeys),
             };
 
             result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);
