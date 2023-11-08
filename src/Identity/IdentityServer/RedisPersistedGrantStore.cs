@@ -63,7 +63,10 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
             throw new InvalidOperationException("Grants are always expected to be stored with an expiry.");
         }
 
-        var persistedGrant = new PersistedGrant();
+        var persistedGrant = new PersistedGrant
+        {
+            Key = key,
+        };
 
         foreach (var entry in grantHashEntries)
         {
