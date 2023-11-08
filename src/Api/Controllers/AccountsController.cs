@@ -81,7 +81,6 @@ public class AccountsController : Controller
         ICurrentContext currentContext
         )
     {
-        _rotateUserKeyCommand = rotateUserKeyCommand;
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
         _globalSettings = globalSettings;
@@ -373,45 +372,6 @@ public class AccountsController : Controller
 
         var result = await _userService.ChangeKdfAsync(user, model.MasterPasswordHash,
             model.NewMasterPasswordHash, model.Key, model.Kdf.Value, model.KdfIterations.Value, model.KdfMemory, model.KdfParallelism);
-        if (result.Succeeded)
-        {
-            return;
-        }
-
-        foreach (var error in result.Errors)
-        {
-            ModelState.AddModelError(string.Empty, error.Description);
-        }
-
-        await Task.Delay(2000);
-        throw new BadRequestException(ModelState);
-    }
-
-    [HttpPost("rotate-key")]
-    [RequireFeature(FeatureFlagKeys.KeyRotationImprovements)]
-    [Obsolete("Intended for future key rotation enhancements. Do not use.")]
-    public async Task RotateKey([FromBody] RotateUserKeyRequestModel model)
-    {
-        var user = await _userService.GetUserByPrincipalAsync(User);
-        if (user == null)
-        {
-            throw new UnauthorizedAccessException();
-        }
-
-        var dataModel = new RotateUserKeyData
-        {
-            // MasterPasswordHash = model.MasterPasswordHash,
-            // Key = model.Key,
-            // PrivateKey = model.PrivateKey,
-            // Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
-            // Folders = await _folderValidator.ValidateAsync(user, model.Folders),
-            // Sends = await _sendValidator.ValidateAsync(user, model.Sends),
-            // EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-            // AccountRecoveryKeys = await _accountRecoveryValidator.ValidateAsync(user, model.AccountRecoveryKeys),
-        };
-
-        var result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);
-
         if (result.Succeeded)
         {
             return;
