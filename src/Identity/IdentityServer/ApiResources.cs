@@ -26,6 +26,7 @@ public class ApiResources
                 Claims.ProviderAdmin,
                 Claims.ProviderServiceUser,
                 Claims.SecretsManagerAccess,
+                Claims.LimitCollectionCreationDeletion,
             }),
             new(ApiScopes.Internal, new[] { JwtClaimTypes.Subject }),
             new(ApiScopes.ApiPush, new[] { JwtClaimTypes.Subject }),
