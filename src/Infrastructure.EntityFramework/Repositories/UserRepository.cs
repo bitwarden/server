@@ -1,7 +1,10 @@
 ﻿using AutoMapper;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Models;
+using Bit.Infrastructure.EntityFramework.Vault.Models;
+using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
