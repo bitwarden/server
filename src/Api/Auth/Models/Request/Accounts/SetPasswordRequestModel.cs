@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -17,7 +15,7 @@ public class SetPasswordRequestModel : IValidatableObject
     public string Key { get; set; }
     [StringLength(50)]
     public string MasterPasswordHint { get; set; }
-    public KeysRequestModel? Keys { get; set; }
+    public KeysRequestModel Keys { get; set; }
     [Required]
     public KdfType Kdf { get; set; }
     [Required]
