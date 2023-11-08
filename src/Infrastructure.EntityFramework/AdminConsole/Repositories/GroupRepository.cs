@@ -32,6 +32,7 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
                 GroupId = grp.Id,
                 ReadOnly = y.ReadOnly,
                 HidePasswords = y.HidePasswords,
+                Manage = y.Manage,
             });
             await dbContext.CollectionGroups.AddRangeAsync(collectionGroups);
             await dbContext.SaveChangesAsync();
@@ -68,6 +69,7 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
                 Id = c.CollectionId,
                 ReadOnly = c.ReadOnly,
                 HidePasswords = c.HidePasswords,
+                Manage = c.Manage,
             }).ToList();
             return new Tuple<AdminConsoleEntities.Group, ICollection<CollectionAccessSelection>>(
                 grp, collections);
@@ -110,7 +112,8 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
                         {
                             Id = c.CollectionId,
                             HidePasswords = c.HidePasswords,
-                            ReadOnly = c.ReadOnly
+                            ReadOnly = c.ReadOnly,
+                            Manage = c.Manage
                         }
                         ).ToList() ?? new List<CollectionAccessSelection>())
             ).ToList();
@@ -204,12 +207,14 @@ public class GroupRepository : Repository<AdminConsoleEntities.Group, Group, Gui
                         GroupId = group.Id,
                         ReadOnly = requestedCollection.ReadOnly,
                         HidePasswords = requestedCollection.HidePasswords,
+                        Manage = requestedCollection.Manage
                     });
                     continue;
                 }
 
                 existingCollectionGroup.ReadOnly = requestedCollection.ReadOnly;
                 existingCollectionGroup.HidePasswords = requestedCollection.HidePasswords;
+                existingCollectionGroup.Manage = requestedCollection.Manage;
             }
 
             var requestedCollectionIds = requestedCollections.Select(c => c.Id);

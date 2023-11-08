@@ -7,7 +7,8 @@ BEGIN
     SELECT
         [OrganizationUserId] [Id],
         [ReadOnly],
-        [HidePasswords]
+        [HidePasswords],
+        [Manage]
     FROM
         [dbo].[CollectionUser]
     WHERE

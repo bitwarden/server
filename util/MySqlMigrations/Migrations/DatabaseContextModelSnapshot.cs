@@ -284,6 +284,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<bool>("HidePasswords")
                         .HasColumnType("tinyint(1)");
 
+                    b.Property<bool>("Manage")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<bool>("ReadOnly")
                         .HasColumnType("tinyint(1)");
 
@@ -303,6 +306,9 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasColumnType("char(36)");
 
                     b.Property<bool>("HidePasswords")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("Manage")
                         .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("ReadOnly")
@@ -563,6 +569,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)");
+
+                    b.Property<bool>("LimitCollectionCreationDeletion")
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
 
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("int");

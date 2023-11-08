@@ -24,6 +24,10 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
         HasTotp = true;
         Has2fa = true;
         HasApi = true;
+        HasSso = true;
+        HasKeyConnector = true;
+        HasScim = true;
+        HasResetPassword = true;
         UsersGetPremium = true;
         HasCustomPermissions = true;
 
@@ -31,7 +35,39 @@ public record Enterprise2019Plan : Models.StaticStore.Plan
         DisplaySortOrder = 3;
         LegacyYear = 2020;
 
+        SecretsManager = new Enterprise2019SecretsManagerFeatures(isAnnual);
         PasswordManager = new Enterprise2019PasswordManagerFeatures(isAnnual);
+    }
+
+    private record Enterprise2019SecretsManagerFeatures : SecretsManagerPlanFeatures
+    {
+        public Enterprise2019SecretsManagerFeatures(bool isAnnual)
+        {
+            BaseSeats = 0;
+            BasePrice = 0;
+            BaseServiceAccount = 200;
+
+            HasAdditionalSeatsOption = true;
+            HasAdditionalServiceAccountOption = true;
+
+            AllowSeatAutoscale = true;
+            AllowServiceAccountsAutoscale = true;
+
+            if (isAnnual)
+            {
+                StripeSeatPlanId = "secrets-manager-enterprise-seat-annually";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-annually";
+                SeatPrice = 144;
+                AdditionalPricePerServiceAccount = 6;
+            }
+            else
+            {
+                StripeSeatPlanId = "secrets-manager-enterprise-seat-monthly";
+                StripeServiceAccountPlanId = "secrets-manager-service-account-monthly";
+                SeatPrice = 13;
+                AdditionalPricePerServiceAccount = 0.5M;
+            }
+        }
     }
 
     private record Enterprise2019PasswordManagerFeatures : PasswordManagerPlanFeatures

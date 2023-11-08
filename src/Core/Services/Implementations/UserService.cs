@@ -1,15 +1,20 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Core.Tokens;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -53,9 +58,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
     private readonly IFido2 _fido2;
     private readonly ICurrentContext _currentContext;
     private readonly IGlobalSettings _globalSettings;
-    private readonly IOrganizationService _organizationService;
+    private readonly IAcceptOrgUserCommand _acceptOrgUserCommand;
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripeSyncService _stripeSyncService;
+    private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
+    private readonly IDataProtectorTokenFactory<WebAuthnLoginTokenable> _webAuthnLoginTokenizer;
+    private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
 
     public UserService(
         IUserRepository userRepository,
@@ -84,9 +92,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         IFido2 fido2,
         ICurrentContext currentContext,
         IGlobalSettings globalSettings,
-        IOrganizationService organizationService,
+        IAcceptOrgUserCommand acceptOrgUserCommand,
         IProviderUserRepository providerUserRepository,
-        IStripeSyncService stripeSyncService)
+        IStripeSyncService stripeSyncService,
+        IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
+        IWebAuthnCredentialRepository webAuthnRepository,
+        IDataProtectorTokenFactory<WebAuthnLoginTokenable> webAuthnLoginTokenizer)
         : base(
               store,
               optionsAccessor,
@@ -120,9 +131,12 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         _fido2 = fido2;
         _currentContext = currentContext;
         _globalSettings = globalSettings;
-        _organizationService = organizationService;
+        _acceptOrgUserCommand = acceptOrgUserCommand;
         _providerUserRepository = providerUserRepository;
         _stripeSyncService = stripeSyncService;
+        _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
+        _webAuthnCredentialRepository = webAuthnRepository;
+        _webAuthnLoginTokenizer = webAuthnLoginTokenizer;
     }
 
     public Guid? GetProperUserId(ClaimsPrincipal principal)
@@ -288,8 +302,13 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var tokenValid = false;
         if (_globalSettings.DisableUserRegistration && !string.IsNullOrWhiteSpace(token) && orgUserId.HasValue)
         {
-            tokenValid = CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
-                user.Email, orgUserId.Value, _globalSettings);
+            // TODO: PM-4142 - remove old token validation logic once 3 releases of backwards compatibility are complete
+            var newTokenValid = OrgUserInviteTokenable.ValidateOrgUserInviteStringToken(
+                _orgUserInviteTokenDataFactory, token, orgUserId.Value, user.Email);
+
+            tokenValid = newTokenValid ||
+                          CoreHelpers.UserInviteTokenIsValid(_organizationServiceDataProtector, token,
+                              user.Email, orgUserId.Value, _globalSettings);
         }
 
         if (_globalSettings.DisableUserRegistration && !tokenValid)
@@ -503,6 +522,129 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return true;
     }
 
+    public async Task<CredentialCreateOptions> StartWebAuthnLoginRegistrationAsync(User user)
+    {
+        var fidoUser = new Fido2User
+        {
+            DisplayName = user.Name,
+            Name = user.Email,
+            Id = user.Id.ToByteArray(),
+        };
+
+        // Get existing keys to exclude
+        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+        var excludeCredentials = existingKeys
+            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
+            .ToList();
+
+        var authenticatorSelection = new AuthenticatorSelection
+        {
+            AuthenticatorAttachment = null,
+            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred
+            UserVerification = UserVerificationRequirement.Preferred
+        };
+
+        var extensions = new AuthenticationExtensionsClientInputs { };
+
+        var options = _fido2.RequestNewCredential(fidoUser, excludeCredentials, authenticatorSelection,
+            AttestationConveyancePreference.None, extensions);
+
+        return options;
+    }
+
+    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, CredentialCreateOptions options,
+        AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf,
+        string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
+    {
+        var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+        if (existingCredentials.Count >= 5)
+        {
+            return false;
+        }
+
+        var existingCredentialIds = existingCredentials.Select(c => c.CredentialId);
+        IsCredentialIdUniqueToUserAsyncDelegate callback = (args, cancellationToken) => Task.FromResult(!existingCredentialIds.Contains(CoreHelpers.Base64UrlEncode(args.CredentialId)));
+
+        var success = await _fido2.MakeNewCredentialAsync(attestationResponse, options, callback);
+
+        var credential = new WebAuthnCredential
+        {
+            Name = name,
+            CredentialId = CoreHelpers.Base64UrlEncode(success.Result.CredentialId),
+            PublicKey = CoreHelpers.Base64UrlEncode(success.Result.PublicKey),
+            Type = success.Result.CredType,
+            AaGuid = success.Result.Aaguid,
+            Counter = (int)success.Result.Counter,
+            UserId = user.Id,
+            SupportsPrf = supportsPrf,
+            EncryptedUserKey = encryptedUserKey,
+            EncryptedPublicKey = encryptedPublicKey,
+            EncryptedPrivateKey = encryptedPrivateKey
+        };
+
+        await _webAuthnCredentialRepository.CreateAsync(credential);
+        return true;
+    }
+
+    public async Task<AssertionOptions> StartWebAuthnLoginAssertionAsync(User user)
+    {
+        var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
+        var existingKeys = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+        var existingCredentials = existingKeys
+            .Select(k => new PublicKeyCredentialDescriptor(CoreHelpers.Base64UrlDecode(k.CredentialId)))
+            .ToList();
+
+        if (existingCredentials.Count == 0)
+        {
+            return null;
+        }
+
+        // TODO: PRF?
+        var exts = new AuthenticationExtensionsClientInputs
+        {
+            UserVerificationMethod = true
+        };
+        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Preferred, exts);
+
+        // TODO: temp save options to user record somehow
+
+        return options;
+    }
+
+    public async Task<string> CompleteWebAuthLoginAssertionAsync(AuthenticatorAssertionRawResponse assertionResponse, User user)
+    {
+        // TODO: Get options from user record somehow, then clear them
+        var options = AssertionOptions.FromJson("");
+
+        var userCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
+        var assertionId = CoreHelpers.Base64UrlEncode(assertionResponse.Id);
+        var credential = userCredentials.FirstOrDefault(c => c.CredentialId == assertionId);
+        if (credential == null)
+        {
+            return null;
+        }
+
+        // TODO: Callback to ensure credential ID is unique. Do we care? I don't think so.
+        IsUserHandleOwnerOfCredentialIdAsync callback = (args, cancellationToken) => Task.FromResult(true);
+        var credentialPublicKey = CoreHelpers.Base64UrlDecode(credential.PublicKey);
+        var assertionVerificationResult = await _fido2.MakeAssertionAsync(
+            assertionResponse, options, credentialPublicKey, (uint)credential.Counter, callback);
+
+        // Update SignatureCounter
+        credential.Counter = (int)assertionVerificationResult.Counter;
+        await _webAuthnCredentialRepository.ReplaceAsync(credential);
+
+        if (assertionVerificationResult.Status == "ok")
+        {
+            var token = _webAuthnLoginTokenizer.Protect(new WebAuthnLoginTokenable(user));
+            return token;
+        }
+        else
+        {
+            return null;
+        }
+    }
+
     public async Task SendEmailVerificationAsync(User user)
     {
         if (user.EmailVerified)
@@ -601,11 +743,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Success;
     }
 
-    public override Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword)
-    {
-        throw new NotImplementedException();
-    }
-
     public async Task<IdentityResult> ChangePasswordAsync(User user, string masterPassword, string newMasterPassword, string passwordHint,
         string key)
     {
@@ -639,40 +776,6 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return IdentityResult.Failed(_identityErrorDescriber.PasswordMismatch());
     }
 
-    public async Task<IdentityResult> SetPasswordAsync(User user, string masterPassword, string key,
-        string orgIdentifier = null)
-    {
-        if (user == null)
-        {
-            throw new ArgumentNullException(nameof(user));
-        }
-
-        if (!string.IsNullOrWhiteSpace(user.MasterPassword))
-        {
-            Logger.LogWarning("Change password failed for user {userId} - already has password.", user.Id);
-            return IdentityResult.Failed(_identityErrorDescriber.UserAlreadyHasPassword());
-        }
-
-        var result = await UpdatePasswordHash(user, masterPassword, true, false);
-        if (!result.Succeeded)
-        {
-            return result;
-        }
-
-        user.RevisionDate = user.AccountRevisionDate = DateTime.UtcNow;
-        user.Key = key;
-
-        await _userRepository.ReplaceAsync(user);
-        await _eventService.LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
-
-        if (!string.IsNullOrWhiteSpace(orgIdentifier))
-        {
-            await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
-        }
-
-        return IdentityResult.Success;
-    }
-
     public async Task<IdentityResult> SetKeyConnectorKeyAsync(User user, string key, string orgIdentifier)
     {
         var identityResult = CheckCanUseKeyConnector(user);
@@ -688,7 +791,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         await _userRepository.ReplaceAsync(user);
         await _eventService.LogUserEventAsync(user.Id, EventType.User_MigratedKeyToKeyConnector);
 
-        await _organizationService.AcceptUserAsync(orgIdentifier, user, this);
+        await _acceptOrgUserCommand.AcceptOrgUserByOrgSsoIdAsync(orgIdentifier, user, this);
 
         return IdentityResult.Success;
     }
@@ -1353,7 +1456,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return token;
     }
 
-    private async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
+    public async Task<IdentityResult> UpdatePasswordHash(User user, string newPassword,
         bool validatePassword = true, bool refreshStamp = true)
     {
         if (validatePassword)
