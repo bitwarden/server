@@ -1,5 +1,6 @@
 ﻿@using Bit.Admin.Enums;
 @inject Bit.Admin.Services.IAccessControlService AccessControlService
+@inject IWebHostEnvironment HostingEnvironment
 @model UserEditModel
 @{
     ViewData["Title"] = "User: " + Model.User.Email;
@@ -10,7 +11,7 @@
     var canViewPremium = AccessControlService.UserHasPermission(Permission.User_Premium_View);
     var canViewLicensing = AccessControlService.UserHasPermission(Permission.User_Licensing_View);
     var canViewBilling = AccessControlService.UserHasPermission(Permission.User_Billing_View);
-    
+
     var canEditPremium = AccessControlService.UserHasPermission(Permission.User_Premium_Edit);
     var canEditLicensing = AccessControlService.UserHasPermission(Permission.User_Licensing_Edit);
     var canEditBilling = AccessControlService.UserHasPermission(Permission.User_Billing_Edit);
@@ -45,10 +46,15 @@
                 }
 
                 if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
-                    window.open('https://dashboard.stripe.com/customers/' + customerId.value, '_blank');
+                    const url = '@(HostingEnvironment.IsDevelopment()
+                                     ? "https://dashboard.stripe.com/test"
+                                     : "https://dashboard.stripe.com")';
+                    window.open(`${url}/customers/${customerId.value}/`, '_blank');
                 } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
-                    window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
-                        'customers/' + customerId.value, '_blank');
+                    const url = '@(HostingEnvironment.IsDevelopment()
+                                     ? $"https://www.sandbox.braintreegateway.com/merchants/{Model.BraintreeMerchantId}"
+                                     : $"https://www.braintreegateway.com/merchants/{Model.BraintreeMerchantId}")';
+                    window.open(`${url}/${customerId.value}`, '_blank');
                 }
             });
 
@@ -60,10 +66,15 @@
                 }
 
                 if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Stripe)') {
-                    window.open('https://dashboard.stripe.com/subscriptions/' + subId.value, '_blank');
+                    const url = '@(HostingEnvironment.IsDevelopment() || HostingEnvironment.IsEnvironment("QA")
+                                     ? "https://dashboard.stripe.com/test"
+                                     : "https://dashboard.stripe.com")'
+                    window.open(`${url}/subscriptions/${subId.value}`, '_blank');
                 } else if (gateway.value === '@((byte)Bit.Core.Enums.GatewayType.Braintree)') {
-                    window.open('https://www.braintreegateway.com/merchants/@(Model.BraintreeMerchantId)/' +
-                        'subscriptions/' + subId.value, '_blank');
+                    const url = '@(HostingEnvironment.IsDevelopment() || HostingEnvironment.IsEnvironment("QA")
+                                     ? $"https://www.sandbox.braintreegateway.com/merchants/{Model.BraintreeMerchantId}"
+                                     : $"https://www.braintreegateway.com/merchants/{Model.BraintreeMerchantId}")';
+                    window.open(`${url}/subscriptions/${subId.value}`, '_blank');
                 }
             });
         })();
@@ -80,7 +91,7 @@
 @if (canViewBillingInformation)
 {
     <h2>Billing Information</h2>
-    @await Html.PartialAsync("_BillingInformation", 
+    @await Html.PartialAsync("_BillingInformation",
         new BillingInformationModel { BillingInfo = Model.BillingInfo, UserId = Model.User.Id, Entity = "User" })
 }
 @if (canViewGeneral)
