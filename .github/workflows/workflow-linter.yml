@@ -8,4 +8,4 @@ on:
 
 jobs:
   call-workflow:
-    uses: bitwarden/gh-actions/.github/workflows/workflow-linter.yml@master
+    uses: bitwarden/gh-actions/.github/workflows/workflow-linter.yml@main
