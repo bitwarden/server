@@ -5,6 +5,8 @@ using Bit.Api.IntegrationTest.SecretsManager.Enums;
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
@@ -25,6 +27,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     private readonly ApiApplicationFactory _factory;
     private readonly IProjectRepository _projectRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
+    private readonly IGroupRepository _groupRepository;
     private string _email = null!;
     private SecretsManagerOrganizationHelper _organizationHelper = null!;
 
@@ -35,6 +38,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         _accessPolicyRepository = _factory.GetService<IAccessPolicyRepository>();
         _serviceAccountRepository = _factory.GetService<IServiceAccountRepository>();
         _projectRepository = _factory.GetService<IProjectRepository>();
+        _groupRepository = _factory.GetService<IGroupRepository>();
     }
 
     public async Task InitializeAsync()
@@ -660,7 +664,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task CreateServiceAccountAccessPolicies_MismatchOrgId_NotFound(PermissionType permissionType)
     {
-        var (org, orgUser) = await _organizationHelper.Initialize(true, true, true);
+        var (_, orgUser) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
         var anotherOrg = await _organizationHelper.CreateSmOrganizationAsync();
 
@@ -904,9 +908,8 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task CreateServiceAccountGrantedPolicies_MismatchedOrgId_NotFound(PermissionType permissionType)
     {
-        var (org, orgUser) = await _organizationHelper.Initialize(true, true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
-        var ownerOrgUserId = orgUser.Id;
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id, true);
         await SetupProjectAndServiceAccountPermissionAsync(permissionType, projectId, serviceAccountId);
@@ -925,9 +928,8 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
     [InlineData(PermissionType.RunAsUserWithPermission)]
     public async Task CreateServiceAccountGrantedPolicies_Success(PermissionType permissionType)
     {
-        var (org, orgUser) = await _organizationHelper.Initialize(true, true, true);
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
         await LoginAsync(_email);
-        var ownerOrgUserId = orgUser.Id;
 
         var (projectId, serviceAccountId) = await CreateProjectAndServiceAccountAsync(org.Id);
         await SetupProjectAndServiceAccountPermissionAsync(permissionType, projectId, serviceAccountId);
@@ -1051,6 +1053,183 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         Assert.NotNull(result.Data.First().GrantedProjectName);
     }
 
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task GetProjectPeopleAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    {
+        var (org, _) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await LoginAsync(_email);
+
+        var initData = await SetupAccessPolicyRequest(org.Id);
+
+        var response = await _client.GetAsync($"/projects/{initData.ProjectId}/access-policies/people");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetProjectPeopleAccessPolicies_ReturnsEmpty()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await LoginAsync(_email);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/people");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.Empty(result!.UserAccessPolicies);
+        Assert.Empty(result.GroupAccessPolicies);
+    }
+
+    [Fact]
+    public async Task GetProjectPeopleAccessPolicies_NoPermission_NotFound()
+    {
+        await _organizationHelper.Initialize(true, true, true);
+        var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = orgUser.OrganizationId,
+            Name = _mockEncryptedString
+        });
+
+        var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/people");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task GetProjectPeopleAccessPolicies_Success(PermissionType permissionType)
+    {
+        var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
+        await LoginAsync(_email);
+
+        var (project, _) = await SetupProjectPeoplePermissionAsync(permissionType, organizationUser);
+
+        var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/people");
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+
+        Assert.NotNull(result?.UserAccessPolicies);
+        Assert.Single(result!.UserAccessPolicies);
+    }
+
+    [Theory]
+    [InlineData(false, false, false)]
+    [InlineData(false, false, true)]
+    [InlineData(false, true, false)]
+    [InlineData(false, true, true)]
+    [InlineData(true, false, false)]
+    [InlineData(true, false, true)]
+    [InlineData(true, true, false)]
+    public async Task PutProjectPeopleAccessPolicies_SmAccessDenied_NotFound(bool useSecrets, bool accessSecrets, bool organizationEnabled)
+    {
+        var (_, organizationUser) = await _organizationHelper.Initialize(useSecrets, accessSecrets, organizationEnabled);
+        await LoginAsync(_email);
+
+        var (project, request) = await SetupProjectPeopleRequestAsync(PermissionType.RunAsAdmin, organizationUser);
+
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutProjectPeopleAccessPolicies_NoPermission()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        var (email, organizationUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+        await LoginAsync(email);
+
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = org.Id,
+            Name = _mockEncryptedString
+        });
+
+        var request = new PeopleAccessPoliciesRequestModel
+        {
+            UserAccessPolicyRequests = new List<AccessPolicyRequest>
+            {
+                new() { GranteeId = organizationUser.Id, Read = true, Write = true }
+            }
+        };
+
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task PutProjectPeopleAccessPolicies_MismatchedOrgIds_NotFound(PermissionType permissionType)
+    {
+        var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
+        await LoginAsync(_email);
+
+        var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
+        var newOrg = await _organizationHelper.CreateSmOrganizationAsync();
+        var group = await _groupRepository.CreateAsync(new Group
+        {
+            OrganizationId = newOrg.Id,
+            Name = _mockEncryptedString
+        });
+        request.GroupAccessPolicyRequests = new List<AccessPolicyRequest>
+        {
+            new() { GranteeId = group.Id, Read = true, Write = true }
+        };
+
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PermissionType.RunAsAdmin)]
+    [InlineData(PermissionType.RunAsUserWithPermission)]
+    public async Task PutProjectPeopleAccessPolicies_Success(PermissionType permissionType)
+    {
+        var (_, organizationUser) = await _organizationHelper.Initialize(true, true, true);
+        await LoginAsync(_email);
+
+        var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
+
+        var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
+        response.EnsureSuccessStatusCode();
+
+        var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
+
+        Assert.NotNull(result);
+        Assert.Equal(request.UserAccessPolicyRequests.First().GranteeId,
+            result!.UserAccessPolicies.First().OrganizationUserId);
+        Assert.True(result.UserAccessPolicies.First().Read);
+        Assert.True(result.UserAccessPolicies.First().Write);
+
+        var createdAccessPolicy =
+            await _accessPolicyRepository.GetByIdAsync(result.UserAccessPolicies.First().Id);
+        Assert.NotNull(createdAccessPolicy);
+        Assert.Equal(result.UserAccessPolicies.First().Read, createdAccessPolicy!.Read);
+        Assert.Equal(result.UserAccessPolicies.First().Write, createdAccessPolicy.Write);
+        Assert.Equal(result.UserAccessPolicies.First().Id, createdAccessPolicy.Id);
+    }
+
     private async Task<RequestSetupData> SetupAccessPolicyRequest(Guid organizationId)
     {
         var project = await _projectRepository.CreateAsync(new Project
@@ -1080,6 +1259,52 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
             ServiceAccountId = serviceAccount.Id,
             AccessPolicyId = accessPolicy.First().Id,
         };
+    }
+
+    private async Task<(Project project, OrganizationUser currentUser)> SetupProjectPeoplePermissionAsync(
+        PermissionType permissionType,
+        OrganizationUser organizationUser)
+    {
+        var project = await _projectRepository.CreateAsync(new Project
+        {
+            OrganizationId = organizationUser.OrganizationId,
+            Name = _mockEncryptedString
+        });
+
+        if (permissionType == PermissionType.RunAsUserWithPermission)
+        {
+            var (email, orgUser) = await _organizationHelper.CreateNewUser(OrganizationUserType.User, true);
+            await LoginAsync(email);
+            organizationUser = orgUser;
+        }
+
+        var accessPolicies = new List<BaseAccessPolicy>
+        {
+            new UserProjectAccessPolicy
+            {
+                GrantedProjectId = project.Id,
+                OrganizationUserId = organizationUser.Id,
+                Read = true,
+                Write = true
+            }
+        };
+        await _accessPolicyRepository.CreateManyAsync(accessPolicies);
+
+        return (project, organizationUser);
+    }
+
+    private async Task<(Project project, PeopleAccessPoliciesRequestModel request)> SetupProjectPeopleRequestAsync(
+        PermissionType permissionType, OrganizationUser organizationUser)
+    {
+        var (project, currentUser) = await SetupProjectPeoplePermissionAsync(permissionType, organizationUser);
+        var request = new PeopleAccessPoliciesRequestModel
+        {
+            UserAccessPolicyRequests = new List<AccessPolicyRequest>
+            {
+                new() { GranteeId = currentUser.Id, Read = true, Write = true }
+            }
+        };
+        return (project, request);
     }
 
     private async Task<(Guid ProjectId, Guid ServiceAccountId)> CreateProjectAndServiceAccountAsync(Guid organizationId,
