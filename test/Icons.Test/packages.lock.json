@@ -2842,7 +2842,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2023.10.1, )",
+          "Core": "[2023.10.2, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
@@ -2895,14 +2895,14 @@
         "type": "Project",
         "dependencies": {
           "AngleSharp": "[1.0.4, )",
-          "Core": "[2023.10.1, )",
-          "SharedWeb": "[2023.10.1, )"
+          "Core": "[2023.10.2, )",
+          "SharedWeb": "[2023.10.2, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.1, )",
+          "Core": "[2023.10.2, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -2910,7 +2910,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.1, )",
+          "Core": "[2023.10.2, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -2922,9 +2922,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.1, )",
-          "Infrastructure.Dapper": "[2023.10.1, )",
-          "Infrastructure.EntityFramework": "[2023.10.1, )"
+          "Core": "[2023.10.2, )",
+          "Infrastructure.Dapper": "[2023.10.2, )",
+          "Infrastructure.EntityFramework": "[2023.10.2, )"
         }
       }
     }

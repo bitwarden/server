@@ -2673,7 +2673,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.17.0, )",
           "AutoFixture.Xunit2": "[4.17.0, )",
-          "Core": "[2023.10.1, )",
+          "Core": "[2023.10.2, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.1.0, )",
           "NSubstitute": "[4.3.0, )",
