@@ -28,7 +28,7 @@ public abstract record Plan
     public bool HasCustomPermissions { get; protected init; }
     public int UpgradeSortOrder { get; protected init; }
     public int DisplaySortOrder { get; protected init; }
-    public int? LegacyYear { get; protected init; }
+    public int? LegacyYear { get; set; }
     public bool Disabled { get; protected init; }
     public PasswordManagerPlanFeatures PasswordManager { get; protected init; }
     public SecretsManagerPlanFeatures SecretsManager { get; protected init; }
