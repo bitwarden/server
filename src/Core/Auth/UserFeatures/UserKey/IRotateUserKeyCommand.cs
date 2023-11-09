@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.Models.Data;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.SqlClient;
 
 namespace Bit.Core.Auth.UserFeatures.UserKey;
 
@@ -13,3 +14,5 @@ public interface IRotateUserKeyCommand
     /// <exception cref="ArgumentNullException">User must be provided.</exception>
     Task<IdentityResult> RotateUserKeyAsync(RotateUserKeyData model);
 }
+
+public delegate Task UpdateEncryptedDataForKeyRotation(SqlTransaction transaction = null);

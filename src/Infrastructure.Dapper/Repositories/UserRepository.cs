@@ -1,12 +1,10 @@
 ﻿using System.Data;
 using Bit.Core;
-using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
-using Bit.Core.Tools.Entities;
-using Bit.Core.Vault.Entities;
 using Dapper;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Data.SqlClient;
@@ -179,87 +177,56 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
     }
 
     /// <inheritdoc />
-    public Task UpdateUserKeyAndEncryptedDataAsync(
+    public async Task UpdateUserKeyAndEncryptedDataAsync(
         User user,
-        IEnumerable<Cipher> ciphers,
-        IEnumerable<Folder> folders,
-        IEnumerable<Send> sends,
-        IEnumerable<EmergencyAccess> emergencyAccessKeys,
-        IEnumerable<OrganizationUser> resetPasswordKeys)
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
     {
-        using (var connection = new SqlConnection(ConnectionString))
+        await using var connection = new SqlConnection(ConnectionString);
+        connection.Open();
+
+        await using var transaction = connection.BeginTransaction();
+        try
         {
-            connection.Open();
-
-            using (var transaction = connection.BeginTransaction())
+            // Update user
+            await using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
             {
-                try
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
+                cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
+                cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
+
+                if (string.IsNullOrWhiteSpace(user.PrivateKey))
                 {
-                    // Update user.
-
-                    using (var cmd = new SqlCommand("[dbo].[User_UpdateKeys]", connection, transaction))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add("@Id", SqlDbType.UniqueIdentifier).Value = user.Id;
-                        cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
-                        cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
-
-                        if (string.IsNullOrWhiteSpace(user.PrivateKey))
-                        {
-                            cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value;
-                        }
-                        else
-                        {
-                            cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
-                        }
-
-                        cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
-                        cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value =
-                            user.AccountRevisionDate;
-                        cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
-                            user.LastKeyRotationDate;
-                        cmd.ExecuteNonQuery();
-                    }
-
-                    //  Update re-encrypted data.
-
-                    if (ciphers.Any())
-                    {
-                        // ciphers.UpdateEncryptedData(user.Id, connection, transaction);
-                    }
-
-                    if (folders.Any())
-                    {
-                        // folders.UpdateEncryptedData(user.Id, connection, transaction);
-                    }
-
-                    if (sends.Any())
-                    {
-                        // sends.UpdateEncryptedData(user.Id, connection, transaction);
-                    }
-
-                    if (emergencyAccessKeys.Any())
-                    {
-                        // emergencyAccessKeys.UpdateEncryptedData(user.Id, connection, transaction);
-                    }
-
-                    if (resetPasswordKeys.Any())
-                    {
-                        // resetPasswordKeys.UpdateEncryptedData(user.Id, connection, transaction);
-                    }
-
-                    transaction.Commit();
+                    cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value;
                 }
-                catch
+                else
                 {
-                    transaction.Rollback();
-                    throw;
+                    cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
                 }
+
+                cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
+                cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value =
+                    user.AccountRevisionDate;
+                cmd.Parameters.Add("@LastKeyRotationDate", SqlDbType.DateTime2).Value =
+                    user.LastKeyRotationDate;
+                cmd.ExecuteNonQuery();
             }
-        }
 
-        return Task.FromResult(0);
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                await action(transaction);
+            }
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
     }
+
 
     public async Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids)
     {

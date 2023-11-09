@@ -1,9 +1,7 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Models;
-using Bit.Infrastructure.EntityFramework.Vault.Models;
-using LinqToDB.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using DataModel = Bit.Core.Models.Data;
@@ -140,14 +138,16 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
     /// <inheritdoc />
     public async Task UpdateUserKeyAndEncryptedDataAsync(Core.Entities.User user,
-        IEnumerable<Core.Vault.Entities.Cipher> ciphers,
-        IEnumerable<Core.Vault.Entities.Folder> folders, IEnumerable<Core.Tools.Entities.Send> sends,
-        IEnumerable<Core.Auth.Entities.EmergencyAccess> emergencyAccessKeys,
-        IEnumerable<Core.Entities.OrganizationUser> resetPasswordKeys)
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
     {
-        using (var scope = ServiceScopeFactory.CreateScope())
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        try
         {
-            var dbContext = GetDatabaseContext(scope);
+            // Update user
             var entity = await dbContext.Users.FindAsync(user.Id);
             if (entity == null)
             {
@@ -161,19 +161,21 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.AccountRevisionDate = user.AccountRevisionDate;
             entity.RevisionDate = user.RevisionDate;
 
-            var cipherEntities = Mapper.Map<List<Cipher>>(ciphers);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, cipherEntities);
-            var folderEntities = Mapper.Map<List<Folder>>(folders);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, folderEntities);
-            var sendEntities = Mapper.Map<List<Send>>(sends);
-            await dbContext.BulkCopyAsync(base.DefaultBulkCopyOptions, sendEntities);
-            var emergencyAccessEntities = Mapper.Map<List<EmergencyAccess>>(emergencyAccessKeys);
-            await dbContext.BulkCopyAsync(DefaultBulkCopyOptions, emergencyAccessEntities);
-            var organizationUserEntities = Mapper.Map<List<OrganizationUser>>(resetPasswordKeys);
-            await dbContext.BulkCopyAsync(DefaultBulkCopyOptions, organizationUserEntities);
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                // TODO (jlf0dev): Check if transaction captures these operations
+                await action();
+            }
 
-            await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
         }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
     }
 
     public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)
