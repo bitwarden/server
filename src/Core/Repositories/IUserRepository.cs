@@ -23,17 +23,6 @@ public interface IUserRepository : IRepository<User, Guid>
     /// <param name="user">The user to update</param>
     /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
     [Obsolete("Intended for future improvements to key rotation. Do not use.")]
-    Task UpdateUserKeyAndEncryptedDataAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders,
-        IEnumerable<Send> sends, IEnumerable<EmergencyAccess> emergencyAccessKeys,
-        IEnumerable<OrganizationUser> resetPasswordKeys);
-    Task<IEnumerable<User>> GetManyAsync(IEnumerable<Guid> ids);
-    /// <summary>
-    /// Sets a new user key and updates all encrypted data.
-    /// <para>Warning: Any user key encrypted data not included will be lost.</para>
-    /// </summary>
-    /// <param name="user">The user to update</param>
-    /// <param name="updateDataActions">Registered database calls to update re-encrypted data.</param>
-    [Obsolete("Intended for future improvements to key rotation. Do not use.")]
     Task UpdateUserKeyAndEncryptedDataAsync(User user,
         IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions);
 }
