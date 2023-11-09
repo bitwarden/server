@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Validators;
@@ -27,7 +28,7 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.Auth.Controllers;
 
 public class AccountsControllerTests : IDisposable
 {
