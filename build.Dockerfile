@@ -41,7 +41,9 @@ RUN npm install -g gulp
 WORKDIR /source
 COPY src/Admin/*.csproj ./src/Admin/
 COPY src/Api/*.csproj ./src/Api/
+COPY src/Billing/*.csproj ./src/Billing/
 COPY src/Events/*.csproj ./src/Events/
+COPY src/EventsProcessor/*.csproj ./src/EventsProcessor/
 COPY src/Icons/*.csproj ./src/Icons/
 COPY src/Identity/*.csproj ./src/Identity/
 COPY src/Notifications/*.csproj ./src/Notifications/
@@ -54,6 +56,8 @@ COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/MySqlMigrations/*.csproj ./util/MySqlMigrations/
 COPY util/PostgresMigrations/*.csproj ./util/PostgresMigrations/
+COPY util/Server/*.csproj ./util/Server/
+COPY util/Setup/*.csproj ./util/Setup/
 COPY util/SqliteMigrations/*.csproj ./util/SqliteMigrations/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
@@ -67,8 +71,16 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 WORKDIR /source/src/Api
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
+# Restore Billing project dependencies and tools
+WORKDIR /source/src/Billing
+RUN . /tmp/rid.txt && dotnet restore -r $RID
+
 # Restore Events project dependencies and tools
 WORKDIR /source/src/Events
+RUN . /tmp/rid.txt && dotnet restore -r $RID
+
+# Restore Events project dependencies and tools
+WORKDIR /source/src/EventsProcessor
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Restore Icons project dependencies and tools
@@ -91,11 +103,21 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 WORKDIR /source/bitwarden_license/src/Scim
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
+# Restore Server project dependencies and tools
+WORKDIR /source/util/Server
+RUN . /tmp/rid.txt && dotnet restore -r $RID
+
+# Restore Setup project dependencies and tools
+WORKDIR /source/util/Setup
+RUN . /tmp/rid.txt && dotnet restore -r $RID
+
 # Copy required project files
 WORKDIR /source
 COPY src/Admin/. ./src/Admin/
 COPY src/Api/. ./src/Api/
+COPY src/Billing/. ./src/Billing/
 COPY src/Events/. ./src/Events/
+COPY src/EventsProcessor/. ./src/EventsProcessor/
 COPY src/Icons/. ./src/Icons/
 COPY src/Identity/. ./src/Identity/
 COPY src/Notifications/. ./src/Notifications/
@@ -108,6 +130,8 @@ COPY src/SharedWeb/. ./src/SharedWeb/
 COPY util/Migrator/. ./util/Migrator/
 COPY util/MySqlMigrations/. ./util/MySqlMigrations/
 COPY util/PostgresMigrations/. ./util/PostgresMigrations/
+COPY util/Server/. ./util/Server/
+COPY util/Setup/. ./util/Setup/
 COPY util/SqliteMigrations/. ./util/SqliteMigrations/
 COPY util/EfShared/. ./util/EfShared/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
@@ -124,9 +148,17 @@ RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Admin --no-restore --no-
 WORKDIR /source/src/Api
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Api --no-restore --no-self-contained -r $RID
 
+# Build Billing app
+WORKDIR /source/src/Billing
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Billing --no-restore --no-self-contained -r $RID
+
 # Build Events app
 WORKDIR /source/src/Events
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Events --no-restore --no-self-contained -r $RID
+
+# Build EventsProcessor app
+WORKDIR /source/src/EventsProcessor
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/EventsProcessor --no-restore --no-self-contained -r $RID
 
 # Build Icons app
 WORKDIR /source/src/Icons
@@ -149,3 +181,11 @@ RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Sso --no-restore --no-se
 # Build Scim app
 WORKDIR /source/bitwarden_license/src/Scim
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Scim --no-restore --no-self-contained -r $RID
+
+# Build Server app
+WORKDIR /source/util/Server
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Server --no-restore --no-self-contained -r $RID
+
+# Build Setup app
+WORKDIR /source/util/Setup
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Setup --no-restore --no-self-contained -r $RID

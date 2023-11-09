@@ -1,6 +1,19 @@
+###############################################
+#                 Build stage                 #
+###############################################
+ARG BUILD_TAG=latest
+FROM --platform=$BUILDPLATFORM bitwardenprod.azurecr.io/build:${BUILD_TAG} AS bitwarden-build
+
+###############################################
+#                  App stage                  #
+###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:6.0
 
+ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden"
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_URLS http://+:5000
+EXPOSE 5000
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -8,13 +21,11 @@ RUN apt-get update \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-ENV ASPNETCORE_URLS http://+:5000
+# Copy app from the build stage
 WORKDIR /app
-EXPOSE 5000
+COPY --from=bitwarden-build /app/Billing ./
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
-
-COPY obj/build-output/publish .
 
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1
 

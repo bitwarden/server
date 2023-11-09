@@ -21,7 +21,7 @@ RUN apt-get update \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all apps from the build stage
+# Copy app from the build stage
 WORKDIR /app
 COPY --from=bitwarden-build /app/Admin ./
 COPY entrypoint.sh /

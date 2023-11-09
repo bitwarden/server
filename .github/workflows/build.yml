@@ -266,36 +266,36 @@ jobs:
         include:
           - project_name: Admin
             base_path: ./src
-          # - project_name: Api
-          #   base_path: ./src
-          # - project_name: Attachments
-          #   base_path: ./util
-          # - project_name: Billing
-          #   base_path: ./src
-          # - project_name: Events
-          #   base_path: ./src
-          # - project_name: EventsProcessor
-          #   base_path: ./src
-          # - project_name: Icons
-          #   base_path: ./src
-          # - project_name: Identity
-          #   base_path: ./src
-          # - project_name: MsSql
-          #   base_path: ./util
-          # - project_name: MsSqlMigratorUtility
-          #   base_path: ./util
-          # - project_name: Nginx
-          #   base_path: ./util
-          # - project_name: Notifications
-          #   base_path: ./src
-          # - project_name: Scim
-          #   base_path: ./bitwarden_license/src
-          # - project_name: Server
-          #   base_path: ./util
-          # - project_name: Setup
-          #   base_path: ./util
-          # - project_name: Sso
-          #   base_path: ./bitwarden_license/src
+          - project_name: Api
+            base_path: ./src
+          - project_name: Attachments
+            base_path: ./util
+          - project_name: Billing
+            base_path: ./src
+          - project_name: Events
+            base_path: ./src
+          - project_name: EventsProcessor
+            base_path: ./src
+          - project_name: Icons
+            base_path: ./src
+          - project_name: Identity
+            base_path: ./src
+          - project_name: MsSql
+            base_path: ./util
+          - project_name: MsSqlMigratorUtility
+            base_path: ./util
+          - project_name: Nginx
+            base_path: ./util
+          - project_name: Notifications
+            base_path: ./src
+          - project_name: Scim
+            base_path: ./bitwarden_license/src
+          - project_name: Server
+            base_path: ./util
+          - project_name: Setup
+            base_path: ./util
+          - project_name: Sso
+            base_path: ./bitwarden_license/src
     steps:
       - name: Checkout repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1

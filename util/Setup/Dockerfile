@@ -1,5 +1,15 @@
+###############################################
+#                 Build stage                 #
+###############################################
+ARG BUILD_TAG=latest
+FROM --platform=$BUILDPLATFORM bitwardenprod.azurecr.io/build:${BUILD_TAG} AS bitwarden-build
+
+###############################################
+#                  App stage                  #
+###############################################
 FROM mcr.microsoft.com/dotnet/aspnet:6.0
 
+ARG TARGETPLATFORM
 LABEL com.bitwarden.product="bitwarden" com.bitwarden.project="setup"
 
 RUN apt-get update \
@@ -8,8 +18,9 @@ RUN apt-get update \
         gosu \
 && rm -rf /var/lib/apt/lists/*
 
+# Copy app from the build stage
 WORKDIR /app
-COPY obj/build-output/publish .
+COPY --from=bitwarden-build /app/Setup ./
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
