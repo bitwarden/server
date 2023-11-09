@@ -189,3 +189,5 @@ RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Server --no-restore --no
 # Build Setup app
 WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Setup --no-restore --no-self-contained -r $RID
+
+WORKDIR /app
