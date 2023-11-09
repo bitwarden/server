@@ -4,6 +4,7 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Validators;
 using Bit.Core;
+using Bit.Api.Vault.Models.Request;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;
@@ -21,6 +22,7 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.Services;
+using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
@@ -51,6 +53,9 @@ public class AccountsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
 
+
+    private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
+    private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
 
@@ -74,6 +79,10 @@ public class AccountsControllerTests : IDisposable
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _currentContext = Substitute.For<ICurrentContext>();
+        _cipherValidator =
+            Substitute.For<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>>();
+        _folderValidator =
+            Substitute.For<IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>>>();
         _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
             IEnumerable<EmergencyAccess>>>();
 
@@ -95,6 +104,8 @@ public class AccountsControllerTests : IDisposable
             _rotateUserKeyCommand,
             _featureService,
             _currentContext,
+            _cipherValidator,
+            _folderValidator,
             _emergencyAccessValidator
         );
     }
