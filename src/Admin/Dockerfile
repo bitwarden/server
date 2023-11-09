@@ -20,13 +20,13 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | b
 RUN npm install -g gulp
 
 WORKDIR /source
-COPY *.csproj .
-COPY ../../Directory.Build.props .
+COPY src/Admin/*.csproj .
+COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
-COPY . .
+COPY src/Admin/. .
 #COPY ../../.git/. ./.git/
 
 # Build Admin app
