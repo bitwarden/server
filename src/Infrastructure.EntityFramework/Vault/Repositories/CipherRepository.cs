@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Nodes;
 using AutoMapper;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Enums;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Enums;
@@ -13,6 +14,7 @@ using Bit.Infrastructure.EntityFramework.Repositories.Vault.Queries;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Repositories.Queries;
 using LinqToDB.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NS = Newtonsoft.Json;
@@ -824,6 +826,34 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
             await dbContext.SaveChangesAsync();
         }
     }
+
+    /// <inheritdoc />
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
+    {
+        return async (SqlConnection connection, SqlTransaction transaction) =>
+        {
+            var newCiphers = ciphers.ToList();
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+            var userCiphers = await GetDbSet(dbContext)
+                .Where(c => c.UserId == userId)
+                .ToListAsync();
+            var validCiphers = userCiphers
+                .Where(cipher => newCiphers.Any(newCipher => newCipher.Id == cipher.Id));
+            foreach (var cipher in validCiphers)
+            {
+                var updateCipher = newCiphers.First(newCipher => newCipher.Id == cipher.Id);
+                cipher.Data = updateCipher.Data;
+                cipher.Attachments = updateCipher.Attachments;
+                cipher.RevisionDate = updateCipher.RevisionDate;
+                cipher.Key = updateCipher.Key;
+            }
+
+            await dbContext.SaveChangesAsync();
+        };
+    }
+
 
     public async Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Core.Vault.Entities.Cipher> ciphers, IEnumerable<Core.Vault.Entities.Folder> folders, IEnumerable<Core.Tools.Entities.Send> sends)
     {

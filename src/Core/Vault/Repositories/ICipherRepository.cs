@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -38,4 +39,12 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections);
     Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
+
+    /// <summary>
+    /// Updates encrypted data for ciphers during a key rotation
+    /// </summary>
+    /// <param name="userId">The grantor that initiated the key rotation</param>
+    /// <param name="ciphers">A list of ciphers with updated data</param>
+    UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(Guid userId,
+        IEnumerable<Cipher> ciphers);
 }

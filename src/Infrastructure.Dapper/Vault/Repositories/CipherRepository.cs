@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Text.Json;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
@@ -7,6 +8,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
 using Bit.Infrastructure.Dapper.Repositories;
+using Bit.Infrastructure.Dapper.Vault.Helpers;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
@@ -306,6 +308,63 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 new { OrganizationId = organizationId },
                 commandType: CommandType.StoredProcedure);
         }
+    }
+
+    /// <inheritdoc />
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid userId, IEnumerable<Cipher> ciphers)
+    {
+        return async (SqlConnection connection, SqlTransaction transaction) =>
+        {
+            // Create temp table
+            var sqlCreateTemp = @"
+                            SELECT TOP 0 *
+                            INTO #TempCipher
+                            FROM [dbo].[Cipher]";
+
+            await using (var cmd = new SqlCommand(sqlCreateTemp, connection, transaction))
+            {
+                cmd.ExecuteNonQuery();
+            }
+
+            // Bulk copy data into temp table
+            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+            {
+                bulkCopy.DestinationTableName = "#TempCipher";
+                var ciphersTable = ciphers.ToDataTable();
+                foreach (DataColumn col in ciphersTable.Columns)
+                {
+                    bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+                }
+
+                ciphersTable.PrimaryKey = new DataColumn[] { ciphersTable.Columns[0] };
+                bulkCopy.WriteToServer(ciphersTable);
+            }
+
+            // Update cipher table from temp table
+            var sql = @"
+                    UPDATE
+                        [dbo].[Cipher]
+                    SET
+                        [Data] = TC.[Data],
+                        [Attachments] = TC.[Attachments],
+                        [RevisionDate] = TC.[RevisionDate],
+                        [Key] = TC.[Key]
+                    FROM
+                        [dbo].[Cipher] C
+                    INNER JOIN
+                        #TempCipher TC ON C.Id = TC.Id
+                    WHERE
+                        C.[UserId] = @UserId
+
+                    DROP TABLE #TempCipher";
+
+            await using (var cmd = new SqlCommand(sql, connection, transaction))
+            {
+                cmd.Parameters.Add("@UserId", SqlDbType.UniqueIdentifier).Value = userId;
+                cmd.ExecuteNonQuery();
+            }
+        };
     }
 
     public Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends)
