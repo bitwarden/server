@@ -21,7 +21,7 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         ldConfig.ApplicationInfo(Components.ApplicationInfo()
             .ApplicationId(globalSettings.ProjectName)
             .ApplicationName(globalSettings.ProjectName)
-            .ApplicationVersion(AssemblyHelpers.GetGitHash())
+            .ApplicationVersion(AssemblyHelpers.GetGitHash() ?? AssemblyHelpers.GetVersion())
             .ApplicationVersionName(AssemblyHelpers.GetVersion())
         );
 

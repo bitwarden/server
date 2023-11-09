@@ -14,6 +14,8 @@ public class LaunchDarklyFeatureServiceTests
 {
     public static SutProvider<LaunchDarklyFeatureService> GetSutProvider(IGlobalSettings globalSettings)
     {
+        globalSettings.ProjectName = "LaunchDarkly Tests";
+
         var fixture = new Fixture();
         return new SutProvider<LaunchDarklyFeatureService>(fixture)
             .SetDependency<IGlobalSettings>(globalSettings)
