@@ -10,5 +10,5 @@ public interface ICollectionCipherRepository
     Task UpdateCollectionsAsync(Guid cipherId, Guid userId, IEnumerable<Guid> collectionIds, bool useFlexibleCollections);
     Task UpdateCollectionsForAdminAsync(Guid cipherId, Guid organizationId, IEnumerable<Guid> collectionIds);
     Task UpdateCollectionsForCiphersAsync(IEnumerable<Guid> cipherIds, Guid userId, Guid organizationId,
-        IEnumerable<Guid> collectionIds);
+        IEnumerable<Guid> collectionIds, bool useFlexibleCollections);
 }
