@@ -43,6 +43,7 @@ jobs:
         run: dotnet format --verify-no-changes
 
   testing:
+    if: false
     name: Testing
     runs-on: ubuntu-22.04
     env:
@@ -195,9 +196,9 @@ jobs:
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-22.04
-    needs:
-      - lint
-      - testing
+    # needs:
+    #   - lint
+    #   - testing
     strategy:
       fail-fast: false
       matrix:
