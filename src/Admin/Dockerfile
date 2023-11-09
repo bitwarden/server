@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Add packages
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
-RUN . ~/.bash_profile
+RUN . ~/.bash_rc
 RUN npm install -g gulp
 
 WORKDIR /source
