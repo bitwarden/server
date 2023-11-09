@@ -1,5 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -8,6 +10,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Data;
@@ -61,6 +64,10 @@ public class AccountsController : Controller
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
+    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
+        _emergencyAccessValidator;
+
+
     public AccountsController(
         GlobalSettings globalSettings,
         ICipherRepository cipherRepository,
@@ -78,7 +85,9 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
-        ICurrentContext currentContext
+        ICurrentContext currentContext,
+        IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
+            emergencyAccessValidator
         )
     {
         _cipherRepository = cipherRepository;
@@ -98,6 +107,7 @@ public class AccountsController : Controller
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
         _currentContext = currentContext;
+        _emergencyAccessValidator = emergencyAccessValidator;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -406,7 +416,7 @@ public class AccountsController : Controller
                 // Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
                 // Folders = await _folderValidator.ValidateAsync(user, model.Folders),
                 // Sends = await _sendValidator.ValidateAsync(user, model.Sends),
-                // EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
+                EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
                 // ResetPasswordKeys = await _accountRecoveryValidator.ValidateAsync(user, model.ResetPasswordKeys),
             };
 

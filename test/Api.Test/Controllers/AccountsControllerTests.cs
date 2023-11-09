@@ -1,9 +1,12 @@
 ﻿using System.Security.Claims;
+using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Validators;
 using Bit.Api.Controllers;
 using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
@@ -48,6 +51,9 @@ public class AccountsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
 
+    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
+        _emergencyAccessValidator;
+
 
     public AccountsControllerTests()
     {
@@ -68,6 +74,8 @@ public class AccountsControllerTests : IDisposable
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _currentContext = Substitute.For<ICurrentContext>();
+        _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
+            IEnumerable<EmergencyAccess>>>();
 
         _sut = new AccountsController(
             _globalSettings,
@@ -86,7 +94,8 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommand,
             _rotateUserKeyCommand,
             _featureService,
-            _currentContext
+            _currentContext,
+            _emergencyAccessValidator
         );
     }
 
