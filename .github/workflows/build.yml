@@ -196,7 +196,7 @@ jobs:
           if-no-files-found: error
 
   build:
-    name: Build artifacts
+    name: Build projects
     runs-on: ubuntu-22.04
     # needs:
     #   - lint
@@ -249,7 +249,7 @@ jobs:
           platforms: |
             linux/amd64,
             linux/arm/v7,
-            linux/arm64/v8
+            linux/arm64
           push: true
           tags: ${{ steps.image-name.outputs.name }}
           secrets: |
@@ -376,7 +376,7 @@ jobs:
           platforms: |
             linux/amd64,
             linux/arm/v7,
-            linux/arm64/v8
+            linux/arm64
           push: true
           tags: ${{ steps.image-name.outputs.name }}
           secrets: |
