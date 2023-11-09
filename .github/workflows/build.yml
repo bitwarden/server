@@ -241,7 +241,7 @@ jobs:
             linux/amd64,
             linux/arm/v7,
             linux/arm64/v8
-          push: false
+          push: true
           tags: ${{ env._AZ_REGISTRY }}/build:latest
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
