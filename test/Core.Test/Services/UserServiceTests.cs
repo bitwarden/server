@@ -1,16 +1,11 @@
-﻿using System.Text;
-using System.Text.Json;
-using AutoFixture;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
-using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
-using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
@@ -18,21 +13,18 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Services;
-using Bit.Core.Utilities;
 using Bit.Core.Vault.Repositories;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
 using Bit.Test.Common.Helpers;
 using Fido2NetLib;
-using Fido2NetLib.Objects;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using NSubstitute;
 using NSubstitute.ReceivedExtensions;
-using NSubstitute.ReturnsExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.Services;
@@ -192,107 +184,6 @@ public class UserServiceTests
         Assert.True(await sutProvider.Sut.HasPremiumFromOrganization(user));
     }
 
-    [Theory, BitAutoData]
-    public async Task CompleteWebAuthLoginRegistrationAsync_ExceedsExistingCredentialsLimit_ReturnsFalse(SutProvider<UserService> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
-    {
-        // Arrange
-        var existingCredentials = credentialGenerator.Take(5).ToList();
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(existingCredentials);
-
-        // Act
-        var result = await sutProvider.Sut.CompleteWebAuthLoginRegistrationAsync(user, "name", options, response, false, null, null, null);
-
-        // Assert
-        Assert.False(result);
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().DidNotReceive();
-    }
-
-    [Theory, BitAutoData]
-    public async Task CompleteWebAuthLoginAssertionAsync_InvalidUserHandle_ThrowsBadRequestException(SutProvider<UserService> sutProvider, AssertionOptions options, AuthenticatorAssertionRawResponse response)
-    {
-        // Arrange
-        response.Response.UserHandle = Encoding.UTF8.GetBytes("invalid-user-handle");
-
-        // Act
-        var result = async () => await sutProvider.Sut.CompleteWebAuthLoginAssertionAsync(options, response);
-
-        // Assert
-        await Assert.ThrowsAsync<BadRequestException>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CompleteWebAuthLoginAssertionAsync_UserNotFound_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
-    {
-        // Arrange
-        response.Response.UserHandle = user.Id.ToByteArray();
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).ReturnsNull();
-
-        // Act
-        var result = async () => await sutProvider.Sut.CompleteWebAuthLoginAssertionAsync(options, response);
-
-        // Assert
-        await Assert.ThrowsAsync<BadRequestException>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CompleteWebAuthLoginAssertionAsync_NoMatchingCredentialExists_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
-    {
-        // Arrange
-        response.Response.UserHandle = user.Id.ToByteArray();
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] { });
-
-        // Act
-        var result = async () => await sutProvider.Sut.CompleteWebAuthLoginAssertionAsync(options, response);
-
-        // Assert
-        await Assert.ThrowsAsync<BadRequestException>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CompleteWebAuthLoginAssertionAsync_AssertionFails_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
-    {
-        // Arrange
-        var credentialId = Guid.NewGuid().ToByteArray();
-        credential.CredentialId = CoreHelpers.Base64UrlEncode(credentialId);
-        response.Id = credentialId;
-        response.Response.UserHandle = user.Id.ToByteArray();
-        assertionResult.Status = "Not ok";
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] { credential });
-        sutProvider.GetDependency<IFido2>().MakeAssertionAsync(response, options, Arg.Any<byte[]>(), Arg.Any<uint>(), Arg.Any<IsUserHandleOwnerOfCredentialIdAsync>())
-            .Returns(assertionResult);
-
-        // Act
-        var result = async () => await sutProvider.Sut.CompleteWebAuthLoginAssertionAsync(options, response);
-
-        // Assert
-        await Assert.ThrowsAsync<BadRequestException>(result);
-    }
-
-    [Theory, BitAutoData]
-    public async Task CompleteWebAuthLoginAssertionAsync_AssertionSucceeds_ReturnsUserAndCredential(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
-    {
-        // Arrange
-        var credentialId = Guid.NewGuid().ToByteArray();
-        credential.CredentialId = CoreHelpers.Base64UrlEncode(credentialId);
-        response.Id = credentialId;
-        response.Response.UserHandle = user.Id.ToByteArray();
-        assertionResult.Status = "ok";
-        sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IWebAuthnCredentialRepository>().GetManyByUserIdAsync(user.Id).Returns(new WebAuthnCredential[] { credential });
-        sutProvider.GetDependency<IFido2>().MakeAssertionAsync(response, options, Arg.Any<byte[]>(), Arg.Any<uint>(), Arg.Any<IsUserHandleOwnerOfCredentialIdAsync>())
-            .Returns(assertionResult);
-
-        // Act
-        var result = await sutProvider.Sut.CompleteWebAuthLoginAssertionAsync(options, response);
-
-        // Assert
-        var (userResult, credentialResult) = result;
-        Assert.Equal(user, userResult);
-        Assert.Equal(credential, credentialResult);
-    }
-
     [Flags]
     public enum ShouldCheck
     {
@@ -368,8 +259,7 @@ public class UserServiceTests
             sutProvider.GetDependency<IAcceptOrgUserCommand>(),
             sutProvider.GetDependency<IProviderUserRepository>(),
             sutProvider.GetDependency<IStripeSyncService>(),
-            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>(),
-            sutProvider.GetDependency<IWebAuthnCredentialRepository>()
+            new FakeDataProtectorTokenFactory<OrgUserInviteTokenable>()
             );
 
         var actualIsVerified = await sut.VerifySecretAsync(user, secret);

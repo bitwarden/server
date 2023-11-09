@@ -27,5 +27,8 @@ public static class UserServiceCollectionExtensions
     private static void AddWebAuthnLoginCommands(this IServiceCollection services)
     {
         services.AddScoped<IGetWebAuthnLoginCredentialCreateOptionsCommand, GetWebAuthnLoginCredentialCreateOptionsCommand>();
+        services.AddScoped<ICreateWebAuthnLoginCredentialCommand, CreateWebAuthnLoginCredentialCommand>();
+        services.AddScoped<IGetWebAuthnLoginCredentialAssertionOptionsCommand, GetWebAuthnLoginCredentialAssertionOptionsCommand>();
+        services.AddScoped<IAssertWebAuthnLoginCredentialCommand, AssertWebAuthnLoginCredentialCommand>();
     }
 }
