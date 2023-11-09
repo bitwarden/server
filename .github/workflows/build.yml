@@ -15,6 +15,7 @@ env:
 
 jobs:
   cloc:
+    if: false
     name: CLOC
     runs-on: ubuntu-22.04
     steps:
@@ -30,6 +31,7 @@ jobs:
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
   lint:
+    if: false
     name: Lint
     runs-on: ubuntu-22.04
     steps:

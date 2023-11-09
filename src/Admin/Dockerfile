@@ -16,6 +16,11 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
     && echo "RID=$RID" > /tmp/rid.txt
 
 # Add packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Add packages
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
 RUN npm install -g gulp
 
