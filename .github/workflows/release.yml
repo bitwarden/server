@@ -41,7 +41,7 @@ jobs:
 
       - name: Check Release Version
         id: version
-        uses: bitwarden/gh-actions/release-version-check@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
+        uses: bitwarden/gh-actions/release-version-check@main
         with:
           release-type: ${{ github.event.inputs.release_type }}
           project-type: dotnet
@@ -89,7 +89,7 @@ jobs:
 
       - name: Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
+        uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -98,7 +98,7 @@ jobs:
 
       - name: Dry Run - Download latest Release ${{ matrix.name }} asset
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
+        uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -274,7 +274,7 @@ jobs:
     steps:
       - name: Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type != 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
+        uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
           workflow_conclusion: success
@@ -287,7 +287,7 @@ jobs:
 
       - name: Dry Run - Download latest Release Docker Stubs
         if: ${{ github.event.inputs.release_type == 'Dry Run' }}
-        uses: bitwarden/gh-actions/download-artifacts@f1125802b1ccae8c601d7c4f61ce39ea254b10c8
+        uses: bitwarden/gh-actions/download-artifacts@main
         with:
           workflow: build.yml
           workflow_conclusion: success

@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
@@ -133,6 +134,48 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             var entity = await dbContext.Users.SingleOrDefaultAsync(e => e.Id == ssoUser.UserId);
             return Mapper.Map<Core.Entities.User>(entity);
         }
+    }
+
+    /// <inheritdoc />
+    public async Task UpdateUserKeyAndEncryptedDataAsync(Core.Entities.User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Update user
+            var entity = await dbContext.Users.FindAsync(user.Id);
+            if (entity == null)
+            {
+                throw new ArgumentException("User not found", nameof(user));
+            }
+
+            entity.SecurityStamp = user.SecurityStamp;
+            entity.Key = user.Key;
+            entity.PrivateKey = user.PrivateKey;
+            entity.LastKeyRotationDate = user.LastKeyRotationDate;
+            entity.AccountRevisionDate = user.AccountRevisionDate;
+            entity.RevisionDate = user.RevisionDate;
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                // TODO (jlf0dev): Check if transaction captures these operations
+                await action();
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
     }
 
     public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)

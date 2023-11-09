@@ -1,4 +1,4 @@
-﻿using Bit.Core.Enums.Provider;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
@@ -48,4 +48,5 @@ public class OrganizationUserOrganizationDetails
     public bool UsePasswordManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; }
 }
