@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Entities;
@@ -15,13 +15,15 @@ internal class AssertWebAuthnLoginCredentialCommand : IAssertWebAuthnLoginCreden
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
     private readonly IUserRepository _userRepository;
 
-    public AssertWebAuthnLoginCredentialCommand(IFido2 fido2, IWebAuthnCredentialRepository webAuthnCredentialRepository, IUserRepository userRepository) {
+    public AssertWebAuthnLoginCredentialCommand(IFido2 fido2, IWebAuthnCredentialRepository webAuthnCredentialRepository, IUserRepository userRepository)
+    {
         _fido2 = fido2;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
         _userRepository = userRepository;
     }
 
-    public async Task<(User, WebAuthnCredential)> AssertWebAuthnLoginCredential(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse) {
+    public async Task<(User, WebAuthnCredential)> AssertWebAuthnLoginCredential(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse)
+    {
         if (!GuidUtilities.TryParseBytes(assertionResponse.Response.UserHandle, out var userId))
         {
             throw new BadRequestException("Invalid credential.");

@@ -1,4 +1,4 @@
-using AutoFixture;
+﻿using AutoFixture;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
@@ -51,7 +51,8 @@ public class CreateWebAuthnLoginCredentialCommandTests
 
     private CredentialMakeResult MakeCredentialResult()
     {
-        return new CredentialMakeResult("ok", "", new AttestationVerificationSuccess {
+        return new CredentialMakeResult("ok", "", new AttestationVerificationSuccess
+        {
             Aaguid = new Guid(),
             Counter = 0,
             CredentialId = new Guid().ToByteArray(),

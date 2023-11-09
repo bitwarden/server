@@ -1,4 +1,4 @@
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Fido2NetLib;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin;

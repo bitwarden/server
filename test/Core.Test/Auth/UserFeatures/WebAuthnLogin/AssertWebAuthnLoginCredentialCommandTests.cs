@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;

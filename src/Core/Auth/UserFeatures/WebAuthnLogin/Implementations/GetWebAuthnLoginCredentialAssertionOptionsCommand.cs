@@ -1,4 +1,4 @@
-using Fido2NetLib;
+﻿using Fido2NetLib;
 using Fido2NetLib.Objects;
 
 namespace Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
@@ -7,7 +7,8 @@ internal class GetWebAuthnLoginCredentialAssertionOptionsCommand : IGetWebAuthnL
 {
     private readonly IFido2 _fido2;
 
-    public GetWebAuthnLoginCredentialAssertionOptionsCommand(IFido2 fido2) {
+    public GetWebAuthnLoginCredentialAssertionOptionsCommand(IFido2 fido2)
+    {
         _fido2 = fido2;
     }
 

@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Repositories;
+﻿using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 using Fido2NetLib;
@@ -11,12 +11,14 @@ internal class GetWebAuthnLoginCredentialCreateOptionsCommand : IGetWebAuthnLogi
     private readonly IFido2 _fido2;
     private readonly IWebAuthnCredentialRepository _webAuthnCredentialRepository;
 
-    public GetWebAuthnLoginCredentialCreateOptionsCommand(IFido2 fido2, IWebAuthnCredentialRepository webAuthnCredentialRepository) {
+    public GetWebAuthnLoginCredentialCreateOptionsCommand(IFido2 fido2, IWebAuthnCredentialRepository webAuthnCredentialRepository)
+    {
         _fido2 = fido2;
         _webAuthnCredentialRepository = webAuthnCredentialRepository;
     }
 
-    public async Task<CredentialCreateOptions> GetWebAuthnLoginCredentialCreateOptionsAsync(User user) {
+    public async Task<CredentialCreateOptions> GetWebAuthnLoginCredentialCreateOptionsAsync(User user)
+    {
         var fidoUser = new Fido2User
         {
             DisplayName = user.Name,
