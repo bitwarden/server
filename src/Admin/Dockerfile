@@ -2,7 +2,7 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:6.0 AS dotnet-bui
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
-ENV NODE_VERSION=16
+ENV NODE_VERSION=16.20.2
 ENV NVM_DIR /usr/local/nvm
 
 # Determine proper runtime value for .NET
@@ -28,6 +28,9 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | b
     && nvm install $NODE_VERSION \
     && nvm alias default $NODE_VERSION \
     && nvm use default
+ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
+ENV PATH      $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
+
 RUN npm install -g gulp
 
 WORKDIR /source
