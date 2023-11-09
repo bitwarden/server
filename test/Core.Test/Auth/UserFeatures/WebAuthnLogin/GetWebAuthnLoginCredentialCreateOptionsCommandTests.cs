@@ -16,7 +16,7 @@ public class GetWebAuthnLoginCredentialCreateOptionsTests
 {
     [Theory]
     [BitAutoData]
-    internal async Task NoExistingCredentials_ReturnsOptionsWithoutExcludedCredentials(SutProvider<GetWebAuthnLoginCredentialCreateOptionsCommand> sutProvider, User user, CredentialCreateOptions options)
+    internal async Task NoExistingCredentials_ReturnsOptionsWithoutExcludedCredentials(SutProvider<GetWebAuthnLoginCredentialCreateOptionsCommand> sutProvider, User user)
     {
         // Arrange
         sutProvider.GetDependency<IWebAuthnCredentialRepository>()
