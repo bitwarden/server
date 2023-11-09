@@ -225,20 +225,20 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
                                        join cu in dbContext.CollectionUsers
                                            on ou.Id equals cu.OrganizationUserId into cu_g
                                        from cu in cu_g.DefaultIfEmpty()
-                                       where !ou.AccessAll && cu.CollectionId == c.Id
+                                       where cu.CollectionId == c.Id
                                        join gu in dbContext.GroupUsers
                                            on ou.Id equals gu.OrganizationUserId into gu_g
                                        from gu in gu_g.DefaultIfEmpty()
-                                       where cu.CollectionId == null && !ou.AccessAll
+                                       where cu.CollectionId == null
                                        join g in dbContext.Groups
                                            on gu.GroupId equals g.Id into g_g
                                        from g in g_g.DefaultIfEmpty()
                                        join cg in dbContext.CollectionGroups
                                            on gu.GroupId equals cg.GroupId into cg_g
                                        from cg in cg_g.DefaultIfEmpty()
-                                       where !g.AccessAll && cg.CollectionId == c.Id &&
+                                       where cg.CollectionId == c.Id &&
                                        (o.Id == organizationId && o.Enabled && ou.Status == OrganizationUserStatusType.Confirmed &&
-                                       (ou.AccessAll || !cu.ReadOnly || g.AccessAll || !cg.ReadOnly))
+                                       (!cu.ReadOnly || !cg.ReadOnly))
                                        select c;
             }
             else
