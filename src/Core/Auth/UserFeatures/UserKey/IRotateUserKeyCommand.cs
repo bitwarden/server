@@ -20,6 +20,7 @@ public interface IRotateUserKeyCommand
 /// A type used to implement updates to the database for key rotations. Each domain that requires an update of encrypted
 /// data during a key rotation should use this to implement its own database call. The user repository loops through
 /// these during a key rotation.
+/// <para>Note: connection and transaction are only used for Dapper. They won't be available in EF</para>
 /// </summary>
 public delegate Task UpdateEncryptedDataForKeyRotation(SqlConnection connection = null,
     SqlTransaction transaction = null);

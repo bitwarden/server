@@ -125,16 +125,18 @@ public class EmergencyAccessRepository : Repository<Core.Auth.Entities.Emergency
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
+            var newKeys = emergencyAccessKeys.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetDatabaseContext(scope);
-            var emergencyAccesses = await dbContext.EmergencyAccesses
+            var userEmergencyAccess = await GetDbSet(dbContext)
                 .Where(ea => ea.GrantorId == grantorId)
-                .Where(ea => emergencyAccessKeys.Any(eak => eak.Id == ea.Id))
                 .ToListAsync();
+            var validEmergencyAccess = userEmergencyAccess
+                .Where(ea => newKeys.Any(eak => eak.Id == ea.Id));
 
-            foreach (var ea in emergencyAccesses)
+            foreach (var ea in validEmergencyAccess)
             {
-                var eak = emergencyAccessKeys.First(eak => eak.Id == ea.Id);
+                var eak = newKeys.First(eak => eak.Id == ea.Id);
                 ea.KeyEncrypted = eak.KeyEncrypted;
             }
 

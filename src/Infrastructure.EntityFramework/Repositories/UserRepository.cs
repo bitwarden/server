@@ -164,7 +164,6 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             //  Update re-encrypted data
             foreach (var action in updateDataActions)
             {
-                // TODO (jlf0dev): Check if transaction captures these operations
                 // connection and transaction aren't used in EF
                 await action();
             }
