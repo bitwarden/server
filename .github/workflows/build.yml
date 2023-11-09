@@ -232,6 +232,15 @@ jobs:
           keyvault: "bitwarden-ci"
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
       
+      - name: Generate image full name
+        id: image-name
+        run: |
+          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+          if [[ "$IMAGE_TAG" == "master" ]]; then
+            IMAGE_TAG=dev
+          fi
+          echo "name=${_AZ_REGISTRY}/build:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+      
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
@@ -242,7 +251,7 @@ jobs:
             linux/arm/v7,
             linux/arm64/v8
           push: true
-          tags: ${{ env._AZ_REGISTRY }}/build:latest
+          tags: ${{ steps.image-name.outputs.name }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
@@ -333,12 +342,6 @@ jobs:
           secrets: "github-pat-bitwarden-devops-bot-repo-scope"
 
       ########## Generate image tag and build Docker image ##########
-      - name: Docker Test Step
-        run: |
-          docker image pull $_AZ_REGISTRY/build:latest
-          docker image ls
-          exit 1
-
       - name: Generate Docker image tag
         id: tag
         run: |
@@ -366,6 +369,8 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
+          build-args: |
+            BUILD_TAG=${{ steps.tag.outputs.image_tag }}
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |

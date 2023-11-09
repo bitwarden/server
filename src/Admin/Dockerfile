@@ -1,7 +1,8 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-FROM --platform=$BUILDPLATFORM bitwarden-build:latest AS bitwarden-build
+ARG BUILD_TAG=latest
+FROM --platform=$BUILDPLATFORM bitwarden-build:${BUILD_TAG} AS bitwarden-build
 
 ###############################################
 #                  App stage                  #
