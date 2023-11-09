@@ -371,7 +371,7 @@ jobs:
         with:
           build-args: |
             BUILD_TAG=${{ steps.tag.outputs.image_tag }}
-          context: .
+          context: ${{ matrix.base_path }}/${{ matrix.project_name }}
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
             linux/amd64,
