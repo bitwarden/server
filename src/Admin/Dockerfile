@@ -54,7 +54,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=dotnet-build /app ./
 
-COPY entrypoint.sh /
+COPY src/Admin/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 HEALTHCHECK CMD curl -f http://localhost:5000 || exit 1
