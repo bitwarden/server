@@ -195,14 +195,8 @@ public class UserRepository : Repository<User, Guid>, IUserRepository
                 cmd.Parameters.Add("@SecurityStamp", SqlDbType.NVarChar).Value = user.SecurityStamp;
                 cmd.Parameters.Add("@Key", SqlDbType.VarChar).Value = user.Key;
 
-                if (string.IsNullOrWhiteSpace(user.PrivateKey))
-                {
-                    cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = DBNull.Value;
-                }
-                else
-                {
-                    cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value = user.PrivateKey;
-                }
+                cmd.Parameters.Add("@PrivateKey", SqlDbType.VarChar).Value =
+                    string.IsNullOrWhiteSpace(user.PrivateKey) ? DBNull.Value : user.PrivateKey;
 
                 cmd.Parameters.Add("@RevisionDate", SqlDbType.DateTime2).Value = user.RevisionDate;
                 cmd.Parameters.Add("@AccountRevisionDate", SqlDbType.DateTime2).Value =
