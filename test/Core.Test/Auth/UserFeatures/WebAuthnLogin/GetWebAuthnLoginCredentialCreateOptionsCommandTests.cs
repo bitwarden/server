@@ -14,8 +14,7 @@ namespace Bit.Core.Test.Auth.UserFeatures.WebAuthnLogin;
 [SutProviderCustomize]
 public class GetWebAuthnLoginCredentialCreateOptionsTests
 {
-    [Theory]
-    [BitAutoData]
+    [Theory, BitAutoData]
     internal async Task NoExistingCredentials_ReturnsOptionsWithoutExcludedCredentials(SutProvider<GetWebAuthnLoginCredentialCreateOptionsCommand> sutProvider, User user)
     {
         // Arrange
@@ -37,8 +36,7 @@ public class GetWebAuthnLoginCredentialCreateOptionsTests
                 Arg.Any<AuthenticationExtensionsClientInputs>());
     }
 
-    [Theory]
-    [BitAutoData]
+    [Theory, BitAutoData]
     internal async Task HasExistingCredential_ReturnsOptionsWithExcludedCredential(SutProvider<GetWebAuthnLoginCredentialCreateOptionsCommand> sutProvider, User user, WebAuthnCredential credential)
     {
         // Arrange
