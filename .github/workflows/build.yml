@@ -94,6 +94,7 @@ jobs:
           fail-on-error: true
 
   build-artifacts:
+    if: false
     name: Build artifacts
     runs-on: ubuntu-22.04
     needs:
@@ -194,59 +195,48 @@ jobs:
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-22.04
-    needs: build-artifacts
+    needs:
+      - lint
+      - testing
     strategy:
       fail-fast: false
       matrix:
         include:
           - project_name: Admin
             base_path: ./src
-            dotnet: true
-          - project_name: Api
-            base_path: ./src
-            dotnet: true
-          - project_name: Attachments
-            base_path: ./util
-          - project_name: Billing
-            base_path: ./src
-            dotnet: true
-          - project_name: Events
-            base_path: ./src
-            dotnet: true
-          - project_name: EventsProcessor
-            base_path: ./src
-            dotnet: true
-          - project_name: Icons
-            base_path: ./src
-            dotnet: true
-          - project_name: Identity
-            base_path: ./src
-            dotnet: true
-          - project_name: MsSql
-            base_path: ./util
-          - project_name: MsSqlMigratorUtility
-            base_path: ./util
-            dotnet: true
-          - project_name: Nginx
-            base_path: ./util
-          - project_name: Notifications
-            base_path: ./src
-            dotnet: true
-          - project_name: Scim
-            base_path: ./bitwarden_license/src
-            dotnet: true
-          - project_name: Server
-            base_path: ./util
-            dotnet: true
-          - project_name: Setup
-            base_path: ./util
-            dotnet: true
-          - project_name: Sso
-            base_path: ./bitwarden_license/src
-            dotnet: true
+          # - project_name: Api
+          #   base_path: ./src
+          # - project_name: Attachments
+          #   base_path: ./util
+          # - project_name: Billing
+          #   base_path: ./src
+          # - project_name: Events
+          #   base_path: ./src
+          # - project_name: EventsProcessor
+          #   base_path: ./src
+          # - project_name: Icons
+          #   base_path: ./src
+          # - project_name: Identity
+          #   base_path: ./src
+          # - project_name: MsSql
+          #   base_path: ./util
+          # - project_name: MsSqlMigratorUtility
+          #   base_path: ./util
+          # - project_name: Nginx
+          #   base_path: ./util
+          # - project_name: Notifications
+          #   base_path: ./src
+          # - project_name: Scim
+          #   base_path: ./bitwarden_license/src
+          # - project_name: Server
+          #   base_path: ./util
+          # - project_name: Setup
+          #   base_path: ./util
+          # - project_name: Sso
+          #   base_path: ./bitwarden_license/src
     steps:
       - name: Checkout repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Check Branch to Publish
         env:
@@ -261,6 +251,13 @@ jobs:
             echo "is_publish_branch=false" >> $GITHUB_ENV
           fi
 
+      ########## Set up Docker ##########
+      - name: Set up QEMU emulators
+        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+
       ########## ACRs ##########
       - name: Login to Azure - PROD Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
@@ -268,7 +265,7 @@ jobs:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to PROD ACR
-        run: az acr login -n bitwardenprod
+        run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
 
       - name: Login to Azure - CI Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
@@ -307,29 +304,22 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
-      - name: Get build artifact
-        if: ${{ matrix.dotnet }}
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
-        with:
-          name: ${{ matrix.project_name }}.zip
-
-      - name: Setup build artifact
-        if: ${{ matrix.dotnet }}
-        run: |
-          mkdir -p ${{ matrix.base_path}}/${{ matrix.project_name }}/obj/build-output/publish
-          unzip ${{ matrix.project_name }}.zip \
-            -d ${{ matrix.base_path }}/${{ matrix.project_name }}/obj/build-output/publish
-
       - name: Build Docker image
         uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3.3.1
         with:
           context: ${{ matrix.base_path }}/${{ matrix.project_name }}
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
-          platforms: linux/amd64
+          platforms: |
+            linux/amd64,
+            linux/arm/v7,
+            linux/arm64/v8
           push: true
           tags: ${{ steps.image-name.outputs.name }}
           secrets: |
             "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
+
+      - name: Log out of Docker
+        run: docker logout
 
   upload:
     name: Upload
@@ -337,7 +327,7 @@ jobs:
     needs: build-docker
     steps:
       - name: Checkout repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
@@ -348,7 +338,7 @@ jobs:
           creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
       - name: Login to PROD ACR
-        run: az acr login -n $_AZ_REGISTRY --only-show-errors
+        run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
 
       - name: Restore
         run: dotnet tool restore
@@ -518,8 +508,7 @@ jobs:
   self-host-build:
     name: Trigger self-host build
     runs-on: ubuntu-22.04
-    needs:
-      - build-docker
+    needs: build-docker
     steps:
       - name: Login to Azure - CI Subscription
         uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
