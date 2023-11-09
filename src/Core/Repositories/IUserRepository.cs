@@ -1,4 +1,4 @@
-using Bit.Core.Auth.UserFeatures.UserKey;
+﻿using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Models.Data;
 
