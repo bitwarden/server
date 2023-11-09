@@ -19,6 +19,7 @@ using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;
@@ -413,14 +414,14 @@ public class AccountsController : Controller
                 MasterPasswordHash = model.MasterPasswordHash,
                 Key = model.Key,
                 PrivateKey = model.PrivateKey,
-                // Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
-                // Folders = await _folderValidator.ValidateAsync(user, model.Folders),
-                // Sends = await _sendValidator.ValidateAsync(user, model.Sends),
+                Ciphers = new List<Cipher>(),
+                Folders = new List<Folder>(),
+                Sends = new List<Send>(),
                 EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-                // ResetPasswordKeys = await _accountRecoveryValidator.ValidateAsync(user, model.ResetPasswordKeys),
+                ResetPasswordKeys = new List<OrganizationUser>(),
             };
 
-            result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);
+            result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
         }
         else
         {
