@@ -2,6 +2,8 @@
 
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
+using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +16,7 @@ public static class UserServiceCollectionExtensions
     {
         services.AddScoped<IUserService, UserService>();
         services.AddUserPasswordCommands();
+        services.AddWebAuthnLoginCommands();
     }
 
     private static void AddUserPasswordCommands(this IServiceCollection services)
@@ -21,4 +24,8 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<ISetInitialMasterPasswordCommand, SetInitialMasterPasswordCommand>();
     }
 
+    private static void AddWebAuthnLoginCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IGetWebAuthnLoginCredentialCreateOptionsCommand, GetWebAuthnLoginCredentialCreateOptionsCommand>();
+    }
 }
