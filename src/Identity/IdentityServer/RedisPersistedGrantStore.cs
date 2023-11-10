@@ -14,6 +14,15 @@ namespace Bit.Identity.IdentityServer;
 /// </remarks>
 public class RedisPersistedGrantStore : IPersistedGrantStore
 {
+    private const string TypeEntry = nameof(PersistedGrant.Type);
+    private const string SubjectIdEntry = nameof(PersistedGrant.SubjectId);
+    private const string SessionIdEntry = nameof(PersistedGrant.SessionId);
+    private const string ClientIdEntry = nameof(PersistedGrant.ClientId);
+    private const string DescriptionEntry = nameof(PersistedGrant.Description);
+    private const string CreationTimeEntry = nameof(PersistedGrant.CreationTime);
+    private const string ConsumedTimeEntry = nameof(PersistedGrant.ConsumedTime);
+    private const string DataEntry = nameof(PersistedGrant.Data);
+
     private readonly IConnectionMultiplexer _connectionMultiplexer;
     private readonly ILogger<RedisPersistedGrantStore> _logger;
     private readonly IPersistedGrantStore _fallbackGrantStore;
@@ -72,37 +81,37 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
         {
             switch (entry.Name)
             {
-                case nameof(PersistedGrant.Type):
+                case TypeEntry:
                     persistedGrant.Type = entry.Value;
                     break;
-                case nameof(PersistedGrant.SubjectId):
+                case SubjectIdEntry:
                     persistedGrant.SubjectId = entry.Value;
                     break;
-                case nameof(PersistedGrant.SessionId):
+                case SessionIdEntry:
                     if (entry.Value.HasValue)
                     {
                         persistedGrant.SessionId = entry.Value;
                     }
                     break;
-                case nameof(PersistedGrant.ClientId):
+                case ClientIdEntry:
                     persistedGrant.ClientId = entry.Value;
                     break;
-                case nameof(PersistedGrant.Description):
+                case DescriptionEntry:
                     if (entry.Value.HasValue)
                     {
                         persistedGrant.Description = entry.Value;
                     }
                     break;
-                case nameof(PersistedGrant.CreationTime):
+                case CreationTimeEntry:
                     persistedGrant.CreationTime = new DateTime((long)entry.Value, DateTimeKind.Utc);
                     break;
-                case nameof(PersistedGrant.ConsumedTime):
+                case ConsumedTimeEntry:
                     if (entry.Value.HasValue)
                     {
                         persistedGrant.ConsumedTime = new DateTime((long)entry.Value, DateTimeKind.Utc);
                     }
                     break;
-                case nameof(PersistedGrant.Data):
+                case DataEntry:
                     persistedGrant.Data = entry.Value;
                     break;
             }
@@ -155,21 +164,21 @@ public class RedisPersistedGrantStore : IPersistedGrantStore
         // Ref: https://stackexchange.github.io/StackExchange.Redis/Transactions.html#and-in-stackexchangeredis
         _ = transaction.HashSetAsync(redisKey, new HashEntry[]
         {
-            new(nameof(PersistedGrant.Type), grant.Type),
-            new(nameof(PersistedGrant.SubjectId), grant.SubjectId),
-            new(nameof(PersistedGrant.SessionId), grant.SessionId != null ? grant.SessionId : RedisValue.EmptyString),
-            new(nameof(PersistedGrant.ClientId), grant.ClientId),
-            new(nameof(PersistedGrant.Description), grant.Description != null ? grant.Description : RedisValue.EmptyString),
-            new(nameof(PersistedGrant.CreationTime), grant.CreationTime.Ticks),
-            new(nameof(PersistedGrant.ConsumedTime), grant.ConsumedTime.HasValue ? grant.CreationTime.Ticks : RedisValue.EmptyString),
-            new(nameof(PersistedGrant.Data), grant.Data),
+            new(TypeEntry, grant.Type),
+            new(SubjectIdEntry, grant.SubjectId),
+            new(SessionIdEntry, grant.SessionId != null ? grant.SessionId : RedisValue.EmptyString),
+            new(ClientIdEntry, grant.ClientId),
+            new(DescriptionEntry, grant.Description != null ? grant.Description : RedisValue.EmptyString),
+            new(CreationTimeEntry, grant.CreationTime.Ticks),
+            new(ConsumedTimeEntry, grant.ConsumedTime.HasValue ? grant.CreationTime.Ticks : RedisValue.EmptyString),
+            new(DataEntry, grant.Data),
         });
         _ = transaction.KeyExpireAsync(redisKey, grant.Expiration.Value);
         await transaction.ExecuteAsync();
     }
 
-    private static string CreateRedisKey(string key)
+    private static RedisKey CreateRedisKey(string key)
     {
-        return $"PersistedGrant_{key}";
+        return $"pg:{key}";
     }
 }
