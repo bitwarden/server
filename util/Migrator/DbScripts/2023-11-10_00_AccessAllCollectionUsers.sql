@@ -1,10 +1,10 @@
--- Step 1: Retrieve relevant data from [dbo].[OrganizationUser] where [AccessAll] is 1
+-- Step 1: Retrieve OrganizationUsers with [AccessAll] permission
 SELECT [Id] AS [OrganizationUserId], [OrganizationId]
 INTO #TempOrgUser
 FROM [dbo].[OrganizationUser]
 WHERE [AccessAll] = 1;
 
--- Step 2: Declare variables for organization user and organization ID
+-- Step 2: Declare variables for OrganizationUserId and OrganizationId
 DECLARE @OrgUserId UNIQUEIDENTIFIER;
 DECLARE @OrganizationId UNIQUEIDENTIFIER;
 
@@ -22,7 +22,7 @@ WHILE @@FETCH_STATUS = 0
 BEGIN
     -- Step 5: Use MERGE to insert or update into [dbo].[CollectionUser] for each [dbo].[Collection] entry
 MERGE INTO [dbo].[CollectionUser] AS target
-    USING (SELECT C.[Id] AS [CollectionId], @OrgUserId AS [OrganizationUserId] FROM [dbo].[Collection] C WHERE C.[OrganizationId] = @OrganizationId) AS source -- Adjusted to use OrganizationId
+    USING (SELECT C.[Id] AS [CollectionId], @OrgUserId AS [OrganizationUserId] FROM [dbo].[Collection] C WHERE C.[OrganizationId] = @OrganizationId) AS source
     ON (target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId])
     WHEN MATCHED THEN
 UPDATE SET
@@ -33,7 +33,7 @@ UPDATE SET
 INSERT ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
 VALUES (source.[CollectionId], source.[OrganizationUserId], 0, 0, 1);
 
--- Step 6: Fetch the next organization user and organization ID
+-- Step 6: Fetch the next OrganizationUserId and OrganizationId
 FETCH NEXT FROM OrgUserCursor INTO @OrgUserId, @OrganizationId;
 END;
 
