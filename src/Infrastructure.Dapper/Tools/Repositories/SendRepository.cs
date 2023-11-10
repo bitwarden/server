@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System.Data;
 using Bit.Core.Auth.UserFeatures.UserKey;

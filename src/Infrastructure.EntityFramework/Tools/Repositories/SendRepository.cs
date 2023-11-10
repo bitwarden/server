@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using AutoMapper;
 using Bit.Core.Auth.UserFeatures.UserKey;

@@ -2,6 +2,7 @@
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tools.Repositories;
 using Bit.Core.Vault.Repositories;
 using Microsoft.AspNetCore.Identity;
 
@@ -13,12 +14,13 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
     private readonly IUserRepository _userRepository;
     private readonly ICipherRepository _cipherRepository;
     private readonly IFolderRepository _folderRepository;
+    private readonly ISendRepository _sendRepository;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IPushNotificationService _pushService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
 
     public RotateUserKeyCommand(IUserService userService, IUserRepository userRepository,
-        ICipherRepository cipherRepository, IFolderRepository folderRepository,
+        ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
         IEmergencyAccessRepository emergencyAccessRepository,
         IPushNotificationService pushService, IdentityErrorDescriber errors)
     {
@@ -26,6 +28,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
         _userRepository = userRepository;
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
+        _sendRepository = sendRepository;
         _emergencyAccessRepository = emergencyAccessRepository;
         _pushService = pushService;
         _identityErrorDescriber = errors;
@@ -64,6 +67,12 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
             {
                 saveEncryptedDataActions.Add(_folderRepository.UpdateForKeyRotation(user.Id, model.Folders));
             }
+
+            if (model.Sends.Any())
+            {
+                saveEncryptedDataActions.Add(_sendRepository.UpdateForKeyRotation(user.Id, model.Sends));
+            }
+
             if (model.EmergencyAccessKeys.Any())
             {
                 saveEncryptedDataActions.Add(
