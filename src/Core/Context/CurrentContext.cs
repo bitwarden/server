@@ -224,7 +224,7 @@ public class CurrentContext : ICurrentContext
                 }));
         }
 
-        if (!UseFlexibleCollections && claimsDict.ContainsKey(Claims.OrganizationManager))
+        if (claimsDict.ContainsKey(Claims.OrganizationManager))
         {
             organizations.AddRange(claimsDict[Claims.OrganizationManager].Select(c =>
                 new CurrentContextOrganization
@@ -283,6 +283,11 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> OrganizationManager(Guid orgId)
     {
+        if (UseFlexibleCollections)
+        {
+            throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
+        }
+
         return await OrganizationAdmin(orgId) ||
                (Organizations?.Any(o => o.Id == orgId && o.Type == OrganizationUserType.Manager) ?? false);
     }
