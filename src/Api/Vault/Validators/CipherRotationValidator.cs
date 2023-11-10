@@ -18,13 +18,17 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
 
     public async Task<IEnumerable<Cipher>> ValidateAsync(User user, IEnumerable<CipherWithIdRequestModel> ciphers)
     {
-        if (!ciphers.Any())
+        var result = new List<Cipher>();
+        if (ciphers == null || !ciphers.Any())
         {
-            return null;
+            return result;
         }
 
         var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
-        var result = new List<Cipher>();
+        if (existingCiphers == null || !existingCiphers.Any())
+        {
+            return result;
+        }
 
         foreach (var existing in existingCiphers)
         {
@@ -33,10 +37,8 @@ public class CipherRotationValidator : IRotationValidator<IEnumerable<CipherWith
             {
                 throw new BadRequestException("All existing ciphers must be included in the rotation.");
             }
-
             result.Add(cipher.ToCipher(existing));
         }
-
         return result;
     }
 }

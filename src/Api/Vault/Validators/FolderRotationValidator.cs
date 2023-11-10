@@ -18,13 +18,17 @@ public class FolderRotationValidator : IRotationValidator<IEnumerable<FolderWith
 
     public async Task<IEnumerable<Folder>> ValidateAsync(User user, IEnumerable<FolderWithIdRequestModel> folders)
     {
-        if (!folders.Any())
+        var result = new List<Folder>();
+        if (folders == null || !folders.Any())
         {
-            return null;
+            return result;
         }
 
         var existingFolders = await _folderRepository.GetManyByUserIdAsync(user.Id);
-        var result = new List<Folder>();
+        if (existingFolders == null || !existingFolders.Any())
+        {
+            return result;
+        }
 
         foreach (var existing in existingFolders)
         {
@@ -33,10 +37,8 @@ public class FolderRotationValidator : IRotationValidator<IEnumerable<FolderWith
             {
                 throw new BadRequestException("All existing folders must be included in the rotation.");
             }
-
             result.Add(folder.ToFolder(existing));
         }
-
         return result;
     }
 }

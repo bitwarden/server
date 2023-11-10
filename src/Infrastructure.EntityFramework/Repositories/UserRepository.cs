@@ -161,6 +161,8 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
             entity.AccountRevisionDate = user.AccountRevisionDate;
             entity.RevisionDate = user.RevisionDate;
 
+            await dbContext.SaveChangesAsync();
+
             //  Update re-encrypted data
             foreach (var action in updateDataActions)
             {
