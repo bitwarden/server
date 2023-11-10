@@ -831,7 +831,7 @@ public class CipherRepository : Repository<Core.Vault.Entities.Cipher, Cipher, G
     public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
         Guid userId, IEnumerable<Core.Vault.Entities.Cipher> ciphers)
     {
-        return async (SqlConnection connection, SqlTransaction transaction) =>
+        return async (SqlConnection _, SqlTransaction _) =>
         {
             var newCiphers = ciphers.ToList();
             using var scope = ServiceScopeFactory.CreateScope();

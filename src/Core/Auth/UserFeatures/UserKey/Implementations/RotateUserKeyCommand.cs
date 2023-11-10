@@ -54,15 +54,16 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
             model.ResetPasswordKeys.Any())
         {
             List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
+
             if (model.Ciphers.Any())
             {
                 saveEncryptedDataActions.Add(_cipherRepository.UpdateForKeyRotation(user.Id, model.Ciphers));
             }
 
-            // if (model.Folders.Any())
-            // {
-            //     saveEncryptedDataActions.Add(_folderRepository.Update);
-            // }
+            if (model.Folders.Any())
+            {
+                saveEncryptedDataActions.Add(_folderRepository.UpdateForKeyRotation(user.Id, model.Folders));
+            }
             if (model.EmergencyAccessKeys.Any())
             {
                 saveEncryptedDataActions.Add(

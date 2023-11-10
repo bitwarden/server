@@ -338,7 +338,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                 }
 
                 ciphersTable.PrimaryKey = new DataColumn[] { ciphersTable.Columns[0] };
-                bulkCopy.WriteToServer(ciphersTable);
+                await bulkCopy.WriteToServerAsync(ciphersTable);
             }
 
             // Update cipher table from temp table
