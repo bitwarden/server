@@ -1,10 +1,10 @@
--- Step 1: Retrieve relevant data from [dbo].[Group] where [AccessAll] is 1
+-- Step 1: Retrieve Groups with [AccessAll] permission
 SELECT [Id] AS [GroupId], [OrganizationId]
 INTO #TempGroup
 FROM [dbo].[Group]
 WHERE [AccessAll] = 1;
 
--- Step 2: Declare variables for group and organization IDs
+-- Step 2: Declare variables for GroupId and OrganizationId
 DECLARE @GroupId UNIQUEIDENTIFIER;
 DECLARE @OrganizationId UNIQUEIDENTIFIER;
 
@@ -33,7 +33,7 @@ UPDATE SET
 INSERT ([CollectionId], [GroupId], [ReadOnly], [HidePasswords], [Manage])
 VALUES (source.[CollectionId], source.[GroupId], 0, 0, 1);
 
--- Step 6: Fetch the next group and organization IDs
+-- Step 6: Fetch the next GroupId and OrganizationId
 FETCH NEXT FROM GroupCursor INTO @GroupId, @OrganizationId;
 END;
 
