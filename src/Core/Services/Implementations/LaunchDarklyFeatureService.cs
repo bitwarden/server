@@ -18,12 +18,15 @@ public class LaunchDarklyFeatureService : IFeatureService, IDisposable
         var ldConfig = Configuration.Builder(globalSettings.LaunchDarkly?.SdkKey);
         ldConfig.Logging(Components.Logging().Level(LogLevel.Error));
 
-        ldConfig.ApplicationInfo(Components.ApplicationInfo()
-            .ApplicationId(globalSettings.ProjectName)
-            .ApplicationName(globalSettings.ProjectName)
-            .ApplicationVersion(AssemblyHelpers.GetGitHash() ?? AssemblyHelpers.GetVersion())
-            .ApplicationVersionName(AssemblyHelpers.GetVersion())
-        );
+        if (!string.IsNullOrEmpty(globalSettings.ProjectName))
+        {
+            ldConfig.ApplicationInfo(Components.ApplicationInfo()
+                .ApplicationId(globalSettings.ProjectName)
+                .ApplicationName(globalSettings.ProjectName)
+                .ApplicationVersion(AssemblyHelpers.GetGitHash() ?? AssemblyHelpers.GetVersion())
+                .ApplicationVersionName(AssemblyHelpers.GetVersion())
+            );
+        }
 
         if (string.IsNullOrEmpty(globalSettings.LaunchDarkly?.SdkKey))
         {
