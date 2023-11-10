@@ -1,4 +1,4 @@
-using BenchmarkDotNet.Attributes;
+﻿using BenchmarkDotNet.Attributes;
 using Bit.Identity.IdentityServer;
 using Bit.Infrastructure.Dapper.Auth.Repositories;
 using IdentityServer4.Models;
