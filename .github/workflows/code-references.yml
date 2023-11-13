@@ -27,4 +27,4 @@ jobs:
         uses: launchdarkly/find-code-references@4a960c4cc0f15edc8d2548517da09546ee4967f4 # v2.11.4
         with:
           accessToken: ${{ secrets.LD_ACCESS_TOKEN }}
-          projKey: Bitwarden
+          projKey: default
