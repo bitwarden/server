@@ -2,17 +2,13 @@
 name: Collect code references
 
 on:
-  push:
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  pull_request:
 
 permissions:
   contents: read
   checks: write
   id-token: write
+  pull-requests: write
 
 jobs:
   refs:
@@ -21,10 +17,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-        with:
-          fetch-depth: 3
+
       - name: Collect
-        uses: launchdarkly/find-code-references@4a960c4cc0f15edc8d2548517da09546ee4967f4 # v2.11.4
+        uses: launchdarkly/find-code-references-in-pull-request@45fb85b5cf1a4d1186e21cac544e39eb65d502cc # v1.0.1
         with:
-          accessToken: ${{ secrets.LD_ACCESS_TOKEN }}
-          projKey: default
+          project-key: default
+          environment-key: production
+          access-token: ${{ secrets.LD_ACCESS_TOKEN }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
