@@ -434,6 +434,8 @@ public class OrganizationService : IOrganizationService
 
         var flexibleCollectionsIsEnabled =
             _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        var flexibleCollectionsV1IsEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
 
         var organization = new Organization
         {
@@ -473,7 +475,7 @@ public class OrganizationService : IOrganizationService
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
             LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled,
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsIsEnabled
+            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
         };
 
         if (signup.UseSecretsManager)

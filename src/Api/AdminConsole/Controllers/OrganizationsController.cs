@@ -29,6 +29,7 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Constants = Microsoft.VisualBasic.Constants;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
@@ -792,6 +793,14 @@ public class OrganizationsController : Controller
         if (!await _currentContext.OrganizationOwner(id))
         {
             throw new NotFoundException();
+        }
+
+        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+
+        if (!v1Enabled)
+        {
+            // V1 is disabled, ensure V1 setting doesn't change
+            model.AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
         }
 
         await _organizationService.UpdateAsync(model.ToOrganization(organization));
