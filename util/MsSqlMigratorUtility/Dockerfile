@@ -4,7 +4,7 @@ LABEL com.bitwarden.product="bitwarden"
 
 # Copy csproj files as distinct layers
 WORKDIR /source
-COPY util/MsSqlMigratorUtility/*.csproj ./util/MsSqlMigratorUtility/
+COPY *.csproj ./util/MsSqlMigratorUtility/
 
 # Restore MsSqlMigratorUtility project dependencies and tools
 WORKDIR /source/util/MsSqlMigratorUtility
