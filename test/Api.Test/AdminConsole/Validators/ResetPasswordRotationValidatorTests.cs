@@ -23,7 +23,9 @@ public class ResetPasswordRotationValidatorTests
             .Select(a =>
                 new OrganizationUser
                 {
-                    Id = new Guid(), ResetPasswordKey = a.ResetPasswordKey, OrganizationId = a.OrganizationId
+                    Id = new Guid(),
+                    ResetPasswordKey = a.ResetPasswordKey,
+                    OrganizationId = a.OrganizationId
                 }).ToList();
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
             .Returns(existingUserResetPassword);
@@ -43,11 +45,14 @@ public class ResetPasswordRotationValidatorTests
             .Select(a =>
                 new OrganizationUser
                 {
-                    Id = new Guid(), ResetPasswordKey = a.ResetPasswordKey, OrganizationId = a.OrganizationId
+                    Id = new Guid(),
+                    ResetPasswordKey = a.ResetPasswordKey,
+                    OrganizationId = a.OrganizationId
                 }).ToList();
         existingUserResetPassword.Add(new OrganizationUser
         {
-            Id = Guid.NewGuid(), ResetPasswordKey = "Missing ResetPasswordKey"
+            Id = Guid.NewGuid(),
+            ResetPasswordKey = "Missing ResetPasswordKey"
         });
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
             .Returns(existingUserResetPassword);
@@ -67,7 +72,9 @@ public class ResetPasswordRotationValidatorTests
             .Select(a =>
                 new OrganizationUser
                 {
-                    Id = new Guid(), ResetPasswordKey = a.ResetPasswordKey, OrganizationId = a.OrganizationId
+                    Id = new Guid(),
+                    ResetPasswordKey = a.ResetPasswordKey,
+                    OrganizationId = a.OrganizationId
                 }).ToList();
         existingUserResetPassword.RemoveAt(0);
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
@@ -88,7 +95,9 @@ public class ResetPasswordRotationValidatorTests
             .Select(a =>
                 new OrganizationUser
                 {
-                    Id = new Guid(), ResetPasswordKey = a.ResetPasswordKey, OrganizationId = a.OrganizationId
+                    Id = new Guid(),
+                    ResetPasswordKey = a.ResetPasswordKey,
+                    OrganizationId = a.OrganizationId
                 }).ToList();
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
             .Returns(existingUserResetPassword);
