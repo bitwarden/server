@@ -3,16 +3,30 @@ using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
-public abstract class Repository<T, TId> : BaseRepository, IRepository<T, TId>
+public abstract class Repository<T, TId> : BaseRepository<T>, IRepository<T, TId>
     where TId : IEquatable<TId>
     where T : class, ITableObject<TId>
 {
-    public Repository(string connectionString, string readOnlyConnectionString,
-        string schema = null, string table = null)
-        : base(connectionString, readOnlyConnectionString)
+    public Repository(
+        string connectionString,
+        string readOnlyConnectionString,
+        string schema = null,
+        string table = null)
+        : this(null, connectionString, readOnlyConnectionString, schema, table)
+    {
+    }
+
+    public Repository(
+        IDistributedCache cache,
+        string connectionString,
+        string readOnlyConnectionString,
+        string schema = null,
+        string table = null)
+        : base(cache, connectionString, readOnlyConnectionString)
     {
         if (!string.IsNullOrWhiteSpace(table))
         {

@@ -17,23 +17,26 @@ public static class DistributedCacheExtensions
         cache.Set(key, bytes, options);
     }
 
-    public static Task SetAsync<T>(this IDistributedCache cache, string key, T value)
+    public static async Task SetAsync<T>(this IDistributedCache cache, string key, T value)
     {
-        return SetAsync(cache, key, value, new DistributedCacheEntryOptions());
+        await SetAsync(cache, key, value, new DistributedCacheEntryOptions());
     }
 
-    public static Task SetAsync<T>(this IDistributedCache cache, string key, T value,
+    public static async Task SetAsync<T>(this IDistributedCache cache, string key, T value,
         DistributedCacheEntryOptions options)
     {
         var bytes = JsonSerializer.SerializeToUtf8Bytes(value);
-        return cache.SetAsync(key, bytes, options);
+
+        await cache.SetAsync(key, bytes, options);
     }
 
     public static bool TryGetValue<T>(this IDistributedCache cache, string key, out T value)
     {
         var val = cache.Get(key);
         value = default;
+
         if (val == null) return false;
+
         try
         {
             value = JsonSerializer.Deserialize<T>(val);
@@ -42,6 +45,7 @@ public static class DistributedCacheExtensions
         {
             return false;
         }
+
         return true;
     }
 }

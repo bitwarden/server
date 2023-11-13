@@ -6,7 +6,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
-public class MaintenanceRepository : BaseRepository, IMaintenanceRepository
+public class MaintenanceRepository : BaseRepository<object>, IMaintenanceRepository
 {
     public MaintenanceRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)

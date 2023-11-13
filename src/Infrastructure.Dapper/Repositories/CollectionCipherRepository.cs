@@ -7,7 +7,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
 
-public class CollectionCipherRepository : BaseRepository, ICollectionCipherRepository
+public class CollectionCipherRepository : BaseRepository<CollectionCipher>, ICollectionCipherRepository
 {
     public CollectionCipherRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
