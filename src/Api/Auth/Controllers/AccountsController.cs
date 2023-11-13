@@ -1,4 +1,5 @@
-﻿using Bit.Api.AdminConsole.Models.Response;
+﻿using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Models.Response;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Validators;
@@ -72,6 +73,8 @@ public class AccountsController : Controller
     private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
+    private readonly IRotationValidator<IEnumerable<ResetPasswordWithIdRequestModel>, IEnumerable<OrganizationUser>>
+        _resetPasswordValidator;
 
 
     public AccountsController(
@@ -96,7 +99,9 @@ public class AccountsController : Controller
         IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
         IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> sendValidator,
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
-            emergencyAccessValidator
+            emergencyAccessValidator,
+        IRotationValidator<IEnumerable<ResetPasswordWithIdRequestModel>, IEnumerable<OrganizationUser>>
+            resetPasswordValidator
         )
     {
         _cipherRepository = cipherRepository;
@@ -120,6 +125,7 @@ public class AccountsController : Controller
         _folderValidator = folderValidator;
         _sendValidator = sendValidator;
         _emergencyAccessValidator = emergencyAccessValidator;
+        _resetPasswordValidator = resetPasswordValidator;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -429,7 +435,7 @@ public class AccountsController : Controller
                 Folders = await _folderValidator.ValidateAsync(user, model.Folders),
                 Sends = await _sendValidator.ValidateAsync(user, model.Sends),
                 EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-                ResetPasswordKeys = new List<OrganizationUser>(),
+                ResetPasswordKeys = await _resetPasswordValidator.ValidateAsync(user, model.ResetPasswordKeys)
             };
 
             result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);

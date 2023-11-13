@@ -18,6 +18,6 @@ public class UpdateKeyRequestModel
     public IEnumerable<FolderWithIdRequestModel> Folders { get; set; }
     public IEnumerable<SendWithIdRequestModel> Sends { get; set; }
     public IEnumerable<EmergencyAccessWithIdRequestModel> EmergencyAccessKeys { get; set; }
-    public IEnumerable<OrganizationUserUpdateRequestModel> ResetPasswordKeys { get; set; }
+    public IEnumerable<ResetPasswordWithIdRequestModel> ResetPasswordKeys { get; set; }
 
 }

@@ -7,6 +7,8 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Api.AdminConsole.Validators;
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Validators;
 using Bit.Api.Tools.Models.Request;
@@ -24,6 +26,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
+using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Vault.Entities;
@@ -156,6 +159,9 @@ public class Startup
         services
             .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
                 EmergencyAccessRotationValidator>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<ResetPasswordWithIdRequestModel>, IEnumerable<OrganizationUser>>,
+                ResetPasswordRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);
