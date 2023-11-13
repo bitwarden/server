@@ -1192,6 +1192,127 @@ public class StripePaymentService : IPaymentService
         }
     }
 
+    public async Task RemovePaymentMethod(Organization organization)
+    {
+        const string braintreeCustomerIdKey = "btCustomerId";
+
+        if (organization == null)
+        {
+            throw new ArgumentNullException(nameof(organization));
+        }
+
+        if (organization.Gateway is not GatewayType.Stripe ||
+            (organization.Gateway is GatewayType.Stripe && string.IsNullOrEmpty(organization.GatewayCustomerId)))
+        {
+            throw ContactSupport();
+        }
+
+        var stripeCustomer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId, new Stripe.CustomerGetOptions
+        {
+            Expand = new List<string> { "invoice_settings.default_payment_method", "sources" }
+        });
+
+        if (stripeCustomer == null)
+        {
+            _logger.LogError("Could not find Stripe customer ({ID}) when removing payment method", organization.GatewayCustomerId);
+
+            throw ContactSupport();
+        }
+
+        // PayPal
+        if (stripeCustomer.Metadata?.TryGetValue(braintreeCustomerIdKey, out var braintreeCustomerId) ?? false)
+        {
+            await RemoveBraintreePaymentMethod(braintreeCustomerId);
+        }
+        // Stripe
+        else
+        {
+            await RemoveStripePaymentMethod(stripeCustomer);
+        }
+
+        return;
+
+        async Task RemoveBraintreePaymentMethod(string customerId)
+        {
+            var braintreeCustomer = await _btGateway.Customer.FindAsync(customerId);
+
+            if (braintreeCustomer == null)
+            {
+                _logger.LogError("Failed to retrieve Braintree customer ({ID}) when removing payment method", customerId);
+
+                throw ContactSupport();
+            }
+
+            if (braintreeCustomer.DefaultPaymentMethod != null)
+            {
+                var existingDefaultPaymentMethod = braintreeCustomer.DefaultPaymentMethod;
+
+                var updateBraintreeCustomerResult = await _btGateway.Customer.UpdateAsync(
+                    customerId,
+                    new Braintree.CustomerRequest { DefaultPaymentMethodToken = null });
+
+                if (!updateBraintreeCustomerResult.IsSuccess())
+                {
+                    _logger.LogError("Failed to update payment method for Braintree customer ({ID}) | Message: {Message}",
+                        customerId, updateBraintreeCustomerResult.Message);
+
+                    throw ContactSupport();
+                }
+
+                var deleteBraintreePaymentMethodResult = await _btGateway.PaymentMethod.DeleteAsync(existingDefaultPaymentMethod.Token);
+
+                if (!deleteBraintreePaymentMethodResult.IsSuccess())
+                {
+                    await _btGateway.Customer.UpdateAsync(
+                        customerId,
+                        new Braintree.CustomerRequest { DefaultPaymentMethodToken = existingDefaultPaymentMethod.Token });
+
+                    _logger.LogError(
+                        "Failed to delete Braintree payment method for Customer ({ID}), re-linked payment method. Message: {Message}",
+                        customerId, deleteBraintreePaymentMethodResult.Message);
+
+                    throw ContactSupport();
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Tried to remove non-existent Braintree payment method for Customer ({ID})", customerId);
+            }
+        }
+
+        async Task RemoveStripePaymentMethod(Stripe.Customer customer)
+        {
+            // Customer sources are deprecated, but we still use them for Bank Accounts and potentially older organizations for cards, so we have to check them.
+            if (customer.Sources != null && customer.Sources.Any())
+            {
+                foreach (var source in customer.Sources)
+                {
+                    switch (source)
+                    {
+                        case Stripe.BankAccount:
+                            await _stripeAdapter.BankAccountDeleteAsync(customer.Id, source.Id);
+                            break;
+                        case Stripe.Card:
+                            await _stripeAdapter.CardDeleteAsync(customer.Id, source.Id);
+                            break;
+                    }
+                }
+            }
+
+            var paymentMethods = _stripeAdapter.PaymentMethodListAutoPagingAsync(new Stripe.PaymentMethodListOptions
+            {
+                Customer = customer.Id
+            });
+
+            await foreach (var paymentMethod in paymentMethods)
+            {
+                await _stripeAdapter.PaymentMethodDetachAsync(paymentMethod.Id, new Stripe.PaymentMethodDetachOptions());
+            }
+        }
+
+        GatewayException ContactSupport() => new("Could not remove your payment method. Please contact support for assistance.");
+    }
+
     public async Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
         string paymentToken, bool allowInAppPurchases = false, TaxInfo taxInfo = null)
     {
