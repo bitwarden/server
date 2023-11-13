@@ -12,7 +12,7 @@ RUN dotnet restore
 
 # Copy required project files
 WORKDIR /source
-COPY util/MsSqlMigratorUtility/. ./util/MsSqlMigratorUtility/
+COPY . ./util/MsSqlMigratorUtility/
 
 # Build Setup app
 WORKDIR /source/util/MsSqlMigratorUtility
