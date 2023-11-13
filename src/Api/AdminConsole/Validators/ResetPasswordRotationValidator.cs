@@ -15,10 +15,10 @@ public class ResetPasswordRotationValidator : IRotationValidator<IEnumerable<Res
         _organizationUserRepository = organizationUserRepository;
 
     public async Task<IEnumerable<OrganizationUser>> ValidateAsync(User user,
-        IEnumerable<ResetPasswordWithIdRequestModel> accountRecoveryKeys)
+        IEnumerable<ResetPasswordWithIdRequestModel> resetPasswordKeys)
     {
         var result = new List<OrganizationUser>();
-        if (accountRecoveryKeys == null || !accountRecoveryKeys.Any())
+        if (resetPasswordKeys == null || !resetPasswordKeys.Any())
         {
             return result;
         }
@@ -35,18 +35,18 @@ public class ResetPasswordRotationValidator : IRotationValidator<IEnumerable<Res
 
         foreach (var ou in existing)
         {
-            var accountRecovery = accountRecoveryKeys.FirstOrDefault(a => a.OrganizationId == ou.OrganizationId);
-            if (accountRecovery == null)
+            var organizationUser = resetPasswordKeys.FirstOrDefault(a => a.OrganizationId == ou.OrganizationId);
+            if (organizationUser == null)
             {
-                throw new BadRequestException("All existing account recovery keys must be included in the rotation.");
+                throw new BadRequestException("All existing reset password keys must be included in the rotation.");
             }
 
-            if (accountRecovery.ResetPasswordKey == null)
+            if (organizationUser.ResetPasswordKey == null)
             {
-                throw new BadRequestException("Account recovery keys cannot be set to null during rotation.");
+                throw new BadRequestException("Reset Password keys cannot be set to null during rotation.");
             }
 
-            ou.ResetPasswordKey = accountRecovery.ResetPasswordKey;
+            ou.ResetPasswordKey = organizationUser.ResetPasswordKey;
             result.Add(ou);
         }
 

@@ -537,15 +537,15 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
                             FROM
                                 [dbo].[OrganizationUser] OU
                             INNER JOIN
-                                @AccountRecoveryKeys AR ON OU.Id = AR.Id
+                                @ResetPasswordKeys AR ON OU.Id = AR.Id
                             WHERE
                                 OU.[UserId] = @UserId";
 
-            var accountRecoveryTVP = resetPasswordKeys.ToTvp();
+            var organizationUsersTVP = resetPasswordKeys.ToTvp();
 
             connection.Execute(
                 sql,
-                new { UserId = userId, AccountRecoveryKeys = accountRecoveryTVP },
+                new { UserId = userId, resetPasswordKeys = organizationUsersTVP },
                 transaction: transaction,
                 commandType: CommandType.Text);
         };
