@@ -66,6 +66,7 @@ public static class FeatureFlagKeys
     public const string BillingPlansUpgrade = "billing-plans-upgrade";
     public const string BillingStarterPlan = "billing-starter-plan";
     public const string KeyRotationImprovements = "key-rotation-improvements";
+    public const string GrantSaveOptimization = "grant-save-optimization";
 
     public static List<string> GetAllKeys()
     {
