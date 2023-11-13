@@ -11,7 +11,7 @@ public static class DistributedCacheExtensions
     public static void Set<T>(this IDistributedCache cache, string key, T value,
         DistributedCacheEntryOptions options)
     {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(value);
+        var bytes = Serialize(value);
 
         cache.Set(key, bytes, options);
     }
@@ -19,7 +19,7 @@ public static class DistributedCacheExtensions
     public static async Task SetAsync<T>(this IDistributedCache cache, string key, T value,
         DistributedCacheEntryOptions options)
     {
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(value);
+        var bytes = Serialize(value);
 
         await cache.SetAsync(key, bytes, options);
     }
