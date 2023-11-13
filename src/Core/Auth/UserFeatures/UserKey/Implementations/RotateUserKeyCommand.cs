@@ -17,6 +17,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
     private readonly IFolderRepository _folderRepository;
     private readonly ISendRepository _sendRepository;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IPushNotificationService _pushService;
     private readonly IdentityErrorDescriber _identityErrorDescriber;
 
@@ -33,7 +34,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
     /// <param name="errors">Provides a password mismatch error if master password hash validation fails</param>
     public RotateUserKeyCommand(IUserService userService, IUserRepository userRepository,
         ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
-        IEmergencyAccessRepository emergencyAccessRepository,
+        IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
         IPushNotificationService pushService, IdentityErrorDescriber errors)
     {
         _userService = userService;
@@ -42,6 +43,7 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
         _folderRepository = folderRepository;
         _sendRepository = sendRepository;
         _emergencyAccessRepository = emergencyAccessRepository;
+        _organizationUserRepository = organizationUserRepository;
         _pushService = pushService;
         _identityErrorDescriber = errors;
     }
@@ -89,6 +91,12 @@ public class RotateUserKeyCommand : IRotateUserKeyCommand
             {
                 saveEncryptedDataActions.Add(
                     _emergencyAccessRepository.UpdateForKeyRotation(user.Id, model.EmergencyAccessKeys));
+            }
+
+            if (model.ResetPasswordKeys.Any())
+            {
+                saveEncryptedDataActions.Add(
+                    _organizationUserRepository.UpdateForKeyRotation(user.Id, model.ResetPasswordKeys));
             }
 
             await _userRepository.UpdateUserKeyAndEncryptedDataAsync(user, saveEncryptedDataActions);

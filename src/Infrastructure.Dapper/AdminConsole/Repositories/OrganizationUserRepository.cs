@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -9,6 +10,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Dapper;
+using Bit.Infrastructure.Dapper.AdminConsole.Helpers;
 using Microsoft.Data.SqlClient;
 
 namespace Bit.Infrastructure.Dapper.Repositories;
@@ -519,5 +521,33 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             return results.ToList();
         }
+    }
+
+    /// <inheritdoc />
+    public UpdateEncryptedDataForKeyRotation UpdateForKeyRotation(
+        Guid userId, IEnumerable<OrganizationUser> resetPasswordKeys)
+    {
+        return async (SqlConnection connection, SqlTransaction transaction) =>
+        {
+            var sql = @"
+                            UPDATE
+                                [dbo].[OrganizationUser]
+                            SET
+                                [ResetPasswordKey] = AR.[ResetPasswordKey]
+                            FROM
+                                [dbo].[OrganizationUser] OU
+                            INNER JOIN
+                                @AccountRecoveryKeys AR ON OU.Id = AR.Id
+                            WHERE
+                                OU.[UserId] = @UserId";
+
+            var accountRecoveryTVP = resetPasswordKeys.ToTvp();
+
+            connection.Execute(
+                sql,
+                new { UserId = userId, AccountRecoveryKeys = accountRecoveryTVP },
+                transaction: transaction,
+                commandType: CommandType.Text);
+        };
     }
 }
