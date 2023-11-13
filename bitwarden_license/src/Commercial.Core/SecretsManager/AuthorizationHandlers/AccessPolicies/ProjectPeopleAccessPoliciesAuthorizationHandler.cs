@@ -1,4 +1,4 @@
-﻿using Bit.Core.Context;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Models.Data;
