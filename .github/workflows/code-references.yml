@@ -6,8 +6,6 @@ on:
 
 permissions:
   contents: read
-  checks: write
-  id-token: write
   pull-requests: write
 
 jobs:
@@ -22,6 +20,6 @@ jobs:
         uses: launchdarkly/find-code-references-in-pull-request@45fb85b5cf1a4d1186e21cac544e39eb65d502cc # v1.0.1
         with:
           project-key: default
-          environment-key: production
+          environment-key: dev
           access-token: ${{ secrets.LD_ACCESS_TOKEN }}
           repo-token: ${{ secrets.GITHUB_TOKEN }}
