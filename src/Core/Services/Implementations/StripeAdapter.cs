@@ -156,6 +156,9 @@ public class StripeAdapter : IStripeAdapter
         return _paymentMethodService.ListAutoPaging(options);
     }
 
+    public IAsyncEnumerable<PaymentMethod> PaymentMethodListAutoPagingAsync(Stripe.PaymentMethodListOptions options)
+        => _paymentMethodService.ListAutoPagingAsync(options);
+
     public Task<Stripe.PaymentMethod> PaymentMethodAttachAsync(string id, Stripe.PaymentMethodAttachOptions options = null)
     {
         return _paymentMethodService.AttachAsync(id, options);

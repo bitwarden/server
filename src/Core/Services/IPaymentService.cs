@@ -26,6 +26,7 @@ public interface IPaymentService
     Task CancelSubscriptionAsync(ISubscriber subscriber, bool endOfPeriod = false,
         bool skipInAppPurchaseCheck = false);
     Task ReinstateSubscriptionAsync(ISubscriber subscriber);
+    Task RemovePaymentMethod(Organization organization);
     Task<bool> UpdatePaymentMethodAsync(ISubscriber subscriber, PaymentMethodType paymentMethodType,
         string paymentToken, bool allowInAppPurchases = false, TaxInfo taxInfo = null);
     Task<bool> CreditAccountAsync(ISubscriber subscriber, decimal creditAmount);
