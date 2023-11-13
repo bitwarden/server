@@ -1,45 +1,27 @@
--- Step 1: Retrieve Groups with [AccessAll] permission
+-- Create a temporary table to store the groups with AccessAll = 1
 SELECT [Id] AS [GroupId], [OrganizationId]
 INTO #TempGroup
 FROM [dbo].[Group]
 WHERE [AccessAll] = 1;
 
--- Step 2: Declare variables for GroupId and OrganizationId
-DECLARE @GroupId UNIQUEIDENTIFIER;
-DECLARE @OrganizationId UNIQUEIDENTIFIER;
+-- Update existing rows in [dbo].[CollectionGroup]
+UPDATE CG
+SET
+    CG.[ReadOnly] = 0,
+    CG.[HidePasswords] = 0,
+    CG.[Manage] = 1
+    FROM [dbo].[CollectionGroup] CG
+INNER JOIN [dbo].[Collection] C ON CG.[CollectionId] = C.[Id]
+INNER JOIN #TempGroup TG ON CG.[GroupId] = TG.[GroupId]
+WHERE C.[OrganizationId] = TG.[OrganizationId];
 
--- Step 3: Create a cursor to iterate through the results of the temporary table
-DECLARE GroupCursor CURSOR FOR
-SELECT [GroupId], [OrganizationId]
-FROM #TempGroup;
+-- Insert new rows into [dbo].[CollectionGroup]
+INSERT INTO [dbo].[CollectionGroup] ([CollectionId], [GroupId], [ReadOnly], [HidePasswords], [Manage])
+SELECT C.[Id], TG.[GroupId], 0, 0, 1
+FROM [dbo].[Collection] C
+    JOIN #TempGroup TG ON C.[OrganizationId] = TG.[OrganizationId]
+    LEFT JOIN [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = TG.[GroupId]
+WHERE CG.[CollectionId] IS NULL;
 
-OPEN GroupCursor;
-
--- Step 4: Loop through the groups
-FETCH NEXT FROM GroupCursor INTO @GroupId, @OrganizationId;
-
-WHILE @@FETCH_STATUS = 0
-BEGIN
-    -- Step 5: Use MERGE to insert or update into [dbo].[CollectionGroup] for each [dbo].[Collection] entry
-MERGE INTO [dbo].[CollectionGroup] AS target
-    USING (SELECT C.[Id] AS [CollectionId], @GroupId AS [GroupId] FROM [dbo].[Collection] C WHERE C.[OrganizationId] = @OrganizationId) AS source
-    ON (target.[CollectionId] = source.[CollectionId] AND target.[GroupId] = source.[GroupId])
-    WHEN MATCHED THEN
-UPDATE SET
-    target.[ReadOnly] = 0,
-    target.[HidePasswords] = 0,
-    target.[Manage] = 1
-    WHEN NOT MATCHED THEN
-INSERT ([CollectionId], [GroupId], [ReadOnly], [HidePasswords], [Manage])
-VALUES (source.[CollectionId], source.[GroupId], 0, 0, 1);
-
--- Step 6: Fetch the next GroupId and OrganizationId
-FETCH NEXT FROM GroupCursor INTO @GroupId, @OrganizationId;
-END;
-
--- Step 7: Close and deallocate the cursor
-CLOSE GroupCursor;
-DEALLOCATE GroupCursor;
-
--- Step 8: Drop the temporary table
+-- Drop the temporary table
 DROP TABLE #TempGroup;
