@@ -1,45 +1,45 @@
--- Step 1: Retrieve OrganizationUsers with [AccessAll] permission
-SELECT [Id] AS [OrganizationUserId], [OrganizationId]
+-- Step 1: Insert into a temporary table with an additional column for batch processing, update 50 k at a time
+SELECT [Id] AS [OrganizationUserId], [OrganizationId], CAST(ROW_NUMBER() OVER(ORDER BY [Id]) / 50000 AS INT) AS Batch
 INTO #TempOrgUser
 FROM [dbo].[OrganizationUser]
 WHERE [AccessAll] = 1;
 
--- Step 2: Declare variables for OrganizationUserId and OrganizationId
-DECLARE @OrgUserId UNIQUEIDENTIFIER;
-DECLARE @OrganizationId UNIQUEIDENTIFIER;
+-- Step 2: Get the maximum batch number
+DECLARE @MaxBatch INT = (SELECT MAX(Batch) FROM #TempOrgUser);
+DECLARE @CurrentBatch INT = 0;
 
--- Step 3: Create a cursor to iterate through the results of the temporary table
-DECLARE OrgUserCursor CURSOR FOR
-SELECT [OrganizationUserId], [OrganizationId]
-FROM #TempOrgUser;
-
-OPEN OrgUserCursor;
-
--- Step 4: Loop through the organization users
-FETCH NEXT FROM OrgUserCursor INTO @OrgUserId, @OrganizationId;
-
-WHILE @@FETCH_STATUS = 0
+-- Step 3: Process each batch
+WHILE @CurrentBatch <= @MaxBatch
 BEGIN
-    -- Step 5: Use MERGE to insert or update into [dbo].[CollectionUser] for each [dbo].[Collection] entry
-MERGE INTO [dbo].[CollectionUser] AS target
-    USING (SELECT C.[Id] AS [CollectionId], @OrgUserId AS [OrganizationUserId] FROM [dbo].[Collection] C WHERE C.[OrganizationId] = @OrganizationId) AS source
-    ON (target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId])
-    WHEN MATCHED THEN
-UPDATE SET
-    target.[ReadOnly] = 0,
-    target.[HidePasswords] = 0,
-    target.[Manage] = 1
-    WHEN NOT MATCHED THEN
-INSERT ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
-VALUES (source.[CollectionId], source.[OrganizationUserId], 0, 0, 1);
+    -- Update existing rows in [dbo].[CollectionUser]
+    UPDATE target
+    SET
+        target.[ReadOnly] = 0,
+        target.[HidePasswords] = 0,
+        target.[Manage] = 1
+        FROM [dbo].[CollectionUser] AS target
+        JOIN (
+            SELECT C.[Id] AS [CollectionId], T.[OrganizationUserId]
+            FROM [dbo].[Collection] C
+            JOIN #TempOrgUser T ON C.[OrganizationId] = T.[OrganizationId] AND T.Batch = @CurrentBatch
+        ) AS source
+    ON target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId];
 
--- Step 6: Fetch the next OrganizationUserId and OrganizationId
-FETCH NEXT FROM OrgUserCursor INTO @OrgUserId, @OrganizationId;
+    -- Insert new rows into [dbo].[CollectionUser]
+    INSERT INTO [dbo].[CollectionUser] ([CollectionId], [OrganizationUserId], [ReadOnly], [HidePasswords], [Manage])
+    SELECT source.[CollectionId], source.[OrganizationUserId], 0, 0, 1
+    FROM (
+             SELECT C.[Id] AS [CollectionId], T.[OrganizationUserId]
+             FROM [dbo].[Collection] C
+                 JOIN #TempOrgUser T ON C.[OrganizationId] = T.[OrganizationId] AND T.Batch = @CurrentBatch
+         ) AS source
+             LEFT JOIN [dbo].[CollectionUser] AS target
+    ON target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId]
+    WHERE target.[CollectionId] IS NULL;
+
+    -- Move to the next batch
+    SET @CurrentBatch = @CurrentBatch + 1;
 END;
 
--- Step 7: Close and deallocate the cursor
-CLOSE OrgUserCursor;
-DEALLOCATE OrgUserCursor;
-
--- Step 8: Drop the temporary table
+-- Step 4: Drop the temporary table
 DROP TABLE #TempOrgUser;
