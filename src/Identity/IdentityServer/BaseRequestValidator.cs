@@ -96,7 +96,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _distributedCache = distributedCache;
         _cacheEntryOptions = new DistributedCacheEntryOptions
         {
-            // This sets the time an item is cached to 15 minutes. This value is hard coded 
+            // This sets the time an item is cached to 15 minutes. This value is hard coded
             // to 15 because to it covers all time-out windows for both Authenticators and
             // Email TOTP.
             AbsoluteExpirationRelativeToNow = new TimeSpan(0, 15, 0)
@@ -149,7 +149,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
             var cacheKey = "TOTP_" + user.Email + "_" + twoFactorToken;
 
-            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, cacheKey, out string _);
+            var isOtpCached = _distributedCache.TryGetValue(cacheKey, out string _);
             if (!verified || isBot || isOtpCached)
             {
                 if (twoFactorProviderType != TwoFactorProviderType.Remember)
@@ -161,12 +161,15 @@ public abstract class BaseRequestValidator<T> where T : class
                 {
                     await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
                 }
+
                 return;
             }
-            // We only want to track TOTPs in the chache to enforce one time use.
-            if (twoFactorProviderType == TwoFactorProviderType.Authenticator || twoFactorProviderType == TwoFactorProviderType.Email)
+
+            // We only want to track TOTPs in the cache to enforce one time use.
+            if (twoFactorProviderType == TwoFactorProviderType.Authenticator ||
+                twoFactorProviderType == TwoFactorProviderType.Email)
             {
-                await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
+                await _distributedCache.SetAsync(cacheKey, twoFactorToken, _cacheEntryOptions);
             }
         }
         else
@@ -229,7 +232,8 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfIterations", user.KdfIterations);
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
-        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
+        customResponse.Add("UserDecryptionOptions",
+            await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
 
         if (sendRememberToken)
         {
@@ -374,7 +378,9 @@ public abstract class BaseRequestValidator<T> where T : class
 
 
         // Check if user belongs to any organization with an active SSO policy
-        var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
+        var anySsoPoliciesApplicableToUser =
+            await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso,
+                OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
         {
             return false;
@@ -463,8 +469,7 @@ public abstract class BaseRequestValidator<T> where T : class
                 {
                     return new Dictionary<string, object>
                     {
-                        ["Host"] = provider.MetaData["Host"],
-                        ["Signature"] = token
+                        ["Host"] = provider.MetaData["Host"], ["Signature"] = token
                     };
                 }
                 else if (type == TwoFactorProviderType.WebAuthn)
@@ -610,7 +615,8 @@ public abstract class BaseRequestValidator<T> where T : class
     /// <summary>
     /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
     /// </summary>
-    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, Device device, ClaimsPrincipal subject)
+    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, Device device,
+        ClaimsPrincipal subject)
     {
         var ssoConfiguration = await GetSsoConfigurationDataAsync(subject);
 
@@ -621,15 +627,18 @@ public abstract class BaseRequestValidator<T> where T : class
 
         var ssoConfigurationData = ssoConfiguration?.GetData();
 
-        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } && !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
+        if (ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.KeyConnector } &&
+            !string.IsNullOrEmpty(ssoConfigurationData.KeyConnectorUrl))
         {
             // KeyConnector makes it mutually exclusive
-            userDecryptionOption.KeyConnectorOption = new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
+            userDecryptionOption.KeyConnectorOption =
+                new KeyConnectorUserDecryptionOption(ssoConfigurationData.KeyConnectorUrl);
             return userDecryptionOption;
         }
 
         // Only add the trusted device specific option when the flag is turned on
-        if (FeatureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext) && ssoConfigurationData is { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
+        if (FeatureService.IsEnabled(FeatureFlagKeys.TrustedDeviceEncryption, CurrentContext) && ssoConfigurationData is
+                { MemberDecryptionType: MemberDecryptionType.TrustedDeviceEncryption })
         {
             string? encryptedPrivateKey = null;
             string? encryptedUserKey = null;
@@ -654,11 +663,13 @@ public abstract class BaseRequestValidator<T> where T : class
             if (CurrentContext.Organizations.Any(o => o.Id == ssoConfiguration!.OrganizationId))
             {
                 // TDE requires single org so grabbing first org & id is fine.
-                hasManageResetPasswordPermission = await CurrentContext.ManageResetPassword(ssoConfiguration!.OrganizationId);
+                hasManageResetPasswordPermission =
+                    await CurrentContext.ManageResetPassword(ssoConfiguration!.OrganizationId);
             }
 
             // If sso configuration data is not null then I know for sure that ssoConfiguration isn't null
-            var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(ssoConfiguration!.OrganizationId, user.Id);
+            var organizationUser =
+                await _organizationUserRepository.GetByOrganizationAsync(ssoConfiguration!.OrganizationId, user.Id);
 
             // They are only able to be approved by an admin if they have enrolled is reset password
             var hasAdminApproval = !string.IsNullOrEmpty(organizationUser.ResetPasswordKey);

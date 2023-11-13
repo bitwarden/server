@@ -52,25 +52,9 @@ public abstract class BaseRepository<T>
     /// <param name="objectKey">The object key. This should typically be the name of a field or fields that uniquely identify the query.</param>
     /// <param name="instanceKey">The instance key. This should typically be the value that uniquely varies each instance by the object key.</param>
     /// <param name="dataAccessFunc">The function to access the data from the data source, if needed.</param>
-    /// <returns>The data object, or default of T if the data could not be loaded.</returns>
-    protected async Task<T> ReadThroughCacheAsync(
-        string objectKey,
-        string instanceKey,
-        Func<Task<T>> dataAccessFunc)
-    {
-        return await ReadThroughCacheAsync(objectKey, instanceKey, dataAccessFunc, new DistributedCacheEntryOptions());
-    }
-
-    /// <summary>
-    /// Provides read-through caching of a single data object.
-    /// </summary>
-    /// <typeparam name="T">The type of object to read-through cache.</typeparam>
-    /// <param name="objectKey">The object key. This should typically be the name of a field or fields that uniquely identify the query.</param>
-    /// <param name="instanceKey">The instance key. This should typically be the value that uniquely varies each instance by the object key.</param>
-    /// <param name="dataAccessFunc">The function to access the data from the data source, if needed.</param>
     /// <param name="entryOptions">The caching options e.g. TTL.</param>
     /// <returns>The data object, or default of T if the data could not be loaded.</returns>
-    protected async Task<T> ReadThroughCacheAsync(
+    protected async Task<T> GetOrCreateThroughCacheAsync(
         string objectKey,
         string instanceKey,
         Func<Task<T>> dataAccessFunc,
@@ -79,25 +63,10 @@ public abstract class BaseRepository<T>
         // return directly from the data store if cache is unavailable
         if (_cache == null) return await dataAccessFunc();
 
-        // first check the cache
         var key = $"{typeof(T).Name}:{objectKey}:{instanceKey}";
+        var result = await _cache.GetAsync(key, dataAccessFunc, entryOptions);
 
-        // first check the cache
-        if (_cache.TryGetValue(key, out T result))
-        {
-            return result;
-        }
-
-        // not in cache, so grab it
-        result = await dataAccessFunc();
-
-        // put in cache
-        if (result != null)
-        {
-            await _cache.SetAsync(key, result, entryOptions);
-        }
-
-        return result;
+        return result.Result;
     }
 
     /// <summary>

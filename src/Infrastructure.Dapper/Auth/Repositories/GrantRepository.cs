@@ -23,7 +23,7 @@ public class GrantRepository : BaseRepository<Grant>, IGrantRepository
 
     public async Task<Grant> GetByKeyAsync(string key)
     {
-        return await ReadThroughCacheAsync("Key", key, async () =>
+        return await GetOrCreateThroughCacheAsync("Key", key, async () =>
         {
             using (var connection = new SqlConnection(ConnectionString))
             {
