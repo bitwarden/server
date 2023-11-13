@@ -7,6 +7,7 @@ public interface IGrantRepository
     Task<Grant> GetByKeyAsync(string key);
     Task<ICollection<Grant>> GetManyAsync(string subjectId, string sessionId, string clientId, string type);
     Task SaveAsync(Grant obj);
+    Task SaveAsync(Grant obj, bool grantSaveOptimizationIsEnabled);
     Task DeleteByKeyAsync(string key);
     Task DeleteManyAsync(string subjectId, string sessionId, string clientId, string type);
 }

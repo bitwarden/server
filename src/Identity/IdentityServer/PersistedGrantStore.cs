@@ -1,18 +1,27 @@
-﻿using Bit.Core.Auth.Repositories;
+﻿using Bit.Core;
+using Bit.Core.Auth.Repositories;
+using Bit.Core.Context;
+using Bit.Core.Services;
 using IdentityServer4.Models;
 using IdentityServer4.Stores;
 using Grant = Bit.Core.Auth.Entities.Grant;
+
 
 namespace Bit.Identity.IdentityServer;
 
 public class PersistedGrantStore : IPersistedGrantStore
 {
     private readonly IGrantRepository _grantRepository;
-
+    private readonly IFeatureService _featureService;
+    private readonly ICurrentContext _currentContext;
     public PersistedGrantStore(
-        IGrantRepository grantRepository)
+        IGrantRepository grantRepository,
+        IFeatureService featureService,
+        ICurrentContext currentContext)
     {
         _grantRepository = grantRepository;
+        _featureService = featureService;
+        _currentContext = currentContext;
     }
 
     public async Task<PersistedGrant> GetAsync(string key)
@@ -47,8 +56,9 @@ public class PersistedGrantStore : IPersistedGrantStore
 
     public async Task StoreAsync(PersistedGrant pGrant)
     {
+        var GrantSaveOptimizationIsEnabled = _featureService.IsEnabled(FeatureFlagKeys.GrantSaveOptimization, _currentContext);
         var grant = ToGrant(pGrant);
-        await _grantRepository.SaveAsync(grant);
+        await _grantRepository.SaveAsync(grant, GrantSaveOptimizationIsEnabled);
     }
 
     private Grant ToGrant(PersistedGrant pGrant)

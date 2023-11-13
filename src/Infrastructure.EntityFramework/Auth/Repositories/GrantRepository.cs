@@ -71,6 +71,7 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
         }
     }
 
+
     public async Task SaveAsync(Core.Auth.Entities.Grant obj)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -90,6 +91,10 @@ public class GrantRepository : BaseEntityFrameworkRepository, IGrantRepository
                 await dbContext.SaveChangesAsync();
             }
         }
+    }
+    public async Task SaveAsync(Core.Auth.Entities.Grant obj, bool grantSaveOptimizationIsEnabled)
+    {
+        //not used by entity framework
     }
 }
 

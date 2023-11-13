@@ -10,6 +10,8 @@ namespace Bit.Infrastructure.Dapper.Auth.Repositories;
 
 public class GrantRepository : BaseRepository, IGrantRepository
 {
+
+
     public GrantRepository(GlobalSettings globalSettings)
         : this(globalSettings.SqlServer.ConnectionString, globalSettings.SqlServer.ReadOnlyConnectionString)
     { }
@@ -44,15 +46,30 @@ public class GrantRepository : BaseRepository, IGrantRepository
             return results.ToList();
         }
     }
-
     public async Task SaveAsync(Grant obj)
     {
+        // This method can be left empty if it's not used in this class
+    }
+    public async Task SaveAsync(Grant obj, bool grantSaveOptimizationIsEnabled)
+    {
+        bool grantSaveOptimization = grantSaveOptimizationIsEnabled;
         using (var connection = new SqlConnection(ConnectionString))
         {
-            var results = await connection.ExecuteAsync(
+            if (!grantSaveOptimization)
+            {
+                var results = await connection.ExecuteAsync(
                 "[dbo].[Grant_Save]",
                 obj,
                 commandType: CommandType.StoredProcedure);
+
+            }
+            else
+            {
+                var results = await connection.ExecuteAsync(
+                "[dbo].[Grant_Save_withInsertUpdate]",
+                obj,
+                commandType: CommandType.StoredProcedure);
+            }
         }
     }
 
