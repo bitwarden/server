@@ -45,7 +45,7 @@
     <PackageReference Include="Quartz" Version="3.4.0" />
     <PackageReference Include="SendGrid" Version="9.27.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="5.0.0" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="7.0.0" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="2.0.0" />
     <PackageReference Include="Sentry.Serilog" Version="3.16.0" />
     <PackageReference Include="IdentityServer4" Version="4.1.2" />
