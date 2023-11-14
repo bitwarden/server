@@ -24,8 +24,7 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.UserFeatures.UserKey;
-using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
+using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Tools.Entities;
@@ -146,7 +145,7 @@ public class Startup
         services.AddScoped<AuthenticatorTokenProvider>();
 
         // Key Rotation
-        services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
+        services.AddUserKeyCommands(globalSettings);
         services
             .AddScoped<IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>>,
                 CipherRotationValidator>();

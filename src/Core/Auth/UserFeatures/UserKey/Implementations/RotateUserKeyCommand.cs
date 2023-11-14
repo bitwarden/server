@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 
 /// <inheritdoc />
-public class RotateUserKeyCommand : IRotateUserKeyCommand
+internal class RotateUserKeyCommand : IRotateUserKeyCommand
 {
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
