@@ -159,8 +159,10 @@ public class Startup
             .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
                 EmergencyAccessRotationValidator>();
         services
-            .AddScoped<IRotationValidator<IEnumerable<ResetPasswordWithIdRequestModel>, IEnumerable<OrganizationUser>>,
-                ResetPasswordRotationValidator>();
+            .AddScoped<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+                    IReadOnlyList<OrganizationUser>>
+                , OrganizationUserRotationValidator>();
+
 
         // Services
         services.AddBaseServices(globalSettings);

@@ -11,13 +11,13 @@ using Xunit;
 namespace Bit.Api.Test.AdminConsole.Validators;
 
 [SutProviderCustomize]
-public class ResetPasswordRotationValidatorTests
+public class OrganizationUserRotationValidatorTests
 {
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_Success_ReturnsValid(
-        SutProvider<ResetPasswordRotationValidator> sutProvider, User user,
-        IEnumerable<ResetPasswordWithIdRequestModel> resetPasswordKeys)
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        IEnumerable<ResetPasswordWithOrgIdRequestModel> resetPasswordKeys)
     {
         var existingUserResetPassword = resetPasswordKeys
             .Select(a =>
@@ -37,9 +37,43 @@ public class ResetPasswordRotationValidatorTests
 
     [Theory]
     [BitAutoData]
+    public async Task ValidateAsync_NullResetPasswordKeys_ReturnsEmptyList(
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user)
+    {
+        // Arrange
+        IEnumerable<ResetPasswordWithOrgIdRequestModel> resetPasswordKeys = null;
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(user, resetPasswordKeys);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task ValidateAsync_NoOrgUsers_ReturnsEmptyList(
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        IEnumerable<ResetPasswordWithOrgIdRequestModel> resetPasswordKeys)
+    {
+        // Arrange
+        sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id)
+            .Returns(new List<OrganizationUser>()); // Return an empty list
+
+        // Act
+        var result = await sutProvider.Sut.ValidateAsync(user, resetPasswordKeys);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task ValidateAsync_MissingResetPassword_Throws(
-        SutProvider<ResetPasswordRotationValidator> sutProvider, User user,
-        IEnumerable<ResetPasswordWithIdRequestModel> resetPasswordKeys)
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        IEnumerable<ResetPasswordWithOrgIdRequestModel> resetPasswordKeys)
     {
         var existingUserResetPassword = resetPasswordKeys
             .Select(a =>
@@ -65,8 +99,8 @@ public class ResetPasswordRotationValidatorTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_ResetPasswordDoesNotBelongToUser_NotReturned(
-        SutProvider<ResetPasswordRotationValidator> sutProvider, User user,
-        IEnumerable<ResetPasswordWithIdRequestModel> resetPasswordKeys)
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        IEnumerable<ResetPasswordWithOrgIdRequestModel> resetPasswordKeys)
     {
         var existingUserResetPassword = resetPasswordKeys
             .Select(a =>
@@ -88,8 +122,8 @@ public class ResetPasswordRotationValidatorTests
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_AttemptToSetKeyToNull_Throws(
-        SutProvider<ResetPasswordRotationValidator> sutProvider, User user,
-        IEnumerable<ResetPasswordWithIdRequestModel> resetPasswordKeys)
+        SutProvider<OrganizationUserRotationValidator> sutProvider, User user,
+        IEnumerable<ResetPasswordWithOrgIdRequestModel> resetPasswordKeys)
     {
         var existingUserResetPassword = resetPasswordKeys
             .Select(a =>

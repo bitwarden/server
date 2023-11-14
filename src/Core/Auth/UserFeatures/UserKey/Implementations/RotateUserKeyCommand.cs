@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 namespace Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 
 /// <inheritdoc />
-internal class RotateUserKeyCommand : IRotateUserKeyCommand
+public class RotateUserKeyCommand : IRotateUserKeyCommand
 {
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
@@ -67,8 +67,8 @@ internal class RotateUserKeyCommand : IRotateUserKeyCommand
         user.SecurityStamp = Guid.NewGuid().ToString();
         user.Key = model.Key;
         user.PrivateKey = model.PrivateKey;
-        if (model.Ciphers.Any() || model.Folders.Any() || model.Sends.Any() || model.EmergencyAccessKeys.Any() ||
-            model.ResetPasswordKeys.Any())
+        if (model.Ciphers.Any() || model.Folders.Any() || model.Sends.Any() || model.EmergencyAccesses.Any() ||
+            model.OrganizationUsers.Any())
         {
             List<UpdateEncryptedDataForKeyRotation> saveEncryptedDataActions = new();
 
@@ -87,16 +87,16 @@ internal class RotateUserKeyCommand : IRotateUserKeyCommand
                 saveEncryptedDataActions.Add(_sendRepository.UpdateForKeyRotation(user.Id, model.Sends));
             }
 
-            if (model.EmergencyAccessKeys.Any())
+            if (model.EmergencyAccesses.Any())
             {
                 saveEncryptedDataActions.Add(
-                    _emergencyAccessRepository.UpdateForKeyRotation(user.Id, model.EmergencyAccessKeys));
+                    _emergencyAccessRepository.UpdateForKeyRotation(user.Id, model.EmergencyAccesses));
             }
 
-            if (model.ResetPasswordKeys.Any())
+            if (model.OrganizationUsers.Any())
             {
                 saveEncryptedDataActions.Add(
-                    _organizationUserRepository.UpdateForKeyRotation(user.Id, model.ResetPasswordKeys));
+                    _organizationUserRepository.UpdateForKeyRotation(user.Id, model.OrganizationUsers));
             }
 
             await _userRepository.UpdateUserKeyAndEncryptedDataAsync(user, saveEncryptedDataActions);

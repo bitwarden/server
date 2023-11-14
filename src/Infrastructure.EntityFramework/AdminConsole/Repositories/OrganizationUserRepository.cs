@@ -647,7 +647,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     {
         return async (_, _) =>
         {
-            var newOrganizationUser = resetPasswordKeys.ToList();
+            var newOrganizationUsers = resetPasswordKeys.ToList();
             using var scope = ServiceScopeFactory.CreateScope();
             var dbContext = GetDatabaseContext(scope);
 
@@ -659,12 +659,12 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
             // Filter to only organization users that are included
             var validOrganizationUsers = userOrganizationUsers
                 .Where(organizationUser =>
-                    newOrganizationUser.Any(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id));
+                    newOrganizationUsers.Any(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id));
 
             foreach (var organizationUser in validOrganizationUsers)
             {
                 var updateOrganizationUser =
-                    newOrganizationUser.First(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id);
+                    newOrganizationUsers.First(newOrganizationUser => newOrganizationUser.Id == organizationUser.Id);
                 organizationUser.ResetPasswordKey = updateOrganizationUser.ResetPasswordKey;
             }
 

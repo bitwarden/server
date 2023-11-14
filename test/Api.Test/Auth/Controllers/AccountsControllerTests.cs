@@ -61,7 +61,8 @@ public class AccountsControllerTests : IDisposable
     private readonly IRotationValidator<IEnumerable<SendWithIdRequestModel>, IReadOnlyList<Send>> _sendValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
-    private readonly IRotationValidator<IEnumerable<ResetPasswordWithIdRequestModel>, IEnumerable<OrganizationUser>>
+    private readonly IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+            IReadOnlyList<OrganizationUser>>
         _resetPasswordValidator;
 
 
@@ -92,7 +93,8 @@ public class AccountsControllerTests : IDisposable
         _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
             IEnumerable<EmergencyAccess>>>();
         _resetPasswordValidator = Substitute
-            .For<IRotationValidator<IEnumerable<ResetPasswordWithIdRequestModel>, IEnumerable<OrganizationUser>>>();
+            .For<IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+                IReadOnlyList<OrganizationUser>>>();
 
         _sut = new AccountsController(
             _globalSettings,

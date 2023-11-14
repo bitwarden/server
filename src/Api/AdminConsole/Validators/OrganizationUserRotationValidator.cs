@@ -6,17 +6,26 @@ using Bit.Core.Repositories;
 
 namespace Bit.Api.AdminConsole.Validators;
 
-public class ResetPasswordRotationValidator : IRotationValidator<IEnumerable<ResetPasswordWithIdRequestModel>,
-    IEnumerable<OrganizationUser>>
+/// <summary>
+/// Organization user implementation for <see cref="IRotationValidator{T,R}"/>
+/// Currently responsible for validation of user reset password keys (used by admins to perform account recovery) during user key rotation
+/// </summary>
+public class OrganizationUserRotationValidator : IRotationValidator<IEnumerable<ResetPasswordWithOrgIdRequestModel>,
+    IReadOnlyList<OrganizationUser>>
 {
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
-    public ResetPasswordRotationValidator(IOrganizationUserRepository organizationUserRepository) =>
+    public OrganizationUserRotationValidator(IOrganizationUserRepository organizationUserRepository) =>
         _organizationUserRepository = organizationUserRepository;
 
-    public async Task<IEnumerable<OrganizationUser>> ValidateAsync(User user,
-        IEnumerable<ResetPasswordWithIdRequestModel> resetPasswordKeys)
+    public async Task<IReadOnlyList<OrganizationUser>> ValidateAsync(User user,
+        IEnumerable<ResetPasswordWithOrgIdRequestModel> resetPasswordKeys)
     {
+        if (user == null)
+        {
+            throw new ArgumentNullException(nameof(user));
+        }
+
         var result = new List<OrganizationUser>();
         if (resetPasswordKeys == null || !resetPasswordKeys.Any())
         {

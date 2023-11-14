@@ -529,7 +529,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
     {
         return async (SqlConnection connection, SqlTransaction transaction) =>
         {
-            var sql = @"
+            const string sql = @"
                             UPDATE
                                 [dbo].[OrganizationUser]
                             SET
@@ -543,7 +543,7 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
 
             var organizationUsersTVP = resetPasswordKeys.ToTvp();
 
-            connection.Execute(
+            await connection.ExecuteAsync(
                 sql,
                 new { UserId = userId, resetPasswordKeys = organizationUsersTVP },
                 transaction: transaction,

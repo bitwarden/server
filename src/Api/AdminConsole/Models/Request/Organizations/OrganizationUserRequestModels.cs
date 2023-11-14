@@ -119,7 +119,7 @@ public class OrganizationUserBulkRequestModel
     public IEnumerable<Guid> Ids { get; set; }
 }
 
-public class ResetPasswordWithIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
+public class ResetPasswordWithOrgIdRequestModel : OrganizationUserResetPasswordEnrollmentRequestModel
 {
     [Required]
     public Guid OrganizationId { get; set; }
