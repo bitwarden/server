@@ -1,6 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Models.Request.Providers;
 using Bit.Api.AdminConsole.Models.Response.Providers;
 using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Context;
@@ -21,17 +22,20 @@ public class ProviderOrganizationsController : Controller
     private readonly IProviderService _providerService;
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
+    private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
 
     public ProviderOrganizationsController(
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         IUserService userService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand)
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _userService = userService;
         _currentContext = currentContext;
+        _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
     }
 
     [HttpGet("")]
@@ -87,7 +91,6 @@ public class ProviderOrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User);
-        await _providerService.RemoveOrganizationAsync(providerId, id, userId.Value);
+        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(providerId, id);
     }
 }
