@@ -18,7 +18,7 @@ public interface IStripeAdapter
     Task<Stripe.Invoice> InvoiceCreateAsync(Stripe.InvoiceCreateOptions options);
     Task<Stripe.InvoiceItem> InvoiceItemCreateAsync(Stripe.InvoiceItemCreateOptions options);
     Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options);
-    Task<Stripe.StripeList<Stripe.Invoice>> InvoiceListAsync(Stripe.InvoiceListOptions options);
+    Task<List<Stripe.Invoice>> InvoiceListAsync(StripeInvoiceListOptions options);
     IEnumerable<InvoiceItem> InvoiceItemListAsync(InvoiceItemListOptions options);
     Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options);
     Task<Stripe.Invoice> InvoiceFinalizeInvoiceAsync(string id, Stripe.InvoiceFinalizeOptions options);
