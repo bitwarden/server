@@ -212,34 +212,34 @@ jobs:
         uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
 
       ########## ACRs ##########
-      - name: Login to Azure - PROD Subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
+      # - name: Login to Azure - PROD Subscription
+      #   uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
+      #   with:
+      #     creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
 
-      - name: Login to PROD ACR
-        run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
+      # - name: Login to PROD ACR
+      #   run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
 
-      - name: Login to Azure - CI Subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+      # - name: Login to Azure - CI Subscription
+      #   uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
+      #   with:
+      #     creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-      - name: Retrieve github PAT secrets
-        id: retrieve-secret-pat
-        uses: bitwarden/gh-actions/get-keyvault-secrets@main
-        with:
-          keyvault: "bitwarden-ci"
-          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+      # - name: Retrieve github PAT secrets
+      #   id: retrieve-secret-pat
+      #   uses: bitwarden/gh-actions/get-keyvault-secrets@main
+      #   with:
+      #     keyvault: "bitwarden-ci"
+      #     secrets: "github-pat-bitwarden-devops-bot-repo-scope"
       
-      - name: Generate image full name
-        id: image-name
-        run: |
-          IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-          if [[ "$IMAGE_TAG" == "master" ]]; then
-            IMAGE_TAG=dev
-          fi
-          echo "name=${_AZ_REGISTRY}/build:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+      # - name: Generate image full name
+      #   id: image-name
+      #   run: |
+      #     IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
+      #     if [[ "$IMAGE_TAG" == "master" ]]; then
+      #       IMAGE_TAG=dev
+      #     fi
+      #     echo "name=${_AZ_REGISTRY}/build:${IMAGE_TAG}" >> $GITHUB_OUTPUT
       
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
@@ -250,10 +250,18 @@ jobs:
             linux/amd64,
             linux/arm/v7,
             linux/arm64
-          push: true
-          tags: ${{ steps.image-name.outputs.name }}
-          secrets: |
-            "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
+          # push: true
+          outputs: type=docker,dest=/tmp/build.tar
+          # tags: ${{ steps.image-name.outputs.name }}
+          tags: build:latest
+          # secrets: |
+          #   "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
+        with:
+          name: build
+          path: /tmp/build.tar
 
   build-docker:
     name: Build Docker images
@@ -366,18 +374,28 @@ jobs:
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
+      - name: Download build image artifact
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: build
+          path: /tmp
+
+      - name: Load build image
+        run: |
+          docker load --input /tmp/build.tar
+          docker image ls -a
+
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          build-args: |
-            BUILD_TAG=${{ steps.tag.outputs.image_tag }}
+          # build-args: |
+          #   BUILD_TAG=${{ steps.tag.outputs.image_tag }}
           context: ${{ matrix.base_path }}/${{ matrix.project_name }}
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
             linux/amd64,
             linux/arm/v7,
             linux/arm64
-          pull: true
           push: true
           tags: ${{ steps.image-name.outputs.name }}
           secrets: |
