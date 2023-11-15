@@ -251,7 +251,7 @@ jobs:
             linux/arm/v7,
             linux/arm64
           # push: true
-          outputs: type=docker,dest=/tmp/build.tar
+          outputs: type=oci,dest=/tmp/build.tar
           # tags: ${{ steps.image-name.outputs.name }}
           tags: build:latest
           # secrets: |
