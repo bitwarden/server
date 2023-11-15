@@ -235,11 +235,7 @@ jobs:
       - name: TEST - Upload artifact
         run: |
           echo "Test file" > /tmp/test.txt
-          az storage blob upload \
-            --file /tmp/test.txt \
-            --container-name builds \
-            --name build \
-            --connection-string ${{ env.storage-account-dockerimagetest-conn-string }}
+          az storage blob upload --file /tmp/test.txt --container-name builds --name build --connection-string ${{ env.storage-account-dockerimagetest-conn-string }}
 
       
       
