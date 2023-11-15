@@ -231,17 +231,6 @@ jobs:
         with:
           keyvault: "bitwarden-ci"
           secrets: "storage-account-dockerimagetest-conn-string"
-
-      - name: TEST - Upload artifact
-        run: |
-          echo "Test file" > /tmp/test.txt
-          az storage blob upload \
-            --file /tmp/test.txt \
-            --container-name builds \
-            --name build \
-            --connection-string '${{ env.storage-account-dockerimagetest-conn-string }}'
-
-      
       
       # - name: Generate image full name
       #   id: image-name
@@ -270,11 +259,12 @@ jobs:
 
       - name: Upload artifact
         run: |
+          ls -alh /tmp
           az storage blob upload \
             --file /tmp/build.tar \
             --container-name builds \
             --name build \
-            --account-name dockerimagetest
+            --connection-string '${{ env.storage-account-dockerimagetest-conn-string }}'
 
   build-docker:
     name: Build Docker images
