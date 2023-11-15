@@ -19,6 +19,7 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 
 # Copy csproj files as distinct layers
 WORKDIR /source
+COPY src/Core/*.csproj ./src/Core/
 COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/Setup/*.csproj ./util/Setup/
 COPY Directory.Build.props .
@@ -29,6 +30,7 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Copy required project files
 WORKDIR /source
+COPY src/Core/. ./src/Core/
 COPY util/Migrator/. ./util/Migrator/
 COPY util/Setup/. ./util/Setup/
 COPY .git/. ./.git/
