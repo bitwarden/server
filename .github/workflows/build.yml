@@ -239,7 +239,7 @@ jobs:
             --file /tmp/test.txt \
             --container-name builds \
             --name build \
-            --connection-string ${{ steps.retrieve-secret.outputs.storage-account-dockerimagetest-conn-string}}
+            --connection-string ${{ env.storage-account-dockerimagetest-conn-string }}
 
       
       
