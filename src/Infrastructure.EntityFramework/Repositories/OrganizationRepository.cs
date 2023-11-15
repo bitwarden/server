@@ -36,9 +36,9 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             var organizations = await GetDbSet(dbContext).Where(e => e.Enabled).ToListAsync();
             var list = Mapper.Map<List<Core.Entities.Organization>>(organizations);
 
-            foreach (Core.Entities.Organization entity in list)
+            foreach (Core.Entities.Organization org in list)
             {
-                entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+                org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
             }
 
             return list;
@@ -57,9 +57,9 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                 .ToListAsync();
             var list = Mapper.Map<List<Core.Entities.Organization>>(organizations);
 
-            foreach (Core.Entities.Organization entity in list)
+            foreach (Core.Entities.Organization org in list)
             {
-                entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+                org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
             }
 
             return list;
@@ -83,9 +83,9 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                 .ToListAsync();
             var list = Mapper.Map<List<Core.Entities.Organization>>(organizations);
 
-            foreach (Core.Entities.Organization entity in list)
+            foreach (Core.Entities.Organization org in list)
             {
-                entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+                org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
             }
 
             return list;
@@ -128,17 +128,17 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
 
         if (string.IsNullOrWhiteSpace(ownerEmail))
         {
-            var list = await query.OrderByDescending(o => o.CreationDate)
+            var orgs = await query.OrderByDescending(o => o.CreationDate)
                 .Skip(skip)
                 .Take(take)
                 .ToArrayAsync();
 
-            foreach (Core.Entities.Organization entity in list)
+            foreach (Core.Entities.Organization org in orgs)
             {
-                entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+                org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
             }
 
-            return list;
+            return orgs;
         }
 
         if (dbContext.Database.IsNpgsql())
@@ -164,9 +164,9 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
 
         var list = await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
 
-        foreach (Core.Entities.Organization entity in list)
+        foreach (Core.Entities.Organization org in list)
         {
-            entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+            org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
         }
 
         return list;
@@ -245,6 +245,8 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             var organization = await GetDbSet(dbContext)
                 .FirstOrDefaultAsync(o => o.LicenseKey == licenseKey);
 
+            organization.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+
             return organization;
         }
     }
@@ -260,6 +262,8 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                 .AsSplitQuery()
                 .ProjectTo<SelfHostedOrganizationDetails>(Mapper.ConfigurationProvider)
                 .SingleOrDefaultAsync();
+
+            selfHostedOrganization.UseSecretsManager = selfHostedOrganization.UseSecretsManager && !selfHostedOrganization.SecretsManagerBeta;
 
             return selfHostedOrganization;
         }
@@ -292,6 +296,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             var dbContext = GetDatabaseContext(scope);
             var entity = await GetDbSet(dbContext).FindAsync(id);
             var result = Mapper.Map<Core.Entities.Organization>(entity);
+
             result.UseSecretsManager = result.UseSecretsManager && !result.SecretsManagerBeta;
 
             return result;

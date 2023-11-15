@@ -28,7 +28,11 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 new { Identifier = identifier },
                 commandType: CommandType.StoredProcedure);
 
-            return results.SingleOrDefault();
+            var result = results.SingleOrDefault();
+
+            result.UseSecretsManager = result.UseSecretsManager && !result.SecretsManagerBeta;
+
+            return result;
         }
     }
 
@@ -40,7 +44,14 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 "[dbo].[Organization_ReadByEnabled]",
                 commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+            var orgs = results.ToList();
+
+            foreach (Organization org in orgs)
+            {
+                org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
+            }
+
+            return orgs;
         }
     }
 
@@ -53,7 +64,14 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
-            return results.ToList();
+            var orgs = results.ToList();
+
+            foreach (Organization org in orgs)
+            {
+                org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
+            }
+
+            return orgs;
         }
     }
 
@@ -68,7 +86,14 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 120);
 
-            return results.ToList();
+            var orgs = results.ToList();
+
+            foreach (Organization org in orgs)
+            {
+                org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
+            }
+
+            return orgs;
         }
     }
 
@@ -105,7 +130,11 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 new { LicenseKey = licenseKey },
                 commandType: CommandType.StoredProcedure);
 
-            return result.SingleOrDefault();
+            var org = result.SingleOrDefault();
+
+            org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
+
+            return org;
         }
     }
 
@@ -131,6 +160,7 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
             selfHostOrganization.Policies = await result.ReadAsync<Policy>();
             selfHostOrganization.SsoConfig = await result.ReadFirstOrDefaultAsync<SsoConfig>();
             selfHostOrganization.ScimConnections = await result.ReadAsync<OrganizationConnection>();
+            selfHostOrganization.UseSecretsManager = selfHostOrganization.UseSecretsManager && !selfHostOrganization.SecretsManagerBeta;
 
             return selfHostOrganization;
         }
@@ -146,7 +176,14 @@ public class OrganizationRepository : Repository<Organization, Guid>, IOrganizat
                 commandType: CommandType.StoredProcedure,
                 commandTimeout: 120);
 
-            return results.ToList();
+            var orgs = results.ToList();
+
+            foreach (Organization org in orgs)
+            {
+                org.UseSecretsManager = org.UseSecretsManager && !org.SecretsManagerBeta;
+            }
+
+            return orgs;
         }
     }
 
