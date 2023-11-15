@@ -2,7 +2,7 @@
 #                 Build stage                 #
 ###############################################
 ARG BUILD_TAG=latest
-FROM --platform=$BUILDPLATFORM build:${BUILD_TAG} AS bitwarden-build
+FROM --platform=$BUILDPLATFORM localhost:5000/build:${BUILD_TAG} AS bitwarden-build
 
 ###############################################
 #                  App stage                  #

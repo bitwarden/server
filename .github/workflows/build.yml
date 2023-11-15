@@ -272,6 +272,11 @@ jobs:
     runs-on: ubuntu-22.04
     # needs:
     #   - build
+    services:
+      registry:
+        image: registry:2
+        ports:
+          - 5000:5000
     strategy:
       fail-fast: false
       matrix:
@@ -346,14 +351,20 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-      - name: Retrieve Storage Account secret
-        id: retrieve-secret
-        uses: bitwarden/gh-actions/get-keyvault-secrets@main
-        with:
-          keyvault: "bitwarden-ci"
-          secrets: "storage-account-dockerimagetest-conn-string"
-
       ########## Generate image tag and build Docker image ##########
+      - name: Build Docker image
+        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+        with:
+          context: .
+          file: build.Dockerfile
+          platforms: |
+            linux/amd64,
+            linux/arm/v7,
+            linux/arm64
+          push: true
+          outputs: type=oci,dest=/tmp/build.tar
+          tags: localhost:5000/build:latest
+
       - name: Generate Docker image tag
         id: tag
         run: |
@@ -377,20 +388,6 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
         run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
-
-      - name: Download build image artifact
-        run: |
-          az storage blob download \
-            --file /tmp/build.tar \
-            --container-name builds \
-            --name build \
-            --connection-string '${{ env.storage-account-dockerimagetest-conn-string }}'
-          ls -alh /tmp
-
-      - name: Load build image
-        run: |
-          docker load --input /tmp/build.tar
-          docker image ls -a
 
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
