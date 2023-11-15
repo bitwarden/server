@@ -21,6 +21,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 WORKDIR /source
 COPY src/Api/*.csproj ./src/Api/
 COPY src/Core/*.csproj ./src/Core/
+COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Commercial.Core/
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
@@ -34,6 +36,8 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 WORKDIR /source
 COPY src/Api/. ./src/Api/
 COPY src/Core/. ./src/Core/
+COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/

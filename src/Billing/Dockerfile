@@ -21,6 +21,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 WORKDIR /source
 COPY src/Billing/*.csproj ./src/Billing/
 COPY src/Core/*.csproj ./src/Core/
+COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY Directory.Build.props .
 
@@ -32,6 +34,8 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 WORKDIR /source
 COPY src/Billing/. ./src/Billing/
 COPY src/Core/. ./src/Core/
+COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY .git/. ./.git/
 

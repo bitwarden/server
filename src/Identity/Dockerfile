@@ -21,6 +21,8 @@ RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
 WORKDIR /source
 COPY src/Admin/*.csproj ./src/Admin/
 COPY src/Core/*.csproj ./src/Core/
+COPY src/Infrastructure.Dapper/*.csproj ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/MySqlMigrations/*.csproj ./util/MySqlMigrations/
@@ -38,6 +40,8 @@ RUN . /tmp/rid.txt && dotnet restore -r $RID
 WORKDIR /source
 COPY src/Admin/. ./src/Admin/
 COPY src/Core/. ./src/Core/
+COPY src/Infrastructure.Dapper/. ./src/Infrastructure.Dapper/
+COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY util/Migrator/. ./util/Migrator/
 COPY util/MySqlMigrations/. ./util/MySqlMigrations/
