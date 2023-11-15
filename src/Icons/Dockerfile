@@ -61,7 +61,7 @@ RUN apt-get update \
 # Copy app from the build stage
 WORKDIR /app
 COPY --from=build /app/Icons ./
-COPY entrypoint.sh /
+COPY src/Icons/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 HEALTHCHECK CMD curl -f http://localhost:5000/google.com/icon.png || exit 1

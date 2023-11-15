@@ -57,7 +57,7 @@ RUN apt-get update \
 # Copy app from the build stage
 WORKDIR /bitwarden_server
 COPY --from=build /app/Server ./
-COPY entrypoint.sh /
+COPY util/Attachments/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1

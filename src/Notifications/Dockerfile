@@ -61,7 +61,7 @@ RUN apt-get update \
 # Copy app from the build stage
 WORKDIR /app
 COPY --from=build /app/Notifications ./
-COPY entrypoint.sh /
+COPY src/Notifications/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 HEALTHCHECK CMD curl -f http://localhost:5000/alive || exit 1

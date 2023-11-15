@@ -55,7 +55,7 @@ RUN apt-get update \
 # Copy app from the build stage
 WORKDIR /app
 COPY --from=build /app/Setup ./
-COPY entrypoint.sh /
+COPY util/Setup/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]

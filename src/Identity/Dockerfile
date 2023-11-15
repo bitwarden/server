@@ -73,7 +73,7 @@ RUN apt-get update \
 # Copy app from the build stage
 WORKDIR /app
 COPY --from=build /app/Identity ./
-COPY entrypoint.sh /
+COPY src/Identity/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 HEALTHCHECK CMD curl -f http://localhost:5000/.well-known/openid-configuration || exit 1
