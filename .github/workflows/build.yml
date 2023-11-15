@@ -362,7 +362,6 @@ jobs:
             linux/arm/v7,
             linux/arm64
           push: true
-          outputs: type=oci,dest=/tmp/build.tar
           tags: localhost:5000/build:latest
 
       - name: Generate Docker image tag
