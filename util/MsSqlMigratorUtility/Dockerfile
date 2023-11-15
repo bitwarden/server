@@ -6,7 +6,7 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS bitwarden-build
 
 # Copy csproj files as distinct layers
 WORKDIR /source
-COPY *.csproj ./util/MsSqlMigratorUtility/
+COPY util/MsSqlMigratorUtility/*.csproj ./util/MsSqlMigratorUtility/
 
 # Restore MsSqlMigratorUtility project dependencies and tools
 WORKDIR /source/util/MsSqlMigratorUtility
@@ -14,7 +14,7 @@ RUN dotnet restore
 
 # Copy required project files
 WORKDIR /source
-COPY . ./util/MsSqlMigratorUtility/
+COPY util/MsSqlMigratorUtility/. ./util/MsSqlMigratorUtility/
 
 # Build Setup app
 WORKDIR /source/util/MsSqlMigratorUtility

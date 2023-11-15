@@ -10,9 +10,9 @@ RUN apt-get update \
         tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backup-db.sql /
-COPY backup-db.sh /
-COPY entrypoint.sh /
+COPY util/MsSql/backup-db.sql /
+COPY util/MsSql/backup-db.sh /
+COPY util/MsSql/entrypoint.sh /
 
 RUN chmod +x /entrypoint.sh \
     && chmod +x /backup-db.sh

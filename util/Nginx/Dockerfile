@@ -9,13 +9,13 @@ RUN apt-get update \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY nginx.conf /etc/nginx
-COPY proxy.conf /etc/nginx
-COPY mime.types /etc/nginx
-COPY security-headers.conf /etc/nginx
-COPY security-headers-ssl.conf /etc/nginx
-COPY logrotate.sh /
-COPY entrypoint.sh /
+COPY util/Nginx/nginx.conf /etc/nginx
+COPY util/Nginx/proxy.conf /etc/nginx
+COPY util/Nginx/mime.types /etc/nginx
+COPY util/Nginx/security-headers.conf /etc/nginx
+COPY util/Nginx/security-headers-ssl.conf /etc/nginx
+COPY util/Nginx/logrotate.sh /
+COPY util/Nginx/entrypoint.sh /
 
 EXPOSE 8080
 EXPOSE 8443

@@ -64,7 +64,7 @@ RUN apt-get update \
 
 # Copy app from the build stage
 WORKDIR /app
-COPY --from=build /app/Admin ./
+COPY --from=build /app/Events ./
 COPY src/Events/entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
