@@ -225,12 +225,23 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-      # - name: Retrieve github PAT secrets
-      #   id: retrieve-secret-pat
-      #   uses: bitwarden/gh-actions/get-keyvault-secrets@main
-      #   with:
-      #     keyvault: "bitwarden-ci"
-      #     secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+      - name: Retrieve Storage Account secret
+        id: retrieve-secret
+        uses: bitwarden/gh-actions/get-keyvault-secrets@main
+        with:
+          keyvault: "bitwarden-ci"
+          secrets: "storage-account-dockerimagetest-conn-string"
+
+      - name: TEST - Upload artifact
+        run: |
+          echo "Test file" > /tmp/test.txt
+          az storage blob upload \
+            --file /tmp/test.txt \
+            --container-name builds \
+            --name build \
+            --connection-string ${{ steps.retrieve-secret.outputs.storage-account-dockerimagetest-conn-string}}
+
+      
       
       # - name: Generate image full name
       #   id: image-name
