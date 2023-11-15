@@ -1,3 +1,13 @@
+/*
+    This procedure is used by the Bitwarden Admin Panel to retrieve the
+    Organizations a Reseller Provider is capable of adding as a client.
+
+    Currently, the procedure is only surfacing Organizations with the most
+    current Enterprise or Teams plans, but we actually need to surface any
+    Enterprise or Teams plan regardless of the version as all of them are
+    applicable to Resellers.
+*/ 
+
 -- Drop existing SPROC
 IF OBJECT_ID('[dbo].[Organization_UnassignedToProviderSearch]') IS NOT NULL
 BEGIN
