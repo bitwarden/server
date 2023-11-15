@@ -203,6 +203,9 @@ public class NoopMailService : IMailService
         return Task.FromResult(0);
     }
 
+    public Task SendProviderUpdatePaymentMethod(Guid organizationId, string organizationName, string providerName,
+        IEnumerable<string> emails) => Task.FromResult(0);
+
     public Task SendUpdatedTempPasswordEmailAsync(string email, string userName)
     {
         return Task.FromResult(0);
