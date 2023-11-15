@@ -540,8 +540,8 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         var authenticatorSelection = new AuthenticatorSelection
         {
             AuthenticatorAttachment = null,
-            RequireResidentKey = false, // TODO: This is using the old residentKey selection variant, we need to update our lib so that we can set this to preferred
-            UserVerification = UserVerificationRequirement.Preferred
+            RequireResidentKey = true,
+            UserVerification = UserVerificationRequirement.Required
         };
 
         var extensions = new AuthenticationExtensionsClientInputs { };
@@ -552,9 +552,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return options;
     }
 
-    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name,
-        CredentialCreateOptions options,
-        AuthenticatorAttestationRawResponse attestationResponse)
+    public async Task<bool> CompleteWebAuthLoginRegistrationAsync(User user, string name, CredentialCreateOptions options,
+        AuthenticatorAttestationRawResponse attestationResponse, bool supportsPrf,
+        string encryptedUserKey = null, string encryptedPublicKey = null, string encryptedPrivateKey = null)
     {
         var existingCredentials = await _webAuthnCredentialRepository.GetManyByUserIdAsync(user.Id);
         if (existingCredentials.Count >= 5)
@@ -575,7 +575,11 @@ public class UserService : UserManager<User>, IUserService, IDisposable
             Type = success.Result.CredType,
             AaGuid = success.Result.Aaguid,
             Counter = (int)success.Result.Counter,
-            UserId = user.Id
+            UserId = user.Id,
+            SupportsPrf = supportsPrf,
+            EncryptedUserKey = encryptedUserKey,
+            EncryptedPublicKey = encryptedPublicKey,
+            EncryptedPrivateKey = encryptedPrivateKey
         };
 
         await _webAuthnCredentialRepository.CreateAsync(credential);
@@ -600,7 +604,7 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         {
             UserVerificationMethod = true
         };
-        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Preferred, exts);
+        var options = _fido2.GetAssertionOptions(existingCredentials, UserVerificationRequirement.Required, exts);
 
         // TODO: temp save options to user record somehow
 
