@@ -196,6 +196,7 @@ jobs:
           if-no-files-found: error
 
   build:
+    if: false
     name: Build projects
     runs-on: ubuntu-22.04
     # needs:
@@ -269,8 +270,8 @@ jobs:
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-22.04
-    needs:
-      - build
+    # needs:
+    #   - build
     strategy:
       fail-fast: false
       matrix:
@@ -345,12 +346,12 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
-      - name: Retrieve github PAT secrets
-        id: retrieve-secret-pat
+      - name: Retrieve Storage Account secret
+        id: retrieve-secret
         uses: bitwarden/gh-actions/get-keyvault-secrets@main
         with:
           keyvault: "bitwarden-ci"
-          secrets: "github-pat-bitwarden-devops-bot-repo-scope"
+          secrets: "storage-account-dockerimagetest-conn-string"
 
       ########## Generate image tag and build Docker image ##########
       - name: Generate Docker image tag
@@ -378,18 +379,12 @@ jobs:
         run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Download build image artifact
-        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
-        with:
-          name: build
-          path: /tmp
-
-      - name: Download build image artifact
         run: |
           az storage blob download \
             --file /tmp/build.tar \
             --container-name builds \
             --name build \
-            --account-name dockerimagetest
+            --connection-string '${{ env.storage-account-dockerimagetest-conn-string }}'
           ls -alh /tmp
 
       - name: Load build image
@@ -410,8 +405,6 @@ jobs:
             linux/arm64
           push: true
           tags: ${{ steps.image-name.outputs.name }}
-          secrets: |
-            "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
       - name: Log out of Docker
         run: docker logout
