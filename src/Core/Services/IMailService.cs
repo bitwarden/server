@@ -56,6 +56,11 @@ public interface IMailService
     Task SendProviderInviteEmailAsync(string providerName, ProviderUser providerUser, string token, string email);
     Task SendProviderConfirmedEmailAsync(string providerName, string email);
     Task SendProviderUserRemoved(string providerName, string email);
+    Task SendProviderUpdatePaymentMethod(
+        Guid organizationId,
+        string organizationName,
+        string providerName,
+        IEnumerable<string> emails);
     Task SendUpdatedTempPasswordEmailAsync(string email, string userName);
     Task SendFamiliesForEnterpriseOfferEmailAsync(string sponsorOrgName, string email, bool existingAccount, string token);
     Task BulkSendFamiliesForEnterpriseOfferEmailAsync(string SponsorOrgName, IEnumerable<(string Email, bool ExistingAccount, string Token)> invites);
