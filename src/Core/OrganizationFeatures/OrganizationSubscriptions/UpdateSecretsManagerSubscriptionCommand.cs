@@ -165,12 +165,6 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
             throw new BadRequestException("Organization has no access to Secrets Manager.");
         }
 
-        if (organization.SecretsManagerBeta)
-        {
-            throw new BadRequestException("Organization is enrolled in Secrets Manager Beta. " +
-                                          "Please contact Customer Success to add Secrets Manager to your subscription.");
-        }
-
         if (update.Plan.Product == ProductType.Free)
         {
             // No need to check the organization is set up with Stripe

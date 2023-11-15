@@ -46,23 +46,7 @@
                 return;
             }
 
-            // SM beta requires SM access
-            document.getElementById('@(nameof(Model.SecretsManagerBeta))').checked = false;
             clearSecretsManagerConfiguration();
-        });
-
-        document.getElementById('@(nameof(Model.SecretsManagerBeta))').addEventListener('change', (event) => {
-            document.getElementById('organization-secrets-configuration').hidden = event.target.checked;
-
-            if (event.target.checked) {
-                // SM beta requires SM access
-                document.getElementById('@(nameof(Model.UseSecretsManager))').checked = true;
-                // SM Beta orgs do not have subscription limits
-                clearSecretsManagerConfiguration();
-                return;
-            }
-
-            setInitialSecretsManagerConfiguration();
         });
     })();
 

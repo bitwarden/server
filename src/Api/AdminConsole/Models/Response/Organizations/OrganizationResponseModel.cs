@@ -44,7 +44,7 @@ public class OrganizationResponseModel : ResponseModel
         Use2fa = organization.Use2fa;
         UseApi = organization.UseApi;
         UseResetPassword = organization.UseResetPassword;
-        UseSecretsManager = organization.UseSecretsManager;
+        UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
         SelfHost = organization.SelfHost;
@@ -106,7 +106,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
-        SecretsManagerBeta = organization.SecretsManagerBeta;
+        UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
@@ -124,7 +124,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             UpcomingInvoice.Amount = null;
         }
 
-        SecretsManagerBeta = organization.SecretsManagerBeta;
+        UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
@@ -140,7 +140,7 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
                                                  .OrganizationSelfHostSubscriptionGracePeriodDays);
         }
 
-        SecretsManagerBeta = organization.SecretsManagerBeta;
+        UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
     }
 
     public string StorageName { get; set; }
@@ -158,6 +158,4 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
     /// Date when a self-hosted organization expires (includes grace period).
     /// </summary>
     public DateTime? Expiration { get; set; }
-
-    public bool SecretsManagerBeta { get; set; }
 }
