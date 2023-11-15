@@ -39,7 +39,7 @@ public class ProviderService : IProviderService
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext, IPaymentService paymentService)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -427,23 +427,6 @@ public class ProviderService : IProviderService
             });
 
         return providerOrganization;
-    }
-
-    public async Task RemoveOrganizationAsync(Guid providerId, Guid providerOrganizationId, Guid removingUserId)
-    {
-        var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
-        if (providerOrganization == null || providerOrganization.ProviderId != providerId)
-        {
-            throw new BadRequestException("Invalid organization.");
-        }
-
-        if (!await _organizationService.HasConfirmedOwnersExceptAsync(providerOrganization.OrganizationId, new Guid[] { }, includeProvider: false))
-        {
-            throw new BadRequestException("Organization needs to have at least one confirmed owner.");
-        }
-
-        await _providerOrganizationRepository.DeleteAsync(providerOrganization);
-        await _eventService.LogProviderOrganizationEventAsync(providerOrganization, EventType.ProviderOrganization_Removed);
     }
 
     public async Task ResendProviderSetupInviteEmailAsync(Guid providerId, Guid ownerId)
