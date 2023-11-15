@@ -1,8 +1,41 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-ARG BUILD_TAG=latest
-FROM --platform=$BUILDPLATFORM localhost:5000/build:${BUILD_TAG} AS bitwarden-build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+
+# Docker buildx supplies the value for this arg
+ARG TARGETPLATFORM
+
+# Determine proper runtime value for .NET
+# We put the value in a file to be read by later layers.
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+      RID=linux-x64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+      RID=linux-arm64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+      RID=linux-arm ; \
+    fi \
+    && echo "RID=$RID" > /tmp/rid.txt
+
+# Copy csproj files as distinct layers
+WORKDIR /source
+COPY util/Server/*.csproj ./util/Server/
+COPY Directory.Build.props .
+
+# Restore Server project dependencies and tools
+WORKDIR /source/util/Server
+RUN . /tmp/rid.txt && dotnet restore -r $RID
+
+# Copy required project files
+WORKDIR /source
+COPY util/Server/. ./util/Server/
+# COPY .git/. ./.git/
+
+# Build Server app
+WORKDIR /source/util/Server
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Server --no-restore --no-self-contained -r $RID
+
+WORKDIR /app
 
 ###############################################
 #                  App stage                  #
@@ -13,4 +46,4 @@ LABEL com.bitwarden.product="bitwarden"
 
 # Copy app from the build stage
 WORKDIR /bitwarden_server
-COPY --from=bitwarden-build /app/Server ./
+COPY --from=build /app/Server ./

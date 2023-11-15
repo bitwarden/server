@@ -1,8 +1,42 @@
 ###############################################
 #                 Build stage                 #
 ###############################################
-ARG BUILD_TAG=latest
-FROM --platform=$BUILDPLATFORM localhost:5000/build:${BUILD_TAG} AS bitwarden-build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+
+# Docker buildx supplies the value for this arg
+ARG TARGETPLATFORM
+
+# Determine proper runtime value for .NET
+# We put the value in a file to be read by later layers.
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+      RID=linux-x64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm64" ]; then \
+      RID=linux-arm64 ; \
+    elif [ "$TARGETPLATFORM" = "linux/arm/v7" ]; then \
+      RID=linux-arm ; \
+    fi \
+    && echo "RID=$RID" > /tmp/rid.txt
+
+# Copy csproj files as distinct layers
+WORKDIR /source
+COPY util/Migrator/*.csproj ./util/Migrator/
+COPY util/Setup/*.csproj ./util/Setup/
+COPY Directory.Build.props .
+
+# Restore Setup project dependencies and tools
+WORKDIR /source/util/Setup
+RUN . /tmp/rid.txt && dotnet restore -r $RID
+
+# Copy required project files
+WORKDIR /source
+COPY util/Setup/. ./util/Setup/
+# COPY .git/. ./.git/
+
+# Build Setup app
+WORKDIR /source/util/Setup
+RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Setup --no-restore --no-self-contained -r $RID
+
+WORKDIR /app
 
 ###############################################
 #                  App stage                  #
@@ -20,7 +54,7 @@ RUN apt-get update \
 
 # Copy app from the build stage
 WORKDIR /app
-COPY --from=bitwarden-build /app/Setup ./
+COPY --from=build /app/Setup ./
 COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 

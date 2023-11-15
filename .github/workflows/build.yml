@@ -195,88 +195,9 @@ jobs:
           path: ${{ matrix.base_path }}/${{ matrix.project_name }}/${{ matrix.project_name }}.zip
           if-no-files-found: error
 
-  build:
-    if: false
-    name: Build projects
-    runs-on: ubuntu-22.04
-    # needs:
-    #   - lint
-    #   - testing
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-
-      - name: Set up QEMU emulators
-        uses: docker/setup-qemu-action@68827325e0b33c7199eb31dd4e31fbe9023e06e3 # v3.0.0
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
-
-      ########## ACRs ##########
-      # - name: Login to Azure - PROD Subscription
-      #   uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-      #   with:
-      #     creds: ${{ secrets.AZURE_PROD_KV_CREDENTIALS }}
-
-      # - name: Login to PROD ACR
-      #   run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
-
-      - name: Login to Azure - CI Subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-
-      - name: Retrieve Storage Account secret
-        id: retrieve-secret
-        uses: bitwarden/gh-actions/get-keyvault-secrets@main
-        with:
-          keyvault: "bitwarden-ci"
-          secrets: "storage-account-dockerimagetest-conn-string"
-      
-      # - name: Generate image full name
-      #   id: image-name
-      #   run: |
-      #     IMAGE_TAG=$(echo "${GITHUB_REF:11}" | sed "s#/#-#g")  # slash safe branch name
-      #     if [[ "$IMAGE_TAG" == "master" ]]; then
-      #       IMAGE_TAG=dev
-      #     fi
-      #     echo "name=${_AZ_REGISTRY}/build:${IMAGE_TAG}" >> $GITHUB_OUTPUT
-      
-      - name: Build Docker image
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
-        with:
-          context: .
-          file: build.Dockerfile
-          platforms: |
-            linux/amd64,
-            linux/arm/v7,
-            linux/arm64
-          # push: true
-          outputs: type=oci,dest=/tmp/build.tar
-          # tags: ${{ steps.image-name.outputs.name }}
-          tags: build:latest
-          # secrets: |
-          #   "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
-
-      - name: Upload artifact
-        run: |
-          ls -alh /tmp
-          az storage blob upload \
-            --file /tmp/build.tar \
-            --container-name builds \
-            --name build \
-            --connection-string '${{ env.storage-account-dockerimagetest-conn-string }}'
-
   build-docker:
     name: Build Docker images
     runs-on: ubuntu-22.04
-    # needs:
-    #   - build
-    services:
-      registry:
-        image: registry:2
-        ports:
-          - 5000:5000
     strategy:
       fail-fast: false
       matrix:
@@ -346,24 +267,7 @@ jobs:
       - name: Login to PROD ACR
         run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
 
-      - name: Login to Azure - CI Subscription
-        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-        with:
-          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
-
       ########## Generate image tag and build Docker image ##########
-      - name: Build Docker image
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
-        with:
-          context: .
-          file: build.Dockerfile
-          platforms: |
-            linux/amd64,
-            linux/arm/v7,
-            linux/arm64
-          push: true
-          tags: localhost:5000/build:latest
-
       - name: Generate Docker image tag
         id: tag
         run: |
@@ -391,9 +295,9 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          # build-args: |
-          #   BUILD_TAG=${{ steps.tag.outputs.image_tag }}
-          context: ${{ matrix.base_path }}/${{ matrix.project_name }}
+          build-args: |
+            BUILD_TAG=${{ steps.tag.outputs.image_tag }}
+          context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
             linux/amd64,
