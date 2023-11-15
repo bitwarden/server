@@ -898,13 +898,33 @@ public class CipherService : ICipherService
         await _pushService.PushSyncCipherUpdateAsync(cipher, null);
     }
 
-    public async Task RestoreManyAsync(IEnumerable<CipherDetails> ciphers, Guid restoringUserId)
+    public async Task<ICollection<CipherOrganizationDetails>> RestoreManyAsync(IEnumerable<Guid> cipherIds, Guid restoringUserId, Guid? organizationId = null, bool orgAdmin = false)
     {
-        var revisionDate = await _cipherRepository.RestoreAsync(ciphers.Select(c => c.Id), restoringUserId);
-
-        var events = ciphers.Select(c =>
+        if (cipherIds == null || !cipherIds.Any())
         {
-            c.RevisionDate = revisionDate;
+            return new List<CipherOrganizationDetails>();
+        }
+
+        var cipherIdsSet = new HashSet<Guid>(cipherIds);
+        var restoringCiphers = new List<CipherOrganizationDetails>();
+        DateTime? revisionDate;
+
+        if (orgAdmin && organizationId.HasValue)
+        {
+            var ciphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId.Value);
+            restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id)).ToList();
+            revisionDate = await _cipherRepository.RestoreByIdsOrganizationIdAsync(restoringCiphers.Select(c => c.Id), organizationId.Value);
+        }
+        else
+        {
+            var ciphers = await _cipherRepository.GetManyByUserIdAsync(restoringUserId);
+            restoringCiphers = ciphers.Where(c => cipherIdsSet.Contains(c.Id) && c.Edit).Select(c => (CipherOrganizationDetails)c).ToList();
+            revisionDate = await _cipherRepository.RestoreAsync(restoringCiphers.Select(c => c.Id), restoringUserId);
+        }
+
+        var events = restoringCiphers.Select(c =>
+        {
+            c.RevisionDate = revisionDate.Value;
             c.DeletedDate = null;
             return new Tuple<Cipher, EventType, DateTime?>(c, EventType.Cipher_Restored, null);
         });
@@ -915,6 +935,8 @@ public class CipherService : ICipherService
 
         // push
         await _pushService.PushSyncCiphersAsync(restoringUserId);
+
+        return restoringCiphers;
     }
 
     public async Task<(IEnumerable<CipherOrganizationDetails>, Dictionary<Guid, IGrouping<Guid, CollectionCipher>>)> GetOrganizationCiphers(Guid userId, Guid organizationId)

@@ -15,6 +15,8 @@ using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.UserFeatures.UserKey;
+using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 
 #if !OSS
@@ -131,11 +133,17 @@ public class Startup
 
         services.AddScoped<AuthenticatorTokenProvider>();
 
+        // Key Rotation
+        services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
+
         // Services
         services.AddBaseServices(globalSettings);
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
+
+        // Authorization Handlers
+        services.AddAuthorizationHandlers();
 
         //health check
         if (!globalSettings.SelfHosted)

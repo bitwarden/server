@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -9,6 +10,7 @@ using Bit.Core.Test.AutoFixture.Attributes;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.Repositories.EqualityComparers;
 using Xunit;
+using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
@@ -184,18 +186,18 @@ public class OrganizationUserRepositoryTests
         List<EfRepo.UserRepository> efUserRepository,
         List<EfRepo.OrganizationRepository> efOrganizationRepository,
         List<EfRepo.OrganizationUserRepository> suts,
-        List<EfRepo.ProviderRepository> efProviderRepository,
-        List<EfRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
-        List<EfRepo.ProviderUserRepository> efProviderUserRepository,
+        List<EfAdminConsoleRepo.ProviderRepository> efProviderRepository,
+        List<EfAdminConsoleRepo.ProviderOrganizationRepository> efProviderOrganizationRepository,
+        List<EfAdminConsoleRepo.ProviderUserRepository> efProviderUserRepository,
 
         // Auto data - SQL repos
         SqlRepo.PolicyRepository sqlPolicyRepo,
         SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,
-        SqlRepo.ProviderRepository sqlProviderRepo,
+        EfAdminConsoleRepo.ProviderRepository sqlProviderRepo,
         SqlRepo.OrganizationUserRepository sqlOrganizationUserRepo,
-        SqlRepo.ProviderOrganizationRepository sqlProviderOrganizationRepo,
-        SqlRepo.ProviderUserRepository sqlProviderUserRepo
+        EfAdminConsoleRepo.ProviderOrganizationRepository sqlProviderOrganizationRepo,
+        EfAdminConsoleRepo.ProviderUserRepository sqlProviderUserRepo
         )
     {
         // Combine EF and SQL repos into one list per type

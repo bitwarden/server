@@ -1,24 +1,28 @@
 ﻿using Bit.Core.AdminConsole.OrganizationAuth;
 using Bit.Core.AdminConsole.OrganizationAuth.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups;
+using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationApiKeys.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationConnections.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Models.Business.Tokenables;
-using Bit.Core.OrganizationFeatures.Groups;
-using Bit.Core.OrganizationFeatures.Groups.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationApiKeys;
-using Bit.Core.OrganizationFeatures.OrganizationApiKeys.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationCollections;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationConnections;
-using Bit.Core.OrganizationFeatures.OrganizationConnections.Interfaces;
-using Bit.Core.OrganizationFeatures.OrganizationDomains;
-using Bit.Core.OrganizationFeatures.OrganizationDomains.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.SelfHosted;
-using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager;
-using Bit.Core.SecretsManager.Commands.EnableAccessSecretsManager.Interfaces;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
+using Bit.Core.OrganizationFeatures.OrganizationUsers;
+using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
@@ -33,7 +37,6 @@ public static class OrganizationServiceCollectionExtensions
     public static void AddOrganizationServices(this IServiceCollection services, IGlobalSettings globalSettings)
     {
         services.AddScoped<IOrganizationService, OrganizationService>();
-        services.AddScoped<IEnableAccessSecretsManagerCommand, EnableAccessSecretsManagerCommand>();
         services.AddTokenizers();
         services.AddOrganizationGroupCommands();
         services.AddOrganizationConnectionCommands();
@@ -44,6 +47,9 @@ public static class OrganizationServiceCollectionExtensions
         services.AddOrganizationLicenseCommandsQueries();
         services.AddOrganizationDomainCommandsQueries();
         services.AddOrganizationAuthCommands();
+        services.AddOrganizationUserCommands();
+        services.AddOrganizationUserCommandsQueries();
+        services.AddBaseOrganizationSubscriptionCommandsQueries();
     }
 
     private static void AddOrganizationConnectionCommands(this IServiceCollection services)
@@ -78,6 +84,12 @@ public static class OrganizationServiceCollectionExtensions
         }
     }
 
+    private static void AddOrganizationUserCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IDeleteOrganizationUserCommand, DeleteOrganizationUserCommand>();
+        services.AddScoped<IUpdateOrganizationUserGroupsCommand, UpdateOrganizationUserGroupsCommand>();
+    }
+
     private static void AddOrganizationApiKeyCommandsQueries(this IServiceCollection services)
     {
         services.AddScoped<IGetOrganizationApiKeyQuery, GetOrganizationApiKeyQuery>();
@@ -88,6 +100,7 @@ public static class OrganizationServiceCollectionExtensions
     public static void AddOrganizationCollectionCommands(this IServiceCollection services)
     {
         services.AddScoped<IDeleteCollectionCommand, DeleteCollectionCommand>();
+        services.AddScoped<IBulkAddCollectionAccessCommand, BulkAddCollectionAccessCommand>();
     }
 
     private static void AddOrganizationGroupCommands(this IServiceCollection services)
@@ -108,7 +121,7 @@ public static class OrganizationServiceCollectionExtensions
     {
         services.AddScoped<ICreateOrganizationDomainCommand, CreateOrganizationDomainCommand>();
         services.AddScoped<IVerifyOrganizationDomainCommand, VerifyOrganizationDomainCommand>();
-        services.AddScoped<IGetOrganizationDomainByIdQuery, GetOrganizationDomainByIdQuery>();
+        services.AddScoped<IGetOrganizationDomainByIdOrganizationIdQuery, GetOrganizationDomainByIdOrganizationIdQuery>();
         services.AddScoped<IGetOrganizationDomainByOrganizationIdQuery, GetOrganizationDomainByOrganizationIdQuery>();
         services.AddScoped<IDeleteOrganizationDomainCommand, DeleteOrganizationDomainCommand>();
     }
@@ -116,6 +129,19 @@ public static class OrganizationServiceCollectionExtensions
     private static void AddOrganizationAuthCommands(this IServiceCollection services)
     {
         services.AddScoped<IUpdateOrganizationAuthRequestCommand, UpdateOrganizationAuthRequestCommand>();
+    }
+
+    private static void AddOrganizationUserCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<ICountNewSmSeatsRequiredQuery, CountNewSmSeatsRequiredQuery>();
+        services.AddScoped<IAcceptOrgUserCommand, AcceptOrgUserCommand>();
+    }
+
+    // TODO: move to OrganizationSubscriptionServiceCollectionExtensions when OrganizationUser methods are moved out of
+    // TODO: OrganizationService - see PM-1880
+    private static void AddBaseOrganizationSubscriptionCommandsQueries(this IServiceCollection services)
+    {
+        services.AddScoped<IUpdateSecretsManagerSubscriptionCommand, UpdateSecretsManagerSubscriptionCommand>();
     }
 
     private static void AddTokenizers(this IServiceCollection services)

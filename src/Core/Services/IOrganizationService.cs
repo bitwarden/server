@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -39,8 +40,6 @@ public interface IOrganizationService
         OrganizationUserType type, bool accessAll, string externalId, IEnumerable<CollectionAccessSelection> collections, IEnumerable<Guid> groups);
     Task<IEnumerable<Tuple<OrganizationUser, string>>> ResendInvitesAsync(Guid organizationId, Guid? invitingUserId, IEnumerable<Guid> organizationUsersId);
     Task ResendInviteAsync(Guid organizationId, Guid? invitingUserId, Guid organizationUserId, bool initOrganization = false);
-    Task<OrganizationUser> AcceptUserAsync(Guid organizationUserId, User user, string token, IUserService userService);
-    Task<OrganizationUser> AcceptUserAsync(string orgIdentifier, User user, IUserService userService);
     Task<OrganizationUser> ConfirmUserAsync(Guid organizationId, Guid organizationUserId, string key,
         Guid confirmingUserId, IUserService userService);
     Task<List<Tuple<OrganizationUser, string>>> ConfirmUsersAsync(Guid organizationId, Dictionary<Guid, string> keys,
@@ -53,7 +52,6 @@ public interface IOrganizationService
     Task DeleteUserAsync(Guid organizationId, Guid userId);
     Task<List<Tuple<OrganizationUser, string>>> DeleteUsersAsync(Guid organizationId,
         IEnumerable<Guid> organizationUserIds, Guid? deletingUserId);
-    Task UpdateUserGroupsAsync(OrganizationUser organizationUser, IEnumerable<Guid> groupIds, Guid? loggedInUserId);
     Task UpdateUserResetPasswordEnrollmentAsync(Guid organizationId, Guid userId, string resetPasswordKey, Guid? callingUserId);
     Task ImportAsync(Guid organizationId, Guid? importingUserId, IEnumerable<ImportedGroup> groups,
         IEnumerable<ImportedOrganizationUser> newUsers, IEnumerable<string> removeUserExternalIds,
@@ -81,4 +79,6 @@ public interface IOrganizationService
 
     void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
+    Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
+        OrganizationUserType? oldType, Permissions permissions);
 }

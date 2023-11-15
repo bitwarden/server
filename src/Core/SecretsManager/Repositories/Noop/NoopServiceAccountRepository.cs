@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Models.Data;
 
 namespace Bit.Core.SecretsManager.Repositories.Noop;
 
@@ -56,4 +57,6 @@ public class NoopServiceAccountRepository : IServiceAccountRepository
     {
         return Task.FromResult(0);
     }
+
+    public Task<IEnumerable<ServiceAccountSecretsDetails>> GetManyByOrganizationIdWithSecretsDetailsAsync(Guid organizationId, Guid userId, AccessClientType accessType) => throw new NotImplementedException();
 }

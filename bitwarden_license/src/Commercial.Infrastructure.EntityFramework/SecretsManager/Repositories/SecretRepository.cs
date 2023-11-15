@@ -57,6 +57,16 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
         return await secrets.ToListAsync();
     }
 
+    public async Task<int> GetSecretsCountByOrganizationIdAsync(Guid organizationId)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.Secret
+                .CountAsync(ou => ou.OrganizationId == organizationId && ou.DeletedDate == null);
+        }
+    }
+
     public async Task<IEnumerable<Core.SecretsManager.Entities.Secret>> GetManyByOrganizationIdInTrashByIdsAsync(Guid organizationId, IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -319,7 +329,8 @@ public class SecretRepository : Repository<Core.SecretsManager.Entities.Secret, 
                 {
                     Secret = Mapper.Map<Bit.Core.SecretsManager.Entities.Secret>(s),
                     Read = true,
-                    Write = false,
+                    Write = s.Projects.Any(p =>
+                        p.ServiceAccountAccessPolicies.Any(ap => ap.ServiceAccountId == userId && ap.Write)),
                 }),
             _ => throw new ArgumentOutOfRangeException(nameof(accessType), accessType, null),
         };

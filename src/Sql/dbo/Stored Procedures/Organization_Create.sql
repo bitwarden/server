@@ -49,7 +49,9 @@
     @SmSeats INT = null,
     @SmServiceAccounts INT = null,
     @MaxAutoscaleSmSeats INT= null,
-    @MaxAutoscaleSmServiceAccounts INT = null
+    @MaxAutoscaleSmServiceAccounts INT = null,
+    @SecretsManagerBeta BIT = 0,
+    @LimitCollectionCreationDeletion BIT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -106,7 +108,9 @@ BEGIN
         [SmSeats],
         [SmServiceAccounts],
         [MaxAutoscaleSmSeats],
-        [MaxAutoscaleSmServiceAccounts]
+        [MaxAutoscaleSmServiceAccounts],
+        [SecretsManagerBeta],
+        [LimitCollectionCreationDeletion]
     )
     VALUES
     (
@@ -160,6 +164,8 @@ BEGIN
         @SmSeats,
         @SmServiceAccounts,
         @MaxAutoscaleSmSeats,
-        @MaxAutoscaleSmServiceAccounts
+        @MaxAutoscaleSmServiceAccounts,
+        @SecretsManagerBeta,
+        @LimitCollectionCreationDeletion
     )
 END

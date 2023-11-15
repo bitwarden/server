@@ -50,6 +50,8 @@
     [SmServiceAccounts]             INT              NULL,
     [MaxAutoscaleSmSeats]           INT              NULL,
     [MaxAutoscaleSmServiceAccounts] INT              NULL,
+    [SecretsManagerBeta]            BIT              NOT NULL CONSTRAINT [DF_Organization_SecretsManagerBeta] DEFAULT (0),
+    [LimitCollectionCreationDeletion]   BIT              NOT NULL CONSTRAINT [DF_Organization_LimitCollectionCreationDeletion] DEFAULT (1),
     CONSTRAINT [PK_Organization] PRIMARY KEY CLUSTERED ([Id] ASC)
 );
 

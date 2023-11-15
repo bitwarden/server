@@ -2,64 +2,84 @@
 
 namespace Bit.Core.Models.StaticStore;
 
-public class Plan
+public abstract record Plan
 {
-    public PlanType Type { get; set; }
-    public ProductType Product { get; set; }
-    public string Name { get; set; }
-    public bool IsAnnual { get; set; }
-    public string NameLocalizationKey { get; set; }
-    public string DescriptionLocalizationKey { get; set; }
-    public bool CanBeUsedByBusiness { get; set; }
-    public int BaseSeats { get; set; }
-    public short? BaseStorageGb { get; set; }
-    public short? MaxCollections { get; set; }
-    public short? MaxUsers { get; set; }
-    public short? MaxServiceAccounts { get; set; }
-    public bool AllowSeatAutoscale { get; set; }
-
-    public bool AllowServiceAccountsAutoscale { get; set; }
-
-    public bool HasAdditionalSeatsOption { get; set; }
-    public int? MaxAdditionalSeats { get; set; }
-    public bool HasAdditionalStorageOption { get; set; }
-    public short? MaxAdditionalStorage { get; set; }
-    public bool HasPremiumAccessOption { get; set; }
-    public int? TrialPeriodDays { get; set; }
-
-    public bool HasSelfHost { get; set; }
-    public bool HasPolicies { get; set; }
-    public bool HasGroups { get; set; }
-    public bool HasDirectory { get; set; }
-    public bool HasEvents { get; set; }
-    public bool HasTotp { get; set; }
-    public bool Has2fa { get; set; }
-    public bool HasApi { get; set; }
-    public bool HasSso { get; set; }
-    public bool HasKeyConnector { get; set; }
-    public bool HasScim { get; set; }
-    public bool HasResetPassword { get; set; }
-    public bool UsersGetPremium { get; set; }
-    public bool HasCustomPermissions { get; set; }
-
-    public int UpgradeSortOrder { get; set; }
-    public int DisplaySortOrder { get; set; }
+    public PlanType Type { get; protected init; }
+    public ProductType Product { get; protected init; }
+    public string Name { get; protected init; }
+    public bool IsAnnual { get; protected init; }
+    public string NameLocalizationKey { get; protected init; }
+    public string DescriptionLocalizationKey { get; protected init; }
+    public bool CanBeUsedByBusiness { get; protected init; }
+    public int? TrialPeriodDays { get; protected init; }
+    public bool HasSelfHost { get; protected init; }
+    public bool HasPolicies { get; protected init; }
+    public bool HasGroups { get; protected init; }
+    public bool HasDirectory { get; protected init; }
+    public bool HasEvents { get; protected init; }
+    public bool HasTotp { get; protected init; }
+    public bool Has2fa { get; protected init; }
+    public bool HasApi { get; protected init; }
+    public bool HasSso { get; protected init; }
+    public bool HasKeyConnector { get; protected init; }
+    public bool HasScim { get; protected init; }
+    public bool HasResetPassword { get; protected init; }
+    public bool UsersGetPremium { get; protected init; }
+    public bool HasCustomPermissions { get; protected init; }
+    public int UpgradeSortOrder { get; protected init; }
+    public int DisplaySortOrder { get; protected init; }
     public int? LegacyYear { get; set; }
-    public bool Disabled { get; set; }
+    public bool Disabled { get; protected init; }
+    public PasswordManagerPlanFeatures PasswordManager { get; protected init; }
+    public SecretsManagerPlanFeatures SecretsManager { get; protected init; }
+    public bool SupportsSecretsManager => SecretsManager != null;
 
-    public string StripePlanId { get; set; }
-    public string StripeSeatPlanId { get; set; }
-    public string StripeStoragePlanId { get; set; }
-    public string StripeServiceAccountPlanId { get; set; }
-    public string StripePremiumAccessPlanId { get; set; }
-    public decimal BasePrice { get; set; }
-    public decimal SeatPrice { get; set; }
-    public decimal AdditionalStoragePricePerGb { get; set; }
-    public decimal PremiumAccessOptionPrice { get; set; }
-    public decimal? AdditionalPricePerServiceAccount { get; set; }
-    public short? BaseServiceAccount { get; set; }
-    public short? MaxAdditionalServiceAccount { get; set; }
-    public bool HasAdditionalServiceAccountOption { get; set; }
-    public short? MaxProjects { get; set; }
-    public BitwardenProductType BitwardenProduct { get; set; }
+    public record SecretsManagerPlanFeatures
+    {
+        // Service accounts
+        public short? MaxServiceAccounts { get; init; }
+        public bool AllowServiceAccountsAutoscale { get; init; }
+        public string StripeServiceAccountPlanId { get; init; }
+        public decimal? AdditionalPricePerServiceAccount { get; init; }
+        public short BaseServiceAccount { get; init; }
+        public short? MaxAdditionalServiceAccount { get; init; }
+        public bool HasAdditionalServiceAccountOption { get; init; }
+        // Seats
+        public string StripeSeatPlanId { get; init; }
+        public bool HasAdditionalSeatsOption { get; init; }
+        public decimal BasePrice { get; init; }
+        public decimal SeatPrice { get; init; }
+        public int BaseSeats { get; init; }
+        public short? MaxSeats { get; init; }
+        public int? MaxAdditionalSeats { get; init; }
+        public bool AllowSeatAutoscale { get; init; }
+
+        // Features
+        public int MaxProjects { get; init; }
+    }
+
+    public record PasswordManagerPlanFeatures
+    {
+        // Seats
+        public string StripePlanId { get; init; }
+        public string StripeSeatPlanId { get; init; }
+        public decimal BasePrice { get; init; }
+        public decimal SeatPrice { get; init; }
+        public bool AllowSeatAutoscale { get; init; }
+        public bool HasAdditionalSeatsOption { get; init; }
+        public int? MaxAdditionalSeats { get; init; }
+        public int BaseSeats { get; init; }
+        public bool HasPremiumAccessOption { get; init; }
+        public string StripePremiumAccessPlanId { get; init; }
+        public decimal PremiumAccessOptionPrice { get; init; }
+        public short? MaxSeats { get; init; }
+        // Storage
+        public short? BaseStorageGb { get; init; }
+        public bool HasAdditionalStorageOption { get; init; }
+        public decimal AdditionalStoragePricePerGb { get; init; }
+        public string StripeStoragePlanId { get; init; }
+        public short? MaxAdditionalStorage { get; init; }
+        // Feature
+        public short? MaxCollections { get; init; }
+    }
 }

@@ -94,6 +94,7 @@ public class UpgradeOrganizationPlanCommandTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         upgrade.AdditionalSmSeats = 10;
         upgrade.AdditionalSeats = 10;
+        upgrade.Plan = PlanType.TeamsAnnually;
         await sutProvider.Sut.UpgradePlanAsync(organization.Id, upgrade);
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(organization);
     }
@@ -103,13 +104,13 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpgradePlan_SM_Passes(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
         upgrade.Plan = planType;
 
-        var passwordManagerPlan = StaticStore.GetPasswordManagerPlan(upgrade.Plan);
-        var secretsManagerPlan = StaticStore.GetSecretsManagerPlan(upgrade.Plan);
+        var plan = StaticStore.GetPlan(upgrade.Plan);
 
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
 
@@ -121,9 +122,9 @@ public class UpgradeOrganizationPlanCommandTests
 
         await sutProvider.GetDependency<IOrganizationService>().Received(1).ReplaceAndUpdateCacheAsync(
             Arg.Is<Organization>(o =>
-                o.Seats == passwordManagerPlan.BaseSeats + upgrade.AdditionalSeats
-                && o.SmSeats == secretsManagerPlan.BaseSeats + upgrade.AdditionalSmSeats
-                && o.SmServiceAccounts == secretsManagerPlan.BaseServiceAccount + upgrade.AdditionalServiceAccounts));
+                o.Seats == plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats
+                && o.SmSeats == plan.SecretsManager.BaseSeats + upgrade.AdditionalSmSeats
+                && o.SmServiceAccounts == plan.SecretsManager.BaseServiceAccount + upgrade.AdditionalServiceAccounts));
 
         Assert.True(result.Item1);
         Assert.NotNull(result.Item2);
@@ -135,6 +136,7 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpgradePlan_SM_NotEnoughSmSeats_Throws(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
@@ -160,6 +162,7 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually, 201)]
     [BitAutoData(PlanType.TeamsMonthly, 51)]
     [BitAutoData(PlanType.TeamsAnnually, 51)]
+    [BitAutoData(PlanType.TeamsStarter, 51)]
     public async Task UpgradePlan_SM_NotEnoughServiceAccounts_Throws(PlanType planType, int currentServiceAccounts,
      Organization organization, OrganizationUpgrade upgrade, SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {

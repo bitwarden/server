@@ -14,14 +14,12 @@ using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
 using Bit.Core.Tools.Services;
-using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.SecretsManager.Controllers;
 
 [Authorize("secrets")]
-[SelfHosted(NotSelfHostedOnly = true)]
 public class SecretsController : Controller
 {
     private readonly ICurrentContext _currentContext;
@@ -206,5 +204,46 @@ public class SecretsController : Controller
         await _deleteSecretCommand.DeleteSecrets(secretsToDelete);
         var responses = results.Select(r => new BulkDeleteResponseModel(r.Secret.Id, r.Error));
         return new ListResponseModel<BulkDeleteResponseModel>(responses);
+    }
+
+    [HttpPost("secrets/get-by-ids")]
+    public async Task<ListResponseModel<BaseSecretResponseModel>> GetSecretsByIdsAsync(
+        [FromBody] GetSecretsRequestModel request)
+    {
+        var secrets = (await _secretRepository.GetManyByIds(request.Ids)).ToList();
+        if (!secrets.Any() || secrets.Count != request.Ids.Count())
+        {
+            throw new NotFoundException();
+        }
+
+        // Ensure all secrets belong to the same organization.
+        var organizationId = secrets.First().OrganizationId;
+        if (secrets.Any(secret => secret.OrganizationId != organizationId) ||
+            !_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+
+        foreach (var secret in secrets)
+        {
+            var authorizationResult = await _authorizationService.AuthorizeAsync(User, secret, SecretOperations.Read);
+            if (!authorizationResult.Succeeded)
+            {
+                throw new NotFoundException();
+            }
+        }
+
+        if (_currentContext.ClientType == ClientType.ServiceAccount)
+        {
+            var userId = _userService.GetProperUserId(User).Value;
+            var org = await _organizationRepository.GetByIdAsync(organizationId);
+            await _eventService.LogServiceAccountSecretsEventAsync(userId, secrets, EventType.Secret_Retrieved);
+            await _referenceEventService.RaiseEventAsync(
+                new ReferenceEvent(ReferenceEventType.SmServiceAccountAccessedSecret, org, _currentContext));
+        }
+
+        var responses = secrets.Select(s => new BaseSecretResponseModel(s));
+        return new ListResponseModel<BaseSecretResponseModel>(responses);
     }
 }

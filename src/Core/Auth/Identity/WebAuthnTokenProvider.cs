@@ -28,10 +28,6 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<bool> CanGenerateTwoFactorTokenAsync(UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!(await userService.CanAccessPremium(user)))
-        {
-            return false;
-        }
 
         var webAuthnProvider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
         if (!HasProperMetaData(webAuthnProvider))
@@ -45,10 +41,6 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<string> GenerateAsync(string purpose, UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!(await userService.CanAccessPremium(user)))
-        {
-            return null;
-        }
 
         var provider = user.GetTwoFactorProvider(TwoFactorProviderType.WebAuthn);
         var keys = LoadKeys(provider);
@@ -81,7 +73,7 @@ public class WebAuthnTokenProvider : IUserTwoFactorTokenProvider<User>
     public async Task<bool> ValidateAsync(string purpose, string token, UserManager<User> manager, User user)
     {
         var userService = _serviceProvider.GetRequiredService<IUserService>();
-        if (!(await userService.CanAccessPremium(user)) || string.IsNullOrWhiteSpace(token))
+        if (string.IsNullOrWhiteSpace(token))
         {
             return false;
         }
