@@ -44,7 +44,7 @@ public class OrganizationResponseModel : ResponseModel
         Use2fa = organization.Use2fa;
         UseApi = organization.UseApi;
         UseResetPassword = organization.UseResetPassword;
-        UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+        UseSecretsManager = organization.UseSecretsManager;
         UsersGetPremium = organization.UsersGetPremium;
         UseCustomPermissions = organization.UseCustomPermissions;
         SelfHost = organization.SelfHost;
@@ -106,7 +106,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             CoreHelpers.ReadableBytesSize(organization.Storage.Value) : null;
         StorageGb = organization.Storage.HasValue ?
             Math.Round(organization.Storage.Value / 1073741824D, 2) : 0; // 1 GB
-        UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, SubscriptionInfo subscription, bool hideSensitiveData)
@@ -123,8 +122,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
             Subscription.Items = null;
             UpcomingInvoice.Amount = null;
         }
-
-        UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
     }
 
     public OrganizationSubscriptionResponseModel(Organization organization, OrganizationLicense license) :
@@ -139,8 +136,6 @@ public class OrganizationSubscriptionResponseModel : OrganizationResponseModel
                                              license.Expires?.AddDays(-Constants
                                                  .OrganizationSelfHostSubscriptionGracePeriodDays);
         }
-
-        UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
     }
 
     public string StorageName { get; set; }

@@ -22,6 +22,8 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             var dbContext = GetDatabaseContext(scope);
             var organization = await GetDbSet(dbContext).Where(e => e.Identifier == identifier)
                 .FirstOrDefaultAsync();
+            organization.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+
             return organization;
         }
     }
@@ -32,7 +34,14 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         {
             var dbContext = GetDatabaseContext(scope);
             var organizations = await GetDbSet(dbContext).Where(e => e.Enabled).ToListAsync();
-            return Mapper.Map<List<Core.Entities.Organization>>(organizations);
+            var list = Mapper.Map<List<Core.Entities.Organization>>(organizations);
+
+            foreach (Core.Entities.Organization entity in list)
+            {
+                entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+            }
+
+            return list;
         }
     }
 
@@ -46,7 +55,14 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                     .Where(ou => ou.UserId == userId)
                     .Select(ou => ou.Organization))
                 .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Organization>>(organizations);
+            var list = Mapper.Map<List<Core.Entities.Organization>>(organizations);
+
+            foreach (Core.Entities.Organization entity in list)
+            {
+                entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+            }
+
+            return list;
         }
     }
 
@@ -65,7 +81,14 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                 .OrderBy(e => e.CreationDate)
                 .Skip(skip).Take(take)
                 .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Organization>>(organizations);
+            var list = Mapper.Map<List<Core.Entities.Organization>>(organizations);
+
+            foreach (Core.Entities.Organization entity in list)
+            {
+                entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+            }
+
+            return list;
         }
     }
 
@@ -105,10 +128,17 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
 
         if (string.IsNullOrWhiteSpace(ownerEmail))
         {
-            return await query.OrderByDescending(o => o.CreationDate)
+            var list = await query.OrderByDescending(o => o.CreationDate)
                 .Skip(skip)
                 .Take(take)
                 .ToArrayAsync();
+
+            foreach (Core.Entities.Organization entity in list)
+            {
+                entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+            }
+
+            return list;
         }
 
         if (dbContext.Database.IsNpgsql())
@@ -132,7 +162,14 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                     select o;
         }
 
-        return await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
+        var list = await query.OrderByDescending(o => o.CreationDate).Skip(skip).Take(take).ToArrayAsync();
+
+        foreach (Core.Entities.Organization entity in list)
+        {
+            entity.UseSecretsManager = organization.UseSecretsManager && !organization.SecretsManagerBeta;
+        }
+
+        return list;
     }
 
     public async Task UpdateStorageAsync(Guid id)
@@ -246,5 +283,18 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
             select grouped.Key;
 
         return await query.ToListAsync();
+    }
+
+    public override async Task<Core.Entities.Organization> GetByIdAsync(Guid id)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            var entity = await GetDbSet(dbContext).FindAsync(id);
+            var result = Mapper.Map<Core.Entities.Organization>(entity);
+            result.UseSecretsManager = result.UseSecretsManager && !result.SecretsManagerBeta;
+
+            return result;
+        }
     }
 }
