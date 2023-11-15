@@ -33,7 +33,7 @@ WORKDIR /source
 COPY bitwarden_license/src/Sso/. ./bitwarden_license/src/Sso/
 COPY src/Core/. ./src/Core/
 COPY src/SharedWeb/. ./src/SharedWeb/
-# COPY .git/. ./.git/
+COPY .git/. ./.git/
 
 # Build Sso app
 WORKDIR /source/bitwarden_license/src/Sso

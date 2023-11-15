@@ -33,7 +33,7 @@ WORKDIR /source
 COPY src/Events/. ./src/Events/
 COPY src/Core/. ./src/Core/
 COPY src/SharedWeb/. ./src/SharedWeb/
-# COPY .git/. ./.git/
+COPY .git/. ./.git/
 
 # Build Events app
 WORKDIR /source/src/Events

@@ -33,7 +33,7 @@ WORKDIR /source
 COPY bitwarden_license/src/Scim/. ./bitwarden_license/src/Scim/
 COPY src/Core/. ./src/Core/
 COPY src/SharedWeb/. ./src/SharedWeb/
-# COPY .git/. ./.git/
+COPY .git/. ./.git/
 
 # Build Scim app
 WORKDIR /source/bitwarden_license/src/Scim

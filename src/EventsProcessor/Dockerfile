@@ -33,7 +33,7 @@ WORKDIR /source
 COPY src/EventsProcessor/. ./src/EventsProcessor/
 COPY src/Core/. ./src/Core/
 COPY src/SharedWeb/. ./src/SharedWeb/
-# COPY .git/. ./.git/
+COPY .git/. ./.git/
 
 # Build EventsProcessor app
 WORKDIR /source/src/EventsProcessor

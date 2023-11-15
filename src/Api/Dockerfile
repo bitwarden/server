@@ -37,7 +37,7 @@ COPY src/Core/. ./src/Core/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.Core/
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
-# COPY .git/. ./.git/
+COPY .git/. ./.git/
 
 # Build Api app
 WORKDIR /source/src/Api

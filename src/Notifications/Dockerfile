@@ -33,7 +33,7 @@ WORKDIR /source
 COPY src/Core/. ./src/Core/
 COPY src/Notifications/. ./src/Notifications/
 COPY src/SharedWeb/. ./src/SharedWeb/
-# COPY .git/. ./.git/
+COPY .git/. ./.git/
 
 # Build Notifications app
 WORKDIR /source/src/Notifications
