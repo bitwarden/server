@@ -220,10 +220,10 @@ jobs:
       # - name: Login to PROD ACR
       #   run: az acr login -n ${_AZ_REGISTRY%.azurecr.io}
 
-      # - name: Login to Azure - CI Subscription
-      #   uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
-      #   with:
-      #     creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
+      - name: Login to Azure - CI Subscription
+        uses: Azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.7
+        with:
+          creds: ${{ secrets.AZURE_KV_CI_SERVICE_PRINCIPAL }}
 
       # - name: Retrieve github PAT secrets
       #   id: retrieve-secret-pat
@@ -258,10 +258,12 @@ jobs:
           #   "GH_PAT=${{ steps.retrieve-secret-pat.outputs.github-pat-bitwarden-devops-bot-repo-scope }}"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
-        with:
-          name: build
-          path: /tmp/build.tar
+        run: |
+          az storage blob upload \
+            --file /tmp/build.tar \
+            --container-name builds \
+            --name build \
+            --account-name dockerimagetest
 
   build-docker:
     name: Build Docker images
@@ -379,6 +381,15 @@ jobs:
         with:
           name: build
           path: /tmp
+
+      - name: Download build image artifact
+        run: |
+          az storage blob download \
+            --file /tmp/build.tar \
+            --container-name builds \
+            --name build \
+            --account-name dockerimagetest
+          ls -alh /tmp
 
       - name: Load build image
         run: |
