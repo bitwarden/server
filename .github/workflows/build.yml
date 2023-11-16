@@ -137,9 +137,6 @@ jobs:
           - project_name: Scim
             base_path: ./bitwarden_license/src
             upload_artifact: true
-          - project_name: Server
-            base_path: ./util
-            upload_artifact: true
           - project_name: Setup
             base_path: ./util
             upload_artifact: true
