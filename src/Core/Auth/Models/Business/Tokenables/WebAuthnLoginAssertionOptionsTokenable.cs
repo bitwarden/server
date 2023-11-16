@@ -10,7 +10,7 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
     // 7 minutes = max webauthn timeout (6 minutes) + slack for miscellaneous delays
     private const double _tokenLifetimeInHours = (double)7 / 60;
     public const string ClearTextPrefix = "BWWebAuthnLoginAssertionOptions_";
-    public const string DataProtectorPurpose = "WebAuthnLoginAssetionOptionsDataProtector";
+    public const string DataProtectorPurpose = "WebAuthnLoginAssertionOptionsDataProtector";
     public const string TokenIdentifier = "WebAuthnLoginAssertionOptionsToken";
 
     public string Identifier { get; set; } = TokenIdentifier;
