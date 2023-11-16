@@ -15,12 +15,11 @@ env:
 
 jobs:
   cloc:
-    if: false
     name: CLOC
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Install cloc
         run: |
@@ -31,12 +30,11 @@ jobs:
         run: cloc --include-lang C#,SQL,Razor,"Bourne Shell",PowerShell,HTML,CSS,Sass,JavaScript,TypeScript --vcs git
 
   lint:
-    if: false
     name: Lint
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
@@ -45,14 +43,13 @@ jobs:
         run: dotnet format --verify-no-changes
 
   testing:
-    if: false
     name: Testing
     runs-on: ubuntu-22.04
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
       - name: Checkout repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
@@ -99,9 +96,9 @@ jobs:
   build:
     name: Build artifacts and images
     runs-on: ubuntu-22.04
-    # needs:
-    #   - lint
-    #   - testing
+    needs:
+      - lint
+      - testing
     strategy:
       fail-fast: false
       matrix:
@@ -212,8 +209,6 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          build-args: |
-            BUILD_TAG=${{ steps.tag.outputs.image_tag }}
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
@@ -249,8 +244,8 @@ jobs:
       - name: Log out of Docker
         run: docker logout
 
-  upload:
-    name: Upload
+  build-stub-swagger:
+    name: Build Docker-Stub/Swagger
     runs-on: ubuntu-22.04
     needs: build
     steps:
@@ -394,7 +389,7 @@ jobs:
           - win-x64
     steps:
       - name: Checkout repo
-        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
@@ -474,7 +469,7 @@ jobs:
       - lint
       - testing
       - build
-      - upload
+      - build-stub-swagger
       - build-mssqlmigratorutility
       - self-host-build
     steps:
@@ -488,7 +483,7 @@ jobs:
           LINT_STATUS: ${{ needs.lint.result }}
           TESTING_STATUS: ${{ needs.testing.result }}
           BUILD_STATUS: ${{ needs.build.result }}
-          UPLOAD_STATUS: ${{ needs.upload.result }}
+          BUILD_STUB_SWAGGER_STATUS: ${{ needs.build-stub-swagger.result }}
           BUILD_MSSQLMIGRATORUTILITY_STATUS: ${{ needs.build-mssqlmigratorutility.result }}
           TRIGGER_SELF_HOST_BUILD_STATUS: ${{ needs.self-host-build.result }}
         run: |
@@ -500,7 +495,7 @@ jobs:
               exit 1
           elif [ "$BUILD_STATUS" = "failure" ]; then
               exit 1
-          elif [ "$UPLOAD_STATUS" = "failure" ]; then
+          elif [ "$BUILD_STUB_SWAGGER_STATUS" = "failure" ]; then
               exit 1
           elif [ "$BUILD_MSSQLMIGRATORUTILITY_STATUS" = "failure" ]; then
               exit 1
