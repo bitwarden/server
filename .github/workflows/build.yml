@@ -304,7 +304,17 @@ jobs:
             linux/arm/v7,
             linux/arm64
           push: true
+          outputs: type=tar,dest=${{ matrix.project_name }}.tar
           tags: ${{ steps.image-name.outputs.name }}
+
+      - name: TEST STEP
+        run: |
+          ls -alh
+          mkdir -p TEST
+          mv ${{ matrix.project_name }}.tar TEST/
+          cd TEST
+          tar -xvf admin.tar
+          ls -alh
 
       - name: Log out of Docker
         run: docker logout
