@@ -2869,8 +2869,6 @@
           "Duende.IdentityServer": "[6.0.4, )",
           "Fido2.AspNet": "[3.0.1, )",
           "Handlebars.Net": "[2.1.2, )",
-          "IdentityServer4": "[4.1.2, )",
-          "IdentityServer4.AccessTokenValidation": "[3.0.1, )",
           "LaunchDarkly.ServerSdk": "[8.0.0, )",
           "MailKit": "[4.2.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[6.0.4, )",
