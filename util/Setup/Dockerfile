@@ -24,7 +24,7 @@ COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/Setup/*.csproj ./util/Setup/
 COPY Directory.Build.props .
 
-# Restore Setup project dependencies and tools
+# Restore project dependencies and tools
 WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
@@ -35,7 +35,7 @@ COPY util/Migrator/. ./util/Migrator/
 COPY util/Setup/. ./util/Setup/
 COPY .git/. ./.git/
 
-# Build Setup app
+# Build app
 WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Setup --no-restore --no-self-contained -r $RID
 

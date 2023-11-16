@@ -34,9 +34,6 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | b
 ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
 ENV PATH      $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
-# Install gulp
-RUN npm install -g gulp
-
 # Copy csproj files as distinct layers
 WORKDIR /source
 COPY bitwarden_license/src/Sso/*.csproj ./bitwarden_license/src/Sso/
@@ -46,7 +43,7 @@ COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFram
 COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY Directory.Build.props .
 
-# Restore Sso project dependencies and tools
+# Restore project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Sso
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
@@ -59,10 +56,10 @@ COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY .git/. ./.git/
 
-# Build Sso app
+# Build app
 WORKDIR /source/bitwarden_license/src/Sso
-RUN npm install
-RUN gulp --gulpfile "gulpfile.js" build
+RUN npm ci
+RUN npm run build
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Sso --no-restore --no-self-contained -r $RID
 
 WORKDIR /app

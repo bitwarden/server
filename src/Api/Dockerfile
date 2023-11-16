@@ -28,7 +28,7 @@ COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Comm
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY Directory.Build.props .
 
-# Restore Api project dependencies and tools
+# Restore project dependencies and tools
 WORKDIR /source/src/Api
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
@@ -43,7 +43,7 @@ COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY .git/. ./.git/
 
-# Build Api app
+# Build app
 WORKDIR /source/src/Api
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Api --no-restore --no-self-contained -r $RID
 

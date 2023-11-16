@@ -22,7 +22,7 @@ WORKDIR /source
 COPY util/Server/*.csproj ./util/Server/
 COPY Directory.Build.props .
 
-# Restore Server project dependencies and tools
+# Restore project dependencies and tools
 WORKDIR /source/util/Server
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
@@ -31,7 +31,7 @@ WORKDIR /source
 COPY util/Server/. ./util/Server/
 COPY .git/. ./.git/
 
-# Build Server app
+# Build app
 WORKDIR /source/util/Server
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Server --no-restore --no-self-contained -r $RID
 

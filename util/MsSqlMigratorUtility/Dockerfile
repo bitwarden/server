@@ -25,7 +25,7 @@ COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/MsSqlMigratorUtility/*.csproj ./util/MsSqlMigratorUtility/
 COPY Directory.Build.props .
 
-# Restore MsSqlMigratorUtility project dependencies and tools
+# Restore project dependencies and tools
 WORKDIR /source/util/MsSqlMigratorUtility
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
@@ -36,7 +36,7 @@ COPY util/Migrator/. ./util/Migrator/
 COPY util/MsSqlMigratorUtility/. ./util/MsSqlMigratorUtility/
 COPY .git/. ./.git/
 
-# Build MsSqlMigratorUtility app
+# Build app
 WORKDIR /source/util/MsSqlMigratorUtility
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/MsSqlMigratorUtility --no-restore --no-self-contained -r $RID
 

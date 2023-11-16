@@ -26,7 +26,7 @@ COPY src/Infrastructure.EntityFramework/*.csproj ./src/Infrastructure.EntityFram
 COPY src/SharedWeb/*.csproj ./src/SharedWeb/
 COPY Directory.Build.props .
 
-# Restore EventsProcessor project dependencies and tools
+# Restore project dependencies and tools
 WORKDIR /source/src/EventsProcessor
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
@@ -39,7 +39,7 @@ COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY .git/. ./.git/
 
-# Build EventsProcessor app
+# Build app
 WORKDIR /source/src/EventsProcessor
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/EventsProcessor --no-restore --no-self-contained -r $RID
 

@@ -34,9 +34,6 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | b
 ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
 ENV PATH      $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
-# Install gulp
-RUN npm install -g gulp
-
 # Copy csproj files as distinct layers
 WORKDIR /source
 COPY src/Admin/*.csproj ./src/Admin/
@@ -52,7 +49,7 @@ COPY bitwarden_license/src/Commercial.Core/*.csproj ./bitwarden_license/src/Comm
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/*.csproj ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY Directory.Build.props .
 
-# Restore Admin project dependencies and tools
+# Restore project dependencies and tools
 WORKDIR /source/src/Admin
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
@@ -72,10 +69,10 @@ COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY .git/. ./.git/
 
-# Build Admin app
+# Build app
 WORKDIR /source/src/Admin
-RUN npm install
-RUN gulp --gulpfile "gulpfile.js" build
+RUN npm ci
+RUN npm run build
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Admin --no-restore --no-self-contained -r $RID
 
 WORKDIR /app
