@@ -207,8 +207,8 @@ jobs:
       - name: Build Docker image
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
         with:
-          cache-from: type=registry,ref=${{ steps.image-name.outputs.name }}-buildcache
-          cache-to: type=registry,ref=${{ steps.image-name.outputs.name }}-buildcache,mode=max
+          cache-from: type=registry,ref=${{ steps.image-name.outputs.name }}
+          cache-to: type=inline
           context: .
           file: ${{ matrix.base_path }}/${{ matrix.project_name }}/Dockerfile
           platforms: |
