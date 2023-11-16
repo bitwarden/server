@@ -375,7 +375,7 @@ jobs:
   build-mssqlmigratorutility:
     name: Build MsSqlMigratorUtility
     runs-on: ubuntu-22.04
-    needs: lint
+    needs: testing
     defaults:
       run:
         shell: bash
