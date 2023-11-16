@@ -224,7 +224,7 @@ jobs:
         run: |
           mkdir build
           docker run --rm --platform linux/amd64 --volume $(pwd)/build:/temp --entrypoint bash \
-          ${{ steps.image-name.outputs.name }} -c "cp -r ./ /temp"
+            ${{ steps.image-name.outputs.name }} -c "cp -r ./ /temp"
 
           cd build
           zip -r ${{ matrix.project_name }}.zip .
