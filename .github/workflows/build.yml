@@ -44,7 +44,7 @@ jobs:
 
   testing:
     name: Testing
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest-m
     env:
       NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
     steps:
@@ -95,10 +95,8 @@ jobs:
 
   build:
     name: Build artifacts and images
-    runs-on: ubuntu-22.04
-    needs:
-      - lint
-      - testing
+    runs-on: ubuntu-latest-m
+    needs: testing
     strategy:
       fail-fast: false
       matrix:
@@ -247,7 +245,7 @@ jobs:
   build-stub-swagger:
     name: Build Docker-Stub/Swagger
     runs-on: ubuntu-22.04
-    needs: build
+    needs: testing
     steps:
       - name: Checkout repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
