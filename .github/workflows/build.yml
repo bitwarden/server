@@ -304,17 +304,21 @@ jobs:
             linux/arm/v7,
             linux/arm64
           push: true
-          outputs: type=tar,dest=${{ matrix.project_name }}.tar
           tags: ${{ steps.image-name.outputs.name }}
 
       - name: TEST STEP
         run: |
-          ls -alh
-          mkdir -p TEST
-          mv ${{ matrix.project_name }}.tar TEST/
-          cd TEST
-          tar -xvf admin.tar
-          ls -alh
+          mkdir linux-amd64
+          docker run --rm -ti --platform linux/amd64 --volume $(pwd):/temp ${{ steps.image-name.outputs.name }} cp -r /app /temp/linux-amd64
+          file linux-amd64/app/${{ matrix.project_name }}.dll
+
+          mkdir linux-arm
+          docker run --rm -ti --platform linux/arm --volume $(pwd):/temp ${{ steps.image-name.outputs.name }} cp -r /app /temp/linux-arm
+          file linux-arm/app/${{ matrix.project_name }}.dll
+
+          mkdir linux-arm64
+          docker run --rm -ti --platform linux/arm64 --volume $(pwd):/temp ${{ steps.image-name.outputs.name }} cp -r /app /temp/linux-arm64
+          file linux-arm64/app/${{ matrix.project_name }}.dll
 
       - name: Log out of Docker
         run: docker logout
