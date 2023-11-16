@@ -54,7 +54,7 @@ COPY Directory.Build.props .
 
 # Restore Admin project dependencies and tools
 WORKDIR /source/src/Admin
-RUN . /tmp/rid.txt && dotnet restore -r $RID
+RUN . /tmp/rid.txt && dotnet restore --locked-mode -r $RID
 
 # Copy required project files
 WORKDIR /source

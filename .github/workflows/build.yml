@@ -348,7 +348,7 @@ jobs:
         run: |
           cd ./src/Api
           echo "Restore"
-          dotnet restore
+          dotnet restore --locked-mode
           echo "Clean"
           dotnet clean -c "Release" -o obj/build-output/publish
           echo "Publish"
@@ -402,7 +402,7 @@ jobs:
       - name: Restore project
         run: |
           echo "Restore"
-          dotnet restore
+          dotnet restore --locked-mode
 
       - name: Publish project
         run: |

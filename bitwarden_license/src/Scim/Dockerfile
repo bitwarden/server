@@ -28,7 +28,7 @@ COPY Directory.Build.props .
 
 # Restore Scim project dependencies and tools
 WORKDIR /source/bitwarden_license/src/Scim
-RUN . /tmp/rid.txt && dotnet restore -r $RID
+RUN . /tmp/rid.txt && dotnet restore --locked-mode -r $RID
 
 # Copy required project files
 WORKDIR /source
