@@ -1,4 +1,4 @@
-namespace Bit.Identity.IdentityServer;
+﻿namespace Bit.Identity.IdentityServer;
 
 public static class Constants
 {
