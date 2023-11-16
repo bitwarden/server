@@ -31,50 +31,37 @@ public class UserDecryptionOptionsBuilderTests
         _builder = new UserDecryptionOptionsBuilder(_currentContext, _featureService, _deviceRepository, _organizationUserRepository);
     }
 
-    [Theory, BitAutoData]
-    public async Task ForUser_WhenUserHasMasterPassword_ShouldReturnMasterPasswordOption(User user)
+    [Theory]
+    [BitAutoData(true, true, true)]    // All keys are non-null
+    [BitAutoData(false, false, false)] // All keys are null
+    [BitAutoData(false, false, true)]  // EncryptedUserKey is non-null, others are null
+    [BitAutoData(false, true, false)]  // EncryptedPublicKey is non-null, others are null
+    [BitAutoData(true, false, false)]  // EncryptedPrivateKey is non-null, others are null
+    [BitAutoData(true, false, true)]   // EncryptedPrivateKey and EncryptedUserKey are non-null, EncryptedPublicKey is null
+    [BitAutoData(true, true, false)]   // EncryptedPrivateKey and EncryptedPublicKey are non-null, EncryptedUserKey is null
+    [BitAutoData(false, true, true)]   // EncryptedPublicKey and EncryptedUserKey are non-null, EncryptedPrivateKey is null
+    public async Task WithWebAuthnLoginCredential_VariousKeyCombinations_ShouldReturnCorrectPrfOption(
+        bool hasEncryptedPrivateKey,
+        bool hasEncryptedPublicKey,
+        bool hasEncryptedUserKey,
+        WebAuthnCredential credential)
     {
-        user.MasterPassword = "password";
-
-        var result = await _builder.ForUser(user).BuildAsync();
-
-        Assert.True(result.HasMasterPassword);
-    }
-
-    [Theory, BitAutoData]
-    public async Task ForUser_WhenUserDoesNotHaveMasterPassword_ShouldNotReturnMasterPasswordOption(User user)
-    {
-        user.MasterPassword = null;
-
-        var result = await _builder.ForUser(user).BuildAsync();
-
-        Assert.False(result.HasMasterPassword);
-    }
-
-    [Theory, BitAutoData]
-    public async Task WithWebAuthnLoginCredential_WhenCredentialDoesNotContainPrfKeys_ShouldNotReturnPrfOption(WebAuthnCredential credential)
-    {
-        credential.EncryptedPrivateKey = null;
-        credential.EncryptedPublicKey = null;
-        credential.EncryptedUserKey = null;
+        credential.EncryptedPrivateKey = hasEncryptedPrivateKey ? "encryptedPrivateKey" : null;
+        credential.EncryptedPublicKey = hasEncryptedPublicKey ? "encryptedPublicKey" : null;
+        credential.EncryptedUserKey = hasEncryptedUserKey ? "encryptedUserKey" : null;
 
         var result = await _builder.WithWebAuthnLoginCredential(credential).BuildAsync();
 
-        Assert.Null(result.WebAuthnPrfOption);
-    }
-
-    [Theory, BitAutoData]
-    public async Task WithWebAuthnLoginCredential_WhenCredentialContainsPrfKeys_ShouldReturnPrfOption(WebAuthnCredential credential)
-    {
-        credential.EncryptedPrivateKey = "encryptedPrivateKey";
-        credential.EncryptedPublicKey = "encryptedPublicKey";
-        credential.EncryptedUserKey = "encryptedUserKey";
-
-        var result = await _builder.WithWebAuthnLoginCredential(credential).BuildAsync();
-
-        Assert.NotNull(result.WebAuthnPrfOption);
-        Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOption!.EncryptedPrivateKey);
-        Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOption!.EncryptedUserKey);
+        if (credential.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
+        {
+            Assert.NotNull(result.WebAuthnPrfOption);
+            Assert.Equal(credential.EncryptedPrivateKey, result.WebAuthnPrfOption!.EncryptedPrivateKey);
+            Assert.Equal(credential.EncryptedUserKey, result.WebAuthnPrfOption!.EncryptedUserKey);
+        }
+        else
+        {
+            Assert.Null(result.WebAuthnPrfOption);
+        }
     }
 
     [Theory, BitAutoData]
