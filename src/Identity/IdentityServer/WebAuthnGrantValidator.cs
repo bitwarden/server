@@ -117,6 +117,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
 
     protected override Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
     {
+        // We consider Fido2 userVerification a second factor, so we don't require a second factor here.
         return Task.FromResult(new Tuple<bool, Organization>(false, null));
     }
 
