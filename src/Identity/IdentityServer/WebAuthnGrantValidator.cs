@@ -104,7 +104,7 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
         List<Claim> claims, Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
-            identityProvider: "bitwarden",
+            identityProvider: Constants.IdentityProvider,
             claims: claims.Count > 0 ? claims : null,
             customResponse: customResponse);
         return Task.CompletedTask;
