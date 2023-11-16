@@ -741,7 +741,6 @@ public class StripePaymentService : IPaymentService
         SubscriptionUpdate subscriptionUpdate, DateTime? prorationDate)
     {
         // remember, when in doubt, throw
-
         var sub = await _stripeAdapter.SubscriptionGetAsync(storableSubscriber.GatewaySubscriptionId);
         if (sub == null)
         {
@@ -840,6 +839,13 @@ public class StripePaymentService : IPaymentService
         }
 
         return paymentIntentClientSecret;
+    }
+
+    public async Task<string> AdjustPlanAsync(Organization organization, StaticStore.Plan currentPlan,
+        StaticStore.Plan newPlan, DateTime? prorationDate = null)
+    {
+        throw new NotImplementedException();
+        await Task.FromResult("todo");
     }
 
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
