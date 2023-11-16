@@ -243,6 +243,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                                               "You cannot decrease your subscription below your current occupied seat count.");
             }
         }
+
+        // Check that SM seats aren't greater than password manager seats
+        if (organization.Seats < update.SmSeats.Value)
+        {
+            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
+        }
     }
 
     private async Task ValidateSmServiceAccountsUpdateAsync(SecretsManagerSubscriptionUpdate update)
