@@ -311,6 +311,8 @@ jobs:
           mkdir linux-amd64
           docker run --rm --platform linux/amd64 --volume $(pwd):/temp --entrypoint bash \
           ${{ steps.image-name.outputs.name }} -c "cp -r ./ /temp/linux-amd64"
+          ls -alh
+          ls -alh linux-amd64
           file linux-amd64/${{ matrix.project_name }}.dll
 
           mkdir linux-arm
