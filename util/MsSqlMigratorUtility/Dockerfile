@@ -23,6 +23,7 @@ WORKDIR /source
 COPY src/Core/*.csproj ./src/Core/
 COPY util/Migrator/*.csproj ./util/Migrator/
 COPY util/MsSqlMigratorUtility/*.csproj ./util/MsSqlMigratorUtility/
+COPY Directory.Build.props .
 
 # Restore MsSqlMigratorUtility project dependencies and tools
 WORKDIR /source/util/MsSqlMigratorUtility
@@ -33,6 +34,7 @@ WORKDIR /source
 COPY src/Core/. ./src/Core/
 COPY util/Migrator/. ./util/Migrator/
 COPY util/MsSqlMigratorUtility/. ./util/MsSqlMigratorUtility/
+COPY .git/. ./.git/
 
 # Build MsSqlMigratorUtility app
 WORKDIR /source/util/MsSqlMigratorUtility
