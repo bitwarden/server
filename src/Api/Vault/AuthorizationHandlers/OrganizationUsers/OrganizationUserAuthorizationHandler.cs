@@ -66,7 +66,9 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
                 org.Permissions.ManageGroups ||
                 org.Permissions.ManageUsers ||
                 org.Permissions.EditAnyCollection ||
-                org.Permissions.DeleteAnyCollection)
+                org.Permissions.DeleteAnyCollection ||
+                org.Permissions.CreateNewCollections ||
+                !org.LimitCollectionCreationDeletion)
             {
                 context.Succeed(requirement);
             }
