@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<StaticClientStore>();
         services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
+        services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services
@@ -45,7 +46,8 @@ public static class ServiceCollectionExtensions
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
             .AddPersistedGrantStore<PersistedGrantStore>()
             .AddClientStore<ClientStore>()
-            .AddIdentityServerCertificate(env, globalSettings);
+            .AddIdentityServerCertificate(env, globalSettings)
+            .AddExtensionGrantValidator<WebAuthnGrantValidator>();
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;

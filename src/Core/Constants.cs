@@ -38,6 +38,11 @@ public static class Constants
     /// regardless of whether there is a proration or not.
     /// </summary>
     public const string AlwaysInvoice = "always_invoice";
+
+    /// <summary>
+    /// Used by IdentityServer to identify our own provider.
+    /// </summary>
+    public const string IdentityProvider = "bitwarden";
 }
 
 public static class TokenPurposes
@@ -57,6 +62,7 @@ public static class FeatureFlagKeys
     public const string PasswordlessLogin = "passwordless-login";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
     public const string Fido2VaultCredentials = "fido2-vault-credentials";
+    public const string VaultOnboarding = "vault-onboarding";
     public const string AutofillV2 = "autofill-v2";
     public const string BrowserFilelessImport = "browser-fileless-import";
     public const string FlexibleCollections = "flexible-collections";
