@@ -38,6 +38,11 @@ public static class Constants
     /// regardless of whether there is a proration or not.
     /// </summary>
     public const string AlwaysInvoice = "always_invoice";
+
+    /// <summary>
+    /// Used by IdentityServer to identify our own provider.
+    /// </summary>
+    public const string IdentityProvider = "bitwarden";
 }
 
 public static class TokenPurposes
