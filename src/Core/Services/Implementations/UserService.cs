@@ -584,11 +584,9 @@ public class UserService : UserManager<User>, IUserService, IDisposable
         return true;
     }
 
-    public Task<AssertionOptions> StartWebAuthnLoginAssertionAsync()
+    public AssertionOptions StartWebAuthnLoginAssertion()
     {
-        var options = _fido2.GetAssertionOptions(Enumerable.Empty<PublicKeyCredentialDescriptor>(), UserVerificationRequirement.Required);
-
-        return Task.FromResult(options);
+        return _fido2.GetAssertionOptions(Enumerable.Empty<PublicKeyCredentialDescriptor>(), UserVerificationRequirement.Required);
     }
 
     public async Task<(User, WebAuthnCredential)> CompleteWebAuthLoginAssertionAsync(AssertionOptions options, AuthenticatorAssertionRawResponse assertionResponse)

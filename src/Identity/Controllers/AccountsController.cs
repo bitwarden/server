@@ -83,9 +83,9 @@ public class AccountsController : Controller
 
     [HttpPost("webauthn/assertion-options")]
     [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
-    public async Task<WebAuthnLoginAssertionOptionsResponseModel> PostWebAuthnLoginAssertionOptions()
+    public WebAuthnLoginAssertionOptionsResponseModel PostWebAuthnLoginAssertionOptions()
     {
-        var options = await _userService.StartWebAuthnLoginAssertionAsync();
+        var options = _userService.StartWebAuthnLoginAssertion();
 
         var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.Authentication, options);
         var token = _assertionOptionsDataProtector.Protect(tokenable);
