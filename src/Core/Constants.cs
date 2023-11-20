@@ -24,6 +24,11 @@ public static class Constants
     public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
 
     public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
+
+    /// <summary>
+    /// Used by IdentityServer to identify our own provider.
+    /// </summary>
+    public const string IdentityProvider = "bitwarden";
 }
 
 public static class TokenPurposes
