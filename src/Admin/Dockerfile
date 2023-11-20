@@ -5,8 +5,6 @@ FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 
 # Docker buildx supplies the value for this arg
 ARG TARGETPLATFORM
-ARG NODE_VERSION=16.20.2
-ENV NVM_DIR /usr/local/nvm
 
 # Determine proper runtime value for .NET
 # We put the value in a file to be read by later layers.
@@ -25,6 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set up Node
+ARG NODE_VERSION=16.20.2
+ENV NVM_DIR /usr/local/nvm
 RUN mkdir -p $NVM_DIR
 RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash \
     && . $NVM_DIR/nvm.sh \
@@ -51,6 +51,7 @@ COPY Directory.Build.props .
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Admin
+RUN npm ci
 RUN . /tmp/rid.txt && dotnet restore -r $RID
 
 # Copy required project files
@@ -69,9 +70,8 @@ COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY .git/. ./.git/
 
-# Build app
+# Build project
 WORKDIR /source/src/Admin
-RUN npm ci
 RUN npm run build
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Admin --no-restore --no-self-contained -r $RID
 
@@ -88,17 +88,18 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS http://+:5000
 EXPOSE 5000
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
         gosu \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy image entrypoint
+COPY src/Admin/entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+
 # Copy app from the build stage
 WORKDIR /app
 COPY --from=build /app/Admin ./
-COPY src/Admin/entrypoint.sh /
-RUN chmod +x /entrypoint.sh
 
 HEALTHCHECK CMD curl -f http://localhost:5000 || exit 1
 

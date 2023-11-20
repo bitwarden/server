@@ -56,7 +56,7 @@ COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY .git/. ./.git/
 
-# Build app
+# Build project
 WORKDIR /source/bitwarden_license/src/Sso
 RUN npm ci
 RUN npm run build

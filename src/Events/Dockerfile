@@ -39,7 +39,7 @@ COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY .git/. ./.git/
 
-# Build app
+# Build project
 WORKDIR /source/src/Events
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Events --no-restore --no-self-contained -r $RID
 

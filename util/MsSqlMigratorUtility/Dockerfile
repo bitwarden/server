@@ -36,7 +36,7 @@ COPY util/Migrator/. ./util/Migrator/
 COPY util/MsSqlMigratorUtility/. ./util/MsSqlMigratorUtility/
 COPY .git/. ./.git/
 
-# Build app
+# Build project
 WORKDIR /source/util/MsSqlMigratorUtility
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/MsSqlMigratorUtility --no-restore --no-self-contained -r $RID
 

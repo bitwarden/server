@@ -31,7 +31,7 @@ WORKDIR /source
 COPY util/Server/. ./util/Server/
 COPY .git/. ./.git/
 
-# Build app
+# Build project
 WORKDIR /source/util/Server
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Server --no-restore --no-self-contained -r $RID
 

@@ -43,7 +43,7 @@ COPY bitwarden_license/src/Commercial.Core/. ./bitwarden_license/src/Commercial.
 COPY bitwarden_license/src/Commercial.Infrastructure.EntityFramework/. ./bitwarden_license/src/Commercial.Infrastructure.EntityFramework/
 COPY .git/. ./.git/
 
-# Build app
+# Build project
 WORKDIR /source/src/Api
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Api --no-restore --no-self-contained -r $RID
 

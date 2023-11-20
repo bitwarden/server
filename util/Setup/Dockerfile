@@ -35,7 +35,7 @@ COPY util/Migrator/. ./util/Migrator/
 COPY util/Setup/. ./util/Setup/
 COPY .git/. ./.git/
 
-# Build app
+# Build project
 WORKDIR /source/util/Setup
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Setup --no-restore --no-self-contained -r $RID
 

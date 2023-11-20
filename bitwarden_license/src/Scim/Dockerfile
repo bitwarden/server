@@ -39,7 +39,7 @@ COPY src/Infrastructure.EntityFramework/. ./src/Infrastructure.EntityFramework/
 COPY src/SharedWeb/. ./src/SharedWeb/
 COPY .git/. ./.git/
 
-# Build app
+# Build project
 WORKDIR /source/bitwarden_license/src/Scim
 RUN . /tmp/rid.txt && dotnet publish -c release -o /app/Scim --no-restore --no-self-contained -r $RID
 
