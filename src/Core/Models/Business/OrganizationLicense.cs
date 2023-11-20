@@ -51,6 +51,7 @@ public class OrganizationLicense : ILicense
         UseSecretsManager = org.UseSecretsManager;
         SmSeats = org.SmSeats;
         SmServiceAccounts = org.SmServiceAccounts;
+        AllowAdminAccessToAllCollectionItems = org.AllowAdminAccessToAllCollectionItems;
 
         if (subscriptionInfo?.Subscription == null)
         {
