@@ -15,9 +15,9 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Helpers;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 using Xunit;
@@ -564,7 +564,7 @@ public class IdentityServerSsoTests
             new Claim(JwtClaimTypes.SessionId, "SOMETHING"),
             new Claim(JwtClaimTypes.AuthenticationMethod, "external"),
             new Claim(JwtClaimTypes.AuthenticationTime, DateTime.UtcNow.AddMinutes(-1).ToEpochTime().ToString())
-        }, "IdentityServer4", JwtClaimTypes.Name, JwtClaimTypes.Role));
+        }, "Duende.IdentityServer", JwtClaimTypes.Name, JwtClaimTypes.Role));
 
         authorizationCode.Subject = subject;
 

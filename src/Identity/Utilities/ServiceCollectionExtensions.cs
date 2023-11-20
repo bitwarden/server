@@ -2,9 +2,9 @@
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer;
 using Bit.SharedWeb.Utilities;
-using IdentityServer4.ResponseHandling;
-using IdentityServer4.Services;
-using IdentityServer4.Stores;
+using Duende.IdentityServer.ResponseHandling;
+using Duende.IdentityServer.Services;
+using Duende.IdentityServer.Stores;
 
 namespace Bit.Identity.Utilities;
 
@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
                     options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
                 }
                 options.InputLengthRestrictions.UserName = 256;
+                options.KeyManagement.Enabled = false;
             })
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())
