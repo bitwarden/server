@@ -7,8 +7,11 @@ namespace Bit.Core.Auth.Models.Business.Tokenables;
 
 public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
 {
-    // 7 minutes = max webauthn timeout (6 minutes) + slack for miscellaneous delays
-    private const double _tokenLifetimeInHours = (double)7 / 60;
+    // Lifetime 17 minutes =
+    //  - 6 Minutes for Attestation (max webauthn timeout)
+    //  - 6 Minutes for PRF Assertion (max webauthn timeout)
+    //  - 5 minutes for user to complete the process (name their passkey, etc)
+    private static readonly TimeSpan _tokenLifetime = TimeSpan.FromMinutes(17);
     public const string ClearTextPrefix = "BWWebAuthnLoginAssertionOptions_";
     public const string DataProtectorPurpose = "WebAuthnLoginAssertionOptionsDataProtector";
     public const string TokenIdentifier = "WebAuthnLoginAssertionOptionsToken";
@@ -20,7 +23,7 @@ public class WebAuthnLoginAssertionOptionsTokenable : ExpiringTokenable
     [JsonConstructor]
     public WebAuthnLoginAssertionOptionsTokenable()
     {
-        ExpirationDate = DateTime.UtcNow.AddHours(_tokenLifetimeInHours);
+        ExpirationDate = DateTime.UtcNow.Add(_tokenLifetime);
     }
 
     public WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope scope, AssertionOptions options) : this()
