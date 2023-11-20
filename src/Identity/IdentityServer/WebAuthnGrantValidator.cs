@@ -11,9 +11,9 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
-using Fido2NetLib;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Validation;
+using Fido2NetLib;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Distributed;
 
