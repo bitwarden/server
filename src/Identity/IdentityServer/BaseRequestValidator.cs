@@ -97,7 +97,7 @@ public abstract class BaseRequestValidator<T> where T : class
         _cacheEntryOptions = new DistributedCacheEntryOptions
         {
             // This sets the time an item is cached to 17 minutes. This value is hard coded
-            // to 15 because to it covers all time-out windows for both Authenticators and
+            // to 17 because to it covers all time-out windows for both Authenticators and
             // Email TOTP.
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(17)
         };
