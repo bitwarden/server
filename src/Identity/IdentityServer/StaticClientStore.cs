@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Enums;
 using Bit.Core.Settings;
-using IdentityServer4.Models;
+using Duende.IdentityServer.Models;
 
 namespace Bit.Identity.IdentityServer;
 

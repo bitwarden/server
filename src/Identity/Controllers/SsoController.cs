@@ -5,9 +5,9 @@ using Bit.Core.Entities;
 using Bit.Core.Models.Api;
 using Bit.Core.Repositories;
 using Bit.Identity.Models;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Services;
 using IdentityModel;
-using IdentityServer4;
-using IdentityServer4.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
@@ -267,7 +267,7 @@ public class SsoController : Controller
         }
     }
 
-    private bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+    private bool IsNativeClient(Duende.IdentityServer.Models.AuthorizationRequest context)
     {
         return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
            && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
