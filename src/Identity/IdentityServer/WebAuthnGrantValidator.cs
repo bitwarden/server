@@ -60,7 +60,8 @@ public class WebAuthnGrantValidator : BaseRequestValidator<ExtensionGrantValidat
 
     public async Task ValidateAsync(ExtensionGrantValidationContext context)
     {
-        if (!FeatureService.IsEnabled(FeatureFlagKeys.PasswordlessLogin, CurrentContext)) {
+        if (!FeatureService.IsEnabled(FeatureFlagKeys.PasswordlessLogin, CurrentContext))
+        {
             context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant);
             return;
         }
