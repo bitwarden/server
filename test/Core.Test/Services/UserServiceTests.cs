@@ -192,7 +192,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void CompleteWebAuthLoginRegistrationAsync_ExceedsExistingCredentialsLimit_ReturnsFalse(SutProvider<UserService> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
+    public async Task CompleteWebAuthLoginRegistrationAsync_ExceedsExistingCredentialsLimit_ReturnsFalse(SutProvider<UserService> sutProvider, User user, CredentialCreateOptions options, AuthenticatorAttestationRawResponse response, Generator<WebAuthnCredential> credentialGenerator)
     {
         // Arrange
         var existingCredentials = credentialGenerator.Take(5).ToList();
@@ -207,7 +207,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void CompleteWebAuthLoginAssertionAsync_InvalidUserHandle_ThrowsBadRequestException(SutProvider<UserService> sutProvider, AssertionOptions options, AuthenticatorAssertionRawResponse response)
+    public async Task CompleteWebAuthLoginAssertionAsync_InvalidUserHandle_ThrowsBadRequestException(SutProvider<UserService> sutProvider, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
         response.Response.UserHandle = Encoding.UTF8.GetBytes("invalid-user-handle");
@@ -220,7 +220,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void CompleteWebAuthLoginAssertionAsync_UserNotFound_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
+    public async Task CompleteWebAuthLoginAssertionAsync_UserNotFound_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
         response.Response.UserHandle = user.Id.ToByteArray();
@@ -234,7 +234,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void CompleteWebAuthLoginAssertionAsync_NoMatchingCredentialExists_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
+    public async Task CompleteWebAuthLoginAssertionAsync_NoMatchingCredentialExists_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response)
     {
         // Arrange
         response.Response.UserHandle = user.Id.ToByteArray();
@@ -249,7 +249,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void CompleteWebAuthLoginAssertionAsync_AssertionFails_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
+    public async Task CompleteWebAuthLoginAssertionAsync_AssertionFails_ThrowsBadRequestException(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
     {
         // Arrange
         var credentialId = Guid.NewGuid().ToByteArray();
@@ -270,7 +270,7 @@ public class UserServiceTests
     }
 
     [Theory, BitAutoData]
-    public async void CompleteWebAuthLoginAssertionAsync_AssertionSucceeds_ReturnsUserAndCredential(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
+    public async Task CompleteWebAuthLoginAssertionAsync_AssertionSucceeds_ReturnsUserAndCredential(SutProvider<UserService> sutProvider, User user, AssertionOptions options, AuthenticatorAssertionRawResponse response, WebAuthnCredential credential, AssertionVerificationResult assertionResult)
     {
         // Arrange
         var credentialId = Guid.NewGuid().ToByteArray();
