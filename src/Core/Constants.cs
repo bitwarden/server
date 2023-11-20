@@ -38,6 +38,11 @@ public static class Constants
     /// regardless of whether there is a proration or not.
     /// </summary>
     public const string AlwaysInvoice = "always_invoice";
+
+    /// <summary>
+    /// Used by IdentityServer to identify our own provider.
+    /// </summary>
+    public const string IdentityProvider = "bitwarden";
 }
 
 public static class TokenPurposes
@@ -65,6 +70,7 @@ public static class FeatureFlagKeys
     public const string ItemShare = "item-share";
     public const string BillingPlansUpgrade = "billing-plans-upgrade";
     public const string BillingStarterPlan = "billing-starter-plan";
+    public const string KeyRotationImprovements = "key-rotation-improvements";
 
     public static List<string> GetAllKeys()
     {

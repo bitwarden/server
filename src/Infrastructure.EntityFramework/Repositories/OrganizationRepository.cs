@@ -96,12 +96,17 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
     public async Task<ICollection<Core.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
     {
         using var scope = ServiceScopeFactory.CreateScope();
+
         var dbContext = GetDatabaseContext(scope);
-        var query = from o in dbContext.Organizations
-                    where o.PlanType >= PlanType.TeamsMonthly2020 && o.PlanType <= PlanType.EnterpriseAnnually &&
-                          !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
-                          (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
-                    select o;
+
+        var query =
+            from o in dbContext.Organizations
+            where
+                ((o.PlanType >= PlanType.TeamsMonthly2019 && o.PlanType <= PlanType.EnterpriseAnnually2019) ||
+                 (o.PlanType >= PlanType.TeamsMonthly2020 && o.PlanType <= PlanType.EnterpriseAnnually)) &&
+                !dbContext.ProviderOrganizations.Any(po => po.OrganizationId == o.Id) &&
+                (string.IsNullOrWhiteSpace(name) || EF.Functions.Like(o.Name, $"%{name}%"))
+            select o;
 
         if (string.IsNullOrWhiteSpace(ownerEmail))
         {

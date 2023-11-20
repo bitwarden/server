@@ -394,26 +394,27 @@
       },
       "LaunchDarkly.CommonSdk": {
         "type": "Transitive",
-        "resolved": "6.0.0",
-        "contentHash": "YYYq+41gZRMQ8dIoMC6HOq/dI+4RY3HsexLLAaE9T1+1tVMeQkbCqak7sVeKX4QcE7xlXx23lWgipYUkRoRUyw==",
+        "resolved": "6.2.0",
+        "contentHash": "eLeb+tTNLwOxlUIsZWzJlcPmG9Wyf20NYyucP6MW6aqKW6doKFeSO+aJe0z+WyijbvfX1Dp1U1HQatOu6fa1Gg==",
         "dependencies": {
+          "LaunchDarkly.Logging": "2.0.0",
           "System.Collections.Immutable": "1.7.1"
         }
       },
       "LaunchDarkly.EventSource": {
         "type": "Transitive",
-        "resolved": "5.0.1",
-        "contentHash": "DN44Ry5M4lyrjiF7LEu0Ijco7Wm8R7mJopN+giYsYjkQlszsXdFvm3POoehIDAOtL1HHl5bZvF9k9xK034u3IA==",
+        "resolved": "5.1.0",
+        "contentHash": "PztDWiMvPWODx+kfBnCroZ8Lpya4nPc7ZO4TZysOogODbVXDDPDYrdcgVivCMgf4davhGrp61ekvZc+Uy1NYMA==",
         "dependencies": {
-          "LaunchDarkly.Logging": "[1.0.1, 3.0.0)"
+          "LaunchDarkly.Logging": "[2.0.0, 3.0.0)"
         }
       },
       "LaunchDarkly.InternalSdk": {
         "type": "Transitive",
-        "resolved": "3.1.0",
-        "contentHash": "jW8VEfFciuCcJUEuvSzmrbMVYYXwGL/ZWHUZLiA4aDOQ1LcEXp32uK405NQW/izEypUfWB+9TaSjPpFIC+5Wzw==",
+        "resolved": "3.3.0",
+        "contentHash": "TBvs/B6iyXp9MqRKjIoBZ/T0+/xgp5xg+MuHqr5U+N5+7DghtI2FnsmgeBedTIeQdA3Tk8Z4Bj4hlqU9FBiEnw==",
         "dependencies": {
-          "LaunchDarkly.CommonSdk": "6.0.0",
+          "LaunchDarkly.CommonSdk": "6.2.0",
           "LaunchDarkly.Logging": "[2.0.0, 3.0.0)",
           "System.Collections.Immutable": "1.7.1"
         }
@@ -428,13 +429,13 @@
       },
       "LaunchDarkly.ServerSdk": {
         "type": "Transitive",
-        "resolved": "7.0.0",
-        "contentHash": "gkTWb+f5QlsXIqFAciBef3qKZU2y0Hy3Fpt4pvZoxNcnBKg2PNTDSnbpbYEKPeQ1yk1avNaI/tKprnahfrmJFg==",
+        "resolved": "8.0.0",
+        "contentHash": "vosFEXYJABuIDIA0+6sncalTmrKXEkBKeqzuP9/vvcCVlFSXUl/ZnrkrAVg3ViDWDi7kjpJSk2W3h5D0TUfCGA==",
         "dependencies": {
           "LaunchDarkly.Cache": "1.0.2",
-          "LaunchDarkly.CommonSdk": "6.0.0",
-          "LaunchDarkly.EventSource": "5.0.1",
-          "LaunchDarkly.InternalSdk": "3.1.0",
+          "LaunchDarkly.CommonSdk": "6.2.0",
+          "LaunchDarkly.EventSource": "5.1.0",
+          "LaunchDarkly.InternalSdk": "3.3.0",
           "LaunchDarkly.Logging": "2.0.0",
           "System.Collections.Immutable": "1.7.1"
         }
@@ -2817,7 +2818,7 @@
           "Handlebars.Net": "[2.1.2, )",
           "IdentityServer4": "[4.1.2, )",
           "IdentityServer4.AccessTokenValidation": "[3.0.1, )",
-          "LaunchDarkly.ServerSdk": "[7.0.0, )",
+          "LaunchDarkly.ServerSdk": "[8.0.0, )",
           "MailKit": "[4.2.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[6.0.4, )",
           "Microsoft.Azure.Cosmos.Table": "[1.0.8, )",
