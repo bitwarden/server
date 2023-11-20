@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
