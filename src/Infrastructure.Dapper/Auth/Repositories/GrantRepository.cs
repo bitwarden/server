@@ -93,6 +93,6 @@ public class GrantRepository : BaseRepository<Grant>, IGrantRepository
 
     private async Task DeleteCacheAsync(Grant obj)
     {
-        await WriteThroughCacheDeleteAsync(new[] { new KeyValuePair<string, string>("Key", obj.Key) });
+        await DeleteCacheAsync(new[] { new KeyValuePair<string, string>("Key", obj.Key) });
     }
 }

@@ -54,17 +54,13 @@ public abstract class BaseRepository<T>
     /// <param name="dataAccessFunc">The function to access the data from the data source, if needed.</param>
     /// <param name="entryOptions">The caching options e.g. TTL.</param>
     /// <returns>The data object, or default of T if the data could not be loaded.</returns>
-    protected async Task<T> GetOrCreateThroughCacheAsync(
-        string objectKey,
-        string instanceKey,
-        Func<Task<T>> dataAccessFunc,
+    protected async Task<T> GetOrCreateThroughCacheAsync(string objectKey, string instanceKey, Func<Task<T>> dataAccessFunc,
         DistributedCacheEntryOptions entryOptions)
     {
         // return directly from the data store if cache is unavailable
         if (_cache == null) return await dataAccessFunc();
 
-        var key = $"{typeof(T).Name}:{objectKey}:{instanceKey}";
-        var result = await _cache.GetAsync(key, dataAccessFunc, entryOptions);
+        var result = await _cache.GetAsync(GetCacheKey(objectKey, instanceKey), dataAccessFunc, entryOptions);
 
         return result.Result;
     }
@@ -72,14 +68,19 @@ public abstract class BaseRepository<T>
     /// <summary>
     /// Provides write-through caching for deleting an object.
     /// </summary>
-    /// <param name="objectAndInstanceKeys">The pairs of object keys and instance keys.</param>
-    protected async Task WriteThroughCacheDeleteAsync(IEnumerable<KeyValuePair<string, string>> objectAndInstanceKeys)
+    /// <param name="objectAndInstanceKeys">The pairs of object and instance keys.</param>
+    protected async Task DeleteCacheAsync(IEnumerable<KeyValuePair<string, string>> objectAndInstanceKeys)
     {
         if (_cache == null) return;
 
         foreach (var key in objectAndInstanceKeys)
         {
-            await _cache.RemoveAsync($"{typeof(T).Name}:{key.Key}:{key.Value}");
+            await _cache.RemoveAsync(GetCacheKey(key.Key, key.Value));
         }
+    }
+
+    private string GetCacheKey(string objectKey, string instanceKey)
+    {
+        return $"{typeof(T).Name}:{objectKey}:{instanceKey}";
     }
 }
