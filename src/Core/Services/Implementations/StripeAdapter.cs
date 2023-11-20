@@ -1,5 +1,4 @@
 ﻿using Bit.Core.Models.BitStripe;
-using Stripe;
 
 namespace Bit.Core.Services;
 
@@ -17,7 +16,6 @@ public class StripeAdapter : IStripeAdapter
     private readonly Stripe.BankAccountService _bankAccountService;
     private readonly Stripe.PriceService _priceService;
     private readonly Stripe.TestHelpers.TestClockService _testClockService;
-    private readonly Stripe.InvoiceItemService _invoiceItemService;
 
     public StripeAdapter()
     {
@@ -33,7 +31,6 @@ public class StripeAdapter : IStripeAdapter
         _bankAccountService = new Stripe.BankAccountService();
         _priceService = new Stripe.PriceService();
         _testClockService = new Stripe.TestHelpers.TestClockService();
-        _invoiceItemService = new Stripe.InvoiceItemService();
     }
 
     public Task<Stripe.Customer> CustomerCreateAsync(Stripe.CustomerCreateOptions options)
@@ -82,16 +79,6 @@ public class StripeAdapter : IStripeAdapter
         return _invoiceService.UpcomingAsync(options);
     }
 
-    public Task<Stripe.Invoice> InvoiceCreateAsync(Stripe.InvoiceCreateOptions options)
-    {
-        return _invoiceService.CreateAsync(options);
-    }
-
-    public Task<Stripe.InvoiceItem> InvoiceItemCreateAsync(Stripe.InvoiceItemCreateOptions options)
-    {
-        return _invoiceItemService.CreateAsync(options);
-    }
-
     public Task<Stripe.Invoice> InvoiceGetAsync(string id, Stripe.InvoiceGetOptions options)
     {
         return _invoiceService.GetAsync(id, options);
@@ -100,11 +87,6 @@ public class StripeAdapter : IStripeAdapter
     public Task<Stripe.StripeList<Stripe.Invoice>> InvoiceListAsync(Stripe.InvoiceListOptions options)
     {
         return _invoiceService.ListAsync(options);
-    }
-
-    public IEnumerable<InvoiceItem> InvoiceItemListAsync(InvoiceItemListOptions options)
-    {
-        return _invoiceItemService.ListAutoPaging(options);
     }
 
     public Task<Stripe.Invoice> InvoiceUpdateAsync(string id, Stripe.InvoiceUpdateOptions options)
