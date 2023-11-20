@@ -99,7 +99,7 @@ public abstract class BaseRequestValidator<T> where T : class
             // This sets the time an item is cached to 15 minutes. This value is hard coded
             // to 15 because to it covers all time-out windows for both Authenticators and
             // Email TOTP.
-            AbsoluteExpirationRelativeToNow = new TimeSpan(0, 15, 0)
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15)
         };
         UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
     }
