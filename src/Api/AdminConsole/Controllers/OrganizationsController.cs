@@ -29,7 +29,6 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Constants = Microsoft.VisualBasic.Constants;
 
 namespace Bit.Api.AdminConsole.Controllers;
 
