@@ -264,9 +264,16 @@ public class StripeController : Controller
 
                 await SendEmails(new List<string> { organization.BillingEmail });
 
-                var ownerEmails = await _organizationRepository.GetOwnerEmailAddressesById(organization.Id);
+                /*
+                 * TODO: https://bitwarden.atlassian.net/browse/PM-4862
+                 * Disabling this as part of a hot fix. It needs to check whether the organization
+                 * belongs to a Reseller provider and only send an email to the organization owners if it does.
+                 * It also requires a new email template as the current one contains too much billing information.
+                 */
 
-                await SendEmails(ownerEmails);
+                // var ownerEmails = await _organizationRepository.GetOwnerEmailAddressesById(organization.Id);
+
+                // await SendEmails(ownerEmails);
             }
             else if (userId.HasValue)
             {
