@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Api.Request;
+﻿using System.Runtime.CompilerServices;
+using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -40,7 +41,7 @@ public class DeviceServiceTests
     }
 
     /// <summary>
-    /// Story: A user choosed to keep trust in one of their current trusted devices, but not in another one of their
+    /// Story: A user chose to keep trust in one of their current trusted devices, but not in another one of their
     /// devices. We will rotate the trust of the currently signed in device as well as the device they chose but will
     /// remove the trust of the device they didn't give new keys for.
     /// </summary>
@@ -116,11 +117,11 @@ public class DeviceServiceTests
             .Received(3)
             .UpsertAsync(Arg.Any<Device>());
 
-        static void SetupOldTrust(Device device)
+        static void SetupOldTrust(Device device, [CallerArgumentExpression(nameof(device))] string expression = null)
         {
-            device.EncryptedPublicKey = $"old_public_{nameof(device)}";
-            device.EncryptedPrivateKey = $"old_private_{nameof(device)}";
-            device.EncryptedUserKey = $"old_user_{nameof(device)}";
+            device.EncryptedPublicKey = $"old_public_{expression}";
+            device.EncryptedPrivateKey = $"old_private_{expression}";
+            device.EncryptedUserKey = $"old_user_{expression}";
         }
     }
 
