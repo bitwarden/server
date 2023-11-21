@@ -858,12 +858,27 @@ public class StripePaymentService : IPaymentService
         return paymentIntentClientSecret;
     }
 
-    public async Task<string> AdjustPlanAsync(Organization organization, StaticStore.Plan currentPlan,
-        StaticStore.Plan newPlan, DateTime? prorationDate = null)
-    {
-        throw new NotImplementedException();
-        await Task.FromResult("todo");
-    }
+    public Task<string> AdjustSubscription(
+        Organization organization,
+        StaticStore.Plan updatedPlan,
+        int updatedPasswordManagerSeats,
+        int? updatedSecretsManagerSeats,
+        int? updatedSecretsManagerServiceAccounts,
+        long? updatedStorage,
+        DateTime? prorationDate = null)
+        => FinalizeSubscriptionChangeAsync(
+            organization,
+            new CompleteSubscriptionUpdate(
+                organization,
+                new SubscriptionData
+                {
+                    Plan = updatedPlan,
+                    PasswordManagerSeats = updatedPasswordManagerSeats,
+                    SecretsManagerSeats = updatedSecretsManagerSeats,
+                    SecretsManagerServiceAccounts = updatedSecretsManagerServiceAccounts,
+                    Storage = updatedStorage
+                }),
+            prorationDate);
 
     public Task<string> AdjustSeatsAsync(Organization organization, StaticStore.Plan plan, int additionalSeats, DateTime? prorationDate = null)
     {
