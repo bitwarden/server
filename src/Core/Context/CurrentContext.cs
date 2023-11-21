@@ -7,7 +7,9 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Microsoft.AspNetCore.Http;
@@ -22,6 +24,7 @@ public class CurrentContext : ICurrentContext
     private bool _builtClaimsPrincipal;
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
     private IEnumerable<ProviderUserOrganizationDetails> _providerUserOrganizations;
+    private readonly IApplicationCacheService _applicationCacheService;
 
     public virtual HttpContext HttpContext { get; set; }
     public virtual Guid? UserId { get; set; }
@@ -44,10 +47,12 @@ public class CurrentContext : ICurrentContext
 
     public CurrentContext(
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
+        IProviderUserRepository providerUserRepository,
+        IApplicationCacheService applicationCacheService)
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerUserRepository = providerUserRepository;
+        _applicationCacheService = applicationCacheService;
     }
 
     public async virtual Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings)
@@ -108,10 +113,11 @@ public class CurrentContext : ICurrentContext
 
         _builtClaimsPrincipal = true;
         IpAddress = HttpContext.GetIpAddress(globalSettings);
-        await SetContextAsync(user);
+        var cachedOrgs = await _applicationCacheService.GetOrganizationAbilitiesAsync();
+        await SetContextAsync(user, cachedOrgs);
     }
 
-    public virtual Task SetContextAsync(ClaimsPrincipal user)
+    public virtual Task SetContextAsync(ClaimsPrincipal user, IDictionary<Guid, OrganizationAbility> cachedOrgs)
     {
         if (user == null || !user.Claims.Any())
         {
@@ -162,14 +168,14 @@ public class CurrentContext : ICurrentContext
 
         DeviceIdentifier = GetClaimValue(claimsDict, Claims.Device);
 
-        Organizations = GetOrganizations(claimsDict, orgApi);
+        Organizations = GetOrganizations(claimsDict, orgApi, cachedOrgs);
 
         Providers = GetProviders(claimsDict);
 
         return Task.FromResult(0);
     }
 
-    private List<CurrentContextOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi)
+    private List<CurrentContextOrganization> GetOrganizations(Dictionary<string, IEnumerable<Claim>> claimsDict, bool orgApi, IDictionary<Guid, OrganizationAbility> cachedOrgs)
     {
         var accessSecretsManager = claimsDict.ContainsKey(Claims.SecretsManagerAccess)
             ? claimsDict[Claims.SecretsManagerAccess].ToDictionary(s => s.Value, _ => true)
@@ -184,6 +190,7 @@ public class CurrentContext : ICurrentContext
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Owner,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    LimitCollectionCreationDeletion = !cachedOrgs.ContainsKey(new Guid(c.Value)) || cachedOrgs[new Guid(c.Value)].LimitCollectionCreationDeletion,
                 }));
         }
         else if (orgApi && OrganizationId.HasValue)
@@ -203,6 +210,7 @@ public class CurrentContext : ICurrentContext
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Admin,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    LimitCollectionCreationDeletion = !cachedOrgs.ContainsKey(new Guid(c.Value)) || cachedOrgs[new Guid(c.Value)].LimitCollectionCreationDeletion,
                 }));
         }
 
@@ -214,6 +222,7 @@ public class CurrentContext : ICurrentContext
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.User,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    LimitCollectionCreationDeletion = !cachedOrgs.ContainsKey(new Guid(c.Value)) || cachedOrgs[new Guid(c.Value)].LimitCollectionCreationDeletion,
                 }));
         }
 
@@ -225,6 +234,7 @@ public class CurrentContext : ICurrentContext
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Manager,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    LimitCollectionCreationDeletion = !cachedOrgs.ContainsKey(new Guid(c.Value)) || cachedOrgs[new Guid(c.Value)].LimitCollectionCreationDeletion,
                 }));
         }
 
@@ -237,6 +247,7 @@ public class CurrentContext : ICurrentContext
                     Type = OrganizationUserType.Custom,
                     Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict),
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    LimitCollectionCreationDeletion = !cachedOrgs.ContainsKey(new Guid(c.Value)) || cachedOrgs[new Guid(c.Value)].LimitCollectionCreationDeletion,
                 }));
         }
 

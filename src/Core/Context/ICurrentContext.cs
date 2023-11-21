@@ -6,6 +6,7 @@ using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Http;
@@ -32,7 +33,7 @@ public interface ICurrentContext
     Task BuildAsync(HttpContext httpContext, GlobalSettings globalSettings);
     Task BuildAsync(ClaimsPrincipal user, GlobalSettings globalSettings);
 
-    Task SetContextAsync(ClaimsPrincipal user);
+    Task SetContextAsync(ClaimsPrincipal user, IDictionary<Guid, OrganizationAbility> cachedOrgs);
 
 
     Task<bool> OrganizationUser(Guid orgId);
