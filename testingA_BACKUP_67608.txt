@@ -1,0 +1,6 @@
+Testing A
+<<<<<<< HEAD
+more edits to a
+=======
+Testing A1
+>>>>>>> 6e0a99492 (Editing A)
