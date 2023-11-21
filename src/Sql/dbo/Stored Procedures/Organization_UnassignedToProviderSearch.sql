@@ -21,7 +21,7 @@ BEGIN
             INNER JOIN
                 [dbo].[User] U ON U.[Id] = OU.[UserId]
         WHERE
-            O.[PlanType] >= 8 AND O.[PlanType] <= 11 -- Get 'Team' and 'Enterprise' Organizations
+            ((O.[PlanType] >= 2 AND O.[PlanType] <= 5) OR (O.[PlanType] >= 8 AND O.[PlanType] <= 15)) -- All 'Teams' and 'Enterprise' organizations
             AND NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] PO WHERE PO.[OrganizationId] = O.[Id])
             AND (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
             AND (U.[Email] LIKE @OwnerLikeSearch)
@@ -36,7 +36,7 @@ BEGIN
         FROM
             [dbo].[OrganizationView] O
         WHERE
-            O.[PlanType] >= 8 AND O.[PlanType] <= 11 -- Get 'Team' and 'Enterprise' Organizations
+            ((O.[PlanType] >= 2 AND O.[PlanType] <= 5) OR (O.[PlanType] >= 8 AND O.[PlanType] <= 15)) -- All 'Teams' and 'Enterprise' organizations
             AND NOT EXISTS (SELECT * FROM [dbo].[ProviderOrganizationView] PO WHERE PO.[OrganizationId] = O.[Id])
             AND (@Name IS NULL OR O.[Name] LIKE @NameLikeSearch)
         ORDER BY O.[CreationDate] DESC

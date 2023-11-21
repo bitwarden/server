@@ -16,14 +16,15 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Extensions;
+using Duende.IdentityServer.Services;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4;
-using IdentityServer4.Extensions;
-using IdentityServer4.Services;
-using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using DIM = Duende.IdentityServer.Models;
 
 namespace Bit.Sso.Controllers;
 
@@ -717,7 +718,7 @@ public class AccountController : Controller
         return (logoutId, logout?.PostLogoutRedirectUri, externalAuthenticationScheme);
     }
 
-    public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+    public bool IsNativeClient(DIM.AuthorizationRequest context)
     {
         return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
            && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);
