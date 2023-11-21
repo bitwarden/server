@@ -3077,25 +3077,25 @@
           "AspNetCore.HealthChecks.SqlServer": "[6.0.2, )",
           "AspNetCore.HealthChecks.Uris": "[6.0.3, )",
           "Azure.Messaging.EventGrid": "[4.10.0, )",
-          "Commercial.Core": "[2023.10.2, )",
-          "Commercial.Infrastructure.EntityFramework": "[2023.10.2, )",
-          "Core": "[2023.10.2, )",
-          "SharedWeb": "[2023.10.2, )",
+          "Commercial.Core": "[2023.10.3, )",
+          "Commercial.Infrastructure.EntityFramework": "[2023.10.3, )",
+          "Core": "[2023.10.3, )",
+          "SharedWeb": "[2023.10.3, )",
           "Swashbuckle.AspNetCore": "[6.5.0, )"
         }
       },
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )"
+          "Core": "[2023.10.3, )"
         }
       },
       "commercial.infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.2, )",
-          "Infrastructure.EntityFramework": "[2023.10.2, )"
+          "Core": "[2023.10.3, )",
+          "Infrastructure.EntityFramework": "[2023.10.3, )"
         }
       },
       "common": {
@@ -3103,7 +3103,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.0, )",
           "AutoFixture.Xunit2": "[4.18.0, )",
-          "Core": "[2023.10.2, )",
+          "Core": "[2023.10.3, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[1.2.0, )",
           "Microsoft.NET.Test.Sdk": "[17.8.0, )",
           "NSubstitute": "[5.1.0, )",
@@ -3155,15 +3155,15 @@
       "identity": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
-          "SharedWeb": "[2023.10.2, )",
+          "Core": "[2023.10.3, )",
+          "SharedWeb": "[2023.10.3, )",
           "Swashbuckle.AspNetCore.SwaggerGen": "[6.5.0, )"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
+          "Core": "[2023.10.3, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -3171,7 +3171,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.2, )",
+          "Core": "[2023.10.3, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -3183,8 +3183,8 @@
       "integrationtestcommon": {
         "type": "Project",
         "dependencies": {
-          "Common": "[2023.10.2, )",
-          "Identity": "[2023.10.2, )",
+          "Common": "[2023.10.3, )",
+          "Identity": "[2023.10.3, )",
           "Microsoft.AspNetCore.Mvc.Testing": "[6.0.5, )",
           "Microsoft.Extensions.Configuration": "[6.0.1, )"
         }
@@ -3192,9 +3192,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
-          "Infrastructure.Dapper": "[2023.10.2, )",
-          "Infrastructure.EntityFramework": "[2023.10.2, )"
+          "Core": "[2023.10.3, )",
+          "Infrastructure.Dapper": "[2023.10.3, )",
+          "Infrastructure.EntityFramework": "[2023.10.3, )"
         }
       }
     }

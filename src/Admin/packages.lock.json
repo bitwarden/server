@@ -2774,15 +2774,15 @@
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )"
+          "Core": "[2023.10.3, )"
         }
       },
       "commercial.infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.2, )",
-          "Infrastructure.EntityFramework": "[2023.10.2, )"
+          "Core": "[2023.10.3, )",
+          "Infrastructure.EntityFramework": "[2023.10.3, )"
         }
       },
       "core": {
@@ -2830,7 +2830,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
+          "Core": "[2023.10.3, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -2838,7 +2838,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.2, )",
+          "Core": "[2023.10.3, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -2850,7 +2850,7 @@
       "migrator": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
+          "Core": "[2023.10.3, )",
           "Microsoft.Extensions.Logging": "[6.0.0, )",
           "dbup-sqlserver": "[5.0.8, )"
         }
@@ -2858,30 +2858,30 @@
       "mysqlmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
-          "Infrastructure.EntityFramework": "[2023.10.2, )"
+          "Core": "[2023.10.3, )",
+          "Infrastructure.EntityFramework": "[2023.10.3, )"
         }
       },
       "postgresmigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
-          "Infrastructure.EntityFramework": "[2023.10.2, )"
+          "Core": "[2023.10.3, )",
+          "Infrastructure.EntityFramework": "[2023.10.3, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
-          "Infrastructure.Dapper": "[2023.10.2, )",
-          "Infrastructure.EntityFramework": "[2023.10.2, )"
+          "Core": "[2023.10.3, )",
+          "Infrastructure.Dapper": "[2023.10.3, )",
+          "Infrastructure.EntityFramework": "[2023.10.3, )"
         }
       },
       "sqlitemigrations": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.2, )",
-          "Infrastructure.EntityFramework": "[2023.10.2, )"
+          "Core": "[2023.10.3, )",
+          "Infrastructure.EntityFramework": "[2023.10.3, )"
         }
       }
     }
