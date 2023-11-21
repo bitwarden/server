@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 
