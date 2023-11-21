@@ -1,6 +1,6 @@
 ﻿using Bit.Core.Auth.Repositories;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using Grant = Bit.Core.Auth.Entities.Grant;
 
 namespace Bit.Identity.IdentityServer;
