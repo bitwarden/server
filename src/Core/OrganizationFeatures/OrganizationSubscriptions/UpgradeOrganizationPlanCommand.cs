@@ -220,8 +220,15 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         }
         else
         {
-            // TODO: Update existing sub
-            throw new BadRequestException("You can only upgrade from the free plan. Contact support.");
+            paymentIntentClientSecret = await _paymentService.AdjustSubscription(
+                organization,
+                newPlan,
+                upgrade.AdditionalSeats,
+                upgrade.AdditionalSmSeats,
+                upgrade.AdditionalServiceAccounts,
+                upgrade.AdditionalStorageGb == 0 ? null : upgrade.AdditionalStorageGb);
+
+            success = string.IsNullOrEmpty(paymentIntentClientSecret);
         }
 
         organization.BusinessName = upgrade.BusinessName;
