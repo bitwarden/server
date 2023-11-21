@@ -1,4 +1,1 @@
-Testing B
-Testing B1
-
-Adding some comments for clarity
+completely removing B to see what happens to feedback
