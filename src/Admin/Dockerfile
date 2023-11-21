@@ -51,8 +51,8 @@ COPY Directory.Build.props .
 
 # Restore project dependencies and tools
 WORKDIR /source/src/Admin
-RUN npm ci
 RUN . /tmp/rid.txt && dotnet restore -r $RID
+RUN npm ci
 
 # Copy required project files
 WORKDIR /source
