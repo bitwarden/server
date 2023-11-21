@@ -34,6 +34,11 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | b
 ENV NODE_PATH $NVM_DIR/versions/node/v$NODE_VERSION/lib/node_modules
 ENV PATH      $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
+# Copying package.json, package-lock.json, and packages.lock.json
+WORKDIR /source/src/Admin
+COPY package*.json .
+RUN npm ci
+
 # Copy csproj files as distinct layers
 WORKDIR /source
 COPY src/Admin/*.csproj ./src/Admin/
@@ -52,7 +57,6 @@ COPY Directory.Build.props .
 # Restore project dependencies and tools
 WORKDIR /source/src/Admin
 RUN . /tmp/rid.txt && dotnet restore -r $RID
-RUN npm ci
 
 # Copy required project files
 WORKDIR /source
