@@ -13,7 +13,7 @@ public class IconFetchingServiceTests : ServiceTestBase<IconFetchingService>
     [InlineData("hopin.com")] // uses svg+xml format
     [InlineData("ameritrade.com")] // redirects to tdameritrace.com
     [InlineData("icloud.com")]
-    [InlineData("bofa.com", Skip = "Broken in pipeline for .NET 6. Tracking link: https://bitwarden.atlassian.net/browse/PS-982")]
+    [InlineData("bofa.com")]
     public async Task GetIconAsync_Success(string domain)
     {
         var sut = BuildSut();

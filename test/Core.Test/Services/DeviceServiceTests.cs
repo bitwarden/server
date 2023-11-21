@@ -117,12 +117,11 @@ public class DeviceServiceTests
             .Received(3)
             .UpsertAsync(Arg.Any<Device>());
 
-        // TODO: .NET 8: Use nameof for parameter name.
-        static void SetupOldTrust(Device device, [CallerArgumentExpression("device")] string expression = null)
+        static void SetupOldTrust(Device device)
         {
-            device.EncryptedPublicKey = $"old_public_{expression}";
-            device.EncryptedPrivateKey = $"old_private_{expression}";
-            device.EncryptedUserKey = $"old_user_{expression}";
+            device.EncryptedPublicKey = $"old_public_{nameof(device)}";
+            device.EncryptedPrivateKey = $"old_private_{nameof(device)}";
+            device.EncryptedUserKey = $"old_user_{nameof(device)}";
         }
     }
 

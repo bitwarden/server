@@ -4,18 +4,18 @@ name: Validate Database
 on:
   pull_request:
     branches-ignore:
-      - 'l10n_master'
-      - 'gh-pages'
+      - "l10n_master"
+      - "gh-pages"
     paths:
-      - 'src/Sql/**'
-      - 'util/Migrator/**'
+      - "src/Sql/**"
+      - "util/Migrator/**"
   push:
     branches:
-      - 'master'
-      - 'rc'
+      - "master"
+      - "rc"
     paths:
-      - 'src/Sql/**'
-      - 'util/Migrator/**'
+      - "src/Sql/**"
+      - "util/Migrator/**"
   workflow_dispatch:
     inputs: {}
 
@@ -29,9 +29,7 @@ jobs:
 
       - name: Set up dotnet
         uses: actions/setup-dotnet@3447fd6a9f9e57506b15f895c5b76d3b197dc7c2 # v3.2.0
-        with:
-          dotnet-version: '6.0.x'
-      
+
       - name: Print environment
         run: |
           dotnet --info

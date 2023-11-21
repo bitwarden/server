@@ -564,7 +564,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organization.Id, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
+            Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).Count() == 0));
     }
 
     [Theory]
@@ -720,7 +720,7 @@ public class CipherServiceTests
 
         await sutProvider.Sut.ShareManyAsync(cipherInfos, organizationId, collectionIds, sharingUserId);
         await sutProvider.GetDependency<ICipherRepository>().Received(1).UpdateCiphersAsync(sharingUserId,
-            Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).IsNullOrEmpty()));
+            Arg.Is<IEnumerable<Cipher>>(arg => arg.Except(ciphers).Count() == 0));
     }
 
     private async Task AssertNoActionsAsync(SutProvider<CipherService> sutProvider)
