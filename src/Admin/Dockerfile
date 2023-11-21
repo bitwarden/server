@@ -36,7 +36,7 @@ ENV PATH      $NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
 # Copying package.json, package-lock.json, and packages.lock.json
 WORKDIR /source/src/Admin
-COPY package*.json .
+COPY src/Admin/package*.json .
 RUN npm ci
 
 # Copy csproj files as distinct layers
