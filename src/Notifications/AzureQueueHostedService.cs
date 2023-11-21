@@ -86,7 +86,7 @@ public class AzureQueueHostedService : IHostedService, IDisposable
             }
             catch (Exception e)
             {
-                _logger.LogError("Error processing messages.", e);
+                _logger.LogError(e, "Error processing messages.");
             }
         }
 

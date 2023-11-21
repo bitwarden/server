@@ -87,7 +87,7 @@ public class ValidateSponsorshipCommand : CancelSponsorshipCommand, IValidateSpo
             }
             catch (Exception e)
             {
-                _logger.LogError("Error sending Family sponsorship removed email.", e);
+                _logger.LogError(e, "Error sending Family sponsorship removed email.");
             }
         }
         await base.DeleteSponsorshipAsync(sponsorship);

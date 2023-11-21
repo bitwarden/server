@@ -750,8 +750,8 @@ public class StripeController : Controller
             GatewayType.AppStore, receiptLastTransactionId);
         if (existingTransaction != null)
         {
-            _logger.LogWarning("There is already an existing transaction for this Apple receipt.",
-                receiptLastTransactionId);
+            _logger.LogWarning(
+                $"There is already an existing transaction {receiptLastTransactionId} for this Apple receipt.");
             return false;
         }
 
