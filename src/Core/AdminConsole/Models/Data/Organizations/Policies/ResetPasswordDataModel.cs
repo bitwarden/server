@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Models.Data.Organizations.Policies;
 
 namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
