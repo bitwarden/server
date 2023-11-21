@@ -57,6 +57,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IProviderRepository _providerRepository;
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
@@ -90,6 +91,7 @@ public class OrganizationService : IOrganizationService
         IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IProviderRepository providerRepository,
         IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
@@ -118,6 +120,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _providerRepository = providerRepository;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
@@ -865,7 +868,7 @@ public class OrganizationService : IOrganizationService
 
         if (newSeatsRequired > 0)
         {
-            var (canScale, failureReason) = CanScale(organization, newSeatsRequired);
+            var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
             if (!canScale)
             {
                 throw new BadRequestException(failureReason);
@@ -1185,7 +1188,8 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    internal (bool canScale, string failureReason) CanScale(Organization organization,
+    internal async Task<(bool canScale, string failureReason)> CanScaleAsync(
+        Organization organization,
         int seatsToAdd)
     {
         var failureReason = "";
@@ -1198,6 +1202,13 @@ public class OrganizationService : IOrganizationService
         if (seatsToAdd < 1)
         {
             return (true, failureReason);
+        }
+
+        var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+        if (provider is { Enabled: true, Type: ProviderType.Reseller })
+        {
+            return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
         }
 
         if (organization.Seats.HasValue &&
@@ -1217,7 +1228,7 @@ public class OrganizationService : IOrganizationService
             return;
         }
 
-        var (canScale, failureMessage) = CanScale(organization, seatsToAdd);
+        var (canScale, failureMessage) = await CanScaleAsync(organization, seatsToAdd);
         if (!canScale)
         {
             throw new BadRequestException(failureMessage);
