@@ -102,7 +102,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
             MasterPasswordHash = "master_password_hash",
         });
 
-        var context = await PostLoginAsync(_factory.Server, username, deviceId, context => context.Request.Headers.Add("Auth-Email", "bad_value"));
+        var context = await PostLoginAsync(_factory.Server, username, deviceId, context => context.Request.Headers.Append("Auth-Email", "bad_value"));
 
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 

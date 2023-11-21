@@ -1,5 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using Bit.Core.Auth.Models.Api.Request;
+﻿using Bit.Core.Auth.Models.Api.Request;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;

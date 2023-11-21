@@ -11,7 +11,6 @@ using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using Castle.Core.Internal;
 using NSubstitute;
 using Xunit;
 
