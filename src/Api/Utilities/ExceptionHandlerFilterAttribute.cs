@@ -84,7 +84,7 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         }
         else if (exception is FeatureUnavailableException)
         {
-            errorMessage = "This feature is not available.";
+            errorMessage = "This feature is unavailable.";
             context.HttpContext.Response.StatusCode = 404;
         }
         else if (exception is SecurityTokenValidationException)
