@@ -104,6 +104,7 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpgradePlan_SM_Passes(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
@@ -135,6 +136,7 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public async Task UpgradePlan_SM_NotEnoughSmSeats_Throws(PlanType planType, Organization organization, OrganizationUpgrade upgrade,
         SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {
@@ -160,6 +162,7 @@ public class UpgradeOrganizationPlanCommandTests
     [BitAutoData(PlanType.EnterpriseAnnually, 201)]
     [BitAutoData(PlanType.TeamsMonthly, 51)]
     [BitAutoData(PlanType.TeamsAnnually, 51)]
+    [BitAutoData(PlanType.TeamsStarter, 51)]
     public async Task UpgradePlan_SM_NotEnoughServiceAccounts_Throws(PlanType planType, int currentServiceAccounts,
      Organization organization, OrganizationUpgrade upgrade, SutProvider<UpgradeOrganizationPlanCommand> sutProvider)
     {

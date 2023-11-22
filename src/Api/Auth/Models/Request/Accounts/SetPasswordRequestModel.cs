@@ -15,7 +15,6 @@ public class SetPasswordRequestModel : IValidatableObject
     public string Key { get; set; }
     [StringLength(50)]
     public string MasterPasswordHint { get; set; }
-    [Required]
     public KeysRequestModel Keys { get; set; }
     [Required]
     public KdfType Kdf { get; set; }
@@ -33,7 +32,7 @@ public class SetPasswordRequestModel : IValidatableObject
         existingUser.KdfMemory = KdfMemory;
         existingUser.KdfParallelism = KdfParallelism;
         existingUser.Key = Key;
-        Keys.ToUser(existingUser);
+        Keys?.ToUser(existingUser);
         return existingUser;
     }
 
