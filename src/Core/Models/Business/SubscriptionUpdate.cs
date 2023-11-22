@@ -1,5 +1,4 @@
 ﻿using Stripe;
-using Exception = System.Exception;
 
 namespace Bit.Core.Models.Business;
 
@@ -17,23 +16,14 @@ public abstract class SubscriptionUpdate
         {
             var upgradeQuantity = upgradeItemOptions.Quantity ?? 0;
             var existingQuantity = SubscriptionItem(subscription, upgradeItemOptions.Plan)?.Quantity ?? 0;
-            var upgradePrice = upgradeItemOptions.Price;
-            var existingPrice = SubscriptionItem(subscription, upgradeItemOptions.Plan)?.Price.Id ??
-                                throw new Exception("todo");
-
-            if (upgradeQuantity != existingQuantity || upgradePrice != existingPrice)
+            if (upgradeQuantity != existingQuantity)
             {
                 return true;
             }
         }
-
         return false;
     }
 
     protected static SubscriptionItem SubscriptionItem(Subscription subscription, string planId) =>
-        planId == null
-            ? null
-            : subscription.Items
-                ?.Data
-                ?.FirstOrDefault(i => i.Plan.Id == planId);
+        planId == null ? null : subscription.Items?.Data?.FirstOrDefault(i => i.Plan.Id == planId);
 }

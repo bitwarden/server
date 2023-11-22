@@ -214,7 +214,6 @@ public class OrganizationService : IOrganizationService
 
     public async Task UpdateSubscription(Guid organizationId, int seatAdjustment, int? maxAutoscaleSeats)
     {
-        //here
         var organization = await GetOrgById(organizationId);
         if (organization == null)
         {
@@ -282,19 +281,6 @@ public class OrganizationService : IOrganizationService
         return await AdjustSeatsAsync(organization, seatAdjustment, prorationDate);
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    /// <param name="organization"></param>
-    /// <param name="newPlan"></param>
-    /// <param name="prorationDate"></param>
-    /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    private async Task<string> AdjustPlan(Organization organization, Plan newPlan, DateTime? prorationDate = null)
-    {
-        throw new NotImplementedException();
-    }
-
     private async Task<string> AdjustSeatsAsync(Organization organization, int seatAdjustment, DateTime? prorationDate = null, IEnumerable<string> ownerEmails = null)
     {
         if (organization.Seats == null)
@@ -323,7 +309,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan does not allow additional seats.");
         }
 
-        var newSeatTotal = organization.Seats.Value + seatAdjustment; // this is a delta value, needs to be absolute
+        var newSeatTotal = organization.Seats.Value + seatAdjustment;
         if (plan.PasswordManager.BaseSeats > newSeatTotal)
         {
             throw new BadRequestException($"Plan has a minimum of {plan.PasswordManager.BaseSeats} seats.");

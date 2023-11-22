@@ -342,7 +342,6 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
         await _organizationService.UpdateSubscription(orgIdGuid, model.SeatAdjustment, model.MaxAutoscaleSeats);
-        // and maybe update plan here
     }
 
     [HttpPost("{id}/sm-subscription")]
