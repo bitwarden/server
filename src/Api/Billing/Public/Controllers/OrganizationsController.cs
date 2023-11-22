@@ -15,14 +15,14 @@ namespace Bit.Api.Billing.Public.Controllers;
 
 [Route("public/organizations")]
 [Authorize("Organization")]
-public class OrganizationSubscriptionsController : Controller
+public class OrganizationsController : Controller
 {
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
-    public OrganizationSubscriptionsController(
+    public OrganizationsController(
         IOrganizationService organizationService,
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
