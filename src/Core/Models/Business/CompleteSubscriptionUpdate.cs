@@ -195,7 +195,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
         {
             Id = subscriptionItem.Id,
             Price = updatedPlanId,
-            Quantity = to.PasswordManagerSeats,
+            Quantity = IsNonSeatBasedPlan(to.Plan) ? 1 : to.PasswordManagerSeats,
             Deleted = subscriptionItem.Id != null && to.PasswordManagerSeats == 0
                 ? true
                 : null
@@ -284,18 +284,16 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
             Storage = organization.Storage
         };
 
-    private static string GetPasswordManagerPlanId(StaticStore.Plan plan)
-    {
-        var isNonSeatBasedPlan =
-            plan.Type is
-                >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
-                or PlanType.FamiliesAnnually
-                or PlanType.TeamsStarter;
+    private static bool IsNonSeatBasedPlan(StaticStore.Plan plan)
+        => plan.Type is
+            >= PlanType.FamiliesAnnually2019 and <= PlanType.EnterpriseAnnually2019
+            or PlanType.FamiliesAnnually
+            or PlanType.TeamsStarter;
 
-        return isNonSeatBasedPlan
+    private static string GetPasswordManagerPlanId(StaticStore.Plan plan)
+        => IsNonSeatBasedPlan(plan)
             ? plan.PasswordManager.StripePlanId
             : plan.PasswordManager.StripeSeatPlanId;
-    }
 
     private static SubscriptionItem GetSubscriptionItem(Subscription subscription, string planId)
     {
@@ -306,7 +304,7 @@ public class CompleteSubscriptionUpdate : SubscriptionUpdate
 
         var data = subscription.Items.Data;
 
-        var subscriptionItem = data.FirstOrDefault(item => item.Plan.Id == planId) ?? data.FirstOrDefault(item => item.Price.Id == planId);
+        var subscriptionItem = data.FirstOrDefault(item => item.Plan?.Id == planId) ?? data.FirstOrDefault(item => item.Price?.Id == planId);
 
         return subscriptionItem;
     }
