@@ -1,12 +1,14 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
+using Bit.Core.Services;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.Services;
 
 public interface IOrganizationService
 {
@@ -77,8 +79,8 @@ public interface IOrganizationService
     Task InitPendingOrganization(Guid userId, Guid organizationId, string publicKey, string privateKey, string collectionName);
     Task ReplaceAndUpdateCacheAsync(Organization org, EventType? orgEvent = null);
 
-    void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
-    void ValidateSecretsManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
+    void ValidatePasswordManagerPlan(Core.Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
+    void ValidateSecretsManagerPlan(Core.Models.StaticStore.Plan plan, OrganizationUpgrade upgrade);
     Task ValidateOrganizationUserUpdatePermissions(Guid organizationId, OrganizationUserType newType,
         OrganizationUserType? oldType, Permissions permissions);
 }

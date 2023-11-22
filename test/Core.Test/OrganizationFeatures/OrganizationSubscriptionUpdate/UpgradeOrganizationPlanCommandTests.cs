@@ -1,17 +1,18 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Repositories;
-using Bit.Core.Services;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using Organization = Bit.Core.Entities.Organization;
+using Organization = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 

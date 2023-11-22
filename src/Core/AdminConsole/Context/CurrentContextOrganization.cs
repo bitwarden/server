@@ -3,7 +3,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Context;
+namespace Bit.Core.AdminConsole.Context;
 
 public class CurrentContextOrganization
 {

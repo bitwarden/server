@@ -1,9 +1,11 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services.Implementations;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
@@ -23,7 +25,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AdminConsole.AutoFixture;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
@@ -37,11 +38,11 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
-using Organization = Bit.Core.Entities.Organization;
+using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
 using Policy = Bit.Core.AdminConsole.Entities.Policy;
 
-namespace Bit.Core.Test.Services;
+namespace Bit.Core.Test.AdminConsole.Services;
 
 [SutProviderCustomize]
 public class OrganizationServiceTests

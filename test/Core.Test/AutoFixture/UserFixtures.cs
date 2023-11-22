@@ -3,7 +3,7 @@ using AutoFixture.Kernel;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
 using Bit.Core.Entities;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 

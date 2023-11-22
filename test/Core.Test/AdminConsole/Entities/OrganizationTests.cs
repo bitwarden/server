@@ -1,11 +1,11 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
-using Bit.Core.Entities;
 using Bit.Test.Common.Helpers;
 using Xunit;
 
-namespace Bit.Core.Test.Entities;
+namespace Bit.Core.Test.AdminConsole.Entities;
 
 public class OrganizationTests
 {

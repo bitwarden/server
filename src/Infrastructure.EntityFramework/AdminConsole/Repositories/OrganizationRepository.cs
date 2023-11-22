@@ -1,21 +1,22 @@
 ﻿using AutoMapper;
 using AutoMapper.QueryableExtensions;
+using Bit.Core.AdminConsole.Models.Data.Organizations;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Enums;
-using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Organization = Bit.Infrastructure.EntityFramework.Models.Organization;
 
-namespace Bit.Infrastructure.EntityFramework.Repositories;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 
-public class OrganizationRepository : Repository<Core.Entities.Organization, Organization, Guid>, IOrganizationRepository
+public class OrganizationRepository : Repository<Core.AdminConsole.Entities.Organization, Organization, Guid>, IOrganizationRepository
 {
     public OrganizationRepository(IServiceScopeFactory serviceScopeFactory, IMapper mapper)
         : base(serviceScopeFactory, mapper, (DatabaseContext context) => context.Organizations)
     { }
 
-    public async Task<Core.Entities.Organization> GetByIdentifierAsync(string identifier)
+    public async Task<Core.AdminConsole.Entities.Organization> GetByIdentifierAsync(string identifier)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -26,17 +27,17 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         }
     }
 
-    public async Task<ICollection<Core.Entities.Organization>> GetManyByEnabledAsync()
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByEnabledAsync()
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
             var organizations = await GetDbSet(dbContext).Where(e => e.Enabled).ToListAsync();
-            return Mapper.Map<List<Core.Entities.Organization>>(organizations);
+            return Mapper.Map<List<Core.AdminConsole.Entities.Organization>>(organizations);
         }
     }
 
-    public async Task<ICollection<Core.Entities.Organization>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> GetManyByUserIdAsync(Guid userId)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -46,11 +47,11 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                     .Where(ou => ou.UserId == userId)
                     .Select(ou => ou.Organization))
                 .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Organization>>(organizations);
+            return Mapper.Map<List<Core.AdminConsole.Entities.Organization>>(organizations);
         }
     }
 
-    public async Task<ICollection<Core.Entities.Organization>> SearchAsync(string name, string userEmail,
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> SearchAsync(string name, string userEmail,
         bool? paid, int skip, int take)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -65,7 +66,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
                 .OrderBy(e => e.CreationDate)
                 .Skip(skip).Take(take)
                 .ToListAsync();
-            return Mapper.Map<List<Core.Entities.Organization>>(organizations);
+            return Mapper.Map<List<Core.AdminConsole.Entities.Organization>>(organizations);
         }
     }
 
@@ -93,7 +94,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         }
     }
 
-    public async Task<ICollection<Core.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
+    public async Task<ICollection<Core.AdminConsole.Entities.Organization>> SearchUnassignedToProviderAsync(string name, string ownerEmail, int skip, int take)
     {
         using var scope = ServiceScopeFactory.CreateScope();
 
@@ -145,7 +146,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         await OrganizationUpdateStorage(id);
     }
 
-    public override async Task DeleteAsync(Core.Entities.Organization organization)
+    public override async Task DeleteAsync(Core.AdminConsole.Entities.Organization organization)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
@@ -205,7 +206,7 @@ public class OrganizationRepository : Repository<Core.Entities.Organization, Org
         }
     }
 
-    public async Task<Core.Entities.Organization> GetByLicenseKeyAsync(string licenseKey)
+    public async Task<Core.AdminConsole.Entities.Organization> GetByLicenseKeyAsync(string licenseKey)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {

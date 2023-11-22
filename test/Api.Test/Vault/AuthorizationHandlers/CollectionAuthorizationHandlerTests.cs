@@ -1,6 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;

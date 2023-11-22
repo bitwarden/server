@@ -7,7 +7,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 
-namespace Bit.Core.Models.Data.Organizations;
+namespace Bit.Core.AdminConsole.Models.Data.Organizations;
 
 public class SelfHostedOrganizationDetails : Organization
 {

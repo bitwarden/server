@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Entities;
@@ -9,7 +11,7 @@ using Bit.Core.OrganizationFeatures.OrganizationUsers;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Test.AutoFixture.OrganizationFixtures;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;

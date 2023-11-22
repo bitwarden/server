@@ -1,14 +1,15 @@
 ﻿using System.Data;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Models.Data.Organizations;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Entities;
-using Bit.Core.Models.Data.Organizations;
-using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class OrganizationRepository : Repository<Organization, Guid>, IOrganizationRepository
 {

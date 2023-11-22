@@ -13,7 +13,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;
 
-namespace Bit.Core.Test.AutoFixture.OrganizationFixtures;
+namespace Bit.Core.Test.AdminConsole.AutoFixture;
 
 public class OrganizationCustomization : ICustomization
 {

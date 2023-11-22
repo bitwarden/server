@@ -4,6 +4,7 @@ using Bit.Core.Test.AutoFixture.UserFixtures;
 using Bit.Core.Tools.Entities;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture;
 using Bit.Infrastructure.EFIntegration.Test.AutoFixture.Relays;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.EntityFramework.Tools.Repositories;
 using Bit.Test.Common.AutoFixture;

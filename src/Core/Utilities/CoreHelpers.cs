@@ -13,7 +13,6 @@ using Azure.Storage.Queues.Models;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Identity;

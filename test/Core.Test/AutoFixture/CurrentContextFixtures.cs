@@ -1,5 +1,6 @@
 ﻿using AutoFixture;
 using AutoFixture.Kernel;
+using Bit.Core.AdminConsole.Context;
 using Bit.Core.Context;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;

@@ -2,7 +2,6 @@
 using AutoFixture;
 using Bit.Core.AdminConsole.Context;
 using Bit.Core.AdminConsole.Enums.Provider;
-using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Test.AutoFixture.UserFixtures;
