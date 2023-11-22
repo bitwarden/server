@@ -1,7 +1,6 @@
 ﻿using AutoMapper;
-using Bit.Infrastructure.EntityFramework.Models;
 
-namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
+namespace Bit.Infrastructure.EntityFramework.Models;
 
 public class Policy : Core.AdminConsole.Entities.Policy
 {
