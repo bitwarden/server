@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,7 +31,7 @@ public class RequireFeatureAttribute : ActionFilterAttribute
 
         if (!featureService.IsEnabled(_featureFlagKey, currentContext))
         {
-            throw new FeatureUnavailableException();
+            context.Result = new NotFoundObjectResult("This feature is unavailable.");
         }
     }
 }
