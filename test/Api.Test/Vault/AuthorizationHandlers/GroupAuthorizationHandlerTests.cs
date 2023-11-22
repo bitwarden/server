@@ -110,6 +110,7 @@ public class GroupAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
