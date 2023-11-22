@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Bit.Api.Models.Public.Response;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 
 namespace Bit.Api.AdminConsole.Public.Models.Response;
 
