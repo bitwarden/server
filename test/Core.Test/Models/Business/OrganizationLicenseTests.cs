@@ -40,14 +40,14 @@ public class OrganizationLicenseTests
     [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION + 1)] // Current version
     public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion)
     {
-        var version13 = OrganizationLicenseStaticVersions.GetVersion(licenseVersion);
+        var license = OrganizationLicenseStaticVersions.GetVersion(licenseVersion);
         var organization = CreateOrganization();
         var globalSettings = Substitute.For<IGlobalSettings>();
         globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
         {
             Id = new Guid(OrganizationLicenseStaticVersions.InstallationId)
         });
-        Assert.True(version13.VerifyData(organization, globalSettings));
+        Assert.True(license.VerifyData(organization, globalSettings));
     }
 
     /// <summary>
