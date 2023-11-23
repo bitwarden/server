@@ -1,12 +1,13 @@
 ﻿using System.Data;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
-using Bit.Core.Repositories;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Settings;
+using Bit.Infrastructure.Dapper.Repositories;
 using Dapper;
 using Microsoft.Data.SqlClient;
 
-namespace Bit.Infrastructure.Dapper.Repositories;
+namespace Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 
 public class PolicyRepository : Repository<Policy, Guid>, IPolicyRepository
 {
