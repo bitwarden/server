@@ -18,8 +18,10 @@ public static class OrganizationLicenseStaticVersions
     public static OrganizationLicense GetVersion(int licenseVersion)
     {
         if (!LicenseVersions.ContainsKey(licenseVersion))
+        {
             throw new Exception(
                 $"Cannot find serialized license version {licenseVersion}. You must add this to OrganizationLicenseStaticVersions when adding a new license version.");
+        }
 
         var json = LicenseVersions.GetValueOrDefault(licenseVersion).Replace("'", "\"");
         return JsonSerializer.Deserialize<OrganizationLicense>(json);
