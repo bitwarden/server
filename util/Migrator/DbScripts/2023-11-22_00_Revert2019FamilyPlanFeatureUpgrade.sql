@@ -1,16 +1,8 @@
 BEGIN TRY
-    BEGIN TRANSACTION;
-
-    UPDATE
-        [dbo].[Organization]
-    SET
-        [UsersGetPremium] = 0
-    WHERE
-        [PlanType] = 1 -- Families 2019 Annual
-
-    COMMIT TRANSACTION;
+    UPDATE [dbo].[Organization]
+    SET [UsersGetPremium] = 0
+    WHERE [PlanType] = 1; -- Families 2019 Annual
 END TRY
 BEGIN CATCH
-    ROLLBACK TRANSACTION;
     THROW;
 END CATCH
