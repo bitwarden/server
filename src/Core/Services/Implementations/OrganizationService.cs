@@ -434,9 +434,6 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var useFlexibleCollections =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription..
@@ -474,7 +471,7 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
-            LimitCollectionCreationDeletion = !useFlexibleCollections
+            LimitCollectionCreationDeletion = !UseFlexibleCollections
         };
 
         if (signup.UseSecretsManager)
