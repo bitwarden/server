@@ -14,14 +14,14 @@ namespace Bit.Core.Test.Models.Business;
 public class OrganizationLicenseTests
 {
     /// <summary>
-    /// Verifies that when version 13 is loaded from disk using the current OrganizationLicense class,
-    /// its hash does not change.
-    /// This guards against the risk that properties added in later versions are accidentally included in the hash
+    ///     Verifies that when the license file is loaded from disk using the current OrganizationLicense class,
+    ///     its hash does not change.
+    ///     This guards against the risk that properties added in later versions are accidentally included in the hash,
+    ///     or that a property is added without incrementing the version number.
     /// </summary>
     [Theory]
-    [BitAutoData(
-        OrganizationLicense.CURRENT_LICENSE_FILE_VERSION,   // This is 1 behind, so the last version
-        OrganizationLicense.CURRENT_LICENSE_FILE_VERSION + 1)]                    // The current version
+    [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION)] // This is 1 behind, so the last version
+    [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION + 1)] // Current version
     public void OrganizationLicense_LoadFromDisk_HashDoesNotChange(int licenseVersion)
     {
         var license = OrganizationLicenseStaticVersions.GetVersion(licenseVersion);
@@ -31,26 +31,29 @@ public class OrganizationLicenseTests
     }
 
     /// <summary>
-    /// Verifies that when version 13 is loaded from disk using the current OrganizationLicense class,
-    /// it matches the Organization it was generated for.
-    /// This guards against the risk that properties added in later versions are accidentally included in the validation
+    ///     Verifies that when the license file is loaded from disk using the current OrganizationLicense class,
+    ///     it matches the Organization it was generated for.
+    ///     This guards against the risk that properties added in later versions are accidentally included in the validation
     /// </summary>
     [Theory]
-    [BitAutoData(
-        OrganizationLicense.CURRENT_LICENSE_FILE_VERSION,   // This is 1 behind, so the last version
-        OrganizationLicense.CURRENT_LICENSE_FILE_VERSION + 1)]                    // The current version
+    [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION)] // This is 1 behind, so the last version
+    [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION + 1)] // Current version
     public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion)
     {
         var version13 = OrganizationLicenseStaticVersions.GetVersion(licenseVersion);
         var organization = CreateOrganization();
         var globalSettings = Substitute.For<IGlobalSettings>();
-        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings() { Id = new Guid(OrganizationLicenseStaticVersions.InstallationId) });
+        globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
+        {
+            Id = new Guid(OrganizationLicenseStaticVersions.InstallationId)
+        });
         Assert.True(version13.VerifyData(organization, globalSettings));
     }
 
     /// <summary>
-    /// Helper used to generate a new json string to be added in OrganizationLicenseStaticVersions
-    /// Uncomment [Fact], run the test and copy the result value
+    ///     Helper used to generate a new json string to be added in OrganizationLicenseStaticVersions
+    ///     Uncomment [Fact], run the test and copy the result value into OrganizationLicenseStaticVersion, following
+    ///     the format in that file.
     /// </summary>
     // [Fact]
     private void GenerateLicenseFileJsonString()
@@ -62,14 +65,14 @@ public class OrganizationLicenseTests
         var license = new OrganizationLicense(organization, null, installationId, licensingService);
 
         var result = JsonSerializer.Serialize(license, JsonHelpers.Indented).Replace("\"", "'");
-        // Put a break here to copy and paste the value into StaticVersions
+        // Put a break after this line, then copy and paste the value of `result` into StaticVersions
     }
 
-    private Organization CreateOrganization()
-    {
-        // These values need to be stable for our test cases to work
-        // Initialize everything with static, non-default values
-        return new Organization
+    private Organization CreateOrganization() =>
+        // These values need to be stable for our test cases to work.
+        // Initialize everything with static, non-default values.
+        // If you add an Organization property value, add it here.
+        new()
         {
             Id = new Guid("12300000-0000-0000-0000-000000000456"),
             Identifier = "myIdentifier",
@@ -82,7 +85,7 @@ public class OrganizationLicenseTests
             BusinessTaxNumber = "myBusinessTaxNumber",
             BillingEmail = "myBillingEmail",
             Plan = "myPlan",
-            PlanType = PlanType.EnterpriseAnnually,
+            PlanType = PlanType.EnterpriseAnnually2020,
             Seats = 10,
             MaxCollections = 2,
             UsePolicies = true,
@@ -125,5 +128,4 @@ public class OrganizationLicenseTests
             SecretsManagerBeta = true,
             LimitCollectionCreationDeletion = true
         };
-    }
 }
