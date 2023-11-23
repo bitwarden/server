@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿#nullable enable
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -15,6 +16,7 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
 {
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
+    private Guid _targetOrganizationId;
 
     private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
@@ -44,6 +46,7 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
 
         if (requirement.OrganizationId == default)
         {
+            context.Fail();
             return;
         }
 
