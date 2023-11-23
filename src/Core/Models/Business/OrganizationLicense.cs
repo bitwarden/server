@@ -145,7 +145,7 @@ public class OrganizationLicense : ILicense
     /// </summary>
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors</remarks>
-    private const int CURRENT_LICENSE_FILE_VERSION = 12;
+    public const int CURRENT_LICENSE_FILE_VERSION = 12;
     private bool ValidLicenseVersion
     {
         get => Version is >= 1 and <= 13;
