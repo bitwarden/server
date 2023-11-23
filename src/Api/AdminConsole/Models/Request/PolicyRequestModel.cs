@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Bit.Core.Entities;
-using Bit.Core.Enums;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 
 namespace Bit.Api.AdminConsole.Models.Request;
 
