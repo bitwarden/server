@@ -589,7 +589,7 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
     }
 
     public async Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers)
+        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers)
     {
         if (!ciphers.Any())
         {
@@ -627,6 +627,16 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
                         {
                             bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
                             var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers);
+                            bulkCopy.WriteToServer(dataTable);
+                        }
+                    }
+
+                    if (collectionUsers.Any())
+                    {
+                        using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                        {
+                            bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
+                            var dataTable = BuildCollectionUsersTable(bulkCopy, collectionUsers);
                             bulkCopy.WriteToServer(dataTable);
                         }
                     }
@@ -894,6 +904,53 @@ public class CipherRepository : Repository<Cipher, Guid>, ICipherRepository
         }
 
         return collectionCiphersTable;
+    }
+
+    private DataTable BuildCollectionUsersTable(SqlBulkCopy bulkCopy, IEnumerable<CollectionUser> collectionUsers)
+    {
+        var cu = collectionUsers.FirstOrDefault();
+        if (cu == null)
+        {
+            throw new ApplicationException("Must have some collectionUsers to bulk import.");
+        }
+
+        var collectionUsersTable = new DataTable("CollectionUserDataTable");
+
+        var collectionIdColumn = new DataColumn(nameof(cu.CollectionId), cu.CollectionId.GetType());
+        collectionUsersTable.Columns.Add(collectionIdColumn);
+        var organizationUserIdColumn = new DataColumn(nameof(cu.OrganizationUserId), cu.OrganizationUserId.GetType());
+        collectionUsersTable.Columns.Add(organizationUserIdColumn);
+        var readOnlyColumn = new DataColumn(nameof(cu.ReadOnly), cu.ReadOnly.GetType());
+        collectionUsersTable.Columns.Add(readOnlyColumn);
+        var hidePasswordsColumn = new DataColumn(nameof(cu.HidePasswords), cu.HidePasswords.GetType());
+        collectionUsersTable.Columns.Add(hidePasswordsColumn);
+        var manageColumn = new DataColumn(nameof(cu.Manage), cu.Manage.GetType());
+        collectionUsersTable.Columns.Add(manageColumn);
+
+        foreach (DataColumn col in collectionUsersTable.Columns)
+        {
+            bulkCopy.ColumnMappings.Add(col.ColumnName, col.ColumnName);
+        }
+
+        var keys = new DataColumn[2];
+        keys[0] = collectionIdColumn;
+        keys[1] = organizationUserIdColumn;
+        collectionUsersTable.PrimaryKey = keys;
+
+        foreach (var collectionUser in collectionUsers)
+        {
+            var row = collectionUsersTable.NewRow();
+
+            row[collectionIdColumn] = collectionUser.CollectionId;
+            row[organizationUserIdColumn] = collectionUser.OrganizationUserId;
+            row[readOnlyColumn] = collectionUser.ReadOnly;
+            row[hidePasswordsColumn] = collectionUser.HidePasswords;
+            row[manageColumn] = collectionUser.Manage;
+
+            collectionUsersTable.Rows.Add(row);
+        }
+
+        return collectionUsersTable;
     }
 
     private DataTable BuildSendsTable(SqlBulkCopy bulkCopy, IEnumerable<Send> sends)
