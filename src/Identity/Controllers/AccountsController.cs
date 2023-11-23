@@ -81,9 +81,9 @@ public class AccountsController : Controller
         return new PreloginResponseModel(kdfInformation);
     }
 
-    [HttpPost("webauthn/assertion-options")]
+    [HttpGet("webauthn/assertion-options")]
     [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
-    public WebAuthnLoginAssertionOptionsResponseModel PostWebAuthnLoginAssertionOptions()
+    public WebAuthnLoginAssertionOptionsResponseModel GetWebAuthnLoginAssertionOptions()
     {
         var options = _userService.StartWebAuthnLoginAssertion();
 
