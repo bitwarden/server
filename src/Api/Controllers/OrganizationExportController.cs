@@ -1,5 +1,6 @@
 ﻿using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Services;
@@ -19,6 +20,7 @@ public class OrganizationExportController : Controller
     private readonly IUserService _userService;
     private readonly ICollectionService _collectionService;
     private readonly ICipherService _cipherService;
+    private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
 
     public OrganizationExportController(
@@ -26,14 +28,18 @@ public class OrganizationExportController : Controller
         ICipherService cipherService,
         ICollectionService collectionService,
         IUserService userService,
-        GlobalSettings globalSettings)
+        GlobalSettings globalSettings,
+        IFeatureService featureService)
     {
         _currentContext = currentContext;
         _cipherService = cipherService;
         _collectionService = collectionService;
         _userService = userService;
         _globalSettings = globalSettings;
+        _featureService = featureService;
     }
+
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     [HttpGet("export")]
     public async Task<IActionResult> Export(Guid organizationId, bool isManaged = false)
@@ -45,7 +51,7 @@ public class OrganizationExportController : Controller
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict;
 
 
-        if (isManaged)
+        if (isManaged && FlexibleCollectionsIsEnabled)
         {
             orgCollections = await _collectionService.GetOrganizationManagedCollectionsAsync(organizationId);
             (orgCiphers, collectionCiphersGroupDict) = await _cipherService.GetOrganizationManagedCiphers(organizationId);
