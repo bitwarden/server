@@ -495,7 +495,7 @@ public class CollectionsController : Controller
 
     private async Task<CollectionResponseModel> Get_vNext(Guid collectionId)
     {
-        var collection = await _collectionRepository.GetByIdAsync(collectionId, _currentContext.UserId.Value);
+        var collection = await _collectionRepository.GetByIdAsync(collectionId);
         var authorized = (await _authorizationService.AuthorizeAsync(User, collection, CollectionOperations.Read)).Succeeded;
         if (!authorized)
         {
