@@ -16,7 +16,6 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
 {
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
-    private Guid _targetOrganizationId;
 
     private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
@@ -65,22 +64,21 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
     }
 
     private async Task CanReadAllAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
-        CurrentContextOrganization org)
+        CurrentContextOrganization? org)
     {
-        if (org != null)
+        // Owners, Admins, and users with EditAnyCollection, DeleteAnyCollection,
+        // or AccessImportExport permission can always read a collection
+        if (org is
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.EditAnyCollection: true } or
+        { Permissions.DeleteAnyCollection: true } or
+        { Permissions.AccessImportExport: true })
         {
-            // Acting user is a member of the target organization, check permissions
-            if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-                  org.Permissions.EditAnyCollection ||
-                  org.Permissions.DeleteAnyCollection ||
-                  org.Permissions.AccessImportExport)
-            {
-                context.Succeed(requirement);
-                return;
-            }
+            context.Succeed(requirement);
+            return;
         }
 
-        // Check if acting user is a provider user for the target organization
+        // Allow provider users to read collections if they are a provider for the target organization
         if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
         {
             context.Succeed(requirement);
@@ -88,21 +86,20 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
     }
 
     private async Task CanReadAllWithAccessAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
-        CurrentContextOrganization org)
+        CurrentContextOrganization? org)
     {
-        if (org != null)
+        // Owners, Admins, and users with EditAnyCollection or DeleteAnyCollection
+        // permission can always read a collection
+        if (org is
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.EditAnyCollection: true } or
+        { Permissions.DeleteAnyCollection: true })
         {
-            // Acting user is a member of the target organization, check permissions
-            if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-                org.Permissions.EditAnyCollection ||
-                org.Permissions.DeleteAnyCollection)
-            {
-                context.Succeed(requirement);
-                return;
-            }
+            context.Succeed(requirement);
+            return;
         }
 
-        // Check if acting user is a provider user for the target organization
+        // Allow provider users to read collections if they are a provider for the target organization
         if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
         {
             context.Succeed(requirement);
