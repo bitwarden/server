@@ -44,6 +44,7 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
 
         if (requirement.OrganizationId == default)
         {
+            context.Fail();
             return;
         }
 

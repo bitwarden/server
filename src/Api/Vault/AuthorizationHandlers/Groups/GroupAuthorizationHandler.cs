@@ -45,6 +45,7 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
 
         if (requirement.OrganizationId == default)
         {
+            context.Fail();
             return;
         }
 

@@ -108,7 +108,7 @@ public class GroupAuthorizationHandlerTests
     [Theory]
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
-    public async Task CanReadAllAsync_WhenMissingAccess_Failure(
+    public async Task CanReadAllAsync_WhenMissingPermissions_NoSuccess(
         OrganizationUserType userType,
         SutProvider<GroupAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
@@ -140,25 +140,7 @@ public class GroupAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_MissingUserId_Failure(
-        Guid organizationId,
-        SutProvider<GroupAuthorizationHandler> sutProvider)
-    {
-        var context = new AuthorizationHandlerContext(
-            new[] { GroupOperations.ReadAll(organizationId) },
-            new ClaimsPrincipal(),
-            null
-        );
-
-        // Simulate missing user id
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
-
-        await sutProvider.Sut.HandleAsync(context);
-        Assert.False(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_MissingOrg_Failure(
+    public async Task CanReadAllAsync_WhenMissingOrgAccess_NoSuccess(
         Guid userId,
         Guid organizationId,
         SutProvider<GroupAuthorizationHandler> sutProvider)
@@ -177,7 +159,26 @@ public class GroupAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_NoSpecifiedOrgId_NoSuccessOrFailure(
+    public async Task HandleRequirementAsync_MissingUserId_Failure(
+        Guid organizationId,
+        SutProvider<GroupAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { GroupOperations.ReadAll(organizationId) },
+            new ClaimsPrincipal(),
+            null
+        );
+
+        // Simulate missing user id
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.False(context.HasSucceeded);
+        Assert.True(context.HasFailed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleRequirementAsync_NoSpecifiedOrgId_Failure(
         SutProvider<GroupAuthorizationHandler> sutProvider)
     {
         var context = new AuthorizationHandlerContext(
@@ -191,6 +192,6 @@ public class GroupAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.False(context.HasSucceeded);
-        Assert.False(context.HasFailed);
+        Assert.True(context.HasFailed);
     }
 }
