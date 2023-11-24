@@ -26,6 +26,7 @@ public class GroupAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
@@ -46,6 +47,10 @@ public class GroupAuthorizationHandlerTests
         Guid userId,
         SutProvider<GroupAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
+        organization.Type = OrganizationUserType.User;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
+
         var context = new AuthorizationHandlerContext(
             new[] { GroupOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
@@ -64,26 +69,27 @@ public class GroupAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false, false, false)]
-    [BitAutoData(false, true, false, false, false)]
-    [BitAutoData(false, false, true, false, false)]
-    [BitAutoData(false, false, false, true, false)]
-    [BitAutoData(false, false, false, false, true)]
+    [BitAutoData(true, false, false, false, true)]
+    [BitAutoData(false, true, false, false, true)]
+    [BitAutoData(false, false, true, false, true)]
+    [BitAutoData(false, false, false, true, true)]
+    [BitAutoData(false, false, false, false, false)]
     public async Task CanReadAllAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool editAnyCollection, bool deleteAnyCollection, bool manageGroups, bool manageUsers, bool accessImportExport,
+        bool editAnyCollection, bool deleteAnyCollection, bool manageGroups,
+        bool manageUsers, bool limitCollectionCreationDeletion,
         SutProvider<GroupAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
+        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = editAnyCollection,
             DeleteAnyCollection = deleteAnyCollection,
             ManageGroups = manageGroups,
-            ManageUsers = manageUsers,
-            AccessImportExport = accessImportExport
+            ManageUsers = manageUsers
         };
 
         var context = new AuthorizationHandlerContext(
