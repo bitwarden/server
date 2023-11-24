@@ -1,4 +1,5 @@
-﻿using Bit.Core;
+﻿#nullable enable
+using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
@@ -57,29 +58,27 @@ public class OrganizationUserAuthorizationHandler : AuthorizationHandler<Organiz
     }
 
     private async Task CanReadAllAsync(AuthorizationHandlerContext context, OrganizationUserOperationRequirement requirement,
-        CurrentContextOrganization org)
+        CurrentContextOrganization? org)
     {
-        if (org != null)
+        // If the limit collection management setting is disabled, allow any user to read all organization users
+        // Otherwise, Owners, Admins, and users with any of ManageGroups, ManageUsers, EditAnyCollection, DeleteAnyCollection, CreateNewCollections permissions can always read all organization users
+        if (org is
+        { LimitCollectionCreationDeletion: false } or
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.ManageGroups: true } or
+        { Permissions.ManageUsers: true } or
+        { Permissions.EditAnyCollection: true } or
+        { Permissions.DeleteAnyCollection: true } or
+        { Permissions.CreateNewCollections: true })
         {
-            // Acting user is a member of the target organization, check permissions
-            if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-                org.Permissions.ManageGroups ||
-                org.Permissions.ManageUsers ||
-                org.Permissions.EditAnyCollection ||
-                org.Permissions.DeleteAnyCollection ||
-                org.Permissions.CreateNewCollections ||
-                !org.LimitCollectionCreationDeletion)
-            {
-                context.Succeed(requirement);
-            }
+            context.Succeed(requirement);
+            return;
         }
-        else
+
+        // Allow provider users to read all organization users if they are a provider for the target organization
+        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
         {
-            // Check if acting user is a provider user for the target organization
-            if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
-            {
-                context.Succeed(requirement);
-            }
+            context.Succeed(requirement);
         }
     }
 }
