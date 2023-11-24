@@ -69,8 +69,7 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
                 org.Permissions.EditAnyCollection ||
                 org.Permissions.DeleteAnyCollection ||
                 org.Permissions.CreateNewCollections ||
-                !org.LimitCollectionCreationDeletion ||
-                org.Permissions.AccessImportExport)
+                !org.LimitCollectionCreationDeletion)
             {
                 context.Succeed(requirement);
             }
