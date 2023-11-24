@@ -47,9 +47,8 @@ public class OrganizationExportController : Controller
         var userId = _userService.GetProperUserId(User).Value;
 
         IEnumerable<Collection> orgCollections;
-        IEnumerable<CipherOrganizationDetails> orgCiphers; 
+        IEnumerable<CipherOrganizationDetails> orgCiphers;
         Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict;
-
 
         if (isManaged && FlexibleCollectionsIsEnabled)
         {
