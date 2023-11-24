@@ -2,6 +2,8 @@
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
@@ -9,7 +11,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.Repositories;
