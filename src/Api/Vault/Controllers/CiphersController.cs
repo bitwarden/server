@@ -245,6 +245,26 @@ public class CiphersController : Controller
         return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
     }
 
+    [HttpGet("organization-details/managed")]
+    public async Task<ListResponseModel<CipherMiniDetailsResponseModel>> GetManagedOrganizationCollections(
+        string organizationId)
+    {
+        var orgIdGuid = new Guid(organizationId);
+
+        (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationManagedCiphers(orgIdGuid);
+
+        var responses = orgCiphers.Select(c => new CipherMiniDetailsResponseModel(c, _globalSettings,
+            collectionCiphersGroupDict, c.OrganizationUseTotp));
+
+        var providerId = await _currentContext.ProviderIdForOrg(orgIdGuid);
+        if (providerId.HasValue)
+        {
+            await _providerService.LogProviderAccessToOrganizationAsync(orgIdGuid);
+        }
+
+        return new ListResponseModel<CipherMiniDetailsResponseModel>(responses);
+    }
+
     [HttpPut("{id}/partial")]
     [HttpPost("{id}/partial")]
     public async Task<CipherResponseModel> PutPartial(string id, [FromBody] CipherPartialRequestModel model)

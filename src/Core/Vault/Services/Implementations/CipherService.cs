@@ -35,6 +35,7 @@ public class CipherService : ICipherService
     private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
+    private readonly ICollectionService _collectionService;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -50,7 +51,8 @@ public class CipherService : ICipherService
         IPolicyService policyService,
         GlobalSettings globalSettings,
         IReferenceEventService referenceEventService,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext,
+        ICollectionService collectionService)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -66,6 +68,7 @@ public class CipherService : ICipherService
         _globalSettings = globalSettings;
         _referenceEventService = referenceEventService;
         _currentContext = currentContext;
+        _collectionService = collectionService;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -961,6 +964,33 @@ public class CipherService : ICipherService
         var orgCipherIds = orgCiphers.Select(c => c.Id);
 
         var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        var collectionCiphersGroupDict = collectionCiphers
+            .Where(c => orgCipherIds.Contains(c.CipherId))
+            .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);
+
+        return (orgCiphers, collectionCiphersGroupDict);
+    }
+
+    public async Task<(IEnumerable<CipherOrganizationDetails>, Dictionary<Guid, IGrouping<Guid, CollectionCipher>>)> GetOrganizationManagedCiphers(Guid organizationId)
+    {
+        if (!await _currentContext.ViewAssignedCollections(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        IEnumerable<CipherOrganizationDetails> orgCiphers;
+
+        var ciphers = await _cipherRepository.GetManyOrganizationDetailsByOrganizationIdAsync(organizationId);
+
+        var collectionCiphers = await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId);
+        var managedCollectionsId = (await _collectionService.GetOrganizationManagedCollectionsAsync(organizationId)).Select(c => c.Id);
+
+        var managedCipherIds = collectionCiphers.Where(c => managedCollectionsId.Contains(c.CollectionId)).Select(c => c.CipherId);
+
+        orgCiphers = ciphers.Where(c => managedCipherIds.Contains(c.Id));
+
+        var orgCipherIds = orgCiphers.Select(c => c.Id);
+
         var collectionCiphersGroupDict = collectionCiphers
             .Where(c => orgCipherIds.Contains(c.CipherId))
             .GroupBy(c => c.CipherId).ToDictionary(s => s.Key);

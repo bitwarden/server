@@ -36,12 +36,25 @@ public class OrganizationExportController : Controller
     }
 
     [HttpGet("export")]
-    public async Task<IActionResult> Export(Guid organizationId)
+    public async Task<IActionResult> Export(Guid organizationId, bool isManaged = false)
     {
         var userId = _userService.GetProperUserId(User).Value;
 
-        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollectionsAsync(organizationId);
-        (IEnumerable<CipherOrganizationDetails> orgCiphers, Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
+        IEnumerable<Collection> orgCollections;
+        IEnumerable<CipherOrganizationDetails> orgCiphers; 
+        Dictionary<Guid, IGrouping<Guid, CollectionCipher>> collectionCiphersGroupDict;
+
+
+        if (isManaged)
+        {
+            orgCollections = await _collectionService.GetOrganizationManagedCollectionsAsync(organizationId);
+            (orgCiphers, collectionCiphersGroupDict) = await _cipherService.GetOrganizationManagedCiphers(organizationId);
+        }
+        else
+        {
+            orgCollections = await _collectionService.GetOrganizationCollectionsAsync(organizationId);
+            (orgCiphers, collectionCiphersGroupDict) = await _cipherService.GetOrganizationCiphers(userId, organizationId);
+        }
 
         if (_currentContext.ClientVersion == null || _currentContext.ClientVersion >= new Version("2023.1.0"))
         {
@@ -62,6 +75,12 @@ public class OrganizationExportController : Controller
         };
 
         return Ok(organizationExportListResponseModel);
+    }
+
+    [HttpGet("export/{isManaged}")]
+    public async Task<IActionResult> ExportManaged(Guid organizationId, bool isManaged = false)
+    {
+        return await Export(organizationId, isManaged);
     }
 
     private ListResponseModel<CollectionResponseModel> GetOrganizationCollectionsResponse(IEnumerable<Collection> orgCollections)

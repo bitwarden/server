@@ -125,6 +125,13 @@ public class CollectionService : ICollectionService
             var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
             orgCollections = collections.Where(c => c.OrganizationId == organizationId);
         }
+        return orgCollections;
+    }
+
+    public async Task<IEnumerable<Collection>> GetOrganizationManagedCollectionsAsync(Guid organizationId)
+    {
+        var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
+        var orgCollections = collections.Where(c => c.OrganizationId == organizationId && c.Manage == true);
 
         return orgCollections;
     }

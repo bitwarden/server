@@ -8,4 +8,5 @@ public interface ICollectionService
     Task SaveAsync(Collection collection, IEnumerable<CollectionAccessSelection> groups = null, IEnumerable<CollectionAccessSelection> users = null);
     Task DeleteUserAsync(Collection collection, Guid organizationUserId);
     Task<IEnumerable<Collection>> GetOrganizationCollectionsAsync(Guid organizationId);
+    Task<IEnumerable<Collection>> GetOrganizationManagedCollectionsAsync(Guid organizationId);
 }

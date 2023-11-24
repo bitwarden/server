@@ -136,6 +136,15 @@ public class CollectionsController : Controller
         return new ListResponseModel<CollectionResponseModel>(responses);
     }
 
+    [HttpGet("managed")]
+    public async Task<ListResponseModel<CollectionResponseModel>> GetManaged(Guid orgId)
+    {
+        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationManagedCollectionsAsync(orgId);
+
+        var responses = orgCollections.Select(c => new CollectionResponseModel(c));
+        return new ListResponseModel<CollectionResponseModel>(responses);
+    }
+
     [HttpGet("~/collections")]
     public async Task<ListResponseModel<CollectionDetailsResponseModel>> GetUser()
     {
