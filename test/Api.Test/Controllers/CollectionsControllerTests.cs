@@ -35,7 +35,7 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 ExpectedCollection(),
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Create)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Create)))
             .Returns(AuthorizationResult.Success());
 
         _ = await sutProvider.Sut.Post(orgId, collectionRequest);
@@ -61,7 +61,7 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 collection,
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Update)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
             .Returns(AuthorizationResult.Success());
 
         _ = await sutProvider.Sut.Put(collection.OrganizationId, collection.Id, collectionRequest);
@@ -79,7 +79,7 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 collection,
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Update)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Update)))
             .Returns(AuthorizationResult.Failed());
 
         sutProvider.GetDependency<ICollectionRepository>()
@@ -160,7 +160,7 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 collections,
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Delete)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Delete)))
             .Returns(AuthorizationResult.Success());
 
         // Act
@@ -202,7 +202,7 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(),
                 collections,
-                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(CollectionOperations.Delete)))
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(r => r.Contains(BulkCollectionOperations.Delete)))
             .Returns(AuthorizationResult.Failed());
 
         // Assert
@@ -237,7 +237,7 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(), ExpectedCollectionAccess(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                    r => r.Contains(CollectionOperations.ModifyAccess)
+                    r => r.Contains(BulkCollectionOperations.ModifyAccess)
                 ))
             .Returns(AuthorizationResult.Success());
 
@@ -251,7 +251,7 @@ public class CollectionsControllerTests
             Arg.Any<ClaimsPrincipal>(),
             ExpectedCollectionAccess(),
             Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                r => r.Contains(CollectionOperations.ModifyAccess))
+                r => r.Contains(BulkCollectionOperations.ModifyAccess))
             );
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().Received()
             .AddAccessAsync(
@@ -313,7 +313,7 @@ public class CollectionsControllerTests
         sutProvider.GetDependency<IAuthorizationService>().AuthorizeAsync(
                 Arg.Any<ClaimsPrincipal>(), ExpectedCollectionAccess(),
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                    r => r.Contains(CollectionOperations.ModifyAccess)
+                    r => r.Contains(BulkCollectionOperations.ModifyAccess)
                 ))
             .Returns(AuthorizationResult.Failed());
 
@@ -324,7 +324,7 @@ public class CollectionsControllerTests
             Arg.Any<ClaimsPrincipal>(),
             ExpectedCollectionAccess(),
             Arg.Is<IEnumerable<IAuthorizationRequirement>>(
-                r => r.Contains(CollectionOperations.ModifyAccess))
+                r => r.Contains(BulkCollectionOperations.ModifyAccess))
             );
         await sutProvider.GetDependency<IBulkAddCollectionAccessCommand>().DidNotReceiveWithAnyArgs()
             .AddAccessAsync(default, default, default);

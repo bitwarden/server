@@ -22,35 +22,25 @@ namespace Bit.Api.Test.Vault.AuthorizationHandlers;
 public class BulkCollectionAuthorizationHandlerTests
 {
     [Theory, CollectionCustomization]
-    [BitAutoData(OrganizationUserType.User, false, true)]
-    [BitAutoData(OrganizationUserType.Admin, false, false)]
-    [BitAutoData(OrganizationUserType.Owner, false, false)]
-    [BitAutoData(OrganizationUserType.Custom, true, false)]
-    [BitAutoData(OrganizationUserType.Owner, true, true)]
-    public async Task CanManageCollectionAccessAsync_Success(
-        OrganizationUserType userType, bool editAnyCollection, bool manageCollections,
-        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanCreateAsync_WhenAdminOrOwner_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
-        ICollection<CollectionDetails> collectionDetails,
         CurrentContextOrganization organization)
     {
-        var actingUserId = Guid.NewGuid();
-        foreach (var collectionDetail in collectionDetails)
-        {
-            collectionDetail.Manage = manageCollections;
-        }
-
         organization.Type = userType;
-        organization.Permissions.EditAnyCollection = editAnyCollection;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ModifyAccess },
+            new[] { BulkCollectionOperations.Create },
             new ClaimsPrincipal(),
             collections);
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -58,24 +48,25 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, CollectionCustomization]
-    [BitAutoData(OrganizationUserType.User, false, false)]
-    [BitAutoData(OrganizationUserType.Admin, false, true)]
-    [BitAutoData(OrganizationUserType.Owner, false, true)]
-    [BitAutoData(OrganizationUserType.Custom, true, true)]
-    public async Task CanCreateAsync_Success(
-        OrganizationUserType userType, bool createNewCollection, bool limitCollectionCreateDelete,
+    [BitAutoData(true, true)]
+    [BitAutoData(false, false)]
+    public async Task CanCreateAsync_WhenCustomUserWithRequiredPermissions_Success(
+        bool createNewCollections, bool limitCollectionCreationDeletion,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
-        organization.Type = userType;
-        organization.Permissions.CreateNewCollections = createNewCollection;
-        organization.LimitCollectionCreationDeletion = limitCollectionCreateDelete;
+        organization.Type = OrganizationUserType.Custom;
+        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
+        organization.Permissions = new Permissions
+        {
+            CreateNewCollections = createNewCollections
+        };
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.Create },
+            new[] { BulkCollectionOperations.Create },
             new ClaimsPrincipal(),
             collections);
 
@@ -88,39 +79,684 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, CollectionCustomization]
-    [BitAutoData(OrganizationUserType.User, false, false, true)]
-    [BitAutoData(OrganizationUserType.Admin, false, true, false)]
-    [BitAutoData(OrganizationUserType.Owner, false, true, false)]
-    [BitAutoData(OrganizationUserType.Custom, true, true, false)]
-    public async Task CanDeleteAsync_Success(
-        OrganizationUserType userType, bool deleteAnyCollection, bool limitCollectionCreateDelete, bool manageCollections,
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanCreateAsync_WhenMissingPermissions_NoSuccess(
+        OrganizationUserType userType,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
-        ICollection<CollectionDetails> collectionDetails,
         CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
-        foreach (var collectionDetail in collectionDetails)
-        {
-            collectionDetail.Manage = manageCollections;
-        }
 
         organization.Type = userType;
-        organization.Permissions.DeleteAnyCollection = deleteAnyCollection;
-        organization.LimitCollectionCreationDeletion = limitCollectionCreateDelete;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManageUsers = false
+        };
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.Delete },
+            new[] { BulkCollectionOperations.Create },
             new ClaimsPrincipal(),
             collections);
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateAsync_WhenMissingOrgAccess_NoSuccess(
+        Guid userId,
+        ICollection<Collection> collections,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Create },
+            new ClaimsPrincipal(),
+            collections
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanReadAsync_WhenAdminOrOwner_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Read },
+            new ClaimsPrincipal(),
+            collections);
 
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(true, false, false, false, true)]
+    [BitAutoData(false, true, false, false, true)]
+    [BitAutoData(false, false, true, false, true)]
+    [BitAutoData(false, false, false, true, true)]
+    [BitAutoData(false, false, false, false, false)]
+
+    public async Task CanReadAsync_WhenCustomUserWithRequiredPermissions_Success(
+        bool manageUsers, bool editAnyCollection, bool deleteAnyCollection,
+        bool createNewCollections, bool limitCollectionCreationDeletion,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.Custom;
+        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
+        organization.Permissions = new Permissions
+        {
+            ManageUsers = manageUsers,
+            EditAnyCollection = editAnyCollection,
+            DeleteAnyCollection = deleteAnyCollection,
+            CreateNewCollections = createNewCollections
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Read },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanReadAsync_WhenUserWithRequiredPermissions_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.LimitCollectionCreationDeletion = false;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Read },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanReadAsync_WhenMissingPermissions_NoSuccess(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManageUsers = false
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Read },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanReadAsync_WhenMissingOrgAccess_NoSuccess(
+        Guid userId,
+        ICollection<Collection> collections,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Read },
+            new ClaimsPrincipal(),
+            collections
+        );
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    //
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanReadAccessAsync_WhenAdminOrOwner_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.ReadAccess },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(true, false, false, true)]
+    [BitAutoData(false, true, false, true)]
+    [BitAutoData(false, false, true, true)]
+    [BitAutoData(false, false, false, false)]
+
+    public async Task CanReadAccessAsync_WhenCustomUserWithRequiredPermissions_Success(
+        bool editAnyCollection, bool deleteAnyCollection,
+        bool createNewCollections, bool limitCollectionCreationDeletion,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.Custom;
+        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = editAnyCollection,
+            DeleteAnyCollection = deleteAnyCollection,
+            CreateNewCollections = createNewCollections
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.ReadAccess },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanReadAccessAsync_WhenUserWithRequiredPermissions_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.LimitCollectionCreationDeletion = false;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.ReadAccess },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanReadAccessAsync_WhenMissingPermissions_NoSuccess(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManageUsers = false
+        };
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.ReadAccess },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanReadAccessAsync_WhenMissingOrgAccess_NoSuccess(
+        Guid userId,
+        ICollection<Collection> collections,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.ReadAccess },
+            new ClaimsPrincipal(),
+            collections
+        );
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    //
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanManageCollectionAccessAsync_WhenAdminOrOwner_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
+
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections);
+
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.True(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanManageCollectionAccessAsync_WithEditAnyCollectionPermission_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.Custom;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = true
+        };
+
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections);
+
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.True(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanManageCollectionAccessAsync_WithManageCollectionPermission_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+            sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections);
+
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.True(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanManageCollectionAccessAsync_WhenMissingPermissions_NoSuccess(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = false;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManageUsers = false
+        };
+
+        foreach (var collectionDetail in collections)
+        {
+            collectionDetail.Manage = true;
+        }
+        // Simulate one collection missing the manage permission
+        collections.First().Manage = false;
+
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections);
+
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.False(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanManageCollectionAccessAsync_WhenMissingOrgAccess_NoSuccess(
+        Guid userId,
+        ICollection<Collection> collections,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Update, BulkCollectionOperations.ModifyAccess
+        };
+
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections
+            );
+
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.False(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.Admin)]
+    [BitAutoData(OrganizationUserType.Owner)]
+    public async Task CanDeleteAsync_WhenAdminOrOwner_Success(
+        OrganizationUserType userType,
+        Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WithDeleteAnyCollectionPermission_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.Custom;
+        organization.LimitCollectionCreationDeletion = false;
+        organization.Permissions = new Permissions
+        {
+            DeleteAnyCollection = true
+        };
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WithManageCollectionPermission_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
+
+        var context = new AuthorizationHandlerContext(
+                new[] { BulkCollectionOperations.Delete },
+                new ClaimsPrincipal(),
+                collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, CollectionCustomization]
+    [BitAutoData(OrganizationUserType.User)]
+    [BitAutoData(OrganizationUserType.Custom)]
+    public async Task CanDeleteAsync_WhenMissingPermissions_NoSuccess(
+        OrganizationUserType userType,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<Collection> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions
+        {
+            EditAnyCollection = false,
+            DeleteAnyCollection = false,
+            ManageGroups = false,
+            ManageUsers = false
+        };
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections);
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanDeleteAsync_WhenMissingOrgAccess_NoSuccess(
+        Guid userId,
+        ICollection<Collection> collections,
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.Delete },
+            new ClaimsPrincipal(),
+            collections
+        );
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -129,7 +765,7 @@ public class BulkCollectionAuthorizationHandlerTests
         ICollection<Collection> collections)
     {
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.Create },
+            new[] { BulkCollectionOperations.Create },
             new ClaimsPrincipal(),
             collections
         );
@@ -153,7 +789,7 @@ public class BulkCollectionAuthorizationHandlerTests
         collections.First().OrganizationId = Guid.NewGuid();
 
         var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.Create },
+            new[] { BulkCollectionOperations.Create },
             new ClaimsPrincipal(),
             collections
         );
@@ -166,92 +802,42 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task HandleRequirementAsync_MissingOrg_NoSuccess(
-        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
-        ICollection<Collection> collections)
-    {
-        var actingUserId = Guid.NewGuid();
-
-        var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.Create },
-            new ClaimsPrincipal(),
-            collections
-        );
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
-
-        await sutProvider.Sut.HandleAsync(context);
-        Assert.False(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
     public async Task HandleRequirementAsync_Provider_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections)
     {
+        var actingUserId = Guid.NewGuid();
+        var orgId = collections.First().OrganizationId;
+
         var operationsToTest = new[]
         {
-            CollectionOperations.Create, CollectionOperations.Delete, CollectionOperations.ModifyAccess
+            BulkCollectionOperations.Create,
+            BulkCollectionOperations.Read,
+            BulkCollectionOperations.ReadAccess,
+            BulkCollectionOperations.Update,
+            BulkCollectionOperations.ModifyAccess,
+            BulkCollectionOperations.Delete,
         };
 
         foreach (var op in operationsToTest)
         {
-            var actingUserId = Guid.NewGuid();
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization)null);
+            sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
+
             var context = new AuthorizationHandlerContext(
                 new[] { op },
                 new ClaimsPrincipal(),
                 collections
             );
-            var orgId = collections.First().OrganizationId;
-
-            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-            sutProvider.GetDependency<ICurrentContext>().GetOrganization(orgId).Returns((CurrentContextOrganization)null);
-            sutProvider.GetDependency<ICurrentContext>().ProviderUserForOrgAsync(Arg.Any<Guid>()).Returns(true);
 
             await sutProvider.Sut.HandleAsync(context);
+
             Assert.True(context.HasSucceeded);
             await sutProvider.GetDependency<ICurrentContext>().Received().ProviderUserForOrgAsync(orgId);
 
             // Recreate the SUT to reset the mocks/dependencies between tests
             sutProvider.Recreate();
         }
-    }
-
-    [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_MissingManageCollectionPermission_NoSuccess(
-        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
-        ICollection<Collection> collections,
-        ICollection<CollectionDetails> collectionDetails,
-        CurrentContextOrganization organization)
-    {
-        var actingUserId = Guid.NewGuid();
-
-        foreach (var collectionDetail in collectionDetails)
-        {
-            collectionDetail.Manage = true;
-        }
-        // Simulate one collection missing the manage permission
-        collectionDetails.First().Manage = false;
-
-        // Ensure the user is not an owner/admin and does not have edit any collection permission
-        organization.Type = OrganizationUserType.User;
-        organization.Permissions.EditAnyCollection = false;
-
-        var context = new AuthorizationHandlerContext(
-            new[] { CollectionOperations.ModifyAccess },
-            new ClaimsPrincipal(),
-            collections
-        );
-
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns(organization);
-        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
-
-        await sutProvider.Sut.HandleAsync(context);
-        Assert.False(context.HasSucceeded);
-        sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().GetOrganization(default);
-        await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
-            .GetManyByUserIdAsync(default);
     }
 }

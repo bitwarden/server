@@ -15,7 +15,7 @@ namespace Bit.Api.Vault.AuthorizationHandlers.Collections;
 /// Handles authorization logic for Collection objects, including access permissions for users and groups.
 /// This uses new logic implemented in the Flexible Collections initiative.
 /// </summary>
-public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<CollectionOperationRequirement, Collection>
+public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkCollectionOperationRequirement, Collection>
 {
     private readonly ICurrentContext _currentContext;
     private readonly ICollectionRepository _collectionRepository;
@@ -35,7 +35,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
     }
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
-        CollectionOperationRequirement requirement, ICollection<Collection>? resources)
+        BulkCollectionOperationRequirement requirement, ICollection<Collection>? resources)
     {
         if (!UseFlexibleCollections)
         {
@@ -69,27 +69,30 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
 
         switch (requirement)
         {
-            case not null when requirement == CollectionOperations.Create:
+            case not null when requirement == BulkCollectionOperations.Create:
                 await CanCreateAsync(context, requirement, org);
                 break;
 
-            case not null when requirement == CollectionOperations.Read:
-            case not null when requirement == CollectionOperations.ReadAccess:
+            case not null when requirement == BulkCollectionOperations.Read:
                 await CanReadAsync(context, requirement, resources, org);
                 break;
 
-            case not null when requirement == CollectionOperations.Delete:
-                await CanDeleteAsync(context, requirement, resources, org);
+            case not null when requirement == BulkCollectionOperations.ReadAccess:
+                await CanReadAccessAsync(context, requirement, resources, org);
                 break;
 
-            case not null when requirement == CollectionOperations.Update:
-            case not null when requirement == CollectionOperations.ModifyAccess:
+            case not null when requirement == BulkCollectionOperations.Update:
+            case not null when requirement == BulkCollectionOperations.ModifyAccess:
                 await CanManageCollectionAccessAsync(context, requirement, resources, org);
+                break;
+
+            case not null when requirement == BulkCollectionOperations.Delete:
+                await CanDeleteAsync(context, requirement, resources, org);
                 break;
         }
     }
 
-    private async Task CanCreateAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
+    private async Task CanCreateAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement,
         CurrentContextOrganization? org)
     {
         // If the limit collection management setting is disabled, allow any user to create collections
@@ -110,25 +113,111 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
         }
     }
 
-    private async Task CanReadAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
-        ICollection<Collection> targetCollections, CurrentContextOrganization org)
+    private async Task CanReadAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement,
+        ICollection<Collection> resources, CurrentContextOrganization? org)
     {
-        if (org.Type is OrganizationUserType.Owner or OrganizationUserType.Admin ||
-            org.Permissions.EditAnyCollection || org.Permissions.DeleteAnyCollection ||
-            await _currentContext.ProviderUserForOrgAsync(org.Id))
+        // Owners, Admins, and users with EditAnyCollection or DeleteAnyCollection permission can always read a collection
+        if (org is
+        { LimitCollectionCreationDeletion: false } or
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.EditAnyCollection: true } or
+        { Permissions.DeleteAnyCollection: true } or
+        { Permissions.CreateNewCollections: true } or
+        { Permissions.ManageUsers: true })
         {
             context.Succeed(requirement);
             return;
         }
 
-        var canManageCollections = await HasCollectionAccessAsync(targetCollections, org, requireManagePermission: false);
-        if (canManageCollections)
+        // The acting user is a member of the target organization,
+        // ensure they have access for the collection being read
+        if (org is not null)
+        {
+            var canManageCollections = await HasCollectionAccessAsync(resources, org, requireManagePermission: false);
+            if (canManageCollections)
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+
+        // Allow provider users to read collections if they are a provider for the target organization
+        if (await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId))
         {
             context.Succeed(requirement);
         }
     }
 
-    private async Task CanDeleteAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
+    private async Task CanReadAccessAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement,
+        ICollection<Collection> resources, CurrentContextOrganization? org)
+    {
+        // Owners, Admins, and users with EditAnyCollection or DeleteAnyCollection permission can always read a collection
+        if (org is
+        { LimitCollectionCreationDeletion: false } or
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.EditAnyCollection: true } or
+        { Permissions.DeleteAnyCollection: true } or
+        { Permissions.CreateNewCollections: true })
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
+        // The acting user is a member of the target organization,
+        // ensure they have access for the collection being read
+        if (org is not null)
+        {
+            var canManageCollections = await HasCollectionAccessAsync(resources, org, requireManagePermission: false);
+            if (canManageCollections)
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+
+        // Allow provider users to read collections if they are a provider for the target organization
+        if (await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId))
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    /// <summary>
+    /// Ensures the acting user is allowed to manage access permissions for the target collections.
+    /// </summary>
+    private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context,
+        IAuthorizationRequirement requirement, ICollection<Collection> resources,
+        CurrentContextOrganization? org)
+    {
+        // Owners, Admins, and users with EditAnyCollection permission can always manage collection access
+        if (org is
+        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
+        { Permissions.EditAnyCollection: true })
+        {
+            context.Succeed(requirement);
+            return;
+        }
+
+        // The acting user is a member of the target organization,
+        // ensure they have manage permission for the collection being managed
+        if (org is not null)
+        {
+            var canManageCollections = await HasCollectionAccessAsync(resources, org, requireManagePermission: true);
+            if (canManageCollections)
+            {
+                context.Succeed(requirement);
+                return;
+            }
+        }
+
+        // Allow providers to manage collections if they are a provider for the target organization
+        if (await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId))
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task CanDeleteAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement,
         ICollection<Collection> resources, CurrentContextOrganization? org)
     {
         // Owners, Admins, and users with DeleteAnyCollection permission can always delete collections
@@ -153,41 +242,6 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<Colle
         }
 
         // Allow providers to delete collections if they are a provider for the target organization
-        if (await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId))
-        {
-            context.Succeed(requirement);
-        }
-    }
-
-    /// <summary>
-    /// Ensures the acting user is allowed to manage access permissions for the target collections.
-    /// </summary>
-    private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context,
-        IAuthorizationRequirement requirement, ICollection<Collection> resources,
-        CurrentContextOrganization? org)
-    {
-        // Owners, Admins, and users with EditAnyCollection permission can always manage collection access
-        if (org is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.EditAnyCollection: true })
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
-        // The limit collection management setting is disabled,
-        // ensure acting user has manage permissions for all collections being deleted
-        if (org is { LimitCollectionCreationDeletion: false })
-        {
-            var canManageCollections = await HasCollectionAccessAsync(resources, org, requireManagePermission: true);
-            if (canManageCollections)
-            {
-                context.Succeed(requirement);
-                return;
-            }
-        }
-
-        // Allow providers to manage collections if they are a provider for the target organization
         if (await _currentContext.ProviderUserForOrgAsync(_targetOrganizationId))
         {
             context.Succeed(requirement);
