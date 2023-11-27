@@ -1,10 +1,13 @@
 ﻿using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
@@ -15,7 +18,6 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data;
-using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
@@ -57,6 +59,7 @@ public class OrganizationService : IOrganizationService
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly ICountNewSmSeatsRequiredQuery _countNewSmSeatsRequiredQuery;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
+    private readonly IProviderRepository _providerRepository;
     private readonly IOrgUserInviteTokenableFactory _orgUserInviteTokenableFactory;
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
@@ -90,6 +93,7 @@ public class OrganizationService : IOrganizationService
         IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
         IDataProtectorTokenFactory<OrgUserInviteTokenable> orgUserInviteTokenDataFactory,
         IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
+        IProviderRepository providerRepository,
         IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
@@ -118,6 +122,7 @@ public class OrganizationService : IOrganizationService
         _providerUserRepository = providerUserRepository;
         _countNewSmSeatsRequiredQuery = countNewSmSeatsRequiredQuery;
         _updateSecretsManagerSubscriptionCommand = updateSecretsManagerSubscriptionCommand;
+        _providerRepository = providerRepository;
         _orgUserInviteTokenableFactory = orgUserInviteTokenableFactory;
         _orgUserInviteTokenDataFactory = orgUserInviteTokenDataFactory;
         _featureService = featureService;
@@ -736,7 +741,7 @@ public class OrganizationService : IOrganizationService
         }
     }
 
-    public async Task UpdateAsync(Organization organization, bool updateBilling = false)
+    public async Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated)
     {
         if (organization.Id == default(Guid))
         {
@@ -752,7 +757,7 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        await ReplaceAndUpdateCacheAsync(organization, EventType.Organization_Updated);
+        await ReplaceAndUpdateCacheAsync(organization, eventType);
 
         if (updateBilling && !string.IsNullOrWhiteSpace(organization.GatewayCustomerId))
         {
@@ -862,7 +867,7 @@ public class OrganizationService : IOrganizationService
 
         if (newSeatsRequired > 0)
         {
-            var (canScale, failureReason) = CanScale(organization, newSeatsRequired);
+            var (canScale, failureReason) = await CanScaleAsync(organization, newSeatsRequired);
             if (!canScale)
             {
                 throw new BadRequestException(failureReason);
@@ -1182,7 +1187,8 @@ public class OrganizationService : IOrganizationService
         return result;
     }
 
-    internal (bool canScale, string failureReason) CanScale(Organization organization,
+    internal async Task<(bool canScale, string failureReason)> CanScaleAsync(
+        Organization organization,
         int seatsToAdd)
     {
         var failureReason = "";
@@ -1195,6 +1201,13 @@ public class OrganizationService : IOrganizationService
         if (seatsToAdd < 1)
         {
             return (true, failureReason);
+        }
+
+        var provider = await _providerRepository.GetByOrganizationIdAsync(organization.Id);
+
+        if (provider is { Enabled: true, Type: ProviderType.Reseller })
+        {
+            return (false, "Seat limit has been reached. Contact your provider to purchase additional seats.");
         }
 
         if (organization.Seats.HasValue &&
@@ -1214,7 +1227,7 @@ public class OrganizationService : IOrganizationService
             return;
         }
 
-        var (canScale, failureMessage) = CanScale(organization, seatsToAdd);
+        var (canScale, failureMessage) = await CanScaleAsync(organization, seatsToAdd);
         if (!canScale)
         {
             throw new BadRequestException(failureMessage);
@@ -1811,9 +1824,9 @@ public class OrganizationService : IOrganizationService
 
     private static void ValidatePlan(Models.StaticStore.Plan plan, int additionalSeats, string productType)
     {
-        if (plan is not { LegacyYear: null })
+        if (plan is null)
         {
-            throw new BadRequestException($"Invalid {productType} plan selected.");
+            throw new BadRequestException($"{productType} Plan was null.");
         }
 
         if (plan.Disabled)
@@ -1829,6 +1842,11 @@ public class OrganizationService : IOrganizationService
 
     public void ValidatePasswordManagerPlan(Models.StaticStore.Plan plan, OrganizationUpgrade upgrade)
     {
+        if (plan is not { LegacyYear: null })
+        {
+            throw new BadRequestException("Invalid Password Manager plan selected.");
+        }
+
         ValidatePlan(plan, upgrade.AdditionalSeats, "Password Manager");
 
         if (plan.PasswordManager.BaseSeats + upgrade.AdditionalSeats <= 0)
@@ -1888,7 +1906,10 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Plan does not allow additional Service Accounts.");
         }
 
-        if (upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats)
+        if ((plan.Product == ProductType.TeamsStarter &&
+            upgrade.AdditionalSmSeats.GetValueOrDefault() > plan.PasswordManager.BaseSeats) ||
+            (plan.Product != ProductType.TeamsStarter &&
+             upgrade.AdditionalSmSeats.GetValueOrDefault() > upgrade.AdditionalSeats))
         {
             throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }

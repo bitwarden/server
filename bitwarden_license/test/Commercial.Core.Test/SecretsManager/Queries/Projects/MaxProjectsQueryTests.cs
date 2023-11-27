@@ -55,6 +55,7 @@ public class MaxProjectsQueryTests
     [BitAutoData(PlanType.TeamsAnnually2019)]
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     [BitAutoData(PlanType.EnterpriseMonthly2019)]
     [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]

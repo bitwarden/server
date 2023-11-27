@@ -5,6 +5,4 @@ LABEL com.bitwarden.product="bitwarden"
 WORKDIR /app
 COPY obj/build-output/publish .
 
-ENTRYPOINT ["sh", "-c", "dotnet /app/MsSqlMigratorUtility.dll \"${MSSQL_CONN_STRING}\""]
-
-CMD [ "-v" ]
+ENTRYPOINT ["sh", "-c", "dotnet /app/MsSqlMigratorUtility.dll \"${MSSQL_CONN_STRING}\" -v ${@}", "--" ]

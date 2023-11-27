@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -21,9 +22,9 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -34,10 +35,11 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 using Organization = Bit.Core.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
-using Policy = Bit.Core.Entities.Policy;
+using Policy = Bit.Core.AdminConsole.Entities.Policy;
 
 namespace Bit.Core.Test.Services;
 
@@ -1355,10 +1357,14 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.Custom, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.EnterpriseAnnually, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.EnterpriseAnnually, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.EnterpriseAnnually2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.EnterpriseAnnually2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.EnterpriseAnnually2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.EnterpriseMonthly, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.EnterpriseMonthly, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.EnterpriseMonthly2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.EnterpriseMonthly2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.EnterpriseMonthly2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.FamiliesAnnually, OrganizationUserType.Admin)]
@@ -1367,10 +1373,14 @@ public class OrganizationServiceTests
     [BitAutoData(PlanType.FamiliesAnnually2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsAnnually, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsAnnually, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.TeamsAnnually2020, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.TeamsAnnually2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsAnnually2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsAnnually2019, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsMonthly, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsMonthly, OrganizationUserType.Owner)]
+    [BitAutoData(PlanType.TeamsMonthly2020, OrganizationUserType.Admin)]
+    [BitAutoData(PlanType.TeamsMonthly2020, OrganizationUserType.Owner)]
     [BitAutoData(PlanType.TeamsMonthly2019, OrganizationUserType.Admin)]
     [BitAutoData(PlanType.TeamsMonthly2019, OrganizationUserType.Owner)]
     public async Task ConfirmUserToNonFree_AlreadyFreeAdminOrOwner_DoesNotThrow(PlanType planType, OrganizationUserType orgUserType, Organization org, OrganizationUser confirmingUser,
@@ -1598,15 +1608,16 @@ public class OrganizationServiceTests
     [BitAutoData(0, null, 100, true, "")]
     [BitAutoData(1, 100, null, true, "")]
     [BitAutoData(1, 100, 100, false, "Seat limit has been reached")]
-    public void CanScale(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
+    public async Task CanScaleAsync(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
         bool expectedResult, string expectedFailureMessage, Organization organization,
         SutProvider<OrganizationService> sutProvider)
     {
         organization.Seats = currentSeats;
         organization.MaxAutoscaleSeats = maxAutoscaleSeats;
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
 
-        var (result, failureMessage) = sutProvider.Sut.CanScale(organization, seatsToAdd);
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, seatsToAdd);
 
         if (expectedFailureMessage == string.Empty)
         {
@@ -1620,14 +1631,33 @@ public class OrganizationServiceTests
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public void CanScale_FailsOnSelfHosted(Organization organization,
+    public async Task CanScaleAsync_FailsOnSelfHosted(Organization organization,
         SutProvider<OrganizationService> sutProvider)
     {
         sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
-        var (result, failureMessage) = sutProvider.Sut.CanScale(organization, 10);
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
 
         Assert.False(result);
         Assert.Contains("Cannot autoscale on self-hosted instance", failureMessage);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task CanScaleAsync_FailsOnResellerManagedOrganization(
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var provider = new Provider
+        {
+            Enabled = true,
+            Type = ProviderType.Reseller
+        };
+
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+
+        Assert.False(result);
+        Assert.Contains("Seat limit has been reached. Contact your provider to purchase additional seats.", failureMessage);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
@@ -1789,27 +1819,9 @@ public class OrganizationServiceTests
     }
 
     [Theory]
-    [BitAutoData(PlanType.EnterpriseAnnually2019)]
-    public void ValidateSecretsManagerPlan_ThrowsException_WhenInvalidPlanSelected(
-        PlanType planType, SutProvider<OrganizationService> sutProvider)
-    {
-        var plan = StaticStore.GetPlan(planType);
-
-        var signup = new OrganizationUpgrade
-        {
-            UseSecretsManager = true,
-            AdditionalSmSeats = 1,
-            AdditionalServiceAccounts = 10,
-            AdditionalSeats = 1
-        };
-
-        var exception = Assert.Throws<BadRequestException>(() => sutProvider.Sut.ValidateSecretsManagerPlan(plan, signup));
-        Assert.Contains("Invalid Secrets Manager plan selected.", exception.Message);
-    }
-
-    [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenNoSecretsManagerSeats(PlanType planType, SutProvider<OrganizationService> sutProvider)
@@ -1882,6 +1894,7 @@ public class OrganizationServiceTests
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ThrowsException_WhenSubtractingServiceAccounts(
@@ -1921,6 +1934,7 @@ public class OrganizationServiceTests
     [Theory]
     [BitAutoData(PlanType.TeamsAnnually)]
     [BitAutoData(PlanType.TeamsMonthly)]
+    [BitAutoData(PlanType.TeamsStarter)]
     [BitAutoData(PlanType.EnterpriseAnnually)]
     [BitAutoData(PlanType.EnterpriseMonthly)]
     public void ValidateSecretsManagerPlan_ValidPlan_NoExceptionThrown(

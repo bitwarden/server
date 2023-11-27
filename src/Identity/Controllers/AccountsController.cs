@@ -1,6 +1,8 @@
 ﻿using Bit.Core;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
+using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Enums;
@@ -8,9 +10,9 @@ using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
-using Fido2NetLib;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
@@ -23,17 +25,21 @@ public class AccountsController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IUserService _userService;
     private readonly ICaptchaValidationService _captchaValidationService;
+    private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
+
 
     public AccountsController(
         ILogger<AccountsController> logger,
         IUserRepository userRepository,
         IUserService userService,
-        ICaptchaValidationService captchaValidationService)
+        ICaptchaValidationService captchaValidationService,
+        IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector)
     {
         _logger = logger;
         _userRepository = userRepository;
         _userService = userService;
         _captchaValidationService = captchaValidationService;
+        _assertionOptionsDataProtector = assertionOptionsDataProtector;
     }
 
     // Moved from API, If you modify this endpoint, please update API as well. Self hosted installs still use the API endpoints.
@@ -75,36 +81,19 @@ public class AccountsController : Controller
         return new PreloginResponseModel(kdfInformation);
     }
 
-    [HttpPost("webauthn-assertion-options")]
-    [ApiExplorerSettings(IgnoreApi = true)] // Disable Swagger due to CredentialCreateOptions not converting properly
+    [HttpGet("webauthn/assertion-options")]
     [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
-    // TODO: Create proper models for this call
-    public async Task<AssertionOptions> PostWebAuthnAssertionOptions([FromBody] PreloginRequestModel model)
+    public WebAuthnLoginAssertionOptionsResponseModel GetWebAuthnLoginAssertionOptions()
     {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
+        var options = _userService.StartWebAuthnLoginAssertion();
+
+        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.Authentication, options);
+        var token = _assertionOptionsDataProtector.Protect(tokenable);
+
+        return new WebAuthnLoginAssertionOptionsResponseModel
         {
-            // TODO: return something? possible enumeration attacks with this response
-            return new AssertionOptions();
-        }
-
-        var options = await _userService.StartWebAuthnLoginAssertionAsync(user);
-        return options;
-    }
-
-    [HttpPost("webauthn-assertion")]
-    [RequireFeature(FeatureFlagKeys.PasswordlessLogin)]
-    // TODO: Create proper models for this call
-    public async Task<string> PostWebAuthnAssertion([FromBody] PreloginRequestModel model)
-    {
-        var user = await _userRepository.GetByEmailAsync(model.Email);
-        if (user == null)
-        {
-            // TODO: proper response here?
-            throw new BadRequestException();
-        }
-
-        var token = await _userService.CompleteWebAuthLoginAssertionAsync(null, user);
-        return token;
+            Options = options,
+            Token = token
+        };
     }
 }
