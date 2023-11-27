@@ -1,9 +1,17 @@
 ﻿using System.Text.Json;
+using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 
 namespace Bit.Core.Test.Models.Business;
 
-public static class OrganizationLicenseStaticVersions
+/// <summary>
+/// Contains test data for OrganizationLicense tests, including json strings for each OrganizationLicense version.
+/// If you increment the OrganizationLicense version (e.g. because you've added a property to it), you must add the
+/// json string for your new version to the LicenseVersions dictionary in this class.
+/// See OrganizationLicenseTests.GenerateLicenseFileJsonString to help you do this.
+/// </summary>
+public static class OrganizationLicenseFileFixtures
 {
     public const string InstallationId = "78900000-0000-0000-0000-000000000123";
 
@@ -20,7 +28,7 @@ public static class OrganizationLicenseStaticVersions
         if (!LicenseVersions.ContainsKey(licenseVersion))
         {
             throw new Exception(
-                $"Cannot find serialized license version {licenseVersion}. You must add this to OrganizationLicenseStaticVersions when adding a new license version.");
+                $"Cannot find serialized license version {licenseVersion}. You must add this to OrganizationLicenseFileFixtures when adding a new license version.");
         }
 
         var json = LicenseVersions.GetValueOrDefault(licenseVersion).Replace("'", "\"");
@@ -36,4 +44,67 @@ public static class OrganizationLicenseStaticVersions
 
         return license;
     }
+
+    /// <summary>
+    /// The organization used to generate the license file json strings in this class.
+    /// All its properties should be initialized with literal, non-default values.
+    /// If you add an Organization property value, please add a value here as well.
+    /// </summary>
+    public static Organization CreateOrganization() =>
+        new()
+        {
+            Id = new Guid("12300000-0000-0000-0000-000000000456"),
+            Identifier = "myIdentifier",
+            Name = "myOrg",
+            BusinessName = "myBusinessName",
+            BusinessAddress1 = "myBusinessAddress1",
+            BusinessAddress2 = "myBusinessAddress2",
+            BusinessAddress3 = "myBusinessAddress3",
+            BusinessCountry = "myBusinessCountry",
+            BusinessTaxNumber = "myBusinessTaxNumber",
+            BillingEmail = "myBillingEmail",
+            Plan = "myPlan",
+            PlanType = PlanType.EnterpriseAnnually2020,
+            Seats = 10,
+            MaxCollections = 2,
+            UsePolicies = true,
+            UseSso = true,
+            UseKeyConnector = true,
+            UseScim = true,
+            UseGroups = true,
+            UseDirectory = true,
+            UseEvents = true,
+            UseTotp = true,
+            Use2fa = true,
+            UseApi = true,
+            UseResetPassword = true,
+            UseSecretsManager = true,
+            SelfHost = true,
+            UsersGetPremium = true,
+            UseCustomPermissions = true,
+            Storage = 100000,
+            MaxStorageGb = 100,
+            Gateway = GatewayType.Stripe,
+            GatewayCustomerId = "myGatewayCustomerId",
+            GatewaySubscriptionId = "myGatewaySubscriptionId",
+            ReferenceData = "myReferenceData",
+            Enabled = true,
+            LicenseKey = "myLicenseKey",
+            PublicKey = "myPublicKey",
+            PrivateKey = "myPrivateKey",
+            TwoFactorProviders = "myTwoFactorProviders",
+            ExpirationDate = new DateTime(2024, 12, 24),
+            CreationDate = new DateTime(2022, 10, 22),
+            RevisionDate = new DateTime(2023, 11, 23),
+            MaxAutoscaleSeats = 100,
+            OwnersNotifiedOfAutoscaling = new DateTime(2020, 5, 10),
+            Status = OrganizationStatusType.Created,
+            UsePasswordManager = true,
+            SmSeats = 5,
+            SmServiceAccounts = 8,
+            MaxAutoscaleSmSeats = 101,
+            MaxAutoscaleSmServiceAccounts = 102,
+            SecretsManagerBeta = true,
+            LimitCollectionCreationDeletion = true
+        };
 }
