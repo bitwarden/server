@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bit.Core.Models.Data.Organizations.Policies;
+namespace Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 
 public class ResetPasswordDataModel : IPolicyDataModel
 {
