@@ -41,7 +41,7 @@ public class OrganizationLicenseTests
     public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion)
     {
         var license = OrganizationLicenseFileFixtures.GetVersion(licenseVersion);
-        var organization = OrganizationLicenseFileFixtures.CreateOrganization();
+        var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
         var globalSettings = Substitute.For<IGlobalSettings>();
         globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings
         {
@@ -58,7 +58,7 @@ public class OrganizationLicenseTests
     // [Fact]
     private void GenerateLicenseFileJsonString()
     {
-        var organization = OrganizationLicenseFileFixtures.CreateOrganization();
+        var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
         var licensingService = Substitute.For<ILicensingService>();
         var installationId = new Guid(OrganizationLicenseFileFixtures.InstallationId);
 

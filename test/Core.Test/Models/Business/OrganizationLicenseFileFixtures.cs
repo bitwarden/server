@@ -50,7 +50,7 @@ public static class OrganizationLicenseFileFixtures
     /// All its properties should be initialized with literal, non-default values.
     /// If you add an Organization property value, please add a value here as well.
     /// </summary>
-    public static Organization CreateOrganization() =>
+    public static Organization OrganizationFactory() =>
         new()
         {
             Id = new Guid("12300000-0000-0000-0000-000000000456"),
