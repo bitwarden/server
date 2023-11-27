@@ -362,7 +362,6 @@ BEGIN TRY
         AND [ex].[ExcludedId] IS NULL
         AND [User].Premium = 0;
 
-
     DROP TABLE #ExcludedOrganizationIds;
 
 COMMIT;
