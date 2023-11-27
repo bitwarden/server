@@ -114,6 +114,9 @@ public class DatabaseContext : DbContext
         eOrganization.Property(c => c.LimitCollectionCreationDeletion)
             .ValueGeneratedNever()
             .HasDefaultValue(true);
+        eOrganization.Property(c => c.AllowAdminAccessToAllCollectionItems)
+            .ValueGeneratedNever()
+            .HasDefaultValue(true);
         eOrganizationSponsorship.Property(c => c.Id).ValueGeneratedNever();
         eOrganizationUser.Property(c => c.Id).ValueGeneratedNever();
         ePolicy.Property(c => c.Id).ValueGeneratedNever();

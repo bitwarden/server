@@ -27,6 +27,7 @@ public class CipherService : ICipherService
     private readonly ICollectionRepository _collectionRepository;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionCipherRepository _collectionCipherRepository;
     private readonly IPushNotificationService _pushService;
     private readonly IAttachmentStorageService _attachmentStorageService;
@@ -34,7 +35,7 @@ public class CipherService : ICipherService
     private readonly IUserService _userService;
     private readonly IPolicyService _policyService;
     private readonly GlobalSettings _globalSettings;
-    private const long _fileSizeLeeway = 1024L * 1024L; // 1MB 
+    private const long _fileSizeLeeway = 1024L * 1024L; // 1MB
     private readonly IReferenceEventService _referenceEventService;
     private readonly ICurrentContext _currentContext;
 
@@ -44,6 +45,7 @@ public class CipherService : ICipherService
         ICollectionRepository collectionRepository,
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
         ICollectionCipherRepository collectionCipherRepository,
         IPushNotificationService pushService,
         IAttachmentStorageService attachmentStorageService,
@@ -59,6 +61,7 @@ public class CipherService : ICipherService
         _collectionRepository = collectionRepository;
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
+        _organizationUserRepository = organizationUserRepository;
         _collectionCipherRepository = collectionCipherRepository;
         _pushService = pushService;
         _attachmentStorageService = attachmentStorageService;
@@ -652,7 +655,7 @@ public class CipherService : ICipherService
 
         cipher.RevisionDate = DateTime.UtcNow;
 
-        // The sprocs will validate that all collections belong to this org/user and that they have 
+        // The sprocs will validate that all collections belong to this org/user and that they have
         // proper write permissions.
         if (orgAdmin)
         {
@@ -747,6 +750,7 @@ public class CipherService : ICipherService
         var org = collections.Count > 0 ?
             await _organizationRepository.GetByIdAsync(collections[0].OrganizationId) :
             await _organizationRepository.GetByIdAsync(ciphers.FirstOrDefault(c => c.OrganizationId.HasValue).OrganizationId.Value);
+        var importingOrgUser = await _organizationUserRepository.GetByOrganizationAsync(org.Id, importingUserId);
 
         if (collections.Count > 0 && org != null && org.MaxCollections.HasValue)
         {
@@ -764,18 +768,25 @@ public class CipherService : ICipherService
             cipher.SetNewId();
         }
 
-        var userCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
+        var organizationCollectionsIds = (await _collectionRepository.GetManyByOrganizationIdAsync(org.Id)).Select(c => c.Id).ToList();
 
         //Assign id to the ones that don't exist in DB
         //Need to keep the list order to create the relationships
-        List<Collection> newCollections = new List<Collection>();
+        var newCollections = new List<Collection>();
+        var newCollectionUsers = new List<CollectionUser>();
 
         foreach (var collection in collections)
         {
-            if (!userCollectionsIds.Contains(collection.Id))
+            if (!organizationCollectionsIds.Contains(collection.Id))
             {
                 collection.SetNewId();
                 newCollections.Add(collection);
+                newCollectionUsers.Add(new CollectionUser
+                {
+                    CollectionId = collection.Id,
+                    OrganizationUserId = importingOrgUser.Id,
+                    Manage = true
+                });
             }
         }
 
@@ -799,7 +810,7 @@ public class CipherService : ICipherService
         }
 
         // Create it all
-        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers);
+        await _cipherRepository.CreateAsync(ciphers, newCollections, collectionCiphers, newCollectionUsers);
 
         // push
         await _pushService.PushSyncVaultAsync(importingUserId);
