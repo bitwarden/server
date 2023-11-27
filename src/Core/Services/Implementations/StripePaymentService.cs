@@ -1206,7 +1206,7 @@ public class StripePaymentService : IPaymentService
             throw ContactSupport();
         }
 
-        var stripeCustomer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId, new CustomerGetOptions
+        var stripeCustomer = await _stripeAdapter.CustomerGetAsync(organization.GatewayCustomerId, new Stripe.CustomerGetOptions
         {
             Expand = new List<string> { "invoice_settings.default_payment_method", "sources" }
         });
@@ -1279,7 +1279,7 @@ public class StripePaymentService : IPaymentService
             }
         }
 
-        async Task RemoveStripePaymentMethod(Customer customer)
+        async Task RemoveStripePaymentMethod(Stripe.Customer customer)
         {
             // Customer sources are deprecated, but we still use them for Bank Accounts and potentially older organizations for cards, so we have to check them.
             if (customer.Sources != null && customer.Sources.Any())
@@ -1288,24 +1288,24 @@ public class StripePaymentService : IPaymentService
                 {
                     switch (source)
                     {
-                        case BankAccount:
+                        case Stripe.BankAccount:
                             await _stripeAdapter.BankAccountDeleteAsync(customer.Id, source.Id);
                             break;
-                        case Card:
+                        case Stripe.Card:
                             await _stripeAdapter.CardDeleteAsync(customer.Id, source.Id);
                             break;
                     }
                 }
             }
 
-            var paymentMethods = _stripeAdapter.PaymentMethodListAutoPagingAsync(new PaymentMethodListOptions
+            var paymentMethods = _stripeAdapter.PaymentMethodListAutoPagingAsync(new Stripe.PaymentMethodListOptions
             {
                 Customer = customer.Id
             });
 
             await foreach (var paymentMethod in paymentMethods)
             {
-                await _stripeAdapter.PaymentMethodDetachAsync(paymentMethod.Id, new PaymentMethodDetachOptions());
+                await _stripeAdapter.PaymentMethodDetachAsync(paymentMethod.Id, new Stripe.PaymentMethodDetachOptions());
             }
         }
 
