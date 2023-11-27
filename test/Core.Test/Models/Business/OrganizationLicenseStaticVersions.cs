@@ -24,6 +24,16 @@ public static class OrganizationLicenseStaticVersions
         }
 
         var json = LicenseVersions.GetValueOrDefault(licenseVersion).Replace("'", "\"");
-        return JsonSerializer.Deserialize<OrganizationLicense>(json);
+        var license = JsonSerializer.Deserialize<OrganizationLicense>(json);
+
+        if (license.Version != licenseVersion - 1)
+        {
+            // license.Version is 1 behind. e.g. if we requested version 13, then license.Version == 12. If not,
+            // the json string is probably for a different version and won't give us accurate test results.
+            throw new Exception(
+                $"License version {licenseVersion} in the static versions did not match the expected version number. Make sure the json string is correct.");
+        }
+
+        return license;
     }
 }
