@@ -1,7 +1,4 @@
-BEGIN TRANSACTION;
-
-BEGIN TRY
-    CREATE TABLE #ExcludedOrganizationIds
+  CREATE TABLE #ExcludedOrganizationIds
     (
         ExcludedId UNIQUEIDENTIFIER
     );
@@ -335,6 +332,7 @@ BEGIN TRY
         ('4e234f3e-a0f5-4f17-9740-aa5500115b73'),
         ('605483a8-dc42-43ac-8a53-abe30133858c');
 
+BEGIN TRY
  -- Update Organization table
     UPDATE
         [org]
@@ -364,7 +362,7 @@ BEGIN TRY
 
     DROP TABLE #ExcludedOrganizationIds;
 
-COMMIT;
+    COMMIT;
 END TRY
 BEGIN CATCH
     ROLLBACK;
