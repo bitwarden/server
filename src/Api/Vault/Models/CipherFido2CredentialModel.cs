@@ -18,6 +18,7 @@ public class CipherFido2CredentialModel
         RpId = data.RpId;
         RpName = data.RpName;
         UserHandle = data.UserHandle;
+        UserName = data.UserName;
         UserDisplayName = data.UserDisplayName;
         Counter = data.Counter;
         Discoverable = data.Discoverable;
@@ -50,6 +51,9 @@ public class CipherFido2CredentialModel
     public string UserHandle { get; set; }
     [EncryptedString]
     [EncryptedStringLength(1000)]
+    public string UserName { get; set; }
+    [EncryptedString]
+    [EncryptedStringLength(1000)]
     public string UserDisplayName { get; set; }
     [EncryptedString]
     [EncryptedStringLength(1000)]
@@ -72,6 +76,7 @@ public class CipherFido2CredentialModel
             RpId = RpId,
             RpName = RpName,
             UserHandle = UserHandle,
+            UserName = UserName,
             UserDisplayName = UserDisplayName,
             Counter = Counter,
             Discoverable = Discoverable,

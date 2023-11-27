@@ -1,14 +1,18 @@
-﻿using Bit.Core.Auth.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
-using Bit.Core.Models.Data.Organizations.Policies;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Settings;
 
-namespace Bit.Core.Services;
+namespace Bit.Core.AdminConsole.Services.Implementations;
 
 public class PolicyService : IPolicyService
 {
@@ -114,12 +118,12 @@ public class PolicyService : IPolicyService
                 var orgUsers = await _organizationUserRepository.GetManyDetailsByOrganizationAsync(
                     policy.OrganizationId);
                 var removableOrgUsers = orgUsers.Where(ou =>
-                    ou.Status != Enums.OrganizationUserStatusType.Invited && ou.Status != Enums.OrganizationUserStatusType.Revoked &&
-                    ou.Type != Enums.OrganizationUserType.Owner && ou.Type != Enums.OrganizationUserType.Admin &&
+                    ou.Status != OrganizationUserStatusType.Invited && ou.Status != OrganizationUserStatusType.Revoked &&
+                    ou.Type != OrganizationUserType.Owner && ou.Type != OrganizationUserType.Admin &&
                     ou.UserId != savingUserId);
                 switch (policy.Type)
                 {
-                    case Enums.PolicyType.TwoFactorAuthentication:
+                    case PolicyType.TwoFactorAuthentication:
                         foreach (var orgUser in removableOrgUsers)
                         {
                             if (!await userService.TwoFactorIsEnabledAsync(orgUser))
@@ -131,7 +135,7 @@ public class PolicyService : IPolicyService
                             }
                         }
                         break;
-                    case Enums.PolicyType.SingleOrg:
+                    case PolicyType.SingleOrg:
                         var userOrgs = await _organizationUserRepository.GetManyByManyUsersAsync(
                                 removableOrgUsers.Select(ou => ou.UserId.Value));
                         foreach (var orgUser in removableOrgUsers)
@@ -154,7 +158,7 @@ public class PolicyService : IPolicyService
         }
         policy.RevisionDate = now;
         await _policyRepository.UpsertAsync(policy);
-        await _eventService.LogPolicyEventAsync(policy, Enums.EventType.Policy_Updated);
+        await _eventService.LogPolicyEventAsync(policy, EventType.Policy_Updated);
     }
 
     public async Task<MasterPasswordPolicyData> GetMasterPasswordPolicyForUserAsync(User user)
