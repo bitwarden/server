@@ -1,10 +1,8 @@
-﻿# Please sort lines alphabetically, this will ensure we don't accidentally add duplicates.
+# Please sort into logical groups with comment headers. Sort groups in order of specificity.
+# For example, default owners should always be the first group.
+# Sort lines alphabetically within these groups to avoid accidentally adding duplicates.
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
-
-# The following owners will be the default owners for everything in the repo
-# unless a later match takes precedence
-* @bitwarden/tech-leads
 
 # DevOps for Actions and other workflow changes
 .github/workflows @bitwarden/dept-devops
