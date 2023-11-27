@@ -344,10 +344,6 @@ BEGIN TRY
         [dbo].[Organization] AS [org]
         LEFT JOIN [#ExcludedOrganizationIds] AS [ex]
             ON [org].[Id] = [ex].[ExcludedId]
-        JOIN [dbo].[OrganizationUser] AS [orgUser]
-            ON [org].[Id] = [orgUser].[OrganizationId]
-        JOIN [dbo].[User] AS [usr]
-            ON [orgUser].[Id] = [usr].[Id]
     WHERE
         [org].[PlanType] = 1 -- Families 2019 Annual
         AND [ex].[ExcludedId] IS NULL;
