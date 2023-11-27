@@ -2,9 +2,9 @@
 using Bit.Core.Settings;
 using Bit.Identity.IdentityServer;
 using Bit.SharedWeb.Utilities;
-using IdentityServer4.ResponseHandling;
-using IdentityServer4.Services;
-using IdentityServer4.Stores;
+using Duende.IdentityServer.ResponseHandling;
+using Duende.IdentityServer.Services;
+using Duende.IdentityServer.Stores;
 
 namespace Bit.Identity.Utilities;
 
@@ -17,6 +17,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<StaticClientStore>();
         services.AddTransient<IAuthorizationCodeStore, AuthorizationCodeStore>();
+        services.AddTransient<IUserDecryptionOptionsBuilder, UserDecryptionOptionsBuilder>();
 
         var issuerUri = new Uri(globalSettings.BaseServiceUri.InternalIdentity);
         var identityServerBuilder = services
@@ -34,6 +35,7 @@ public static class ServiceCollectionExtensions
                     options.Authentication.CookieSameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode.Unspecified;
                 }
                 options.InputLengthRestrictions.UserName = 256;
+                options.KeyManagement.Enabled = false;
             })
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())
@@ -44,7 +46,8 @@ public static class ServiceCollectionExtensions
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
             .AddPersistedGrantStore<PersistedGrantStore>()
             .AddClientStore<ClientStore>()
-            .AddIdentityServerCertificate(env, globalSettings);
+            .AddIdentityServerCertificate(env, globalSettings)
+            .AddExtensionGrantValidator<WebAuthnGrantValidator>();
 
         services.AddTransient<ICorsPolicyService, CustomCorsPolicyService>();
         return identityServerBuilder;
