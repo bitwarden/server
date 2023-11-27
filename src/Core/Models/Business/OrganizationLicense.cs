@@ -13,12 +13,13 @@ namespace Bit.Core.Models.Business;
 public class OrganizationLicense : ILicense
 {
     public OrganizationLicense()
-    { }
+    {
+    }
 
     public OrganizationLicense(Organization org, SubscriptionInfo subscriptionInfo, Guid installationId,
         ILicensingService licenseService, int? version = null)
     {
-        Version = version.GetValueOrDefault(CURRENT_LICENSE_FILE_VERSION); // TODO: Remember to change the constant
+        Version = version.GetValueOrDefault(CurrentLicenseFileVersion); // TODO: Remember to change the constant
         LicenseType = Enums.LicenseType.Organization;
         LicenseKey = org.LicenseKey;
         InstallationId = installationId;
@@ -66,7 +67,7 @@ public class OrganizationLicense : ILicense
             }
         }
         else if (subscriptionInfo.Subscription.TrialEndDate.HasValue &&
-            subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
+                 subscriptionInfo.Subscription.TrialEndDate.Value > DateTime.UtcNow)
         {
             Expires = Refresh = subscriptionInfo.Subscription.TrialEndDate.Value;
             Trial = true;
@@ -79,10 +80,11 @@ public class OrganizationLicense : ILicense
                 Expires = Refresh = org.ExpirationDate.Value;
             }
             else if (subscriptionInfo?.Subscription?.PeriodDuration != null &&
-                subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
+                     subscriptionInfo.Subscription.PeriodDuration > TimeSpan.FromDays(180))
             {
                 Refresh = DateTime.UtcNow.AddDays(30);
-                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants.OrganizationSelfHostSubscriptionGracePeriodDays);
+                Expires = subscriptionInfo.Subscription.PeriodEndDate?.AddDays(Constants
+                    .OrganizationSelfHostSubscriptionGracePeriodDays);
                 ExpirationWithoutGracePeriod = subscriptionInfo.Subscription.PeriodEndDate;
             }
             else
@@ -137,15 +139,15 @@ public class OrganizationLicense : ILicense
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
-    [JsonIgnore]
-    public byte[] SignatureBytes => Convert.FromBase64String(Signature);
+    [JsonIgnore] public byte[] SignatureBytes => Convert.FromBase64String(Signature);
 
     /// <summary>
     /// Represents the current version of the license format. Should be updated whenever new fields are added.
     /// </summary>
     /// <remarks>Intentionally set one version behind to allow self hosted users some time to update before
     /// getting out of date license errors</remarks>
-    public const int CURRENT_LICENSE_FILE_VERSION = 12;
+    public const int CurrentLicenseFileVersion = 12;
+
     private bool ValidLicenseVersion
     {
         get => Version is >= 1 and <= 13;
@@ -235,14 +237,14 @@ public class OrganizationLicense : ILicense
         if (InstallationId != globalSettings.Installation.Id || !SelfHost)
         {
             exception = "Invalid license. Make sure your license allows for on-premise " +
-                "hosting of organizations and that the installation id matches your current installation.";
+                        "hosting of organizations and that the installation id matches your current installation.";
             return false;
         }
 
         if (LicenseType != null && LicenseType != Enums.LicenseType.Organization)
         {
             exception = "Premium licenses cannot be applied to an organization. "
-                                          + "Upload this license from your personal account settings page.";
+                        + "Upload this license from your personal account settings page.";
             return false;
         }
 
@@ -331,9 +333,9 @@ public class OrganizationLicense : ILicense
             if (valid && Version >= 13)
             {
                 valid = organization.UseSecretsManager == UseSecretsManager &&
-                organization.UsePasswordManager == UsePasswordManager &&
-                organization.SmSeats == SmSeats &&
-                organization.SmServiceAccounts == SmServiceAccounts;
+                        organization.UsePasswordManager == UsePasswordManager &&
+                        organization.SmSeats == SmSeats &&
+                        organization.SmServiceAccounts == SmServiceAccounts;
             }
 
             return valid;

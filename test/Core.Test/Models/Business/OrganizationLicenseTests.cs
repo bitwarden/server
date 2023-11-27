@@ -20,8 +20,8 @@ public class OrganizationLicenseTests
     ///     or that a property is added without incrementing the version number.
     /// </summary>
     [Theory]
-    [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION)] // This is 1 behind, so the last version
-    [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION + 1)] // Current version
+    [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion)] // This is 1 behind, so the last version
+    [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion + 1)] // Current version
     public void OrganizationLicense_LoadFromDisk_HashDoesNotChange(int licenseVersion)
     {
         var license = OrganizationLicenseStaticVersions.GetVersion(licenseVersion);
@@ -36,8 +36,8 @@ public class OrganizationLicenseTests
     ///     This guards against the risk that properties added in later versions are accidentally included in the validation
     /// </summary>
     [Theory]
-    [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION)] // This is 1 behind, so the last version
-    [BitAutoData(OrganizationLicense.CURRENT_LICENSE_FILE_VERSION + 1)] // Current version
+    [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion)] // This is 1 behind, so the last version
+    [BitAutoData(OrganizationLicense.CurrentLicenseFileVersion + 1)] // Current version
     public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion)
     {
         var license = OrganizationLicenseStaticVersions.GetVersion(licenseVersion);
