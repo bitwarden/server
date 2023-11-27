@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
@@ -21,9 +22,9 @@ using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
+using Bit.Core.Test.AdminConsole.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
-using Bit.Core.Test.AutoFixture.PolicyFixtures;
 using Bit.Core.Tokens;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Business;
@@ -34,10 +35,11 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using NSubstitute.ReturnsExtensions;
 using Xunit;
 using Organization = Bit.Core.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
-using Policy = Bit.Core.Entities.Policy;
+using Policy = Bit.Core.AdminConsole.Entities.Policy;
 
 namespace Bit.Core.Test.Services;
 
@@ -1606,15 +1608,16 @@ public class OrganizationServiceTests
     [BitAutoData(0, null, 100, true, "")]
     [BitAutoData(1, 100, null, true, "")]
     [BitAutoData(1, 100, 100, false, "Seat limit has been reached")]
-    public void CanScale(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
+    public async Task CanScaleAsync(int seatsToAdd, int? currentSeats, int? maxAutoscaleSeats,
         bool expectedResult, string expectedFailureMessage, Organization organization,
         SutProvider<OrganizationService> sutProvider)
     {
         organization.Seats = currentSeats;
         organization.MaxAutoscaleSeats = maxAutoscaleSeats;
         sutProvider.GetDependency<ICurrentContext>().ManageUsers(organization.Id).Returns(true);
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).ReturnsNull();
 
-        var (result, failureMessage) = sutProvider.Sut.CanScale(organization, seatsToAdd);
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, seatsToAdd);
 
         if (expectedFailureMessage == string.Empty)
         {
@@ -1628,14 +1631,33 @@ public class OrganizationServiceTests
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]
-    public void CanScale_FailsOnSelfHosted(Organization organization,
+    public async Task CanScaleAsync_FailsOnSelfHosted(Organization organization,
         SutProvider<OrganizationService> sutProvider)
     {
         sutProvider.GetDependency<IGlobalSettings>().SelfHosted.Returns(true);
-        var (result, failureMessage) = sutProvider.Sut.CanScale(organization, 10);
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
 
         Assert.False(result);
         Assert.Contains("Cannot autoscale on self-hosted instance", failureMessage);
+    }
+
+    [Theory, PaidOrganizationCustomize, BitAutoData]
+    public async Task CanScaleAsync_FailsOnResellerManagedOrganization(
+        Organization organization,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var provider = new Provider
+        {
+            Enabled = true,
+            Type = ProviderType.Reseller
+        };
+
+        sutProvider.GetDependency<IProviderRepository>().GetByOrganizationIdAsync(organization.Id).Returns(provider);
+
+        var (result, failureMessage) = await sutProvider.Sut.CanScaleAsync(organization, 10);
+
+        Assert.False(result);
+        Assert.Contains("Seat limit has been reached. Contact your provider to purchase additional seats.", failureMessage);
     }
 
     [Theory, PaidOrganizationCustomize, BitAutoData]

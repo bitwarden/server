@@ -1,4 +1,5 @@
 ﻿using Bit.Api.Vault.Models.Response;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
