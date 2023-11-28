@@ -514,6 +514,10 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
 
+                    b.Property<bool>("AllowAdminAccessToAllCollectionItems")
+                        .HasColumnType("tinyint(1)")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("BillingEmail")
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
@@ -1508,7 +1512,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.Property<string>("Folders")
                         .HasColumnType("longtext");
-                    
+
                     b.Property<string>("Key")
                         .HasColumnType("longtext");
 
