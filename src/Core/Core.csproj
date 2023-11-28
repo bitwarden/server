@@ -50,7 +50,7 @@
     <PackageReference Include="Duende.IdentityServer" Version="6.0.4" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="Serilog.Sinks.AzureCosmosDB" Version="2.0.0" />
-    <PackageReference Include="Serilog.Sinks.SyslogMessages" Version="2.0.6" />
+    <PackageReference Include="Serilog.Sinks.SyslogMessages" Version="2.0.9" />
     <PackageReference Include="AspNetCoreRateLimit" Version="4.0.2" />
     <PackageReference Include="Braintree" Version="5.19.0" />
     <PackageReference Include="Stripe.net" Version="40.0.0" />
