@@ -367,7 +367,7 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id, Arg.Any<bool>()).Returns(
             Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
             {
                 new CollectionCipher
@@ -447,7 +447,7 @@ public class CipherServiceTests
         Assert.Contains("ex from StartShareAttachmentAsync", exception.Message);
 
         await collectionCipherRepository.Received().UpdateCollectionsAsync(cipher.Id, cipher.UserId.Value,
-            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]));
+            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]), Arg.Any<bool>());
 
         await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
                 c.GetAttachments()[v0AttachmentId].Key == null
@@ -472,7 +472,7 @@ public class CipherServiceTests
         var attachmentStorageService = sutProvider.GetDependency<IAttachmentStorageService>();
         var userRepository = sutProvider.GetDependency<IUserRepository>();
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id).Returns(
+        collectionCipherRepository.GetManyByUserIdCipherIdAsync(cipher.UserId.Value, cipher.Id, Arg.Any<bool>()).Returns(
             Task.FromResult((ICollection<CollectionCipher>)new List<CollectionCipher>
             {
                 new CollectionCipher
@@ -579,7 +579,7 @@ public class CipherServiceTests
         Assert.Contains("ex from StartShareAttachmentAsync", exception.Message);
 
         await collectionCipherRepository.Received().UpdateCollectionsAsync(cipher.Id, cipher.UserId.Value,
-            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]));
+            Arg.Is<List<Guid>>(ids => ids.Count == 1 && ids[0] != collectionIds[0]), Arg.Any<bool>());
 
         await cipherRepository.Received().ReplaceAsync(Arg.Is<Cipher>(c =>
                 c.GetAttachments()[v0AttachmentId1].Key == null
