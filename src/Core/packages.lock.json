@@ -382,9 +382,9 @@
       },
       "Serilog.Sinks.SyslogMessages": {
         "type": "Direct",
-        "requested": "[2.0.6, )",
-        "resolved": "2.0.6",
-        "contentHash": "V2Yq2GEbk7taEPbpBLFzLXhrHrUzKf4sQu/zLrANU8XIoUn/Mr08M2E8PrcrWVXCj0R4xLMWYe0Z1sxOrMF3IA==",
+        "requested": "[2.0.9, )",
+        "resolved": "2.0.9",
+        "contentHash": "y7J+/h/Nf5EAtbpa6lC1nDhK/F9kC5oxuVYmQivv242Oh4hAVMeoAk5Gv6bgb/KbmqufGPXUFkX/AlcrvZ8Ywg==",
         "dependencies": {
           "Serilog": "2.5.0",
           "Serilog.Sinks.PeriodicBatching": "2.3.0"
