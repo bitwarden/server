@@ -136,7 +136,7 @@
       "reviewers": ["team:team-secrets-manager-dev"]
     },
     {
-      "matchPackagePatterns": ["^Microsoft.EntityFrameworkCore"],
+      "matchPackagePatterns": ["EntityFrameworkCore"],
       "groupName": "EntityFrameworkCore",
       "description": "Group EntityFrameworkCore to exclude them from the dotnet monorepo preset"
     },
