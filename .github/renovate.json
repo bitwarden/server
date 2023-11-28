@@ -127,6 +127,7 @@
     {
       "matchPackageNames": [
         "Dapper",
+        "dotnet-ef",
         "linq2db.EntityFrameworkCore",
         "Microsoft.EntityFrameworkCore.Design",
         "Microsoft.EntityFrameworkCore.InMemory",
@@ -141,7 +142,7 @@
       "reviewers": ["team:team-secrets-manager-dev"]
     },
     {
-      "matchPackagePatterns": ["EntityFrameworkCore"],
+      "matchPackagePatterns": ["EntityFrameworkCore", "^dotnet-ef"],
       "groupName": "EntityFrameworkCore",
       "description": "Group EntityFrameworkCore to exclude them from the dotnet monorepo preset"
     },
@@ -156,11 +157,11 @@
         "Microsoft.AspNetCore.SignalR.Protocols.MessagePack",
         "Microsoft.AspNetCore.SignalR.StackExchangeRedis",
         "Microsoft.Azure.NotificationHubs",
-        "Microsoft.Extensions.Configuration",
         "Microsoft.Extensions.Configuration.EnvironmentVariables",
         "Microsoft.Extensions.Configuration.UserSecrets",
-        "Microsoft.Extensions.DependencyInjection",
+        "Microsoft.Extensions.Configuration",
         "Microsoft.Extensions.DependencyInjection.Abstractions",
+        "Microsoft.Extensions.DependencyInjection",
         "SendGrid"
       ],
       "description": "Tools owned dependencies",
