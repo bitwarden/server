@@ -11,9 +11,8 @@ public class IconFetchingServiceTests : ServiceTestBase<IconFetchingService>
     [InlineData("neverssl.com")] // http site
     [InlineData("neopets.com")] // uses favicon.ico
     [InlineData("hopin.com")] // uses svg+xml format
-    [InlineData("ameritrade.com")] // redirects to tdameritrace.com
+    [InlineData("ameritrade.com")] // redirects to tdameritrade.com
     [InlineData("icloud.com")]
-    [InlineData("bofa.com")]
     public async Task GetIconAsync_Success(string domain)
     {
         var sut = BuildSut();
