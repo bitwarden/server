@@ -104,6 +104,11 @@
       "reviewers": ["team:team-billing-dev"]
     },
     {
+      "matchPackagePatterns": ["^Microsoft.Extensions.Logging"],
+      "groupName": "Microsoft.Extensions.Logging",
+      "description": "Group Microsoft.Extensions.Logging to exclude them from the dotnet monorepo preset"
+    },
+    {
       "matchPackageNames": ["CommandDotNet", "dbup-sqlserver", "YamlDotNet"],
       "description": "DevOps owned dependencies",
       "commitMessagePrefix": "[deps] DevOps:",
@@ -161,6 +166,21 @@
       "description": "Tools owned dependencies",
       "commitMessagePrefix": "[deps] Tools:",
       "reviewers": ["team:team-tools-dev"]
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.AspNetCore.SignalR"],
+      "groupName": "SignalR",
+      "description": "Group SignalR to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.Extensions.Configuration"],
+      "groupName": "Microsoft.Extensions.Configuration",
+      "description": "Group Microsoft.Extensions.Configuration to exclude them from the dotnet monorepo preset"
+    },
+    {
+      "matchPackagePatterns": ["^Microsoft.Extensions.DependencyInjection"],
+      "groupName": "Microsoft.Extensions.DependencyInjection",
+      "description": "Group Microsoft.Extensions.DependencyInjection to exclude them from the dotnet monorepo preset"
     },
     {
       "matchPackageNames": [
