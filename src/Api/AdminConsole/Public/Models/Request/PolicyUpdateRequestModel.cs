@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Api.AdminConsole.Public.Models.Request;
 

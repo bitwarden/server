@@ -43,6 +43,7 @@ public class SecretsManagerSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsAnnually2019)]
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public void UpdateSubscription_WithNonSecretsManagerPlanType_DoesNotThrowException(
         PlanType planType,
         Organization organization)

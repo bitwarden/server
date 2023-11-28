@@ -72,6 +72,12 @@ public class SutProvider<TSut> : ISutProvider
         Sut = default;
     }
 
+    public void Recreate()
+    {
+        _dependencies = new Dictionary<Type, Dictionary<string, object>>();
+        Sut = _fixture.Create<TSut>();
+    }
+
     ISutProvider ISutProvider.Create() => Create();
     public SutProvider<TSut> Create()
     {
