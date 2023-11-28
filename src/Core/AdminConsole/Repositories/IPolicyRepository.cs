@@ -1,7 +1,8 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Repositories;
 
-namespace Bit.Core.Repositories;
+namespace Bit.Core.AdminConsole.Repositories;
 
 public interface IPolicyRepository : IRepository<Policy, Guid>
 {

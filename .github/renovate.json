@@ -175,7 +175,8 @@
   ],
   "force": {
     "constraints": {
-      "dotnet": "6.0.413"
+      "dotnet": "6.0.100"
     }
-  }
+  },
+  "ignoreDeps": ["dotnet-sdk"]
 }

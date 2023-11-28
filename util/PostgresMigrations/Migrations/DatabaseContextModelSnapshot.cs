@@ -523,6 +523,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AllowAdminAccessToAllCollectionItems")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("BillingEmail")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -1519,7 +1523,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("Folders")
                         .HasColumnType("text");
-                    
+
                     b.Property<string>("Key")
                         .HasColumnType("text");
 

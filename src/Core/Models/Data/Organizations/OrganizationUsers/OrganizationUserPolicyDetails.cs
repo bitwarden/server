@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using Bit.Core.AdminConsole.Enums;
+using Bit.Core.Enums;
 
 namespace Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
