@@ -560,7 +560,15 @@ public class CollectionsController : Controller
         else
         {
             var collections = await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId.Value);
-            orgCollections = collections.Where(c => c.OrganizationId == orgId);
+            var readAuthorized = (await _authorizationService.AuthorizeAsync(User, collections, BulkCollectionOperations.Read)).Succeeded;
+            if (readAuthorized)
+            {
+                orgCollections = collections.Where(c => c.OrganizationId == orgId);
+            }
+            else
+            {
+                throw new NotFoundException();
+            }
         }
 
         var responses = orgCollections.Select(c => new CollectionResponseModel(c));
