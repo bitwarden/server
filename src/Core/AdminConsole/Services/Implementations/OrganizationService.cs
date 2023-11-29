@@ -64,6 +64,9 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
 
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool FlexibleCollectionsV1IsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+
     public OrganizationService(
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -437,11 +440,6 @@ public class OrganizationService : IOrganizationService
             await ValidateSignUpPoliciesAsync(signup.Owner.Id);
         }
 
-        var flexibleCollectionsIsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
-        var flexibleCollectionsV1IsEnabled =
-            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
-
         var organization = new Organization
         {
             // Pre-generate the org id so that we can save it with the Stripe subscription..
@@ -479,8 +477,8 @@ public class OrganizationService : IOrganizationService
             Status = OrganizationStatusType.Created,
             UsePasswordManager = true,
             UseSecretsManager = signup.UseSecretsManager,
-            LimitCollectionCreationDeletion = !flexibleCollectionsIsEnabled,
-            AllowAdminAccessToAllCollectionItems = !flexibleCollectionsV1IsEnabled
+            LimitCollectionCreationDeletion = !FlexibleCollectionsIsEnabled,
+            AllowAdminAccessToAllCollectionItems = !FlexibleCollectionsV1IsEnabled
         };
 
         if (signup.UseSecretsManager)
@@ -941,6 +939,10 @@ public class OrganizationService : IOrganizationService
                         orgUser.Permissions = JsonSerializer.Serialize(invite.Permissions, JsonHelpers.CamelCase);
                     }
 
+                    // If Flexible Collections is disabled and the user has EditAssignedCollections permission
+                    // grant Manage permission for all assigned collections
+                    invite.Collections = ApplyManageCollectionPermissions(orgUser, invite.Collections);
+
                     if (!orgUser.AccessAll && invite.Collections.Any())
                     {
                         limitedCollectionOrgUsers.Add((orgUser, invite.Collections));
@@ -1327,11 +1329,9 @@ public class OrganizationService : IOrganizationService
             }
         }
 
-        if (user.AccessAll)
-        {
-            // We don't need any collections if we're flagged to have all access.
-            collections = new List<CollectionAccessSelection>();
-        }
+        // If Flexible Collections is disabled and the user has EditAssignedCollections permission
+        // grant Manage permission for all assigned collections
+        collections = ApplyManageCollectionPermissions(user, collections);
         await _organizationUserRepository.ReplaceAsync(user, collections);
 
         if (groups != null)
@@ -2443,5 +2443,19 @@ public class OrganizationService : IOrganizationService
             };
             await _collectionRepository.CreateAsync(defaultCollection);
         }
+    }
+
+    private IEnumerable<CollectionAccessSelection> ApplyManageCollectionPermissions(OrganizationUser orgUser, IEnumerable<CollectionAccessSelection> collections)
+    {
+        if (!FlexibleCollectionsIsEnabled && (orgUser.GetPermissions()?.EditAssignedCollections ?? false))
+        {
+            return collections.Select(c =>
+            {
+                c.Manage = true;
+                return c;
+            }).ToList();
+        }
+
+        return collections;
     }
 }
