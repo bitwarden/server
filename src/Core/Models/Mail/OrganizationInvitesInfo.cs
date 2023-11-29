@@ -1,4 +1,5 @@
-﻿using Bit.Core.Auth.Models.Business;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 
