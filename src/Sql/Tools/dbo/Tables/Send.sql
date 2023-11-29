@@ -1,7 +1,7 @@
 ﻿CREATE TABLE [dbo].[Send] (
     [Id]             UNIQUEIDENTIFIER NOT NULL,
     [UserId]         UNIQUEIDENTIFIER NULL,
-    [OrganizationId] UNIQUEIDENTIFIER NULL,
+    [OrganizationId] UNIQUEIDENTIFIER NULL,    
     [Type]           TINYINT          NOT NULL,
     [Data]           VARCHAR(MAX)     NOT NULL,
     [Key]            VARCHAR (MAX)    NOT NULL,
@@ -14,6 +14,7 @@
     [DeletionDate]   DATETIME2 (7)    NOT NULL,
     [Disabled]       BIT              NOT NULL,
     [HideEmail]      BIT              NULL,
+    [CipherId]       UNIQUEIDENTIFIER NULL
     CONSTRAINT [PK_Send] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_Send_Organization] FOREIGN KEY ([OrganizationId]) REFERENCES [dbo].[Organization] ([Id]),
     CONSTRAINT [FK_Send_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])

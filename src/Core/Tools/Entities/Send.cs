@@ -9,7 +9,7 @@ public class Send : ITableObject<Guid>
 {
     public Guid Id { get; set; }
     public Guid? UserId { get; set; }
-    public Guid? OrganizationId { get; set; }
+    public Guid? OrganizationId { get; set; }    
     public SendType Type { get; set; }
     public string Data { get; set; }
     public string Key { get; set; }
@@ -23,6 +23,7 @@ public class Send : ITableObject<Guid>
     public DateTime DeletionDate { get; set; }
     public bool Disabled { get; set; }
     public bool? HideEmail { get; set; }
+    public Guid? CipherId { get; set; }
 
     public void SetNewId()
     {

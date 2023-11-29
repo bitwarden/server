@@ -1,7 +1,7 @@
 ﻿CREATE PROCEDURE [dbo].[Send_Create]
     @Id UNIQUEIDENTIFIER OUTPUT,
     @UserId UNIQUEIDENTIFIER,
-    @OrganizationId UNIQUEIDENTIFIER,
+    @OrganizationId UNIQUEIDENTIFIER,    
     @Type TINYINT,
     @Data VARCHAR(MAX),
     @Key VARCHAR(MAX),
@@ -13,7 +13,8 @@
     @ExpirationDate DATETIME2(7),
     @DeletionDate DATETIME2(7),
     @Disabled BIT,
-    @HideEmail BIT
+    @HideEmail BIT,
+    @CipherId UNIQUEIDENTIFIER
 AS
 BEGIN
     SET NOCOUNT ON
@@ -22,7 +23,7 @@ BEGIN
     (
         [Id],
         [UserId],
-        [OrganizationId],
+        [OrganizationId],        
         [Type],
         [Data],
         [Key],
@@ -34,13 +35,14 @@ BEGIN
         [ExpirationDate],
         [DeletionDate],
         [Disabled],
-        [HideEmail]
+        [HideEmail],
+        [CiperId]
     )
     VALUES
     (
         @Id,
         @UserId,
-        @OrganizationId,
+        @OrganizationId,        
         @Type,
         @Data,
         @Key,
@@ -52,7 +54,8 @@ BEGIN
         @ExpirationDate,
         @DeletionDate,
         @Disabled,
-        @HideEmail
+        @HideEmail,
+        @CipherId
     )
 
     IF @UserId IS NOT NULL
