@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
@@ -38,6 +37,9 @@ using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
 using Xunit;
+using Organization = Bit.Core.AdminConsole.Entities.Organization;
+using OrganizationUser = Bit.Core.Entities.OrganizationUser;
+using Policy = Bit.Core.AdminConsole.Entities.Policy;
 
 namespace Bit.Core.Test.Services;
 
