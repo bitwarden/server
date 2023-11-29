@@ -27,7 +27,7 @@ SELECT
         WHEN O.[UseTotp] = 1
         THEN 1
         ELSE 0
-END [OrganizationUseTotp]
+    END [OrganizationUseTotp]
 FROM
     [dbo].[CipherDetails](@UserId) C
 INNER JOIN
@@ -59,4 +59,4 @@ FROM
     [dbo].[CipherDetails](@UserId)
 WHERE
     [UserId] = @UserId
-    GO
+GO
