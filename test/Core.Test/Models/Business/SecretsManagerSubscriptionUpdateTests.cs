@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -43,6 +43,7 @@ public class SecretsManagerSubscriptionUpdateTests
     [BitAutoData(PlanType.TeamsAnnually2019)]
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     public void UpdateSubscription_WithNonSecretsManagerPlanType_DoesNotThrowException(
         PlanType planType,
         Organization organization)

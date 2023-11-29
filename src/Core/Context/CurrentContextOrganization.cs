@@ -16,6 +16,7 @@ public class CurrentContextOrganization
         Permissions = CoreHelpers.LoadClassFromJsonData<Permissions>(orgUser.Permissions);
         AccessSecretsManager = orgUser.AccessSecretsManager && orgUser.UseSecretsManager && orgUser.Enabled;
         LimitCollectionCreationDeletion = orgUser.LimitCollectionCreationDeletion;
+        AllowAdminAccessToAllCollectionItems = orgUser.AllowAdminAccessToAllCollectionItems;
     }
 
     public Guid Id { get; set; }
@@ -23,4 +24,5 @@ public class CurrentContextOrganization
     public Permissions Permissions { get; set; } = new();
     public bool AccessSecretsManager { get; set; }
     public bool LimitCollectionCreationDeletion { get; set; }
+    public bool AllowAdminAccessToAllCollectionItems { get; set; }
 }

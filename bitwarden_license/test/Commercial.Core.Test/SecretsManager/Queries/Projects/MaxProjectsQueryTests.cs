@@ -1,5 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Queries.Projects;
-using Bit.Core.Entities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -55,6 +55,7 @@ public class MaxProjectsQueryTests
     [BitAutoData(PlanType.TeamsAnnually2019)]
     [BitAutoData(PlanType.TeamsAnnually2020)]
     [BitAutoData(PlanType.TeamsAnnually)]
+    [BitAutoData(PlanType.TeamsStarter)]
     [BitAutoData(PlanType.EnterpriseMonthly2019)]
     [BitAutoData(PlanType.EnterpriseMonthly2020)]
     [BitAutoData(PlanType.EnterpriseMonthly)]

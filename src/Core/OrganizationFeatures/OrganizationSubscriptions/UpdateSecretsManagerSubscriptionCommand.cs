@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -242,6 +242,12 @@ public class UpdateSecretsManagerSubscriptionCommand : IUpdateSecretsManagerSubs
                 throw new BadRequestException($"{occupiedSeats} users are currently occupying Secrets Manager seats. " +
                                               "You cannot decrease your subscription below your current occupied seat count.");
             }
+        }
+
+        // Check that SM seats aren't greater than password manager seats
+        if (organization.Seats < update.SmSeats.Value)
+        {
+            throw new BadRequestException("You cannot have more Secrets Manager seats than Password Manager seats.");
         }
     }
 

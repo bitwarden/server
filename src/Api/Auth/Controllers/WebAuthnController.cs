@@ -3,9 +3,10 @@ using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -75,7 +76,7 @@ public class WebAuthnController : Controller
             throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
         }
 
-        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, tokenable.Options, model.DeviceResponse);
+        var success = await _userService.CompleteWebAuthLoginRegistrationAsync(user, model.Name, tokenable.Options, model.DeviceResponse, model.SupportsPrf, model.EncryptedUserKey, model.EncryptedPublicKey, model.EncryptedPrivateKey);
         if (!success)
         {
             throw new BadRequestException("Unable to complete WebAuthn registration.");
