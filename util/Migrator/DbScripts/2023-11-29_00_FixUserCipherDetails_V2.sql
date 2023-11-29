@@ -14,9 +14,9 @@ WITH [CTE] AS (
 SELECT
     C.*,
     CASE
-	    WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
-	    THEN 1
-	    ELSE 0
+        WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+        THEN 1
+        ELSE 0
     END [Edit],
     CASE
     	WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
