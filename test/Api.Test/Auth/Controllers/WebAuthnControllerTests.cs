@@ -76,7 +76,22 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_UserNotFound_ThrowsUnauthorizedAccessException(WebAuthnCredentialRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
+    public async Task PostOptions_RequireSsoPolicyApplicable_ThrowsBadRequestException(
+        SecretVerificationRequestModel requestModel, User user, SutProvider<WebAuthnController> sutProvider)
+    {
+        // Arrange
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        sutProvider.GetDependency<IUserService>().VerifySecretAsync(user, default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<IPolicyService>().AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso).ReturnsForAnyArgs(true);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.PostOptions(requestModel));
+        Assert.Contains("Passkeys cannot be created for your account. SSO login is required", exception.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Post_UserNotFound_ThrowsUnauthorizedAccessException(WebAuthnLoginCredentialCreateRequestModel requestModel, SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
         sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsNullForAnyArgs();
@@ -89,7 +104,7 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_ExpiredToken_ThrowsBadRequestException(WebAuthnCredentialRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
+    public async Task Post_ExpiredToken_ThrowsBadRequestException(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
         var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);
@@ -108,7 +123,7 @@ public class WebAuthnControllerTests
     }
 
     [Theory, BitAutoData]
-    public async Task Post_ValidInput_Returns(WebAuthnCredentialRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
+    public async Task Post_ValidInput_Returns(WebAuthnLoginCredentialCreateRequestModel requestModel, CredentialCreateOptions createOptions, User user, SutProvider<WebAuthnController> sutProvider)
     {
         // Arrange
         var token = new WebAuthnCredentialCreateOptionsTokenable(user, createOptions);

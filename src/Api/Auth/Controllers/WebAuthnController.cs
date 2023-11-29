@@ -3,6 +3,8 @@ using Bit.Api.Auth.Models.Request.Webauthn;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
 using Bit.Core;
+using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Enums;
@@ -24,16 +26,19 @@ public class WebAuthnController : Controller
     private readonly IWebAuthnCredentialRepository _credentialRepository;
     private readonly IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> _createOptionsDataProtector;
     private readonly IPolicyService _policyService;
+    private readonly IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> _assertionOptionsDataProtector;
 
     public WebAuthnController(
         IUserService userService,
         IWebAuthnCredentialRepository credentialRepository,
         IDataProtectorTokenFactory<WebAuthnCredentialCreateOptionsTokenable> createOptionsDataProtector,
+        IDataProtectorTokenFactory<WebAuthnLoginAssertionOptionsTokenable> assertionOptionsDataProtector,
         IPolicyService policyService)
     {
         _userService = userService;
         _credentialRepository = credentialRepository;
         _createOptionsDataProtector = createOptionsDataProtector;
+        _assertionOptionsDataProtector = assertionOptionsDataProtector;
         _policyService = policyService;
     }
 
@@ -46,8 +51,8 @@ public class WebAuthnController : Controller
         return new ListResponseModel<WebAuthnCredentialResponseModel>(credentials.Select(c => new WebAuthnCredentialResponseModel(c)));
     }
 
-    [HttpPost("options")]
-    public async Task<WebAuthnCredentialCreateOptionsResponseModel> PostOptions([FromBody] SecretVerificationRequestModel model)
+    [HttpPost("attestation-options")]
+    public async Task<WebAuthnCredentialCreateOptionsResponseModel> AttestationOptions([FromBody] SecretVerificationRequestModel model)
     {
         var user = await VerifyUserAsync(model);
         await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
@@ -63,8 +68,24 @@ public class WebAuthnController : Controller
         };
     }
 
+    [HttpPost("assertion-options")]
+    public async Task<WebAuthnLoginAssertionOptionsResponseModel> AssertionOptions([FromBody] SecretVerificationRequestModel model)
+    {
+        var user = await VerifyUserAsync(model);
+        var options = _userService.StartWebAuthnLoginAssertion();
+
+        var tokenable = new WebAuthnLoginAssertionOptionsTokenable(WebAuthnLoginAssertionOptionsScope.PrfRegistration, options);
+        var token = _assertionOptionsDataProtector.Protect(tokenable);
+
+        return new WebAuthnLoginAssertionOptionsResponseModel
+        {
+            Options = options,
+            Token = token
+        };
+    }
+
     [HttpPost("")]
-    public async Task Post([FromBody] WebAuthnCredentialRequestModel model)
+    public async Task Post([FromBody] WebAuthnLoginCredentialCreateRequestModel model)
     {
         var user = await GetUserAsync();
         await ValidateRequireSsoPolicyDisabledOrNotApplicable(user.Id);
@@ -90,6 +111,29 @@ public class WebAuthnController : Controller
         {
             throw new BadRequestException("Passkeys cannot be created for your account. SSO login is required.");
         }
+    }
+
+    [HttpPut()]
+    public async Task UpdateCredential([FromBody] WebAuthnLoginCredentialUpdateRequestModel model)
+    {
+        var tokenable = _assertionOptionsDataProtector.Unprotect(model.Token);
+        if (!tokenable.TokenIsValid(WebAuthnLoginAssertionOptionsScope.PrfRegistration))
+        {
+            throw new BadRequestException("The token associated with your request is expired. A valid token is required to continue.");
+        }
+
+        var (_, credential) = await _userService.CompleteWebAuthLoginAssertionAsync(tokenable.Options, model.DeviceResponse);
+        if (credential == null)
+        {
+            throw new BadRequestException("Unable to update WebAuthnLoginCredential.");
+        }
+
+        // assign new keys to credential
+        credential.EncryptedUserKey = model.EncryptedUserKey;
+        credential.EncryptedPrivateKey = model.EncryptedPrivateKey;
+        credential.EncryptedPublicKey = model.EncryptedPublicKey;
+
+        await _credentialRepository.UpdateAsync(credential);
     }
 
     [HttpPost("{id}/delete")]

@@ -4,7 +4,7 @@ using Fido2NetLib;
 
 namespace Bit.Api.Auth.Models.Request.Webauthn;
 
-public class WebAuthnCredentialRequestModel
+public class WebAuthnLoginCredentialCreateRequestModel
 {
     [Required]
     public AuthenticatorAttestationRawResponse DeviceResponse { get; set; }
@@ -29,5 +29,8 @@ public class WebAuthnCredentialRequestModel
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public string EncryptedPrivateKey { get; set; }
+
+    public (string userKey, string publicKey, string privateKey) GetKeys()
+        => (EncryptedUserKey, EncryptedPublicKey, EncryptedPrivateKey);
 }
 
