@@ -6,7 +6,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Models.Business;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
@@ -907,6 +906,8 @@ public class OrganizationServiceTests
                     DeleteAnyCollection = true
                 }
             });
+
+        SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
 
         await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new[] { invite });
 
