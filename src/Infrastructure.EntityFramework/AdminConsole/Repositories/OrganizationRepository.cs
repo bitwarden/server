@@ -3,9 +3,9 @@ using AutoMapper.QueryableExtensions;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Organization = Bit.Infrastructure.EntityFramework.AdminConsole.Models.Organization;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories;
 
