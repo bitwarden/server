@@ -22,7 +22,7 @@ SELECT
     	WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
     	THEN 1
     	ELSE 0
-	END [ViewPassword],
+    END [ViewPassword],
     CASE
         WHEN O.[UseTotp] = 1
         THEN 1
