@@ -520,6 +520,13 @@ public class CollectionsController : Controller
 
     private async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails_vNext(Guid orgId)
     {
+        var readManyWithDetailsAuthorized =
+            (await _authorizationService.AuthorizeAsync(User, CollectionOperations.ReadManyWithDetails(orgId))).Succeeded;
+        if (!readManyWithDetailsAuthorized)
+        {
+            throw new NotFoundException();
+        }
+
         // We always need to know which collections the current user is assigned to
         var assignedOrgCollections = await _collectionRepository
             .GetManyByUserIdWithAccessAsync(_currentContext.UserId.Value, orgId);

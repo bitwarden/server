@@ -135,17 +135,28 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = userType;
         organization.LimitCollectionCreationDeletion = true;
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Read, BulkCollectionOperations.ReadAccess
+        };
 
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.Read },
-            new ClaimsPrincipal(),
-            collections);
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
-        await sutProvider.Sut.HandleAsync(context);
+            var context = new AuthorizationHandlerContext(
+                new[] { BulkCollectionOperations.Read },
+                new ClaimsPrincipal(),
+                collections);
 
-        Assert.True(context.HasSucceeded);
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.True(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
     }
 
     [Theory, CollectionCustomization]
@@ -172,17 +183,28 @@ public class BulkCollectionAuthorizationHandlerTests
             CreateNewCollections = createNewCollections
         };
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Read, BulkCollectionOperations.ReadAccess
+        };
 
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.Read },
-            new ClaimsPrincipal(),
-            collections);
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
-        await sutProvider.Sut.HandleAsync(context);
+            var context = new AuthorizationHandlerContext(
+                new[] { BulkCollectionOperations.Read },
+                new ClaimsPrincipal(),
+                collections);
 
-        Assert.True(context.HasSucceeded);
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.True(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -196,18 +218,29 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.Type = OrganizationUserType.User;
         organization.LimitCollectionCreationDeletion = false;
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Read, BulkCollectionOperations.ReadAccess
+        };
 
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.Read },
-            new ClaimsPrincipal(),
-            collections);
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+            sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
 
-        await sutProvider.Sut.HandleAsync(context);
+            var context = new AuthorizationHandlerContext(
+                new[] { BulkCollectionOperations.Read },
+                new ClaimsPrincipal(),
+                collections);
 
-        Assert.True(context.HasSucceeded);
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.True(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
     }
 
     [Theory, CollectionCustomization]
@@ -231,17 +264,28 @@ public class BulkCollectionAuthorizationHandlerTests
             ManageUsers = false
         };
 
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Read, BulkCollectionOperations.ReadAccess
+        };
 
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.Read },
-            new ClaimsPrincipal(),
-            collections);
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
-        await sutProvider.Sut.HandleAsync(context);
+            var context = new AuthorizationHandlerContext(
+                new[] { BulkCollectionOperations.Read },
+                new ClaimsPrincipal(),
+                collections);
 
-        Assert.False(context.HasSucceeded);
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.False(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
     }
 
     [Theory, BitAutoData, CollectionCustomization]
@@ -250,26 +294,35 @@ public class BulkCollectionAuthorizationHandlerTests
         ICollection<Collection> collections,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
     {
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
-        sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
+        var operationsToTest = new[]
+        {
+            BulkCollectionOperations.Read, BulkCollectionOperations.ReadAccess
+        };
 
-        var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.Read },
-            new ClaimsPrincipal(),
-            collections
-        );
+        foreach (var op in operationsToTest)
+        {
+            sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+            sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
 
-        await sutProvider.Sut.HandleAsync(context);
+            var context = new AuthorizationHandlerContext(
+                new[] { op },
+                new ClaimsPrincipal(),
+                collections
+            );
 
-        Assert.False(context.HasSucceeded);
+            await sutProvider.Sut.HandleAsync(context);
+
+            Assert.False(context.HasSucceeded);
+
+            // Recreate the SUT to reset the mocks/dependencies between tests
+            sutProvider.Recreate();
+        }
     }
-
-    //
 
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanReadAccessAsync_WhenAdminOrOwner_Success(
+    public async Task CanReadWithAccessAsync_WhenAdminOrOwner_Success(
         OrganizationUserType userType,
         Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
@@ -282,7 +335,7 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
         var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ReadAccess },
+            new[] { BulkCollectionOperations.ReadWithAccess },
             new ClaimsPrincipal(),
             collections);
 
@@ -292,14 +345,15 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, CollectionCustomization]
-    [BitAutoData(true, false, false, true)]
-    [BitAutoData(false, true, false, true)]
-    [BitAutoData(false, false, true, true)]
-    [BitAutoData(false, false, false, false)]
+    [BitAutoData(true, false, false, false, true)]
+    [BitAutoData(false, true, false, false, true)]
+    [BitAutoData(false, false, true, false, true)]
+    [BitAutoData(false, false, false, true, true)]
+    [BitAutoData(false, false, false, false, false)]
 
-    public async Task CanReadAccessAsync_WhenCustomUserWithRequiredPermissions_Success(
+    public async Task CanReadWithAccessAsync_WhenCustomUserWithRequiredPermissions_Success(
         bool editAnyCollection, bool deleteAnyCollection,
-        bool createNewCollections, bool limitCollectionCreationDeletion,
+        bool createNewCollections, bool manageUsers, bool limitCollectionCreationDeletion,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization)
@@ -312,14 +366,15 @@ public class BulkCollectionAuthorizationHandlerTests
         {
             EditAnyCollection = editAnyCollection,
             DeleteAnyCollection = deleteAnyCollection,
-            CreateNewCollections = createNewCollections
+            CreateNewCollections = createNewCollections,
+            ManageUsers = manageUsers
         };
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
         var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ReadAccess },
+            new[] { BulkCollectionOperations.ReadWithAccess },
             new ClaimsPrincipal(),
             collections);
 
@@ -329,7 +384,7 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanReadAccessAsync_WhenUserWithRequiredPermissions_Success(
+    public async Task CanReadWithAccessAsync_WhenUserWithRequiredPermissions_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
@@ -344,7 +399,7 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
 
         var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ReadAccess },
+            new[] { BulkCollectionOperations.ReadWithAccess },
             new ClaimsPrincipal(),
             collections);
 
@@ -356,7 +411,7 @@ public class BulkCollectionAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
-    public async Task CanReadAccessAsync_WhenMissingPermissions_NoSuccess(
+    public async Task CanReadWithAccessAsync_WhenMissingPermissions_NoSuccess(
         OrganizationUserType userType,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
@@ -378,7 +433,7 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
 
         var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ReadAccess },
+            new[] { BulkCollectionOperations.ReadWithAccess },
             new ClaimsPrincipal(),
             collections);
 
@@ -388,7 +443,7 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanReadAccessAsync_WhenMissingOrgAccess_NoSuccess(
+    public async Task CanReadWithAccessAsync_WhenMissingOrgAccess_NoSuccess(
         Guid userId,
         ICollection<Collection> collections,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider)
@@ -397,7 +452,7 @@ public class BulkCollectionAuthorizationHandlerTests
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns((CurrentContextOrganization)null);
 
         var context = new AuthorizationHandlerContext(
-            new[] { BulkCollectionOperations.ReadAccess },
+            new[] { BulkCollectionOperations.ReadWithAccess },
             new ClaimsPrincipal(),
             collections
         );
