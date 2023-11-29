@@ -158,14 +158,13 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, CollectionCustomization]
-    [BitAutoData(true, false, false, false, true)]
-    [BitAutoData(false, true, false, false, true)]
-    [BitAutoData(false, false, true, false, true)]
-    [BitAutoData(false, false, false, true, true)]
-    [BitAutoData(false, false, false, false, false)]
+    [BitAutoData(true, false, false, true)]
+    [BitAutoData(false, true, false, true)]
+    [BitAutoData(false, false, true, true)]
+    [BitAutoData(false, false, false, false)]
 
     public async Task CanReadAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool manageUsers, bool editAnyCollection, bool deleteAnyCollection,
+        bool editAnyCollection, bool deleteAnyCollection,
         bool createNewCollections, bool limitCollectionCreationDeletion,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
@@ -177,7 +176,6 @@ public class BulkCollectionAuthorizationHandlerTests
         organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
         organization.Permissions = new Permissions
         {
-            ManageUsers = manageUsers,
             EditAnyCollection = editAnyCollection,
             DeleteAnyCollection = deleteAnyCollection,
             CreateNewCollections = createNewCollections
@@ -421,12 +419,10 @@ public class BulkCollectionAuthorizationHandlerTests
         Assert.False(context.HasSucceeded);
     }
 
-    //
-
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.Admin)]
     [BitAutoData(OrganizationUserType.Owner)]
-    public async Task CanManageCollectionAccessAsync_WhenAdminOrOwner_Success(
+    public async Task CanUpdateCollection_WhenAdminOrOwner_Success(
         OrganizationUserType userType,
         Guid userId, SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
@@ -461,7 +457,7 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_WithEditAnyCollectionPermission_Success(
+    public async Task CanUpdateCollection_WithEditAnyCollectionPermission_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization)
@@ -499,7 +495,7 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_WithManageCollectionPermission_Success(
+    public async Task CanUpdateCollection_WithManageCollectionPermission_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
@@ -542,7 +538,7 @@ public class BulkCollectionAuthorizationHandlerTests
     [Theory, CollectionCustomization]
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
-    public async Task CanManageCollectionAccessAsync_WhenMissingPermissions_NoSuccess(
+    public async Task CanUpdateCollection_WhenMissingPermissions_NoSuccess(
         OrganizationUserType userType,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
@@ -592,7 +588,7 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanManageCollectionAccessAsync_WhenMissingOrgAccess_NoSuccess(
+    public async Task CanUpdateCollection_WhenMissingOrgAccess_NoSuccess(
         Guid userId,
         ICollection<Collection> collections,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider)

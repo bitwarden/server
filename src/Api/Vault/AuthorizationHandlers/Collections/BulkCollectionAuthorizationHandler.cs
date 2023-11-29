@@ -74,16 +74,17 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
                 break;
 
             case not null when requirement == BulkCollectionOperations.Read:
+            case not null when requirement == BulkCollectionOperations.ReadAccess:
                 await CanReadAsync(context, requirement, resources, org);
                 break;
 
-            case not null when requirement == BulkCollectionOperations.ReadAccess:
-                await CanReadAccessAsync(context, requirement, resources, org);
+            case not null when requirement == BulkCollectionOperations.ReadWithAccess:
+                await CanReadWithAccessAsync(context, requirement, resources, org);
                 break;
 
             case not null when requirement == BulkCollectionOperations.Update:
             case not null when requirement == BulkCollectionOperations.ModifyAccess:
-                await CanManageCollectionAccessAsync(context, requirement, resources, org);
+                await CanUpdateCollection(context, requirement, resources, org);
                 break;
 
             case not null when requirement == BulkCollectionOperations.Delete:
@@ -122,8 +123,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.EditAnyCollection: true } or
         { Permissions.DeleteAnyCollection: true } or
-        { Permissions.CreateNewCollections: true } or
-        { Permissions.ManageUsers: true })
+        { Permissions.CreateNewCollections: true })
         {
             context.Succeed(requirement);
             return;
@@ -133,7 +133,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have access for the collection being read
         if (org is not null)
         {
-            var canManageCollections = await HasCollectionAccessAsync(resources, org, requireManagePermission: false);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 context.Succeed(requirement);
@@ -148,7 +148,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
     }
 
-    private async Task CanReadAccessAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement,
+    private async Task CanReadWithAccessAsync(AuthorizationHandlerContext context, IAuthorizationRequirement requirement,
         ICollection<Collection> resources, CurrentContextOrganization? org)
     {
         // Owners, Admins, and users with EditAnyCollection or DeleteAnyCollection permission can always read a collection
@@ -157,7 +157,8 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.EditAnyCollection: true } or
         { Permissions.DeleteAnyCollection: true } or
-        { Permissions.CreateNewCollections: true })
+        { Permissions.CreateNewCollections: true } or
+        { Permissions.ManageUsers: true })
         {
             context.Succeed(requirement);
             return;
@@ -167,7 +168,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have access for the collection being read
         if (org is not null)
         {
-            var canManageCollections = await HasCollectionAccessAsync(resources, org, requireManagePermission: false);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 context.Succeed(requirement);
@@ -183,9 +184,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     }
 
     /// <summary>
-    /// Ensures the acting user is allowed to manage access permissions for the target collections.
+    /// Ensures the acting user is allowed to update the target collections or manage access permissions for them.
     /// </summary>
-    private async Task CanManageCollectionAccessAsync(AuthorizationHandlerContext context,
+    private async Task CanUpdateCollection(AuthorizationHandlerContext context,
         IAuthorizationRequirement requirement, ICollection<Collection> resources,
         CurrentContextOrganization? org)
     {
@@ -202,7 +203,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure they have manage permission for the collection being managed
         if (org is not null)
         {
-            var canManageCollections = await HasCollectionAccessAsync(resources, org, requireManagePermission: true);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 context.Succeed(requirement);
@@ -233,7 +234,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         // ensure acting user has manage permissions for all collections being deleted
         if (org is { LimitCollectionCreationDeletion: false })
         {
-            var canManageCollections = await HasCollectionAccessAsync(resources, org, requireManagePermission: true);
+            var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
             {
                 context.Succeed(requirement);
@@ -248,18 +249,16 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
     }
 
-    private async Task<bool> HasCollectionAccessAsync(
+    private async Task<bool> CanManageCollectionsAsync(
         ICollection<Collection> targetCollections,
-        CurrentContextOrganization org,
-        bool requireManagePermission)
+        CurrentContextOrganization org)
     {
         // List of collection Ids the acting user has access to
         var manageableCollectionIds =
             (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
             .Where(c =>
-                // If requireManagePermission is true, check Collections with Manage permission
-                (!requireManagePermission || c.Manage)
-                && c.OrganizationId == org.Id)
+                // Check Collections with Manage permission
+                c.Manage && c.OrganizationId == org.Id)
             .Select(c => c.Id)
             .ToHashSet();
 

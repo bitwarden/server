@@ -509,7 +509,7 @@ public class CollectionsController : Controller
     {
         // New flexible collections logic
         var (collection, access) = await _collectionRepository.GetByIdWithAccessAsync(id);
-        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Read)).Succeeded;
+        var authorized = (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.ReadWithAccess)).Succeeded;
         if (!authorized)
         {
             throw new NotFoundException();

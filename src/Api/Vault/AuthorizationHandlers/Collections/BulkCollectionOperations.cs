@@ -9,6 +9,7 @@ public static class BulkCollectionOperations
     public static readonly BulkCollectionOperationRequirement Create = new() { Name = nameof(Create) };
     public static readonly BulkCollectionOperationRequirement Read = new() { Name = nameof(Read) };
     public static readonly BulkCollectionOperationRequirement ReadAccess = new() { Name = nameof(ReadAccess) };
+    public static readonly BulkCollectionOperationRequirement ReadWithAccess = new() { Name = nameof(ReadWithAccess) };
     public static readonly BulkCollectionOperationRequirement Update = new() { Name = nameof(Update) };
     /// <summary>
     /// The operation that represents creating, updating, or removing collection access.
