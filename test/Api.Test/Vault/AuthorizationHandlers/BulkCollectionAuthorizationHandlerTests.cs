@@ -46,23 +46,16 @@ public class BulkCollectionAuthorizationHandlerTests
         Assert.True(context.HasSucceeded);
     }
 
-    [Theory, CollectionCustomization]
-    [BitAutoData(true, true)]
-    [BitAutoData(false, false)]
-    public async Task CanCreateAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool createNewCollections, bool limitCollectionCreationDeletion,
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanCreateAsync_WhenUser_WithLimitCollectionCreationDeletionFalse_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
-        organization.Type = OrganizationUserType.Custom;
-        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
-        organization.Permissions = new Permissions
-        {
-            CreateNewCollections = createNewCollections
-        };
+        organization.Type = OrganizationUserType.User;
+        organization.LimitCollectionCreationDeletion = false;
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
