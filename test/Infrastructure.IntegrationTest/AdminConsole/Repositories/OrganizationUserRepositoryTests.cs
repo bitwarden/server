@@ -4,7 +4,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
+namespace Bit.Infrastructure.IntegrationTest.Repositories;
 
 public class OrganizationUserRepositoryTests
 {
