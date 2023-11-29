@@ -56,8 +56,6 @@ public static class FeatureFlagKeys
     public const string BulkCollectionAccess = "bulk-collection-access";
     public const string AutofillOverlay = "autofill-overlay";
     public const string ItemShare = "item-share";
-    public const string BillingPlansUpgrade = "billing-plans-upgrade";
-    public const string BillingStarterPlan = "billing-starter-plan";
     public const string KeyRotationImprovements = "key-rotation-improvements";
 
     public static List<string> GetAllKeys()
