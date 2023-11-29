@@ -26,7 +26,7 @@ public class CurrentContext : ICurrentContext
     private IEnumerable<ProviderOrganizationProviderDetails> _providerOrganizationProviderDetails;
     private IEnumerable<ProviderUserOrganizationDetails> _providerUserOrganizations;
 
-    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, this);
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, this);
 
     public virtual HttpContext HttpContext { get; set; }
     public virtual Guid? UserId { get; set; }
@@ -345,7 +345,7 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> EditAssignedCollections(Guid orgId)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
         }
@@ -356,7 +356,7 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> DeleteAssignedCollections(Guid orgId)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
         }
@@ -373,7 +373,7 @@ public class CurrentContext : ICurrentContext
          * This entire method will be moved to the CollectionAuthorizationHandler in the future
          */
 
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
         }

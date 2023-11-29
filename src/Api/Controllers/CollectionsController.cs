@@ -51,12 +51,12 @@ public class CollectionsController : Controller
         _featureService = featureService;
     }
 
-    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     [HttpGet("{id}")]
     public async Task<CollectionResponseModel> Get(Guid orgId, Guid id)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             return await Get_vNext(id);
@@ -76,7 +76,7 @@ public class CollectionsController : Controller
     [HttpGet("{id}/details")]
     public async Task<CollectionAccessDetailsResponseModel> GetDetails(Guid orgId, Guid id)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             return await GetDetails_vNext(id);
@@ -114,7 +114,7 @@ public class CollectionsController : Controller
     [HttpGet("details")]
     public async Task<ListResponseModel<CollectionAccessDetailsResponseModel>> GetManyWithDetails(Guid orgId)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             return await GetManyWithDetails_vNext(orgId);
@@ -155,7 +155,7 @@ public class CollectionsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             return await GetByOrgId_vNext(orgId);
@@ -179,7 +179,7 @@ public class CollectionsController : Controller
     [HttpGet("{id}/users")]
     public async Task<IEnumerable<SelectionReadOnlyResponseModel>> GetUsers(Guid orgId, Guid id)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             return await GetUsers_vNext(id);
@@ -197,7 +197,7 @@ public class CollectionsController : Controller
     {
         var collection = model.ToCollection(orgId);
 
-        var authorized = UseFlexibleCollections
+        var authorized = FlexibleCollectionsIsEnabled
             ? (await _authorizationService.AuthorizeAsync(User, collection, BulkCollectionOperations.Create)).Succeeded
             : await CanCreateCollection(orgId, collection.Id) || await CanEditCollectionAsync(orgId, collection.Id);
         if (!authorized)
@@ -216,7 +216,7 @@ public class CollectionsController : Controller
     [HttpPost("{id}")]
     public async Task<CollectionResponseModel> Put(Guid orgId, Guid id, [FromBody] CollectionRequestModel model)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             return await Put_vNext(id, model);
@@ -238,7 +238,7 @@ public class CollectionsController : Controller
     [HttpPut("{id}/users")]
     public async Task PutUsers(Guid orgId, Guid id, [FromBody] IEnumerable<SelectionReadOnlyRequestModel> model)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             await PutUsers_vNext(id, model);
@@ -286,7 +286,7 @@ public class CollectionsController : Controller
     [HttpPost("{id}/delete")]
     public async Task Delete(Guid orgId, Guid id)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             await Delete_vNext(id);
@@ -307,7 +307,7 @@ public class CollectionsController : Controller
     [HttpPost("delete")]
     public async Task DeleteMany(Guid orgId, [FromBody] CollectionBulkDeleteRequestModel model)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             var collections = await _collectionRepository.GetManyByManyIdsAsync(model.Ids);
@@ -343,7 +343,7 @@ public class CollectionsController : Controller
     [HttpPost("{id}/delete-user/{orgUserId}")]
     public async Task DeleteUser(Guid orgId, Guid id, Guid orgUserId)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             // New flexible collections logic
             await DeleteUser_vNext(id, orgUserId);
@@ -357,7 +357,7 @@ public class CollectionsController : Controller
 
     private void DeprecatedPermissionsGuard()
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
         }

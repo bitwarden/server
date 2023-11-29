@@ -17,7 +17,7 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
     private readonly ICurrentContext _currentContext;
     private readonly IFeatureService _featureService;
 
-    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public GroupAuthorizationHandler(
         ICurrentContext currentContext,
@@ -30,7 +30,7 @@ public class GroupAuthorizationHandler : AuthorizationHandler<GroupOperationRequ
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         GroupOperationRequirement requirement)
     {
-        if (!UseFlexibleCollections)
+        if (!FlexibleCollectionsIsEnabled)
         {
             // Flexible collections is OFF, should not be using this handler
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");

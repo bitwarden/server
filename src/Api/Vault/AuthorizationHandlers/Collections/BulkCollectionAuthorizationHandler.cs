@@ -22,7 +22,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     private readonly IFeatureService _featureService;
     private Guid _targetOrganizationId;
 
-    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public BulkCollectionAuthorizationHandler(
         ICurrentContext currentContext,
@@ -37,7 +37,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context,
         BulkCollectionOperationRequirement requirement, ICollection<Collection>? resources)
     {
-        if (!UseFlexibleCollections)
+        if (!FlexibleCollectionsIsEnabled)
         {
             // Flexible collections is OFF, should not be using this handler
             throw new FeatureUnavailableException("Flexible collections is OFF when it should be ON.");
