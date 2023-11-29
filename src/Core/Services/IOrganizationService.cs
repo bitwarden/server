@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
@@ -27,7 +28,7 @@ public interface IOrganizationService
     Task DisableAsync(Guid organizationId, DateTime? expirationDate);
     Task UpdateExpirationDateAsync(Guid organizationId, DateTime? expirationDate);
     Task EnableAsync(Guid organizationId);
-    Task UpdateAsync(Organization organization, bool updateBilling = false);
+    Task UpdateAsync(Organization organization, bool updateBilling = false, EventType eventType = EventType.Organization_Updated);
     Task UpdateTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task DisableTwoFactorProviderAsync(Organization organization, TwoFactorProviderType type);
     Task<List<OrganizationUser>> InviteUsersAsync(Guid organizationId, Guid? invitingUserId,

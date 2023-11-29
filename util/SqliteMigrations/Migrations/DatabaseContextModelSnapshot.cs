@@ -512,6 +512,10 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AllowAdminAccessToAllCollectionItems")
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("BillingEmail")
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
@@ -1506,7 +1510,7 @@ namespace Bit.SqliteMigrations.Migrations
 
                     b.Property<string>("Folders")
                         .HasColumnType("TEXT");
-                    
+
                     b.Property<string>("Key")
                         .HasColumnType("TEXT");
 

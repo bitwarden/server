@@ -1,5 +1,7 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -13,6 +15,7 @@ using Xunit;
 using EfAdminConsoleRepo = Bit.Infrastructure.EntityFramework.AdminConsole.Repositories;
 using EfRepo = Bit.Infrastructure.EntityFramework.Repositories;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
+using SqlAdminConsoleRepo = Bit.Infrastructure.Dapper.AdminConsole.Repositories;
 using SqlRepo = Bit.Infrastructure.Dapper.Repositories;
 
 namespace Bit.Infrastructure.EFIntegration.Test.Repositories;
@@ -182,7 +185,7 @@ public class OrganizationUserRepositoryTests
         OrganizationUserPolicyDetailsCompare equalityComparer,
 
         // Auto data - EF repos
-        List<EfRepo.PolicyRepository> efPolicyRepository,
+        List<EfAdminConsoleRepo.PolicyRepository> efPolicyRepository,
         List<EfRepo.UserRepository> efUserRepository,
         List<EfRepo.OrganizationRepository> efOrganizationRepository,
         List<EfRepo.OrganizationUserRepository> suts,
@@ -191,7 +194,7 @@ public class OrganizationUserRepositoryTests
         List<EfAdminConsoleRepo.ProviderUserRepository> efProviderUserRepository,
 
         // Auto data - SQL repos
-        SqlRepo.PolicyRepository sqlPolicyRepo,
+        SqlAdminConsoleRepo.PolicyRepository sqlPolicyRepo,
         SqlRepo.UserRepository sqlUserRepo,
         SqlRepo.OrganizationRepository sqlOrganizationRepo,
         EfAdminConsoleRepo.ProviderRepository sqlProviderRepo,
