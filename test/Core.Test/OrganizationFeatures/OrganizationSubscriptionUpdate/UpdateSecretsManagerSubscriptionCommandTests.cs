@@ -94,6 +94,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.PlanType = planType;
+        organization.Seats = 20;
 
         const int updateSmSeats = 15;
         const int updateSmServiceAccounts = 450;
