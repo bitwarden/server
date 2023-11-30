@@ -692,12 +692,17 @@ public static class CoreHelpers
                         break;
                 }
 
-                // Secrets Manager
+                // Additional claims for the above orgs
                 foreach (var org in group)
                 {
                     if (org.AccessSecretsManager)
                     {
                         claims.Add(new KeyValuePair<string, string>(Claims.SecretsManagerAccess, org.Id.ToString()));
+                    }
+
+                    if (org.CreateNewCollections)
+                    {
+                        claims.Add(new KeyValuePair<string, string>(Claims.CreateNewCollections, org.Id.ToString()));
                     }
                 }
             }

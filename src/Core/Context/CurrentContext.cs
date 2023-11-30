@@ -175,6 +175,10 @@ public class CurrentContext : ICurrentContext
             ? claimsDict[Claims.SecretsManagerAccess].ToDictionary(s => s.Value, _ => true)
             : new Dictionary<string, bool>();
 
+        var createNewCollections = claimsDict.ContainsKey(Claims.CreateNewCollections)
+            ? claimsDict[Claims.CreateNewCollections].ToDictionary(s => s.Value, _ => true)
+            : new Dictionary<string, bool>();
+
         var organizations = new List<CurrentContextOrganization>();
         if (claimsDict.ContainsKey(Claims.OrganizationOwner))
         {
@@ -184,6 +188,7 @@ public class CurrentContext : ICurrentContext
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Owner,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    CreateNewCollections = createNewCollections.ContainsKey(c.Value)
                 }));
         }
         else if (orgApi && OrganizationId.HasValue)
@@ -203,6 +208,7 @@ public class CurrentContext : ICurrentContext
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Admin,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    CreateNewCollections = createNewCollections.ContainsKey(c.Value)
                 }));
         }
 
@@ -214,6 +220,7 @@ public class CurrentContext : ICurrentContext
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.User,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    CreateNewCollections = createNewCollections.ContainsKey(c.Value)
                 }));
         }
 
@@ -225,6 +232,7 @@ public class CurrentContext : ICurrentContext
                     Id = new Guid(c.Value),
                     Type = OrganizationUserType.Manager,
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    CreateNewCollections = createNewCollections.ContainsKey(c.Value)
                 }));
         }
 
@@ -237,6 +245,7 @@ public class CurrentContext : ICurrentContext
                     Type = OrganizationUserType.Custom,
                     Permissions = SetOrganizationPermissionsFromClaims(c.Value, claimsDict),
                     AccessSecretsManager = accessSecretsManager.ContainsKey(c.Value),
+                    CreateNewCollections = createNewCollections.ContainsKey(c.Value)
                 }));
         }
 

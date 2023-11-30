@@ -83,10 +83,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
     {
         // If the limit collection management setting is disabled, allow any user to create collections
         // Otherwise, Owners, Admins, and users with CreateNewCollections permission can always create collections
-        if (org is
-        { LimitCollectionCreationDeletion: false } or
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.CreateNewCollections: true })
+        if (org is {CreateNewCollections: true})
         {
             context.Succeed(requirement);
             return;

@@ -16,6 +16,9 @@ public static class Claims
     public const string ProviderServiceUser = "providerserviceuser";
 
     public const string SecretsManagerAccess = "accesssecretsmanager";
+    public const string CreateNewCollections = "createcollect";
+    public const string DeleteManagedCollections = "deletecollect";
+    public const string AccessAllItems = "accessitems";
 
     // Service Account
     public const string Organization = "organization";
