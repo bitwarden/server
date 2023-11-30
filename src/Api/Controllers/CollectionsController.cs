@@ -540,6 +540,12 @@ public class CollectionsController : Controller
             );
         }
 
+        var readAssignedAuthorized = await _authorizationService.AuthorizeAsync(User, assignedOrgCollections, BulkCollectionOperations.ReadWithAccess);
+        if (!readAssignedAuthorized.Succeeded)
+        {
+            throw new NotFoundException();
+        }
+
         return new ListResponseModel<CollectionAccessDetailsResponseModel>(assignedOrgCollections.Select(c =>
             new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
             {
