@@ -32,6 +32,7 @@ public class BulkCollectionAuthorizationHandlerTests
     {
         organization.Type = userType;
         organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Create },
@@ -134,6 +135,7 @@ public class BulkCollectionAuthorizationHandlerTests
     {
         organization.Type = userType;
         organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
 
         var operationsToTest = new[]
         {
@@ -217,6 +219,7 @@ public class BulkCollectionAuthorizationHandlerTests
 
         organization.Type = OrganizationUserType.User;
         organization.LimitCollectionCreationDeletion = false;
+        organization.Permissions = new Permissions();
 
         var operationsToTest = new[]
         {
@@ -330,6 +333,7 @@ public class BulkCollectionAuthorizationHandlerTests
     {
         organization.Type = userType;
         organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -393,6 +397,7 @@ public class BulkCollectionAuthorizationHandlerTests
 
         organization.Type = OrganizationUserType.User;
         organization.LimitCollectionCreationDeletion = false;
+        organization.Permissions = new Permissions();
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
@@ -473,6 +478,7 @@ public class BulkCollectionAuthorizationHandlerTests
     {
         organization.Type = userType;
         organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
 
         var operationsToTest = new[]
         {
@@ -545,6 +551,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         foreach (var c in collections)
         {
@@ -670,6 +677,7 @@ public class BulkCollectionAuthorizationHandlerTests
     {
         organization.Type = userType;
         organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { BulkCollectionOperations.Delete },
@@ -721,6 +729,7 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);

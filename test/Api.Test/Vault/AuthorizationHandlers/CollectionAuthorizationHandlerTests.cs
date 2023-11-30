@@ -26,6 +26,7 @@ public class CollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAll(organization.Id) },
@@ -46,6 +47,7 @@ public class CollectionAuthorizationHandlerTests
         SutProvider<CollectionAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAll(organization.Id) },
@@ -136,6 +138,7 @@ public class CollectionAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAllWithAccess(organization.Id) },
@@ -156,6 +159,7 @@ public class CollectionAuthorizationHandlerTests
         SutProvider<CollectionAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
         organization.Type = OrganizationUserType.User;
+        organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
             new[] { CollectionOperations.ReadAllWithAccess(organization.Id) },
