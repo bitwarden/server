@@ -18,7 +18,7 @@ public class OrganizationSsoResponseModel : ResponseModel
         }
 
         Identifier = organization.Identifier;
-        Urls = new SsoUrls(organization.Id.ToString(), globalSettings);
+        Urls = new SsoUrls(organization.Id.ToString(), globalSettings, Data);
     }
 
     public bool Enabled { get; set; }
@@ -29,11 +29,12 @@ public class OrganizationSsoResponseModel : ResponseModel
 
 public class SsoUrls
 {
-    public SsoUrls(string organizationId, GlobalSettings globalSettings)
+    public SsoUrls(string organizationId, GlobalSettings globalSettings, SsoConfigurationData config)
     {
         CallbackPath = SsoConfigurationData.BuildCallbackPath(globalSettings.BaseServiceUri.Sso);
         SignedOutCallbackPath = SsoConfigurationData.BuildSignedOutCallbackPath(globalSettings.BaseServiceUri.Sso);
-        SpEntityId = SsoConfigurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso);
+        SpEntityId = SsoConfigurationData.BuildSaml2ModulePath(globalSettings.BaseServiceUri.Sso,
+            config.SpUniqueEntityId ? organizationId : null);
         SpMetadataUrl = SsoConfigurationData.BuildSaml2MetadataUrl(globalSettings.BaseServiceUri.Sso, organizationId);
         SpAcsUrl = SsoConfigurationData.BuildSaml2AcsUrl(globalSettings.BaseServiceUri.Sso, organizationId);
     }
