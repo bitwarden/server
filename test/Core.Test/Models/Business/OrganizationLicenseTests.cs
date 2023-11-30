@@ -39,6 +39,10 @@ public class OrganizationLicenseTests
     public void OrganizationLicense_LoadedFromDisk_VerifyData_Passes(int licenseVersion)
     {
         var license = OrganizationLicenseFileFixtures.GetVersion(licenseVersion);
+
+        // These licenses will naturally expire over time, but we still want them to be able to test
+        license.Expires = DateTime.MaxValue;
+
         var organization = OrganizationLicenseFileFixtures.OrganizationFactory();
         var globalSettings = Substitute.For<IGlobalSettings>();
         globalSettings.Installation.Returns(new GlobalSettings.InstallationSettings

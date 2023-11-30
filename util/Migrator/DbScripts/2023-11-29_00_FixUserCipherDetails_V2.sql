@@ -1,4 +1,4 @@
-﻿CREATE FUNCTION [dbo].[UserCipherDetails_V2](@UserId UNIQUEIDENTIFIER)
+CREATE OR ALTER FUNCTION [dbo].[UserCipherDetails_V2](@UserId UNIQUEIDENTIFIER)
 RETURNS TABLE
 AS RETURN
 WITH [CTE] AS (
@@ -59,3 +59,4 @@ FROM
     [dbo].[CipherDetails](@UserId)
 WHERE
     [UserId] = @UserId
+GO
