@@ -788,12 +788,15 @@ public class CipherService : ICipherService
             {
                 collection.SetNewId();
                 newCollections.Add(collection);
-                newCollectionUsers.Add(new CollectionUser
+                if (UseFlexibleCollections)
                 {
-                    CollectionId = collection.Id,
-                    OrganizationUserId = importingOrgUser.Id,
-                    Manage = true
-                });
+                    newCollectionUsers.Add(new CollectionUser
+                    {
+                        CollectionId = collection.Id,
+                        OrganizationUserId = importingOrgUser.Id,
+                        Manage = true
+                    });
+                }
             }
         }
 
