@@ -293,6 +293,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<bool>("HidePasswords")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("Manage")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("ReadOnly")
                         .HasColumnType("boolean");
 
@@ -312,6 +315,9 @@ namespace Bit.PostgresMigrations.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<bool>("HidePasswords")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Manage")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("ReadOnly")
@@ -517,6 +523,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AllowAdminAccessToAllCollectionItems")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("BillingEmail")
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
@@ -573,6 +583,10 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("LicenseKey")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("LimitCollectionCreationDeletion")
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
 
                     b.Property<int?>("MaxAutoscaleSeats")
                         .HasColumnType("integer");
@@ -1509,7 +1523,7 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.Property<string>("Folders")
                         .HasColumnType("text");
-                    
+
                     b.Property<string>("Key")
                         .HasColumnType("text");
 
