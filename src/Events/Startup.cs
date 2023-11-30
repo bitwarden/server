@@ -70,6 +70,9 @@ public class Startup
             services.AddSingleton<IEventWriteService, RepositoryEventWriteService>();
         }
 
+        // To be removed in AC-1723 provided feature flags are not otherwise being used in this project
+        services.AddSingleton<IFeatureService, LaunchDarklyFeatureService>();
+
         // Mvc
         services.AddMvc(config =>
         {
