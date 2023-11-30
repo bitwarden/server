@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Api.Models.Request.Organizations;
 

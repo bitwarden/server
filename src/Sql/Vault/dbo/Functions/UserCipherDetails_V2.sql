@@ -13,8 +13,16 @@ WITH [CTE] AS (
 )
 SELECT
     C.*,
-    COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) AS [Edit],
-    COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) AS [ViewPassword],
+    CASE
+        WHEN COALESCE(CU.[ReadOnly], CG.[ReadOnly], 0) = 0
+        THEN 1
+        ELSE 0
+    END [Edit],
+    CASE
+    	WHEN COALESCE(CU.[HidePasswords], CG.[HidePasswords], 0) = 0
+    	THEN 1
+    	ELSE 0
+    END [ViewPassword],
     CASE
         WHEN O.[UseTotp] = 1
         THEN 1
