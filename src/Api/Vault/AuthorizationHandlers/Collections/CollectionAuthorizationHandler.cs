@@ -60,10 +60,6 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
             case not null when requirement.Name == nameof(CollectionOperations.ReadAllWithAccess):
                 await CanReadAllWithAccessAsync(context, requirement, org);
                 break;
-
-            case not null when requirement.Name == nameof(CollectionOperations.ReadManyWithDetails):
-                await CanReadManyWithDetailsAsync(context, requirement, org);
-                break;
         }
     }
 
@@ -98,31 +94,6 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.EditAnyCollection: true } or
         { Permissions.DeleteAnyCollection: true })
-        {
-            context.Succeed(requirement);
-            return;
-        }
-
-        // Allow provider users to read collections if they are a provider for the target organization
-        if (await _currentContext.ProviderUserForOrgAsync(requirement.OrganizationId))
-        {
-            context.Succeed(requirement);
-        }
-    }
-
-    private async Task CanReadManyWithDetailsAsync(AuthorizationHandlerContext context, CollectionOperationRequirement requirement,
-        CurrentContextOrganization? org)
-    {
-        // Owners, Admins, and users with EditAnyCollection or DeleteAnyCollection
-        // permission can always read a collection
-        if (org is
-        { LimitCollectionCreationDeletion: false } or
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
-        { Permissions.ManageUsers: true } or
-        { Permissions.ManageGroups: true } or
-        { Permissions.EditAnyCollection: true } or
-        { Permissions.DeleteAnyCollection: true } or
-        { Permissions.CreateNewCollections: true })
         {
             context.Succeed(requirement);
             return;
