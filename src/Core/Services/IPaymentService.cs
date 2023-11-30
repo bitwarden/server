@@ -1,7 +1,8 @@
 ﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
-using Bit.Core.Models.StaticStore;
+using Plan = Bit.Core.Models.StaticStore.Plan;
+using TaxRate = Bit.Core.Entities.TaxRate;
 
 namespace Bit.Core.Services;
 
@@ -40,4 +41,7 @@ public interface IPaymentService
     Task ArchiveTaxRateAsync(TaxRate taxRate);
     Task<string> AddSecretsManagerToSubscription(Organization org, Plan plan, int additionalSmSeats,
         int additionalServiceAccount, DateTime? prorationDate = null);
+
+    Task<Stripe.Subscription> GetSubscriptionAsync(string subscriptionId);
+    Task<Stripe.Subscription> SubscriptionUpdateAsync(string id, Stripe.SubscriptionUpdateOptions options);
 }
