@@ -341,10 +341,12 @@ public class OrganizationLicense : ILicense
                         organization.SmServiceAccounts == SmServiceAccounts;
             }
 
-            if (valid && Version >= 14)
-            {
-                valid = organization.LimitCollectionCreationDeletion == LimitCollectionCreationDeletion;
-            }
+            // Restore validity check when Flexible Collections are enabled for cloud and self-host
+            // https://bitwarden.atlassian.net/browse/AC-1875
+            // if (valid && Version >= 14)
+            // {
+            //     valid = organization.LimitCollectionCreationDeletion == LimitCollectionCreationDeletion;
+            // }
 
             return valid;
         }
