@@ -1,4 +1,4 @@
-﻿CREATE PROCEDURE [dbo].[Collection_ReadByIdUserId]
+﻿CREATE PROCEDURE [dbo].[Collection_ReadByIdUserId_V2]
     @Id UNIQUEIDENTIFIER,
     @UserId UNIQUEIDENTIFIER
 AS
@@ -15,7 +15,7 @@ BEGIN
         MIN([HidePasswords]) AS [HidePasswords],
         MIN([Manage]) AS [Manage]
     FROM
-        [dbo].[UserCollectionDetails](@UserId)
+        [dbo].[UserCollectionDetails_V2](@UserId)
     WHERE
         [Id] = @Id
     GROUP BY
