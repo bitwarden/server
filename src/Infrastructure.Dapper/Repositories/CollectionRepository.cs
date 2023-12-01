@@ -184,12 +184,16 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
 
     }
 
-    public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId)
+    public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
     {
+        var sprocName = useFlexibleCollections
+            ? $"[{Schema}].[Collection_ReadByIdUserId_V2]"
+            : $"[{Schema}].[Collection_ReadByIdUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionDetails>(
-                $"[{Schema}].[Collection_ReadByIdUserId]",
+                sprocName,
                 new { Id = id, UserId = userId },
                 commandType: CommandType.StoredProcedure);
 
@@ -197,12 +201,16 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
         }
     }
 
-    public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
     {
+        var sprocName = useFlexibleCollections
+            ? $"[{Schema}].[Collection_ReadByUserId_V2]"
+            : $"[{Schema}].[Collection_ReadByUserId]";
+
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryAsync<CollectionDetails>(
-                $"[{Schema}].[Collection_ReadByUserId]",
+                sprocName,
                 new { UserId = userId },
                 commandType: CommandType.StoredProcedure);
 

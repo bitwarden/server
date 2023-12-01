@@ -110,12 +110,12 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId)
+    public async Task<CollectionDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            return (await GetManyByUserIdAsync(userId)).FirstOrDefault(c => c.Id == id);
+            return (await GetManyByUserIdAsync(userId, useFlexibleCollections)).FirstOrDefault(c => c.Id == id);
         }
     }
 
@@ -309,13 +309,13 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
         }
     }
 
-    public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId)
+    public async Task<ICollection<CollectionDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
 
-            var baseCollectionQuery = new UserCollectionDetailsQuery(userId).Run(dbContext);
+            var baseCollectionQuery = new UserCollectionDetailsQuery(userId, useFlexibleCollections).Run(dbContext);
 
             if (dbContext.Database.IsSqlite())
             {
