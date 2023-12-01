@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.Json;
 using AutoFixture;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Entities;

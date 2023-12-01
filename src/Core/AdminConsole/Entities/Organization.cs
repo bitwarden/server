@@ -2,12 +2,13 @@
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.AdminConsole.Entities;
 
 public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
 {
@@ -82,6 +83,14 @@ public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorabl
     /// Refers to the ability for an organization to limit collection creation and deletion to owners and admins only
     /// </summary>
     public bool LimitCollectionCreationDeletion { get; set; }
+    /// <summary>
+    /// Refers to the ability for an organization to limit owner/admin access to all collection items
+    /// <remarks>
+    /// True: Owner/admins can access all items belonging to any collections
+    /// False: Owner/admins can only access items for collections they are assigned
+    /// </remarks>
+    /// </summary>
+    public bool AllowAdminAccessToAllCollectionItems { get; set; }
 
     public void SetNewId()
     {
