@@ -173,7 +173,7 @@ public class CollectionsController : Controller
         }
 
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
-        var users = model.Users?.Select(g => g.ToSelectionReadOnly()).ToList();
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly()).ToList() ?? new List<CollectionAccessSelection>();
 
         // Pre-flexible collections logic assigned Managers to collections they create
         var assignUserToCollection =
@@ -185,9 +185,10 @@ public class CollectionsController : Controller
         if (assignUserToCollection && isNewCollection && _currentContext.UserId.HasValue)
         {
             var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, _currentContext.UserId.Value);
-            if (orgUser is { Status: OrganizationUserStatusType.Confirmed })
+            // don't add duplicate access if the user has already specified it themselves
+            var existingAccess = users.Any(u => u.Id == orgUser.Id);
+            if (orgUser is { Status: OrganizationUserStatusType.Confirmed } && !existingAccess)
             {
-                users ??= new List<CollectionAccessSelection>();
                 users.Add(new CollectionAccessSelection
                 {
                     Id = orgUser.Id,
