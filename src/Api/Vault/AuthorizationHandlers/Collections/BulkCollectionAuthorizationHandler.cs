@@ -119,11 +119,9 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
     {
         // Owners, Admins, and users with EditAnyCollection or DeleteAnyCollection permission can always read a collection
         if (org is
-        { LimitCollectionCreationDeletion: false } or
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.EditAnyCollection: true } or
-        { Permissions.DeleteAnyCollection: true } or
-        { Permissions.CreateNewCollections: true })
+        { Permissions.DeleteAnyCollection: true })
         {
             context.Succeed(requirement);
             return;
@@ -131,7 +129,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         // The acting user is a member of the target organization,
         // ensure they have access for the collection being read
-        if (org is not null)
+        if (org is { LimitCollectionCreationDeletion: false })
         {
             var canManageCollections = await CanManageCollectionsAsync(resources, org);
             if (canManageCollections)
