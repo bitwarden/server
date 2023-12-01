@@ -2,12 +2,13 @@
 using System.Text.Json;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Business;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Utilities;
 
-namespace Bit.Core.Entities;
+namespace Bit.Core.AdminConsole.Entities;
 
 public class Organization : ITableObject<Guid>, ISubscriber, IStorable, IStorableSubscriber, IRevisable, IReferenceable
 {
