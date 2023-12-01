@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models.Provider;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.Infrastructure.EntityFramework.Converters;
@@ -111,6 +112,9 @@ public class DatabaseContext : DbContext
         eInstallation.Property(c => c.Id).ValueGeneratedNever();
         eOrganization.Property(c => c.Id).ValueGeneratedNever();
         eOrganization.Property(c => c.LimitCollectionCreationDeletion)
+            .ValueGeneratedNever()
+            .HasDefaultValue(true);
+        eOrganization.Property(c => c.AllowAdminAccessToAllCollectionItems)
             .ValueGeneratedNever()
             .HasDefaultValue(true);
         eOrganizationSponsorship.Property(c => c.Id).ValueGeneratedNever();
