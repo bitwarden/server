@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -25,7 +26,7 @@ namespace Bit.Core.Test.Services;
 public class CipherServiceTests
 {
     [Theory, BitAutoData]
-    public async Task ImportCiphersAsync_IntoOrganization_Success(
+    public async Task ImportCiphersAsync_IntoOrganization_WithFlexibleCollectionsDisabled_Success(
         Organization organization,
         Guid importingUserId,
         OrganizationUser importingOrganizationUser,
@@ -59,6 +60,69 @@ public class CipherServiceTests
         sutProvider.GetDependency<IOrganizationUserRepository>()
             .GetByOrganizationAsync(organization.Id, importingUserId)
             .Returns(importingOrganizationUser);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
+            .Returns(false);
+
+        // Set up a collection that already exists in the organization
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByOrganizationIdAsync(organization.Id)
+            .Returns(new List<Collection> { collections[0] });
+
+        await sutProvider.Sut.ImportCiphersAsync(collections, ciphers, collectionRelationships, importingUserId);
+
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(
+            ciphers,
+            Arg.Is<IEnumerable<Collection>>(cols => cols.Count() == collections.Count - 1 &&
+                        !cols.Any(c => c.Id == collections[0].Id) && // Check that the collection that already existed in the organization was not added
+                        cols.All(c => collections.Any(x => c.Name == x.Name))),
+            Arg.Is<IEnumerable<CollectionCipher>>(c => c.Count() == ciphers.Count),
+            Arg.Is<IEnumerable<CollectionUser>>(i => i.IsNullOrEmpty()));
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
+        await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
+            Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.VaultImported));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ImportCiphersAsync_IntoOrganization_WithFlexibleCollectionsEnabled_Success(
+        Organization organization,
+        Guid importingUserId,
+        OrganizationUser importingOrganizationUser,
+        List<Collection> collections,
+        List<CipherDetails> ciphers,
+        SutProvider<CipherService> sutProvider)
+    {
+        organization.MaxCollections = null;
+        importingOrganizationUser.OrganizationId = organization.Id;
+
+        foreach (var collection in collections)
+        {
+            collection.OrganizationId = organization.Id;
+        }
+
+        foreach (var cipher in ciphers)
+        {
+            cipher.OrganizationId = organization.Id;
+        }
+
+        KeyValuePair<int, int>[] collectionRelationships = {
+            new(0, 0),
+            new(1, 1),
+            new(2, 2)
+        };
+
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdAsync(organization.Id)
+            .Returns(organization);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(organization.Id, importingUserId)
+            .Returns(importingOrganizationUser);
+
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
+            .Returns(true);
 
         // Set up a collection that already exists in the organization
         sutProvider.GetDependency<ICollectionRepository>()
