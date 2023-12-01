@@ -45,6 +45,9 @@ bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
 **/*paypal* @bitwarden/team-billing-dev
 **/*stripe* @bitwarden/team-billing-dev
 **/*subscription* @bitwarden/team-billing-dev
+**/*payment* @bitwarden/team-billing-dev
+**/*invoice* @bitwarden/team-billing-dev
+**/*OrganizationLicense* @bitwarden/team-billing-dev
 **/Billing @bitwarden/team-billing-dev
 
 # Multiple owners
