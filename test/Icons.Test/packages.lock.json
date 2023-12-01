@@ -280,19 +280,19 @@
       },
       "Duende.IdentityServer": {
         "type": "Transitive",
-        "resolved": "6.0.4",
-        "contentHash": "4HVjzx1F8v5J+U7oa8RGAQGj2QzmzNSu87r18Sh+dlh10uyZZL8teAaT/FaVLDObnfItGdPFvN8mwpF/HkI3Xw==",
+        "resolved": "6.3.6",
+        "contentHash": "KQekGpJxb4fENF6zBOU10KTWHxw/Bs8CP3+YXUlz4d/ePxvo/dVU7o/1xlTlDjne7SDqfx06IHMG9Z3mZl9U9Q==",
         "dependencies": {
-          "Duende.IdentityServer.Storage": "6.0.4",
+          "Duende.IdentityServer.Storage": "6.3.6",
           "Microsoft.AspNetCore.Authentication.OpenIdConnect": "6.0.0"
         }
       },
       "Duende.IdentityServer.Storage": {
         "type": "Transitive",
-        "resolved": "6.0.4",
-        "contentHash": "s5gAjfbpr2IMgI+fU2Nx+2AZdzstmbt9gpo13iX7GwvqSeSaBVqj9ZskAN0R2KF1OemPdZuGnfaTcevdXMUrrw==",
+        "resolved": "6.3.6",
+        "contentHash": "d7Fqk8x2yEj2w1BjRUO5PGIGF+yEaU23Ek9Mf/esGfGzXPmAX24FqEnWU+WF3/SeA3/Ll0HF1kd1Se/z0M4TUA==",
         "dependencies": {
-          "IdentityModel": "6.0.0",
+          "IdentityModel": "6.1.0",
           "Microsoft.AspNetCore.DataProtection.Abstractions": "6.0.0"
         }
       },
@@ -340,8 +340,8 @@
       },
       "IdentityModel": {
         "type": "Transitive",
-        "resolved": "6.0.0",
-        "contentHash": "eVHCR7a6m/dm5RFcBzE3qs/Jg5j9R5Rjpu8aTOv9e4AFvaQtBXb5ah7kmwU+YwA0ufRwz4wf1hnIvsD2hSnI4g=="
+        "resolved": "6.1.0",
+        "contentHash": "W9A6U26se5Jeo+QoczLfXW5LgBDXL0bBfnb2DWWZMivv9L52ls/85WtEGZQ8kSgOUecuBUlQZdpu02Uni8n1tg=="
       },
       "Kralizek.AutoFixture.Extensions.MockHttp": {
         "type": "Transitive",
@@ -2855,7 +2855,7 @@
           "BitPay.Light": "1.0.1907",
           "Braintree": "5.19.0",
           "DnsClient": "1.7.0",
-          "Duende.IdentityServer": "6.0.4",
+          "Duende.IdentityServer": "6.3.6",
           "Fido2.AspNet": "3.0.1",
           "Handlebars.Net": "2.1.2",
           "LaunchDarkly.ServerSdk": "8.0.0",
