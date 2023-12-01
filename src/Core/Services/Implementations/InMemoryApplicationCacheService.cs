@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Context;
 using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Repositories;
 
@@ -11,6 +12,8 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
 {
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IProviderRepository _providerRepository;
+    private readonly IFeatureService _featureService;
+    private readonly ICurrentContext _currentContext;
     private DateTime _lastOrgAbilityRefresh = DateTime.MinValue;
     private IDictionary<Guid, OrganizationAbility> _orgAbilities;
     private TimeSpan _orgAbilitiesRefreshInterval = TimeSpan.FromMinutes(10);
@@ -18,10 +21,13 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
     private IDictionary<Guid, ProviderAbility> _providerAbilities;
 
     public InMemoryApplicationCacheService(
-        IOrganizationRepository organizationRepository, IProviderRepository providerRepository)
+        IOrganizationRepository organizationRepository, IProviderRepository providerRepository,
+        IFeatureService featureService, ICurrentContext currentContext)
     {
         _organizationRepository = organizationRepository;
         _providerRepository = providerRepository;
+        _featureService = featureService;
+        _currentContext = currentContext;
     }
 
     public virtual async Task<IDictionary<Guid, OrganizationAbility>> GetOrganizationAbilitiesAsync()
@@ -54,7 +60,9 @@ public class InMemoryApplicationCacheService : IApplicationCacheService
     public virtual async Task UpsertOrganizationAbilityAsync(Organization organization)
     {
         await InitOrganizationAbilitiesAsync();
-        var newAbility = new OrganizationAbility(organization);
+        var flexibleCollectionsIsEnabled =
+            _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+        var newAbility = new OrganizationAbility(organization, flexibleCollectionsIsEnabled);
 
         if (_orgAbilities.ContainsKey(organization.Id))
         {

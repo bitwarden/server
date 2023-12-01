@@ -171,7 +171,7 @@ public class UserServiceTests
         orgUser.OrganizationId = organization.Id;
         organization.Enabled = orgEnabled;
         organization.UsersGetPremium = orgUsersGetPremium;
-        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization, true) } };
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
@@ -185,7 +185,7 @@ public class UserServiceTests
         orgUser.OrganizationId = organization.Id;
         organization.Enabled = true;
         organization.UsersGetPremium = true;
-        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization) } };
+        var orgAbilities = new Dictionary<Guid, OrganizationAbility>() { { organization.Id, new OrganizationAbility(organization, true) } };
 
         sutProvider.GetDependency<IOrganizationUserRepository>().GetManyByUserAsync(user.Id).Returns(new List<OrganizationUser>() { orgUser });
         sutProvider.GetDependency<IApplicationCacheService>().GetOrganizationAbilitiesAsync().Returns(orgAbilities);
