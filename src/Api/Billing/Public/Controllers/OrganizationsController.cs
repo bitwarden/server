@@ -13,7 +13,7 @@ using OrganizationSubscriptionUpdateRequestModel = Bit.Api.Billing.Public.Models
 
 namespace Bit.Api.Billing.Public.Controllers;
 
-[Route("public/organizations")]
+[Route("public/billing-organization")]
 [Authorize("Organization")]
 public class OrganizationsController : Controller
 {
@@ -35,36 +35,32 @@ public class OrganizationsController : Controller
     }
 
     /// <summary>
-    /// Set Max Seats Autoscale, ServiceAccounts Autoscale, Current Seats,ServiceAccounts and storage for Password Manager and Secrets Manager.
+    /// Update the organization's current subscription for Password Manager and/or Secrets Manager.
     /// </summary>
-    /// <remarks>
-    /// Set Max Seats Autoscale,ServiceAccounts Autoscale, Current Seats,ServiceAccounts and storage from an external system.
-    /// </remarks>
-    /// <param name="id">The identifier of the member to be updated.</param>
-    /// <param name="model">The request model.</param>
-    [HttpPut("{id}/subscription")]
+    /// <param name="model">The request model containing the updated subscription information.</param>
+    [HttpPut("subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
     [ProducesResponseType((int)HttpStatusCode.OK)]
     [ProducesResponseType(typeof(ErrorResponseModel), (int)HttpStatusCode.BadRequest)]
     [ProducesResponseType((int)HttpStatusCode.NotFound)]
-    public async Task<IActionResult> PostSubscriptionAsync(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
+    public async Task<IActionResult> PostSubscriptionAsync([FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
-        var organization = await _organizationRepository.GetByIdAsync(id);
+        var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
         if (organization == null)
         {
             throw new NotFoundException();
         }
 
-        if (model.SecretsManager != null)
+        if (model.SecretsManagerSubscriptionUpdateRequestModel != null)
         {
             var requestModel = SecretsManagerSubscriptionUpdateRequestModel(model);
             var organizationUpdate = requestModel.ToSecretsManagerSubscriptionUpdate(organization);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
         }
 
-        if (model.PasswordManager != null)
+        if (model.PasswordManagerSubscriptionUpdateRequestModel != null)
         {
-            await UpdatePasswordManagerSubscriptionAsync(id, model);
+            await UpdatePasswordManagerSubscriptionAsync(_currentContext.OrganizationId.Value, model);
         }
 
         return new OkResult();
@@ -72,11 +68,11 @@ public class OrganizationsController : Controller
 
     private async Task UpdatePasswordManagerSubscriptionAsync(Guid id, OrganizationSubscriptionUpdateRequestModel model)
     {
-        await _organizationService.UpdateSubscription(id, model.PasswordManager.Seats,
-            model.PasswordManager.MaxAutoScaleSeats);
-        if (model.PasswordManager.Storage != 0)
+        await _organizationService.UpdateSubscription(id, model.PasswordManagerSubscriptionUpdateRequestModel.Seats,
+            model.PasswordManagerSubscriptionUpdateRequestModel.MaxAutoScaleSeats);
+        if (model.PasswordManagerSubscriptionUpdateRequestModel.Storage.HasValue)
         {
-            await _organizationService.AdjustStorageAsync(id, model.PasswordManager.Storage);
+            await _organizationService.AdjustStorageAsync(id, (short)model.PasswordManagerSubscriptionUpdateRequestModel.Storage);
         }
     }
 
@@ -85,10 +81,10 @@ public class OrganizationsController : Controller
     {
         var requestModel = new SecretsManagerSubscriptionUpdateRequestModel
         {
-            SeatAdjustment = model.SecretsManager.Seats,
-            MaxAutoscaleSeats = model.SecretsManager.MaxAutoScaleSeats,
-            ServiceAccountAdjustment = model.SecretsManager.ServiceAccounts,
-            MaxAutoscaleServiceAccounts = model.SecretsManager.MaxAutoScaleServiceAccounts
+            SeatAdjustment = model.SecretsManagerSubscriptionUpdateRequestModel.Seats,
+            MaxAutoscaleSeats = model.SecretsManagerSubscriptionUpdateRequestModel.MaxAutoScaleSeats,
+            ServiceAccountAdjustment = model.SecretsManagerSubscriptionUpdateRequestModel.ServiceAccounts,
+            MaxAutoscaleServiceAccounts = model.SecretsManagerSubscriptionUpdateRequestModel.MaxAutoScaleServiceAccounts
         };
         return requestModel;
     }

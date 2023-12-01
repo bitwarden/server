@@ -5,9 +5,9 @@ namespace Bit.Api.Billing.Public.Models;
 public class OrganizationSubscriptionUpdateRequestModel
 {
     [ValidateAtLeastOneNotNull]
-    public PasswordManager PasswordManager { get; set; }
+    public PasswordManager PasswordManagerSubscriptionUpdateRequestModel { get; set; }
     [ValidateAtLeastOneNotNull]
-    public SecretsManager SecretsManager { get; set; }
+    public SecretsManager SecretsManagerSubscriptionUpdateRequestModel { get; set; }
 }
 
 public class PasswordManager
@@ -15,7 +15,7 @@ public class PasswordManager
     [Range(0, int.MaxValue, ErrorMessage = "Seats cannot be negative.")]
     public int Seats { get; set; }
     [Range(0, int.MaxValue, ErrorMessage = "Storage cannot be negative.")]
-    public short Storage { get; set; }
+    public short? Storage { get; set; }
     [Range(0, int.MaxValue, ErrorMessage = "MaxAutoScaleSeats cannot be negative.")]
     public int? MaxAutoScaleSeats { get; set; }
     public PasswordManager(int seats, short storage, int? maxAutoScaleSeats)
@@ -50,7 +50,12 @@ public class ValidateAtLeastOneNotNullAttribute : ValidationAttribute
 {
     protected override ValidationResult IsValid(object value, ValidationContext validationContext)
     {
+        /*Note: You need to specify at least one of the properties ('PasswordManager' or 'SecretsManager').
+        If both properties are specified, both will be updated but If both properties not specified it will return validation error message*/
+
+        // Retrieve the 'PasswordManager' property value from the validation context object.
         var passwordManager = validationContext.ObjectType.GetProperty("PasswordManager")?.GetValue(validationContext.ObjectInstance);
+        // Retrieve the 'SecretsManager' property value from the validation context object.
         var secretsManager = validationContext.ObjectType.GetProperty("SecretsManager")?.GetValue(validationContext.ObjectInstance);
 
         if (passwordManager == null && secretsManager == null)
