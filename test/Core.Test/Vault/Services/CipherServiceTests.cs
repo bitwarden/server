@@ -78,7 +78,7 @@ public class CipherServiceTests
                         !cols.Any(c => c.Id == collections[0].Id) && // Check that the collection that already existed in the organization was not added
                         cols.All(c => collections.Any(x => c.Name == x.Name))),
             Arg.Is<IEnumerable<CollectionCipher>>(c => c.Count() == ciphers.Count),
-            Arg.Is<IEnumerable<CollectionUser>>(i => i.IsNullOrEmpty()));
+            Arg.Is<IEnumerable<CollectionUser>>(i => i.Count() == 0));
         await sutProvider.GetDependency<IPushNotificationService>().Received(1).PushSyncVaultAsync(importingUserId);
         await sutProvider.GetDependency<IReferenceEventService>().Received(1).RaiseEventAsync(
             Arg.Is<ReferenceEvent>(e => e.Type == ReferenceEventType.VaultImported));
