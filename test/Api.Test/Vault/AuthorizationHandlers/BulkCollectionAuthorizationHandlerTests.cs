@@ -214,11 +214,6 @@ public class BulkCollectionAuthorizationHandlerTests
     {
         var actingUserId = Guid.NewGuid();
 
-        foreach (var c in collections)
-        {
-            c.Manage = true;
-        }
-
         organization.Type = OrganizationUserType.User;
         organization.LimitCollectionCreationDeletion = false;
         organization.Permissions = new Permissions();
@@ -249,7 +244,7 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanReadAsync_WhenUserIsNotAssignedToCollections_Success(
+    public async Task CanReadAsync_WhenUserIsNotAssignedToCollections_NoSuccess(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
@@ -426,12 +421,17 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData, CollectionCustomization]
-    public async Task CanReadWithAccessAsync_WhenUserWithRequiredPermissions_Success(
+    public async Task CanReadWithAccessAsync_WhenUserCanManageCollections_Success(
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<CollectionDetails> collections,
         CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
+
+        foreach (var c in collections)
+        {
+            c.Manage = true;
+        }
 
         organization.Type = OrganizationUserType.User;
         organization.LimitCollectionCreationDeletion = false;
@@ -449,6 +449,37 @@ public class BulkCollectionAuthorizationHandlerTests
         await sutProvider.Sut.HandleAsync(context);
 
         Assert.True(context.HasSucceeded);
+    }
+
+    [Theory, BitAutoData, CollectionCustomization]
+    public async Task CanReadWithAccessAsync_WhenUserCanNotManageCollections_Success(
+        SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
+        ICollection<CollectionDetails> collections,
+        CurrentContextOrganization organization)
+    {
+        var actingUserId = Guid.NewGuid();
+
+        foreach (var c in collections)
+        {
+            c.Manage = false;
+        }
+
+        organization.Type = OrganizationUserType.User;
+        organization.LimitCollectionCreationDeletion = false;
+        organization.Permissions = new Permissions();
+
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collections);
+
+        var context = new AuthorizationHandlerContext(
+            new[] { BulkCollectionOperations.ReadWithAccess },
+            new ClaimsPrincipal(),
+            collections);
+
+        await sutProvider.Sut.HandleAsync(context);
+
+        Assert.False(context.HasSucceeded);
     }
 
     [Theory, CollectionCustomization]
