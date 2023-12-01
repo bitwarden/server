@@ -1,7 +1,7 @@
 ﻿using Bit.Billing.Constants;
 using Bit.Billing.Services;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;

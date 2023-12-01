@@ -1,13 +1,13 @@
 ﻿using AutoMapper;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data.Organizations;
-using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Auth.Models;
+using Bit.Infrastructure.EntityFramework.Models;
 using Bit.Infrastructure.EntityFramework.Vault.Models;
 
-namespace Bit.Infrastructure.EntityFramework.Models;
+namespace Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 
-public class Organization : Core.Entities.Organization
+public class Organization : Core.AdminConsole.Entities.Organization
 {
     public virtual ICollection<Cipher> Ciphers { get; set; }
     public virtual ICollection<OrganizationUser> OrganizationUsers { get; set; }
@@ -26,7 +26,7 @@ public class OrganizationMapperProfile : Profile
 {
     public OrganizationMapperProfile()
     {
-        CreateMap<Core.Entities.Organization, Organization>().ReverseMap();
+        CreateMap<Core.AdminConsole.Entities.Organization, Organization>().ReverseMap();
         CreateProjection<Organization, SelfHostedOrganizationDetails>()
             .ForMember(sd => sd.CollectionCount, opt => opt.MapFrom(o => o.Collections.Count))
             .ForMember(sd => sd.GroupCount, opt => opt.MapFrom(o => o.Groups.Count))

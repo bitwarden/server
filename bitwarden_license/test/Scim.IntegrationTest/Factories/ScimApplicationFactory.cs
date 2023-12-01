@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using Bit.Core.Services;
+using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Scim.Models;
@@ -196,11 +197,11 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
         };
     }
 
-    private List<Infrastructure.EntityFramework.Models.Organization> GetSeedingOrganizations()
+    private List<Organization> GetSeedingOrganizations()
     {
-        return new List<Infrastructure.EntityFramework.Models.Organization>()
+        return new List<Organization>()
         {
-            new Infrastructure.EntityFramework.Models.Organization { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
+            new Organization { Id = TestOrganizationId1, Name = "Test Organization 1", UseGroups = true }
         };
     }
 
