@@ -3,10 +3,16 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Text.Json;
 using Bit.Core;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models;
+using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -19,8 +25,9 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using IdentityServer4.Validation;
+using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -29,7 +36,6 @@ public abstract class BaseRequestValidator<T> where T : class
     private UserManager<User> _userManager;
     private readonly IDeviceRepository _deviceRepository;
     private readonly IDeviceService _deviceService;
-    private readonly IUserService _userService;
     private readonly IEventService _eventService;
     private readonly IOrganizationDuoWebTokenProvider _organizationDuoWebTokenProvider;
     private readonly IOrganizationRepository _organizationRepository;
@@ -40,9 +46,15 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly GlobalSettings _globalSettings;
     private readonly IUserRepository _userRepository;
     private readonly IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> _tokenDataFactory;
+    private readonly IDistributedCache _distributedCache;
+    private readonly DistributedCacheEntryOptions _cacheEntryOptions;
 
     protected ICurrentContext CurrentContext { get; }
     protected IPolicyService PolicyService { get; }
+    protected IFeatureService FeatureService { get; }
+    protected ISsoConfigRepository SsoConfigRepository { get; }
+    protected IUserService _userService { get; }
+    protected IUserDecryptionOptionsBuilder UserDecryptionOptionsBuilder { get; }
 
     public BaseRequestValidator(
         UserManager<User> userManager,
@@ -58,10 +70,13 @@ public abstract class BaseRequestValidator<T> where T : class
         ILogger logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
+        IFeatureService featureService,
+        ISsoConfigRepository ssoConfigRepository,
+        IDistributedCache distributedCache,
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
         _deviceRepository = deviceRepository;
@@ -79,6 +94,17 @@ public abstract class BaseRequestValidator<T> where T : class
         PolicyService = policyService;
         _userRepository = userRepository;
         _tokenDataFactory = tokenDataFactory;
+        FeatureService = featureService;
+        SsoConfigRepository = ssoConfigRepository;
+        _distributedCache = distributedCache;
+        _cacheEntryOptions = new DistributedCacheEntryOptions
+        {
+            // This sets the time an item is cached to 17 minutes. This value is hard coded
+            // to 17 because to it covers all time-out windows for both Authenticators and
+            // Email TOTP.
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(17)
+        };
+        UserDecryptionOptionsBuilder = userDecryptionOptionsBuilder;
     }
 
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
@@ -125,18 +151,26 @@ public abstract class BaseRequestValidator<T> where T : class
             var verified = await VerifyTwoFactor(user, twoFactorOrganization,
                 twoFactorProviderType, twoFactorToken);
 
-            if ((!verified || isBot) && twoFactorProviderType != TwoFactorProviderType.Remember)
+            var cacheKey = "TOTP_" + user.Email + "_" + twoFactorToken;
+
+            var isOtpCached = Core.Utilities.DistributedCacheExtensions.TryGetValue(_distributedCache, cacheKey, out string _);
+            if (!verified || isBot || isOtpCached)
             {
-                await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
-                await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
+                if (twoFactorProviderType != TwoFactorProviderType.Remember)
+                {
+                    await UpdateFailedAuthDetailsAsync(user, true, !validatorContext.KnownDevice);
+                    await BuildErrorResultAsync("Two-step token is invalid. Try again.", true, context, user);
+                }
+                else if (twoFactorProviderType == TwoFactorProviderType.Remember)
+                {
+                    await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
+                }
                 return;
             }
-            else if ((!verified || isBot) && twoFactorProviderType == TwoFactorProviderType.Remember)
+            // We only want to track TOTPs in the chache to enforce one time use.
+            if (twoFactorProviderType == TwoFactorProviderType.Authenticator || twoFactorProviderType == TwoFactorProviderType.Email)
             {
-                // Delay for brute force.
-                await Task.Delay(2000);
-                await BuildTwoFactorResultAsync(user, twoFactorOrganization, context);
-                return;
+                await Core.Utilities.DistributedCacheExtensions.SetAsync(_distributedCache, cacheKey, twoFactorToken, _cacheEntryOptions);
             }
         }
         else
@@ -199,6 +233,7 @@ public abstract class BaseRequestValidator<T> where T : class
         customResponse.Add("KdfIterations", user.KdfIterations);
         customResponse.Add("KdfMemory", user.KdfMemory);
         customResponse.Add("KdfParallelism", user.KdfParallelism);
+        customResponse.Add("UserDecryptionOptions", await CreateUserDecryptionOptionsAsync(user, device, GetSubject(context)));
 
         if (sendRememberToken)
         {
@@ -300,8 +335,9 @@ public abstract class BaseRequestValidator<T> where T : class
         Dictionary<string, object> customResponse);
 
     protected abstract void SetErrorResult(T context, Dictionary<string, object> customResponse);
+    protected abstract ClaimsPrincipal GetSubject(T context);
 
-    private async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
+    protected virtual async Task<Tuple<bool, Organization>> RequiresTwoFactorAsync(User user, ValidatedTokenRequest request)
     {
         if (request.GrantType == "client_credentials")
         {
@@ -340,7 +376,8 @@ public abstract class BaseRequestValidator<T> where T : class
             return true;
         }
 
-        // Check if user belongs to any organization with an active SSO policy 
+
+        // Check if user belongs to any organization with an active SSO policy
         var anySsoPoliciesApplicableToUser = await PolicyService.AnyPoliciesApplicableToUserAsync(user.Id, PolicyType.RequireSso, OrganizationUserStatusType.Confirmed);
         if (anySsoPoliciesApplicableToUser)
         {
@@ -571,5 +608,37 @@ public abstract class BaseRequestValidator<T> where T : class
         }
 
         return new MasterPasswordPolicyResponseModel(await PolicyService.GetMasterPasswordPolicyForUserAsync(user));
+    }
+
+#nullable enable
+    /// <summary>
+    /// Used to create a list of all possible ways the newly authenticated user can decrypt their vault contents
+    /// </summary>
+    private async Task<UserDecryptionOptions> CreateUserDecryptionOptionsAsync(User user, Device device, ClaimsPrincipal subject)
+    {
+        var ssoConfig = await GetSsoConfigurationDataAsync(subject);
+        return await UserDecryptionOptionsBuilder
+            .ForUser(user)
+            .WithDevice(device)
+            .WithSso(ssoConfig)
+            .BuildAsync();
+    }
+
+    private async Task<SsoConfig?> GetSsoConfigurationDataAsync(ClaimsPrincipal subject)
+    {
+        var organizationClaim = subject?.FindFirstValue("organizationId");
+
+        if (organizationClaim == null || !Guid.TryParse(organizationClaim, out var organizationId))
+        {
+            return null;
+        }
+
+        var ssoConfig = await SsoConfigRepository.GetByOrganizationIdAsync(organizationId);
+        if (ssoConfig == null)
+        {
+            return null;
+        }
+
+        return ssoConfig;
     }
 }

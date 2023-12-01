@@ -18,7 +18,7 @@ public class SendResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(send));
         }
 
-        Id = send.Id.ToString();
+        Id = send.Id;
         AccessId = CoreHelpers.Base64UrlEncode(send.Id.ToByteArray());
         Type = send.Type;
         Key = send.Key;
@@ -52,7 +52,7 @@ public class SendResponseModel : ResponseModel
         Notes = sendData.Notes;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string AccessId { get; set; }
     public SendType Type { get; set; }
     public string Name { get; set; }

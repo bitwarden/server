@@ -34,12 +34,12 @@ public class CiphersControllerTests
         };
 
         sutProvider.GetDependency<ICipherRepository>()
-            .GetByIdAsync(cipherId, userId)
+            .GetByIdAsync(cipherId, userId, Arg.Any<bool>())
             .Returns(Task.FromResult(cipherDetails));
 
-        var result = await sutProvider.Sut.PutPartial(cipherId.ToString(), new CipherPartialRequestModel { Favorite = isFavorite, FolderId = folderId.ToString() });
+        var result = await sutProvider.Sut.PutPartial(cipherId, new CipherPartialRequestModel { Favorite = isFavorite, FolderId = folderId.ToString() });
 
-        Assert.Equal(folderId.ToString(), result.FolderId);
+        Assert.Equal(folderId, result.FolderId);
         Assert.Equal(isFavorite, result.Favorite);
     }
 }

@@ -14,14 +14,14 @@ public class CollectionResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(collection));
         }
 
-        Id = collection.Id.ToString();
-        OrganizationId = collection.OrganizationId.ToString();
+        Id = collection.Id;
+        OrganizationId = collection.OrganizationId;
         Name = collection.Name;
         ExternalId = collection.ExternalId;
     }
 
-    public string Id { get; set; }
-    public string OrganizationId { get; set; }
+    public Guid Id { get; set; }
+    public Guid OrganizationId { get; set; }
     public string Name { get; set; }
     public string ExternalId { get; set; }
 }
@@ -33,10 +33,12 @@ public class CollectionDetailsResponseModel : CollectionResponseModel
     {
         ReadOnly = collectionDetails.ReadOnly;
         HidePasswords = collectionDetails.HidePasswords;
+        Manage = collectionDetails.Manage;
     }
 
     public bool ReadOnly { get; set; }
     public bool HidePasswords { get; set; }
+    public bool Manage { get; set; }
 }
 
 public class CollectionAccessDetailsResponseModel : CollectionResponseModel

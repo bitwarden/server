@@ -1,12 +1,17 @@
-﻿using Bit.Core.Auth.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
+using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
-using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -203,7 +208,7 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
-            Arg.Any<Guid>(), Enums.PolicyType.SingleOrg).Returns(new Policy
+            Arg.Any<Guid>(), PolicyType.SingleOrg).Returns(new Policy
             {
                 Enabled = true
             });
@@ -237,7 +242,7 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
-            Arg.Any<Guid>(), Arg.Any<Enums.PolicyType>()).Returns(new Policy
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new Policy
             {
                 Enabled = true
             });
@@ -272,7 +277,7 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
-            Arg.Any<Guid>(), Arg.Any<Enums.PolicyType>()).Returns(new Policy
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new Policy
             {
                 Enabled = true,
             });
@@ -307,12 +312,48 @@ public class SsoConfigServiceTests
         };
 
         sutProvider.GetDependency<IPolicyRepository>().GetByOrganizationIdTypeAsync(
-            Arg.Any<Guid>(), Arg.Any<Enums.PolicyType>()).Returns(new Policy
+            Arg.Any<Guid>(), Arg.Any<PolicyType>()).Returns(new Policy
             {
                 Enabled = true,
             });
 
         await sutProvider.Sut.SaveAsync(ssoConfig, organization);
+
+        await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()
+            .UpsertAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_Tde_Enable_Required_Policies(SutProvider<SsoConfigService> sutProvider, Organization organization)
+    {
+        var ssoConfig = new SsoConfig
+        {
+            Id = default,
+            Data = new SsoConfigurationData
+            {
+                MemberDecryptionType = MemberDecryptionType.TrustedDeviceEncryption,
+            }.Serialize(),
+            Enabled = true,
+            OrganizationId = organization.Id,
+        };
+
+        await sutProvider.Sut.SaveAsync(ssoConfig, organization);
+
+        await sutProvider.GetDependency<IPolicyService>().Received(1)
+            .SaveAsync(
+                Arg.Is<Policy>(t => t.Type == PolicyType.SingleOrg),
+                Arg.Any<IUserService>(),
+                Arg.Any<IOrganizationService>(),
+                null
+            );
+
+        await sutProvider.GetDependency<IPolicyService>().Received(1)
+            .SaveAsync(
+                Arg.Is<Policy>(t => t.Type == PolicyType.ResetPassword && t.GetDataModel<ResetPasswordDataModel>().AutoEnrollEnabled),
+                Arg.Any<IUserService>(),
+                Arg.Any<IOrganizationService>(),
+                null
+            );
 
         await sutProvider.GetDependency<ISsoConfigRepository>().ReceivedWithAnyArgs()
             .UpsertAsync(default);

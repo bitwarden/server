@@ -1,6 +1,9 @@
 ﻿using System.Security.Claims;
+using Bit.Core;
+using Bit.Core.AdminConsole.Services;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.Services;
 using Bit.Core.Context;
 using Bit.Core.Entities;
@@ -9,9 +12,10 @@ using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Bit.Core.Utilities;
-using IdentityServer4.Models;
-using IdentityServer4.Validation;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -37,16 +41,19 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         ILogger<ResourceOwnerPasswordValidator> logger,
         ICurrentContext currentContext,
         GlobalSettings globalSettings,
-        IPolicyRepository policyRepository,
         ICaptchaValidationService captchaValidationService,
         IAuthRequestRepository authRequestRepository,
         IUserRepository userRepository,
         IPolicyService policyService,
-        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory)
+        IDataProtectorTokenFactory<SsoEmail2faSessionTokenable> tokenDataFactory,
+        IFeatureService featureService,
+        ISsoConfigRepository ssoConfigRepository,
+        IDistributedCache distributedCache,
+        IUserDecryptionOptionsBuilder userDecryptionOptionsBuilder)
         : base(userManager, deviceRepository, deviceService, userService, eventService,
               organizationDuoWebTokenProvider, organizationRepository, organizationUserRepository,
-              applicationCacheService, mailService, logger, currentContext, globalSettings, policyRepository,
-              userRepository, policyService, tokenDataFactory)
+              applicationCacheService, mailService, logger, currentContext, globalSettings, userRepository, policyService,
+              tokenDataFactory, featureService, ssoConfigRepository, distributedCache, userDecryptionOptionsBuilder)
     {
         _userManager = userManager;
         _userService = userService;
@@ -140,7 +147,7 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         List<Claim> claims, Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(user.Id.ToString(), "Application",
-            identityProvider: "bitwarden",
+            identityProvider: Constants.IdentityProvider,
             claims: claims.Count > 0 ? claims : null,
             customResponse: customResponse);
         return Task.CompletedTask;
@@ -164,6 +171,11 @@ public class ResourceOwnerPasswordValidator : BaseRequestValidator<ResourceOwner
         Dictionary<string, object> customResponse)
     {
         context.Result = new GrantValidationResult(TokenRequestErrors.InvalidGrant, customResponse: customResponse);
+    }
+
+    protected override ClaimsPrincipal GetSubject(ResourceOwnerPasswordValidationContext context)
+    {
+        return context.Result.Subject;
     }
 
     private bool AuthEmailHeaderIsValid(ResourceOwnerPasswordValidationContext context)

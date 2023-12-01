@@ -6,10 +6,11 @@
   
   <ItemGroup>
     <EmbeddedResource Include="DbScripts\**\*.sql" />
+    <EmbeddedResource Include="DbScripts_transition\**\*.sql" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="dbup-sqlserver" Version="5.0.8" />
+    <PackageReference Include="dbup-sqlserver" Version="5.0.37" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
   </ItemGroup>
 

@@ -12,7 +12,8 @@ BEGIN
         RevisionDate DATETIME2(7), 
         ExternalId NVARCHAR(300), 
         ReadOnly BIT, 
-        HidePasswords BIT)
+        HidePasswords BIT,
+        Manage BIT)
 
     INSERT INTO @TempUserCollections EXEC [dbo].[Collection_ReadByUserId] @UserId
 	 

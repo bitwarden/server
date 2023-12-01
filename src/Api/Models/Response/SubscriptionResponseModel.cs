@@ -45,6 +45,20 @@ public class SubscriptionResponseModel : ResponseModel
     public bool UsingInAppPurchase { get; set; }
 }
 
+public class BillingCustomerDiscount
+{
+    public BillingCustomerDiscount(SubscriptionInfo.BillingCustomerDiscount discount)
+    {
+        Id = discount.Id;
+        Active = discount.Active;
+        PercentOff = discount.PercentOff;
+    }
+
+    public string Id { get; }
+    public bool Active { get; }
+    public decimal? PercentOff { get; }
+}
+
 public class BillingSubscription
 {
     public BillingSubscription(SubscriptionInfo.BillingSubscription sub)
@@ -82,6 +96,7 @@ public class BillingSubscription
             Interval = item.Interval;
             Quantity = item.Quantity;
             SponsoredSubscriptionItem = item.SponsoredSubscriptionItem;
+            AddonSubscriptionItem = item.AddonSubscriptionItem;
         }
 
         public string Name { get; set; }
@@ -89,6 +104,7 @@ public class BillingSubscription
         public int Quantity { get; set; }
         public string Interval { get; set; }
         public bool SponsoredSubscriptionItem { get; set; }
+        public bool AddonSubscriptionItem { get; set; }
     }
 }
 

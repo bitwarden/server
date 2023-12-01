@@ -5,6 +5,7 @@ namespace Bit.Core;
 public static class Constants
 {
     public const int BypassFiltersEventId = 12482444;
+    public const int FailedSecretVerificationDelay = 2000;
 
     // File size limits - give 1 MB extra for cushion.
     // Note: if request size limits are changed, 'client_max_body_size'
@@ -19,6 +20,15 @@ public static class Constants
     /// their subscription has expired.
     /// </summary>
     public const int OrganizationSelfHostSubscriptionGracePeriodDays = 60;
+
+    public const string Fido2KeyCipherMinimumVersion = "2023.10.0";
+
+    public const string CipherKeyEncryptionMinimumVersion = "2023.9.2";
+
+    /// <summary>
+    /// Used by IdentityServer to identify our own provider.
+    /// </summary>
+    public const string IdentityProvider = "bitwarden";
 }
 
 public static class TokenPurposes
@@ -35,7 +45,20 @@ public static class FeatureFlagKeys
 {
     public const string DisplayEuEnvironment = "display-eu-environment";
     public const string DisplayLowKdfIterationWarning = "display-kdf-iteration-warning";
+    public const string PasswordlessLogin = "passwordless-login";
     public const string TrustedDeviceEncryption = "trusted-device-encryption";
+    public const string Fido2VaultCredentials = "fido2-vault-credentials";
+    public const string VaultOnboarding = "vault-onboarding";
+    public const string AutofillV2 = "autofill-v2";
+    public const string BrowserFilelessImport = "browser-fileless-import";
+    public const string FlexibleCollections = "flexible-collections";
+    public const string FlexibleCollectionsV1 = "flexible-collections-v-1"; // v-1 is intentional
+    public const string BulkCollectionAccess = "bulk-collection-access";
+    public const string AutofillOverlay = "autofill-overlay";
+    public const string ItemShare = "item-share";
+    public const string BillingPlansUpgrade = "billing-plans-upgrade";
+    public const string BillingStarterPlan = "billing-starter-plan";
+    public const string KeyRotationImprovements = "key-rotation-improvements";
 
     public static List<string> GetAllKeys()
     {
@@ -43,5 +66,15 @@ public static class FeatureFlagKeys
             .Where(fi => fi.IsLiteral && !fi.IsInitOnly && fi.FieldType == typeof(string))
             .Select(x => (string)x.GetRawConstantValue())
             .ToList();
+    }
+
+    public static Dictionary<string, string> GetLocalOverrideFlagValues()
+    {
+        // place overriding values when needed locally (offline), or return null
+        return new Dictionary<string, string>()
+        {
+            { TrustedDeviceEncryption, "true" },
+            { Fido2VaultCredentials, "true" }
+        };
     }
 }

@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 
 namespace Bit.Scim.Models;
 
@@ -13,13 +13,13 @@ public class ScimGroupResponseModel : BaseScimGroupModel
     public ScimGroupResponseModel(Group group)
         : this()
     {
-        Id = group.Id.ToString();
+        Id = group.Id;
         DisplayName = group.Name;
         ExternalId = group.ExternalId;
         Meta.Created = group.CreationDate;
         Meta.LastModified = group.RevisionDate;
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public ScimMetaModel Meta { get; private set; }
 }

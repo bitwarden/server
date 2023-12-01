@@ -1,7 +1,8 @@
-﻿using Bit.Api.Models.Response.Providers;
+﻿using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.AdminConsole.Models.Response.Providers;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.Entities;
 using Bit.Core.Models.Api;
-using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 
 namespace Bit.Api.Models.Response;
@@ -20,7 +21,7 @@ public class ProfileResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(user));
         }
 
-        Id = user.Id.ToString();
+        Id = user.Id;
         Name = user.Name;
         Email = user.Email;
         EmailVerified = user.EmailVerified;
@@ -45,7 +46,7 @@ public class ProfileResponseModel : ResponseModel
     {
     }
 
-    public string Id { get; set; }
+    public Guid Id { get; set; }
     public string Name { get; set; }
     public string Email { get; set; }
     public bool EmailVerified { get; set; }

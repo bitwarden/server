@@ -3,6 +3,7 @@ namespace Bit.Core.Settings;
 
 public interface IBaseServiceUriSettings
 {
+    string CloudRegion { get; set; }
     string Vault { get; set; }
     string VaultWithHash { get; }
     string Api { get; set; }

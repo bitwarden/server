@@ -19,7 +19,7 @@ public class EmergencyAccessResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        Id = emergencyAccess.Id.ToString();
+        Id = emergencyAccess.Id;
         Status = emergencyAccess.Status;
         Type = emergencyAccess.Type;
         WaitTimeDays = emergencyAccess.WaitTimeDays;
@@ -32,13 +32,13 @@ public class EmergencyAccessResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        Id = emergencyAccess.Id.ToString();
+        Id = emergencyAccess.Id;
         Status = emergencyAccess.Status;
         Type = emergencyAccess.Type;
         WaitTimeDays = emergencyAccess.WaitTimeDays;
     }
 
-    public string Id { get; private set; }
+    public Guid Id { get; private set; }
     public EmergencyAccessStatusType Status { get; private set; }
     public EmergencyAccessType Type { get; private set; }
     public int WaitTimeDays { get; private set; }
@@ -54,13 +54,13 @@ public class EmergencyAccessGranteeDetailsResponseModel : EmergencyAccessRespons
             throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        GranteeId = emergencyAccess.GranteeId.ToString();
+        GranteeId = emergencyAccess.GranteeId;
         Email = emergencyAccess.GranteeEmail;
         Name = emergencyAccess.GranteeName;
         AvatarColor = emergencyAccess.GranteeAvatarColor;
     }
 
-    public string GranteeId { get; private set; }
+    public Guid? GranteeId { get; private set; }
     public string Name { get; private set; }
     public string Email { get; private set; }
     public string AvatarColor { get; private set; }
@@ -76,13 +76,13 @@ public class EmergencyAccessGrantorDetailsResponseModel : EmergencyAccessRespons
             throw new ArgumentNullException(nameof(emergencyAccess));
         }
 
-        GrantorId = emergencyAccess.GrantorId.ToString();
+        GrantorId = emergencyAccess.GrantorId;
         Email = emergencyAccess.GrantorEmail;
         Name = emergencyAccess.GrantorName;
         AvatarColor = emergencyAccess.GrantorAvatarColor;
     }
 
-    public string GrantorId { get; private set; }
+    public Guid GrantorId { get; private set; }
     public string Name { get; private set; }
     public string Email { get; private set; }
     public string AvatarColor { get; private set; }

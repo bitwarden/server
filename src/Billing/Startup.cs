@@ -1,5 +1,9 @@
 ﻿using System.Globalization;
+using Bit.Billing.Services;
+using Bit.Billing.Services.Implementations;
 using Bit.Core.Context;
+using Bit.Core.SecretsManager.Repositories;
+using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
@@ -58,6 +62,10 @@ public class Startup
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();
 
+        // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
+        // TODO: no longer be required - see PM-1880
+        services.AddScoped<IServiceAccountRepository, NoopServiceAccountRepository>();
+
         // Mvc
         services.AddMvc(config =>
         {
@@ -74,6 +82,9 @@ public class Startup
 
         // Set up HttpClients
         services.AddHttpClient("FreshdeskApi");
+
+        services.AddScoped<IStripeFacade, StripeFacade>();
+        services.AddScoped<IStripeEventService, StripeEventService>();
     }
 
     public void Configure(

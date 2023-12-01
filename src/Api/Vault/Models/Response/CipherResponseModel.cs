@@ -18,7 +18,7 @@ public class CipherMiniResponseModel : ResponseModel
             throw new ArgumentNullException(nameof(cipher));
         }
 
-        Id = cipher.Id.ToString();
+        Id = cipher.Id;
         Type = cipher.Type;
 
         CipherData cipherData;
@@ -57,16 +57,17 @@ public class CipherMiniResponseModel : ResponseModel
         Fields = cipherData.Fields?.Select(f => new CipherFieldModel(f));
         PasswordHistory = cipherData.PasswordHistory?.Select(ph => new CipherPasswordHistoryModel(ph));
         RevisionDate = cipher.RevisionDate;
-        OrganizationId = cipher.OrganizationId?.ToString();
+        OrganizationId = cipher.OrganizationId;
         Attachments = AttachmentResponseModel.FromCipher(cipher, globalSettings);
         OrganizationUseTotp = orgUseTotp;
         CreationDate = cipher.CreationDate;
         DeletedDate = cipher.DeletedDate;
         Reprompt = cipher.Reprompt.GetValueOrDefault(CipherRepromptType.None);
+        Key = cipher.Key;
     }
 
-    public string Id { get; set; }
-    public string OrganizationId { get; set; }
+    public Guid Id { get; set; }
+    public Guid? OrganizationId { get; set; }
     public CipherType Type { get; set; }
     public dynamic Data { get; set; }
     public string Name { get; set; }
@@ -83,6 +84,7 @@ public class CipherMiniResponseModel : ResponseModel
     public DateTime CreationDate { get; set; }
     public DateTime? DeletedDate { get; set; }
     public CipherRepromptType Reprompt { get; set; }
+    public string Key { get; set; }
 }
 
 public class CipherResponseModel : CipherMiniResponseModel
@@ -90,13 +92,13 @@ public class CipherResponseModel : CipherMiniResponseModel
     public CipherResponseModel(CipherDetails cipher, IGlobalSettings globalSettings, string obj = "cipher")
         : base(cipher, globalSettings, cipher.OrganizationUseTotp, obj)
     {
-        FolderId = cipher.FolderId?.ToString();
+        FolderId = cipher.FolderId;
         Favorite = cipher.Favorite;
         Edit = cipher.Edit;
         ViewPassword = cipher.ViewPassword;
     }
 
-    public string FolderId { get; set; }
+    public Guid? FolderId { get; set; }
     public bool Favorite { get; set; }
     public bool Edit { get; set; }
     public bool ViewPassword { get; set; }

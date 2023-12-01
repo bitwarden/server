@@ -2,17 +2,51 @@
 #
 # https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
 
-## Auth team files ##
+# The following owners will be the default owners for everything in the repo
+# unless a later match takes precedence
+* @bitwarden/tech-leads
+
+# DevOps for Actions and other workflow changes
+.github/workflows @bitwarden/dept-devops
+
+# DevOps for Docker changes
+**/Dockerfile @bitwarden/dept-devops
+**/*.Dockerfile @bitwarden/dept-devops
+**/.dockerignore @bitwarden/dept-devops
+
+# Database Operations for database changes
+src/Sql/** @bitwarden/dept-dbops
+util/Migrator/** @bitwarden/dept-dbops
+
+# Auth team
 **/Auth @bitwarden/team-auth-dev
 bitwarden_license/src/Sso @bitwarden/team-auth-dev
 src/Identity @bitwarden/team-auth-dev
 
 **/SecretsManager @bitwarden/team-secrets-manager-dev
 **/Tools @bitwarden/team-tools-dev
-**/Vault @bitwarden/team-vault-dev
 
-# Admin-Console Team
+# Vault team
+**/Vault @bitwarden/team-vault-dev
+**/Vault/AuthorizationHandlers @bitwarden/team-vault-dev @bitwarden/team-admin-console-dev  # joint ownership over authorization handlers that affect organization users
+
+# Admin Console team
+**/AdminConsole @bitwarden/team-admin-console-dev
 bitwarden_license/src/Scim @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.IntegrationTest @bitwarden/team-admin-console-dev
 bitwarden_license/src/test/Scim.ScimTest @bitwarden/team-admin-console-dev
-**/AdminConsole @bitwarden/team-admin-console-dev
+
+# Billing team
+**/*billing* @bitwarden/team-billing-dev
+**/*bitpay* @bitwarden/team-billing-dev
+**/*braintree* @bitwarden/team-billing-dev
+**/*freshdesk* @bitwarden/team-billing-dev
+**/*freshsales* @bitwarden/team-billing-dev
+**/*paypal* @bitwarden/team-billing-dev
+**/*stripe* @bitwarden/team-billing-dev
+**/*subscription* @bitwarden/team-billing-dev
+**/Billing @bitwarden/team-billing-dev
+
+# Multiple owners
+**/packages.lock.json
+Directory.Build.props

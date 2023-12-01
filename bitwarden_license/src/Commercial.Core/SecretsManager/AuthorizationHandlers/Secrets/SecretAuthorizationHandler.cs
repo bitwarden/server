@@ -38,8 +38,14 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             case not null when requirement == SecretOperations.Create:
                 await CanCreateSecretAsync(context, requirement, resource);
                 break;
+            case not null when requirement == SecretOperations.Read:
+                await CanReadSecretAsync(context, requirement, resource);
+                break;
             case not null when requirement == SecretOperations.Update:
                 await CanUpdateSecretAsync(context, requirement, resource);
+                break;
+            case not null when requirement == SecretOperations.Delete:
+                await CanDeleteSecretAsync(context, requirement, resource);
                 break;
             default:
                 throw new ArgumentException("Unsupported operation requirement type provided.", nameof(requirement));
@@ -71,11 +77,25 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
             AccessClientType.NoAccessCheck => true,
             AccessClientType.User => (await _projectRepository.AccessToProjectAsync(project!.Id, userId, accessClient))
                 .Write,
-            AccessClientType.ServiceAccount => false,
+            AccessClientType.ServiceAccount => (await _projectRepository.AccessToProjectAsync(project!.Id, userId, accessClient))
+                .Write,
             _ => false,
         };
 
         if (hasAccess)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task CanReadSecretAsync(AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement, Secret resource)
+    {
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+
+        var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
+
+        if (access.Read)
         {
             context.Succeed(requirement);
         }
@@ -103,12 +123,10 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
                 hasAccess = true;
                 break;
             case AccessClientType.User:
-                var newProject = resource.Projects?.FirstOrDefault();
-                var access = (await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient)).Write;
-                var accessToNew = newProject != null &&
-                                  (await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient))
-                                  .Write;
-                hasAccess = access && accessToNew;
+                hasAccess = await GetAccessToUpdateSecretAsync(resource, userId, accessClient);
+                break;
+            case AccessClientType.ServiceAccount:
+                hasAccess = await GetAccessToUpdateSecretAsync(resource, userId, accessClient);
                 break;
             default:
                 hasAccess = false;
@@ -119,5 +137,28 @@ public class SecretAuthorizationHandler : AuthorizationHandler<SecretOperationRe
         {
             context.Succeed(requirement);
         }
+    }
+
+    private async Task CanDeleteSecretAsync(AuthorizationHandlerContext context,
+        SecretOperationRequirement requirement, Secret resource)
+    {
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+
+        var access = await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient);
+
+        if (access.Write)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task<bool> GetAccessToUpdateSecretAsync(Secret resource, Guid userId, AccessClientType accessClient)
+    {
+        var newProject = resource.Projects?.FirstOrDefault();
+        var access = (await _secretRepository.AccessToSecretAsync(resource.Id, userId, accessClient)).Write;
+        var accessToNew = newProject != null &&
+                          (await _projectRepository.AccessToProjectAsync(newProject.Id, userId, accessClient))
+                          .Write;
+        return access && accessToNew;
     }
 }

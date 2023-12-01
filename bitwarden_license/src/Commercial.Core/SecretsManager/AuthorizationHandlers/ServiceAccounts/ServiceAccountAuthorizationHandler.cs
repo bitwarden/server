@@ -44,6 +44,9 @@ public class
             case not null when requirement == ServiceAccountOperations.Update:
                 await CanUpdateServiceAccountAsync(context, requirement, resource);
                 break;
+            case not null when requirement == ServiceAccountOperations.Delete:
+                await CanDeleteServiceAccountAsync(context, requirement, resource);
+                break;
             case not null when requirement == ServiceAccountOperations.CreateAccessToken:
                 await CanCreateAccessTokenAsync(context, requirement, resource);
                 break;
@@ -52,6 +55,9 @@ public class
                 break;
             case not null when requirement == ServiceAccountOperations.RevokeAccessTokens:
                 await CanRevokeAccessTokensAsync(context, requirement, resource);
+                break;
+            case not null when requirement == ServiceAccountOperations.ReadEvents:
+                await CanReadEventsAsync(context, requirement, resource);
                 break;
             default:
                 throw new ArgumentException("Unsupported operation requirement type provided.",
@@ -107,6 +113,21 @@ public class
         }
     }
 
+    private async Task CanDeleteServiceAccountAsync(AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    {
+        var (accessClient, userId) =
+            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var access =
+            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
+                accessClient);
+
+        if (access.Write)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
     private async Task CanCreateAccessTokenAsync(AuthorizationHandlerContext context,
         ServiceAccountOperationRequirement requirement, ServiceAccount resource)
     {
@@ -147,6 +168,21 @@ public class
                 accessClient);
 
         if (access.Write)
+        {
+            context.Succeed(requirement);
+        }
+    }
+
+    private async Task CanReadEventsAsync(AuthorizationHandlerContext context,
+        ServiceAccountOperationRequirement requirement, ServiceAccount resource)
+    {
+        var (accessClient, userId) =
+            await _accessClientQuery.GetAccessClientAsync(context.User, resource.OrganizationId);
+        var access =
+            await _serviceAccountRepository.AccessToServiceAccountAsync(resource.Id, userId,
+                accessClient);
+
+        if (access.Read)
         {
             context.Succeed(requirement);
         }

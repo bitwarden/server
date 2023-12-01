@@ -1,4 +1,5 @@
 ﻿using Bit.Commercial.Core.SecretsManager.Commands.Projects;
+using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
@@ -29,7 +30,7 @@ public class CreateProjectCommandTests
             .CreateAsync(Arg.Any<Project>())
             .Returns(data);
 
-        await sutProvider.Sut.CreateAsync(data, userId);
+        await sutProvider.Sut.CreateAsync(data, userId, sutProvider.GetDependency<ICurrentContext>().ClientType);
 
         await sutProvider.GetDependency<IProjectRepository>().Received(1)
             .CreateAsync(Arg.Is(data));

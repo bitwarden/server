@@ -1,4 +1,5 @@
 ﻿@using Bit.SharedWeb.Utilities
+@using Bit.Core.AdminConsole.Enums.Provider
 @model CreateProviderModel
 @{
     ViewData["Title"] = "Create Provider";
@@ -17,7 +18,7 @@
 
 <form method="post">
     <div asp-validation-summary="All" class="alert alert-danger"></div>
-    
+
     <div class="form-group">
         <label asp-for="Type" class="h2"></label>
         @foreach(ProviderType providerType in Enum.GetValues(typeof(ProviderType)))
@@ -31,7 +32,7 @@
             </div>
         }
     </div>
-    
+
     <div id="@($"info-{(int)ProviderType.Msp}")" class="form-group @(Model.Type != ProviderType.Msp ? "d-none" : string.Empty)">
         <h2>MSP Info</h2>
         <div class="form-group">
@@ -39,9 +40,13 @@
             <input type="text" class="form-control" asp-for="OwnerEmail">
         </div>
     </div>
-    
+
     <div id="@($"info-{(int)ProviderType.Reseller}")" class="form-group @(Model.Type != ProviderType.Reseller ? "d-none" : string.Empty)">
         <h2>Reseller Info</h2>
+        <div class="form-group">
+            <label asp-for="Name"></label>
+            <input type="text" class="form-control" asp-for="Name">
+        </div>
         <div class="form-group">
             <label asp-for="BusinessName"></label>
             <input type="text" class="form-control" asp-for="BusinessName">
@@ -51,6 +56,6 @@
             <input type="text" class="form-control" asp-for="BillingEmail">
         </div>
     </div>
-    
+
     <button type="submit" class="btn btn-primary mb-2">Create Provider</button>
 </form>

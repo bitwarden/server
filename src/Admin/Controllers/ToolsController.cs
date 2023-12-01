@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Admin.Enums;
 using Bit.Admin.Models;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Models.BitStripe;
 using Bit.Core.OrganizationFeatures.OrganizationLicenses.Interfaces;
@@ -95,12 +96,13 @@ public class ToolsController : Controller
                     SubmitForSettlement = true,
                     PayPal = new Braintree.TransactionOptionsPayPalRequest
                     {
-                        CustomField = $"{btObjIdField}:{btObjId}"
+                        CustomField = $"{btObjIdField}:{btObjId},region:{_globalSettings.BaseServiceUri.CloudRegion}"
                     }
                 },
                 CustomFields = new Dictionary<string, string>
                 {
-                    [btObjIdField] = btObjId.ToString()
+                    [btObjIdField] = btObjId.ToString(),
+                    ["region"] = _globalSettings.BaseServiceUri.CloudRegion
                 }
             });
 

@@ -8,11 +8,11 @@ namespace Bit.Core.Vault.Repositories;
 
 public interface ICipherRepository : IRepository<Cipher, Guid>
 {
-    Task<CipherDetails> GetByIdAsync(Guid id, Guid userId);
+    Task<CipherDetails> GetByIdAsync(Guid id, Guid userId, bool useFlexibleCollections);
     Task<CipherOrganizationDetails> GetOrganizationDetailsByIdAsync(Guid id);
     Task<ICollection<CipherOrganizationDetails>> GetManyOrganizationDetailsByOrganizationIdAsync(Guid organizationId);
     Task<bool> GetCanEditByIdAsync(Guid userId, Guid cipherId);
-    Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool withOrganizations = true);
+    Task<ICollection<CipherDetails>> GetManyByUserIdAsync(Guid userId, bool useFlexibleCollections, bool withOrganizations = true);
     Task<ICollection<Cipher>> GetManyByOrganizationIdAsync(Guid organizationId);
     Task CreateAsync(Cipher cipher, IEnumerable<Guid> collectionIds);
     Task CreateAsync(CipherDetails cipher);
@@ -23,18 +23,19 @@ public interface ICipherRepository : IRepository<Cipher, Guid>
     Task UpdatePartialAsync(Guid id, Guid userId, Guid? folderId, bool favorite);
     Task UpdateAttachmentAsync(CipherAttachment attachment);
     Task DeleteAttachmentAsync(Guid cipherId, string attachmentId);
-    Task DeleteAsync(IEnumerable<Guid> ids, Guid userId);
+    Task DeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections);
     Task DeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
-    Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId);
+    Task MoveAsync(IEnumerable<Guid> ids, Guid? folderId, Guid userId, bool useFlexibleCollections);
     Task DeleteByUserIdAsync(Guid userId);
     Task DeleteByOrganizationIdAsync(Guid organizationId);
     Task UpdateUserKeysAndCiphersAsync(User user, IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders, IEnumerable<Send> sends);
     Task UpdateCiphersAsync(Guid userId, IEnumerable<Cipher> ciphers);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Folder> folders);
     Task CreateAsync(IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections,
-        IEnumerable<CollectionCipher> collectionCiphers);
-    Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId);
+        IEnumerable<CollectionCipher> collectionCiphers, IEnumerable<CollectionUser> collectionUsers);
+    Task SoftDeleteAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections);
     Task SoftDeleteByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
-    Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId);
+    Task<DateTime> RestoreAsync(IEnumerable<Guid> ids, Guid userId, bool useFlexibleCollections);
+    Task<DateTime> RestoreByIdsOrganizationIdAsync(IEnumerable<Guid> ids, Guid organizationId);
     Task DeleteDeletedAsync(DateTime deletedDateBefore);
 }
