@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
