@@ -334,8 +334,8 @@
       },
       "Handlebars.Net": {
         "type": "Transitive",
-        "resolved": "2.1.2",
-        "contentHash": "p60QyeBYpZmcZdIXRMqs9XySIBaxJ0lj3+QD0EJVr4ybTigOTCumXMMin5dPwjo9At1UwkDZ3gGwa1lmGjG6DA==",
+        "resolved": "2.1.4",
+        "contentHash": "Od7MWDfGxYKRtxETFMlcvCrY8hAqyuXZDX4EsOfiI/jzh+PVBuVxazHBC1HmVqTKX1JnRtoxIMcH95K9UFlYog==",
         "dependencies": {
           "Microsoft.CSharp": "4.7.0"
         }
@@ -2866,7 +2866,7 @@
           "DnsClient": "1.7.0",
           "Duende.IdentityServer": "6.0.4",
           "Fido2.AspNet": "3.0.1",
-          "Handlebars.Net": "2.1.2",
+          "Handlebars.Net": "2.1.4",
           "LaunchDarkly.ServerSdk": "8.0.0",
           "MailKit": "4.2.0",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "6.0.4",
