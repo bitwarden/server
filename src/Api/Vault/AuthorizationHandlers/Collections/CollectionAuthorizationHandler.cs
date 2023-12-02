@@ -116,7 +116,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         if (org is { LimitCollectionCreationDeletion: false })
         {
             var manageableCollectionIds =
-                (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
+                (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value, true))
                 .Where(c => c.Manage && c.OrganizationId == org.Id)
                 .Select(c => c.Id)
                 .ToHashSet();
@@ -156,7 +156,7 @@ public class CollectionAuthorizationHandler : BulkAuthorizationHandler<Collectio
         if (org is not null)
         {
             var manageableCollectionIds =
-                (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value))
+                (await _collectionRepository.GetManyByUserIdAsync(_currentContext.UserId!.Value, true))
                 .Where(c => c.Manage && c.OrganizationId == org.Id)
                 .Select(c => c.Id)
                 .ToHashSet();

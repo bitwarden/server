@@ -50,7 +50,7 @@ public class CollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -116,7 +116,7 @@ public class CollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organization.Id).Returns(organization);
-        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
 
@@ -246,12 +246,12 @@ public class CollectionAuthorizationHandlerTests
 
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(actingUserId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(Arg.Any<Guid>()).Returns(organization);
-        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId).Returns(collectionDetails);
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(actingUserId, Arg.Any<bool>()).Returns(collectionDetails);
 
         await sutProvider.Sut.HandleAsync(context);
         Assert.False(context.HasSucceeded);
         sutProvider.GetDependency<ICurrentContext>().ReceivedWithAnyArgs().GetOrganization(default);
         await sutProvider.GetDependency<ICollectionRepository>().ReceivedWithAnyArgs()
-            .GetManyByUserIdAsync(default);
+            .GetManyByUserIdAsync(default, default);
     }
 }

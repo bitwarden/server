@@ -115,7 +115,7 @@ public class SyncControllerTests
         policyRepository.GetManyByUserIdAsync(user.Id).Returns(policies);
 
         // Returns for methods only called if we have enabled orgs
-        collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
+        collectionRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(collections);
         collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
 
         // Back to standard test setup
@@ -280,7 +280,7 @@ public class SyncControllerTests
         policyRepository.GetManyByUserIdAsync(user.Id).Returns(policies);
 
         // Returns for methods only called if we have enabled orgs
-        collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
+        collectionRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(collections);
         collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
 
         // Back to standard test setup
@@ -344,7 +344,7 @@ public class SyncControllerTests
         if (hasEnabledOrgs)
         {
             await collectionRepository.ReceivedWithAnyArgs(1)
-                .GetManyByUserIdAsync(default);
+                .GetManyByUserIdAsync(default, default);
             await collectionCipherRepository.ReceivedWithAnyArgs(1)
                 .GetManyByUserIdAsync(default);
         }
@@ -352,7 +352,7 @@ public class SyncControllerTests
         {
             // all disabled orgs
             await collectionRepository.ReceivedWithAnyArgs(0)
-                .GetManyByUserIdAsync(default);
+                .GetManyByUserIdAsync(default, default);
             await collectionCipherRepository.ReceivedWithAnyArgs(0)
                 .GetManyByUserIdAsync(default);
         }
