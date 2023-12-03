@@ -2,12 +2,28 @@
 
 namespace Bit.Api.Billing.Public.Models;
 
-public class OrganizationSubscriptionUpdateRequestModel
+public class OrganizationSubscriptionUpdateRequestModel : IValidatableObject
 {
-    [ValidateAtLeastOneNotNull]
     public PasswordManager PasswordManagerSubscriptionUpdateRequestModel { get; set; }
-    [ValidateAtLeastOneNotNull]
     public SecretsManager SecretsManagerSubscriptionUpdateRequestModel { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        /*Note: You need to specify at least one of the properties ('PasswordManager' or 'SecretsManager').
+        If both properties are specified, both will be updated but If both properties not specified it will return validation error message*/
+
+        // Retrieve the 'PasswordManager' property value from the validation context object.
+        var passwordManager = validationContext.ObjectType.GetProperty("PasswordManager")?.GetValue(validationContext.ObjectInstance);
+        // Retrieve the 'SecretsManager' property value from the validation context object.
+        var secretsManager = validationContext.ObjectType.GetProperty("SecretsManager")?.GetValue(validationContext.ObjectInstance);
+
+        if (passwordManager == null && secretsManager == null)
+        {
+            yield return new ValidationResult("At least one of PasswordManager or SecretsManager must be provided.");
+        }
+
+        yield return ValidationResult.Success;
+    }
 }
 
 public class PasswordManager
@@ -45,26 +61,5 @@ public class SecretsManager
     }
 }
 
-[AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
-public class ValidateAtLeastOneNotNullAttribute : ValidationAttribute
-{
-    protected override ValidationResult IsValid(object value, ValidationContext validationContext)
-    {
-        /*Note: You need to specify at least one of the properties ('PasswordManager' or 'SecretsManager').
-        If both properties are specified, both will be updated but If both properties not specified it will return validation error message*/
-
-        // Retrieve the 'PasswordManager' property value from the validation context object.
-        var passwordManager = validationContext.ObjectType.GetProperty("PasswordManager")?.GetValue(validationContext.ObjectInstance);
-        // Retrieve the 'SecretsManager' property value from the validation context object.
-        var secretsManager = validationContext.ObjectType.GetProperty("SecretsManager")?.GetValue(validationContext.ObjectInstance);
-
-        if (passwordManager == null && secretsManager == null)
-        {
-            return new ValidationResult("At least one of PasswordManager or SecretsManager must be provided.");
-        }
-
-        return ValidationResult.Success;
-    }
-}
 
 
