@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Bit.Api.Models.Public.Response;
-using Bit.Api.Models.Request.Organizations;
 using Bit.Core.Context;
 using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
@@ -51,14 +50,13 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        if (model.SecretsManagerSubscriptionUpdateRequestModel != null)
+        if (model.SecretsManagerSubscriptionUpdateModel != null)
         {
-            var requestModel = SecretsManagerSubscriptionUpdateRequestModel(model);
-            var organizationUpdate = requestModel.ToSecretsManagerSubscriptionUpdate(organization);
+            var organizationUpdate = model.SecretsManagerSubscriptionUpdateModel.ToSecretsManagerSubscriptionUpdate(organization);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
         }
 
-        if (model.PasswordManagerSubscriptionUpdateRequestModel != null)
+        if (model.PasswordManagerSubscriptionUpdateModel != null)
         {
             await UpdatePasswordManagerSubscriptionAsync(_currentContext.OrganizationId.Value, model);
         }
@@ -68,24 +66,11 @@ public class OrganizationsController : Controller
 
     private async Task UpdatePasswordManagerSubscriptionAsync(Guid id, OrganizationSubscriptionUpdateRequestModel model)
     {
-        await _organizationService.UpdateSubscription(id, model.PasswordManagerSubscriptionUpdateRequestModel.Seats,
-            model.PasswordManagerSubscriptionUpdateRequestModel.MaxAutoScaleSeats);
-        if (model.PasswordManagerSubscriptionUpdateRequestModel.Storage.HasValue)
+        await _organizationService.UpdateSubscription(id, model.PasswordManagerSubscriptionUpdateModel.Seats,
+            model.PasswordManagerSubscriptionUpdateModel.MaxAutoScaleSeats);
+        if (model.PasswordManagerSubscriptionUpdateModel.Storage.HasValue)
         {
-            await _organizationService.AdjustStorageAsync(id, (short)model.PasswordManagerSubscriptionUpdateRequestModel.Storage);
+            await _organizationService.AdjustStorageAsync(id, (short)model.PasswordManagerSubscriptionUpdateModel.Storage);
         }
-    }
-
-    private static SecretsManagerSubscriptionUpdateRequestModel SecretsManagerSubscriptionUpdateRequestModel(
-        OrganizationSubscriptionUpdateRequestModel model)
-    {
-        var requestModel = new SecretsManagerSubscriptionUpdateRequestModel
-        {
-            SeatAdjustment = model.SecretsManagerSubscriptionUpdateRequestModel.Seats,
-            MaxAutoscaleSeats = model.SecretsManagerSubscriptionUpdateRequestModel.MaxAutoScaleSeats,
-            ServiceAccountAdjustment = model.SecretsManagerSubscriptionUpdateRequestModel.ServiceAccounts,
-            MaxAutoscaleServiceAccounts = model.SecretsManagerSubscriptionUpdateRequestModel.MaxAutoScaleServiceAccounts
-        };
-        return requestModel;
     }
 }
