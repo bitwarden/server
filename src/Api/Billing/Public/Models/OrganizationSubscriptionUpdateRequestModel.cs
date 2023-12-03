@@ -1,11 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Models.Business;
 
 namespace Bit.Api.Billing.Public.Models;
 
 public class OrganizationSubscriptionUpdateRequestModel : IValidatableObject
 {
-    public PasswordManager PasswordManagerSubscriptionUpdateRequestModel { get; set; }
-    public SecretsManager SecretsManagerSubscriptionUpdateRequestModel { get; set; }
+    public PasswordManagerSubscriptionUpdateRequestModel PasswordManagerSubscriptionUpdateRequestModel { get; set; }
+    public SecretsManagerSubscriptionUpdateRequestModel SecretsManagerSubscriptionUpdateRequestModel { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -26,7 +28,7 @@ public class OrganizationSubscriptionUpdateRequestModel : IValidatableObject
     }
 }
 
-public class PasswordManager
+public class PasswordManagerSubscriptionUpdateRequestModel
 {
     [Range(0, int.MaxValue, ErrorMessage = "Seats cannot be negative.")]
     public int Seats { get; set; }
@@ -34,7 +36,7 @@ public class PasswordManager
     public short? Storage { get; set; }
     [Range(0, int.MaxValue, ErrorMessage = "MaxAutoScaleSeats cannot be negative.")]
     public int? MaxAutoScaleSeats { get; set; }
-    public PasswordManager(int seats, short storage, int? maxAutoScaleSeats)
+    public PasswordManagerSubscriptionUpdateRequestModel(int seats, short storage, int? maxAutoScaleSeats)
     {
         Seats = seats;
         Storage = storage;
@@ -42,7 +44,7 @@ public class PasswordManager
     }
 }
 
-public class SecretsManager
+public class SecretsManagerSubscriptionUpdateRequestModel
 {
     [Range(0, int.MaxValue, ErrorMessage = "Seats cannot be negative.")]
     public int Seats { get; set; }
@@ -52,12 +54,16 @@ public class SecretsManager
     public int ServiceAccounts { get; set; }
     [Range(0, int.MaxValue, ErrorMessage = "MaxAutoScaleServiceAccounts cannot be negative.")]
     public int? MaxAutoScaleServiceAccounts { get; set; }
-    public SecretsManager(int seats, int? maxAutoScaleSeats, int serviceAccounts, int? maxAutoScaleServiceAccounts)
+
+    public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
     {
-        Seats = seats;
-        MaxAutoScaleSeats = maxAutoScaleSeats;
-        ServiceAccounts = serviceAccounts;
-        MaxAutoScaleServiceAccounts = maxAutoScaleServiceAccounts;
+        return new SecretsManagerSubscriptionUpdate(organization, false)
+        {
+            MaxAutoscaleSmSeats = MaxAutoScaleSeats,
+            MaxAutoscaleSmServiceAccounts = MaxAutoScaleServiceAccounts
+        }
+            .AdjustSeats(Seats)
+            .AdjustServiceAccounts(ServiceAccounts);
     }
 }
 
