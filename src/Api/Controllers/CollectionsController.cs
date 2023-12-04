@@ -22,7 +22,6 @@ namespace Bit.Api.Controllers;
 public class CollectionsController : Controller
 {
     private readonly ICollectionRepository _collectionRepository;
-    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly ICollectionService _collectionService;
     private readonly IDeleteCollectionCommand _deleteCollectionCommand;
     private readonly IUserService _userService;
@@ -34,7 +33,6 @@ public class CollectionsController : Controller
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
-        IOrganizationUserRepository organizationUserRepository,
         ICollectionService collectionService,
         IDeleteCollectionCommand deleteCollectionCommand,
         IUserService userService,
