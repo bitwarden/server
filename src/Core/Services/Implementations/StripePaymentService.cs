@@ -8,7 +8,6 @@ using Bit.Core.Models.Business;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
 using Microsoft.Extensions.Logging;
-using Stripe;
 using StaticStore = Bit.Core.Models.StaticStore;
 using TaxRate = Bit.Core.Entities.TaxRate;
 
@@ -1559,16 +1558,6 @@ public class StripePaymentService : IPaymentService
         };
 
         return billingInfo;
-    }
-
-    public async Task<Subscription> GetSubscriptionAsync(string subscriptionId)
-    {
-        return await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
-    }
-
-    public async Task<Subscription> SubscriptionUpdateAsync(string id, Stripe.SubscriptionUpdateOptions options)
-    {
-        return await _stripeAdapter.SubscriptionUpdateAsync(id, options);
     }
 
     public async Task<SubscriptionInfo> GetSubscriptionAsync(ISubscriber subscriber)

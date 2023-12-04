@@ -36,14 +36,14 @@ public class ProviderService : IProviderService
     private readonly IUserService _userService;
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
-    private readonly IPaymentService _paymentService;
+    private readonly IStripeAdapter _stripeAdapter;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IPaymentService paymentService)
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -57,7 +57,7 @@ public class ProviderService : IProviderService
         _globalSettings = globalSettings;
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
-        _paymentService = paymentService;
+        _stripeAdapter = stripeAdapter;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
@@ -392,7 +392,7 @@ public class ProviderService : IProviderService
             throw new BadRequestException("Organizations must not be assigned to any Provider.");
         }
 
-        await UpdatePlanForExistingOrgAsync(organizationIds, provider);
+        await UpdatePlanForExistingProviderAsync(organizationIds, provider);
 
         var providerOrganizationsToInsert = organizationIds.Select(orgId => new ProviderOrganization { ProviderId = providerId, OrganizationId = orgId });
         var insertedProviderOrganizations = await _providerOrganizationRepository.CreateManyAsync(providerOrganizationsToInsert);
@@ -401,35 +401,37 @@ public class ProviderService : IProviderService
             insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
     }
 
-    private async Task UpdatePlanForExistingOrgAsync(IEnumerable<Guid> organizationIds, Provider provider)
+    private async Task UpdatePlanForExistingProviderAsync(IEnumerable<Guid> organizationIds, Provider provider)
     {
-        if (provider.CreationDate < new DateTime(2023, 11, 6))
+        // Check if provider was created on or after November 6, 2023; if so, do not update the plan to the 2020 plan.
+        if (provider.CreationDate >= new DateTime(2023, 11, 6))
         {
-
-            foreach (var orgId in organizationIds)
-            {
-                var organization = await _organizationRepository.GetByIdAsync(orgId);
-                var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetPlanId(organization.PlanType));
-                var newPlanType = GetPlanTypeFromPlan(organization.Plan, organization);
-                if (subscriptionItem != null)
-                {
-                    await UpdateSubscriptionAsync(organization.GatewaySubscriptionId, subscriptionItem, GetPlanId(newPlanType));
-                }
-
-                await _organizationRepository.UpsertAsync(organization);
-            }
+            return;
         }
+
+        foreach (var orgId in organizationIds)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(orgId);
+            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetPlanId(organization.PlanType));
+            var newPlanType = GetPlanTypeFromPlan(organization.Plan, organization);
+            if (subscriptionItem != null)
+            {
+                await UpdateSubscriptionAsync(organization.GatewaySubscriptionId, subscriptionItem, GetPlanId(newPlanType));
+            }
+
+            await _organizationRepository.UpsertAsync(organization);
+        }
+    }
+
+    private async Task<SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
+    {
+        var subscrptionInfo = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
+        return subscrptionInfo.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
     }
 
     private static string GetPlanId(PlanType planType)
     {
         return StaticStore.GetPlan(planType).PasswordManager.StripeSeatPlanId;
-    }
-
-    private async Task<SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
-    {
-        var subscrptionInfo = await _paymentService.GetSubscriptionAsync(subscriptionId);
-        return subscrptionInfo.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
     }
 
     private async Task UpdateSubscriptionAsync(string subscriptionId, SubscriptionItem subscriptionItem, string newPlanId)
@@ -438,7 +440,7 @@ public class ProviderService : IProviderService
         {
             if (subscriptionItem.Plan.Id != newPlanId)
             {
-                await _paymentService.SubscriptionUpdateAsync(subscriptionId,
+                await _stripeAdapter.SubscriptionUpdateAsync(subscriptionId,
                     new SubscriptionUpdateOptions
                     {
                         Items = new List<SubscriptionItemOptions>
@@ -459,10 +461,10 @@ public class ProviderService : IProviderService
     {
         PlanType planType = plan switch
         {
-            var planTypeString when planTypeString.Contains("Enterprise (Annually)") => PlanType.EnterpriseAnnually2020,
-            var planTypeString when planTypeString.Contains("Enterprise (Monthly)") => PlanType.EnterpriseMonthly2020,
-            var planTypeString when planTypeString.Contains("Teams (Monthly)") => PlanType.TeamsMonthly2020,
-            var planTypeString when planTypeString.Contains("Teams (Annually)") => PlanType.TeamsAnnually2020,
+            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.EnterpriseAnnually2020)) => PlanType.EnterpriseAnnually2020,
+            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.EnterpriseMonthly2020)) => PlanType.EnterpriseMonthly2020,
+            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.TeamsMonthly2020)) => PlanType.TeamsMonthly2020,
+            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.TeamsAnnually2020)) => PlanType.TeamsAnnually2020,
             _ => throw new BadRequestException("Invalid PlanType selected")
         };
 
