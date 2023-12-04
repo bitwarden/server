@@ -6,20 +6,12 @@ namespace Bit.Api.Billing.Public.Models;
 
 public class OrganizationSubscriptionUpdateRequestModel : IValidatableObject
 {
-    public PasswordManagerSubscriptionUpdateModel PasswordManagerSubscriptionUpdateModel { get; set; }
-    public SecretsManagerSubscriptionUpdateModel SecretsManagerSubscriptionUpdateModel { get; set; }
+    public PasswordManagerSubscriptionUpdateModel PasswordManager { get; set; }
+    public SecretsManagerSubscriptionUpdateModel SecretsManager { get; set; }
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
-        /*Note: You need to specify at least one of the properties ('PasswordManager' or 'SecretsManager').
-        If both properties are specified, both will be updated but If both properties not specified it will return validation error message*/
-
-        // Retrieve the 'PasswordManager' property value from the validation context object.
-        var passwordManager = validationContext.ObjectType.GetProperty("PasswordManager")?.GetValue(validationContext.ObjectInstance);
-        // Retrieve the 'SecretsManager' property value from the validation context object.
-        var secretsManager = validationContext.ObjectType.GetProperty("SecretsManager")?.GetValue(validationContext.ObjectInstance);
-
-        if (passwordManager == null && secretsManager == null)
+        if (PasswordManager == null && SecretsManager == null)
         {
             yield return new ValidationResult("At least one of PasswordManager or SecretsManager must be provided.");
         }
@@ -30,64 +22,75 @@ public class OrganizationSubscriptionUpdateRequestModel : IValidatableObject
 
 public class PasswordManagerSubscriptionUpdateModel
 {
-    [Range(0, int.MaxValue, ErrorMessage = "Seats cannot be negative.")]
-    public int Seats { get; set; }
-    [Range(0, int.MaxValue, ErrorMessage = "Storage cannot be negative.")]
-    public short? Storage { get; set; }
-    [Range(0, int.MaxValue, ErrorMessage = "MaxAutoScaleSeats cannot be negative.")]
+    private int? _seats;
+    public int? Seats
+    {
+        get { return _seats; }
+        set { _seats = value is < 0 or null ? 0 : value; }
+    }
+
+    private int? _storage;
+    public int? Storage
+    {
+        get { return _storage; }
+        set { _storage = value is < 0 or null ? 0 : value; }
+    }
+
+    private int? _maxAutoScaleSeats;
     public int? MaxAutoScaleSeats
     {
-        get => MaxAutoScaleSeats;
-        set
-        {
-            // Check if the value is -1 or negative, set to null; otherwise, set the provided value.
-            MaxAutoScaleSeats = value <= 0 ? null : value;
-        }
-    }
-    public PasswordManagerSubscriptionUpdateModel(int seats, short storage, int? maxAutoScaleSeats)
-    {
-        Seats = seats;
-        Storage = storage;
-        MaxAutoScaleSeats = maxAutoScaleSeats;
+        get { return _maxAutoScaleSeats; }
+        set { _maxAutoScaleSeats = value < 0 ? null : value; }
     }
 }
 
 public class SecretsManagerSubscriptionUpdateModel
 {
-    [Range(0, int.MaxValue, ErrorMessage = "Seats cannot be negative.")]
-    public int Seats { get; set; }
-    [Range(0, int.MaxValue, ErrorMessage = "MaxAutoScaleSeats cannot be negative.")]
+    private int? _seats;
+    public int? Seats
+    {
+        get { return _seats; }
+        set { _seats = value is < 0 or null ? 0 : value; }
+    }
+
+    private int? _maxAutoScaleSeats;
     public int? MaxAutoScaleSeats
     {
-        get => MaxAutoScaleSeats;
-        set
-        {
-            // Check if the value is -1 or negative, set to null; otherwise, set the provided value.
-            MaxAutoScaleSeats = value <= 0 ? null : value;
-        }
+        get { return _maxAutoScaleSeats; }
+        set { _maxAutoScaleSeats = value < 0 ? null : value; }
     }
-    [Range(0, int.MaxValue, ErrorMessage = "ServiceAccounts cannot be negative.")]
-    public int ServiceAccounts { get; set; }
-    [Range(0, int.MaxValue, ErrorMessage = "MaxAutoScaleServiceAccounts cannot be negative.")]
+
+    private int? _serviceAccounts;
+    public int? ServiceAccounts
+    {
+        get { return _serviceAccounts; }
+        set { _serviceAccounts = value is < 0 or null ? 0 : value; }
+    }
+
+    private int? _maxAutoScaleServiceAccounts;
     public int? MaxAutoScaleServiceAccounts
     {
-        get => MaxAutoScaleServiceAccounts;
-        set
-        {
-            // Check if the value is -1 or negative, set to null; otherwise, set the provided value.
-            MaxAutoScaleServiceAccounts = value <= 0 ? null : value;
-        }
+        get { return _maxAutoScaleServiceAccounts; }
+        set { _maxAutoScaleServiceAccounts = value < 0 ? null : value; }
     }
 
     public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
     {
-        return new SecretsManagerSubscriptionUpdate(organization, false)
+        var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
             MaxAutoscaleSmSeats = MaxAutoScaleSeats ?? organization.MaxAutoscaleSmSeats,
-            MaxAutoscaleSmServiceAccounts = MaxAutoScaleServiceAccounts ?? organization.MaxAutoscaleSmServiceAccounts
+            MaxAutoscaleSmServiceAccounts = MaxAutoScaleServiceAccounts ?? organization.MaxAutoscaleSmServiceAccounts,
+        };
+        if (Seats.HasValue)
+        {
+            update.AdjustSeats(Seats.Value);
         }
-            .AdjustSeats(Seats)
-            .AdjustServiceAccounts(ServiceAccounts);
+        if (ServiceAccounts.HasValue)
+        {
+            update.AdjustServiceAccounts(ServiceAccounts.Value);
+        }
+
+        return update;
     }
 }
 

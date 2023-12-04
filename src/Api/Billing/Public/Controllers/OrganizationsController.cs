@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using Bit.Api.Models.Public.Response;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
-using Bit.Core.Exceptions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -45,32 +45,29 @@ public class OrganizationsController : Controller
     public async Task<IActionResult> PostSubscriptionAsync([FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
         var organization = await _organizationRepository.GetByIdAsync(_currentContext.OrganizationId.Value);
-        if (organization == null)
+
+        if (model.PasswordManager != null)
         {
-            throw new NotFoundException();
+            await UpdatePasswordManagerSubscriptionAsync(organization, model);
         }
 
-        if (model.SecretsManagerSubscriptionUpdateModel != null)
+        if (model.SecretsManager != null)
         {
-            var organizationUpdate = model.SecretsManagerSubscriptionUpdateModel.ToSecretsManagerSubscriptionUpdate(organization);
+            var organizationUpdate = model.SecretsManager.ToSecretsManagerSubscriptionUpdate(organization);
             await _updateSecretsManagerSubscriptionCommand.UpdateSubscriptionAsync(organizationUpdate);
-        }
-
-        if (model.PasswordManagerSubscriptionUpdateModel != null)
-        {
-            await UpdatePasswordManagerSubscriptionAsync(_currentContext.OrganizationId.Value, model);
         }
 
         return new OkResult();
     }
 
-    private async Task UpdatePasswordManagerSubscriptionAsync(Guid id, OrganizationSubscriptionUpdateRequestModel model)
+    private async Task UpdatePasswordManagerSubscriptionAsync(Organization organization, OrganizationSubscriptionUpdateRequestModel model)
     {
-        await _organizationService.UpdateSubscription(id, model.PasswordManagerSubscriptionUpdateModel.Seats,
-            model.PasswordManagerSubscriptionUpdateModel.MaxAutoScaleSeats);
-        if (model.PasswordManagerSubscriptionUpdateModel.Storage.HasValue)
+        model.PasswordManager.MaxAutoScaleSeats ??= organization.MaxAutoscaleSeats;
+        await _organizationService.UpdateSubscription(organization.Id, (int)model.PasswordManager.Seats,
+            model.PasswordManager.MaxAutoScaleSeats);
+        if (model.PasswordManager.Storage.HasValue)
         {
-            await _organizationService.AdjustStorageAsync(id, (short)model.PasswordManagerSubscriptionUpdateModel.Storage);
+            await _organizationService.AdjustStorageAsync(organization.Id, (short)model.PasswordManager.Storage);
         }
     }
 }
