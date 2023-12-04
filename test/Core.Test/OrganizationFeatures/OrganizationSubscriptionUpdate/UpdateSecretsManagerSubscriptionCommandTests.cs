@@ -587,10 +587,16 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int smSeats = 10;
+        const int maxAutoscaleSmSeats = 5;
+
+        organization.SmSeats = smSeats - 1;
+        organization.MaxAutoscaleSmSeats = smSeats * 2;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmSeats = 10,
-            MaxAutoscaleSmSeats = 5
+            SmSeats = smSeats,
+            MaxAutoscaleSmSeats = maxAutoscaleSmSeats
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.UpdateSubscriptionAsync(update));
