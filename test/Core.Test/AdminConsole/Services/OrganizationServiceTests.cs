@@ -23,7 +23,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Test.AdminConsole.AutoFixture;
-using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
 using Bit.Core.Test.AutoFixture.OrganizationUserFixtures;
 using Bit.Core.Tokens;
@@ -34,10 +33,6 @@ using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
-using NSubstitute;
-using NSubstitute.ExceptionExtensions;
-using NSubstitute.ReturnsExtensions;
-using Xunit;
 using Organization = Bit.Core.AdminConsole.Entities.Organization;
 using OrganizationUser = Bit.Core.Entities.OrganizationUser;
 using Policy = Bit.Core.AdminConsole.Entities.Policy;
@@ -827,53 +822,6 @@ public class OrganizationServiceTests
         });
     }
 
-    [Theory]
-    [OrganizationInviteCustomize(
-        InviteeUserType = OrganizationUserType.Custom,
-        InvitorUserType = OrganizationUserType.Owner
-    ), BitAutoData]
-    public async Task InviteUser_WithEditAssignedCollectionsTrue_WhileFCFlagDisabled_SetsCollectionsManageTrue(Organization organization, (OrganizationUserInvite invite, string externalId) invite,
-        OrganizationUser invitor,
-        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.Owner)] OrganizationUser owner,
-        SutProvider<OrganizationService> sutProvider)
-    {
-        invite.invite.Permissions = new Permissions { EditAssignedCollections = true };
-
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(false);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-        organizationUserRepository.GetManyByOrganizationAsync(organization.Id, OrganizationUserType.Owner)
-            .Returns(new[] { owner });
-        currentContext.ManageUsers(organization.Id).Returns(true);
-        currentContext.EditAssignedCollections(organization.Id).Returns(true);
-        currentContext.GetOrganization(organization.Id)
-            .Returns(new CurrentContextOrganization
-            {
-                Permissions = new Permissions
-                {
-                    CreateNewCollections = true,
-                    DeleteAnyCollection = true
-                }
-            });
-
-        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, new[] { invite });
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>()
-            .Received(invite.invite.Emails.Count())
-            .CreateAsync(Arg.Is<OrganizationUser>(ou =>
-                    ou.OrganizationId == organization.Id &&
-                    ou.Type == invite.invite.Type &&
-                    invite.invite.Emails.Contains(ou.Email)),
-                Arg.Is<IEnumerable<CollectionAccessSelection>>(collections =>
-                    collections.All(c => c.Manage)));
-    }
-
     private void InviteUserHelper_ArrangeValidPermissions(Organization organization, OrganizationUser savingUser,
     SutProvider<OrganizationService> sutProvider)
     {
@@ -933,42 +881,6 @@ public class OrganizationServiceTests
         currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
 
         await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveUser_WithEditAssignedCollections_WhileFCFlagDisabled_SetsCollectionsManageTrue(
-        Organization organization,
-        OrganizationUser oldUserData,
-        OrganizationUser newUserData,
-        [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> collections,
-        IEnumerable<Guid> groups,
-        [OrganizationUser(type: OrganizationUserType.Owner)] OrganizationUser savingUser,
-        SutProvider<OrganizationService> sutProvider)
-    {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(false);
-
-        var organizationRepository = sutProvider.GetDependency<IOrganizationRepository>();
-        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
-        var currentContext = sutProvider.GetDependency<ICurrentContext>();
-
-        organizationRepository.GetByIdAsync(organization.Id).Returns(organization);
-
-        newUserData.Id = oldUserData.Id;
-        newUserData.UserId = oldUserData.UserId;
-        newUserData.OrganizationId = savingUser.OrganizationId = oldUserData.OrganizationId = organization.Id;
-        newUserData.Permissions = CoreHelpers.ClassToJsonData(new Permissions { EditAssignedCollections = true });
-        organizationUserRepository.GetByIdAsync(oldUserData.Id).Returns(oldUserData);
-        organizationUserRepository.GetManyByOrganizationAsync(savingUser.OrganizationId, OrganizationUserType.Owner)
-            .Returns(new List<OrganizationUser> { savingUser });
-        currentContext.OrganizationOwner(savingUser.OrganizationId).Returns(true);
-
-        await sutProvider.Sut.SaveUserAsync(newUserData, savingUser.UserId, collections, groups);
-
-        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1).ReplaceAsync(
-            Arg.Is<OrganizationUser>(ou => ou.Id == newUserData.Id),
-            Arg.Is<IEnumerable<CollectionAccessSelection>>(i => i.All(c => c.Manage)));
     }
 
     [Theory, BitAutoData]

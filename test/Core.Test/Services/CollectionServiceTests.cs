@@ -8,11 +8,8 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture;
 using Bit.Core.Test.AutoFixture.OrganizationFixtures;
-using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
-using NSubstitute;
-using Xunit;
 
 namespace Bit.Core.Test.Services;
 
@@ -32,43 +29,6 @@ public class CollectionServiceTest
         await sutProvider.GetDependency<ICollectionRepository>().Received()
             .CreateAsync(collection, Arg.Is<List<CollectionAccessSelection>>(l => l == null),
                 Arg.Is<List<CollectionAccessSelection>>(l => l.Any(i => i.Manage == true)));
-        await sutProvider.GetDependency<IEventService>().Received()
-            .LogCollectionEventAsync(collection, EventType.Collection_Created);
-        Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
-        Assert.True(collection.RevisionDate - utcNow < TimeSpan.FromSeconds(1));
-    }
-
-    [Theory, BitAutoData]
-    public async Task SaveAsync_DefaultIdWithUsers_WithOneEditAssignedCollectionsUser_WhileFCFlagDisabled_CreatesCollectionInTheRepository(
-        Collection collection, Organization organization,
-        [CollectionAccessSelectionCustomize] IEnumerable<CollectionAccessSelection> users,
-        SutProvider<CollectionService> sutProvider)
-    {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.FlexibleCollections, Arg.Any<ICurrentContext>(), Arg.Any<bool>())
-            .Returns(false);
-
-        collection.Id = default;
-        collection.OrganizationId = organization.Id;
-        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(collection.OrganizationId).Returns(organization);
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyByOrganizationAsync(collection.OrganizationId, Arg.Any<OrganizationUserType?>())
-            .Returns(new List<OrganizationUser>
-            {
-                users.Select(x => new OrganizationUser
-                {
-                    Id = x.Id,
-                    Type = OrganizationUserType.Custom,
-                    Permissions = CoreHelpers.ClassToJsonData(new Permissions { EditAssignedCollections = true })
-                }).First()
-            });
-        var utcNow = DateTime.UtcNow;
-
-        await sutProvider.Sut.SaveAsync(collection, null, users);
-
-        await sutProvider.GetDependency<ICollectionRepository>().Received()
-            .CreateAsync(collection, Arg.Is<List<CollectionAccessSelection>>(l => l == null),
-                Arg.Is<List<CollectionAccessSelection>>(l => l.Count(i => i.Manage == true) == 1));
         await sutProvider.GetDependency<IEventService>().Received()
             .LogCollectionEventAsync(collection, EventType.Collection_Created);
         Assert.True(collection.CreationDate - utcNow < TimeSpan.FromSeconds(1));
