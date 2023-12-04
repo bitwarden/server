@@ -303,10 +303,15 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int seatCount = 10;
+
+        // Make sure Password Manager seats is greater or equal to Secrets Manager seats
+        organization.Seats = seatCount;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmSeats = 10,
-            MaxAutoscaleSmSeats = 10
+            SmSeats = seatCount,
+            MaxAutoscaleSmSeats = seatCount
         };
 
         await sutProvider.Sut.UpdateSubscriptionAsync(update);
