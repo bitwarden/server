@@ -353,8 +353,8 @@
       },
       "Dapper": {
         "type": "Transitive",
-        "resolved": "2.0.123",
-        "contentHash": "RDFF4rBLLmbpi6pwkY7q/M6UXHRJEOerplDGE5jwEkP/JGJnBauAClYavNKJPW1yOTWRPIyfj4is3EaJxQXILQ=="
+        "resolved": "2.1.24",
+        "contentHash": "/2t2vsdJyZRsk13AsWigZpsuFvEwK+o3v862cEULXoww905gyKhJFSuwmZI/4Ui9COX9ZCFCI09UHyH4wVYl3A=="
       },
       "DnsClient": {
         "type": "Transitive",
@@ -3216,7 +3216,7 @@
         "type": "Project",
         "dependencies": {
           "Core": "2023.10.3",
-          "Dapper": "2.0.123"
+          "Dapper": "2.1.24"
         }
       },
       "infrastructure.entityframework": {
