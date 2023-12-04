@@ -795,6 +795,14 @@ public class OrganizationsController : Controller
             throw new NotFoundException();
         }
 
+        var v1Enabled = _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollectionsV1, _currentContext);
+
+        if (!v1Enabled)
+        {
+            // V1 is disabled, ensure V1 setting doesn't change
+            model.AllowAdminAccessToAllCollectionItems = organization.AllowAdminAccessToAllCollectionItems;
+        }
+
         await _organizationService.UpdateAsync(model.ToOrganization(organization), eventType: EventType.Organization_CollectionManagement_Updated);
         return new OrganizationResponseModel(organization);
     }

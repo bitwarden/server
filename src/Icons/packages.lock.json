@@ -239,8 +239,8 @@
       },
       "Handlebars.Net": {
         "type": "Transitive",
-        "resolved": "2.1.2",
-        "contentHash": "p60QyeBYpZmcZdIXRMqs9XySIBaxJ0lj3+QD0EJVr4ybTigOTCumXMMin5dPwjo9At1UwkDZ3gGwa1lmGjG6DA==",
+        "resolved": "2.1.4",
+        "contentHash": "Od7MWDfGxYKRtxETFMlcvCrY8hAqyuXZDX4EsOfiI/jzh+PVBuVxazHBC1HmVqTKX1JnRtoxIMcH95K9UFlYog==",
         "dependencies": {
           "Microsoft.CSharp": "4.7.0"
         }
@@ -310,16 +310,16 @@
       },
       "linq2db": {
         "type": "Transitive",
-        "resolved": "5.2.1",
-        "contentHash": "OOBM8s39zhbZAgqFnl2KGxT5RqBDw21X69U528qV2PgQispaA3f+or0ILrLEgnNIJuB4EBgaw8gC6ttSHn4X0Q=="
+        "resolved": "5.3.1",
+        "contentHash": "707mIbEmtptvKeUW940UwoNwq05I7OUu0VWtclLtyYaASp+ugX4I/Er1UVpeldsDawqlVMXB5EQ5/Oar6AkUGQ=="
       },
       "linq2db.EntityFrameworkCore": {
         "type": "Transitive",
-        "resolved": "7.5.0",
-        "contentHash": "ePHzO99xbObgMLlAFh08of1SnVhg6j4Su9327DrIB7RZWCgtQIX6k+nbl+HRVOooAndZSs7b+DduSgdnJjaJGw==",
+        "resolved": "7.6.0",
+        "contentHash": "T1W9o8wVzApsUwu7SRg/L7487kaiLQYt2AqRVnXVGfobD+ZKy2oRsUMws0PICtciaz4qbfLp/r/+NksfuYsFlw==",
         "dependencies": {
           "Microsoft.EntityFrameworkCore.Relational": "7.0.0",
-          "linq2db": "5.2.1"
+          "linq2db": "5.3.1"
         }
       },
       "MailKit": {
@@ -462,48 +462,44 @@
       },
       "Microsoft.Data.SqlClient": {
         "type": "Transitive",
-        "resolved": "5.0.1",
-        "contentHash": "uu8dfrsx081cSbEevWuZAvqdmANDGJkbLBL2G3j0LAZxX1Oy8RCVAaC4Lcuak6jNicWP6CWvHqBTIEmQNSxQlw==",
+        "resolved": "5.1.1",
+        "contentHash": "MW5E9HFvCaV069o8b6YpuRDPBux8s96qDnOJ+4N9QNUCs7c5W3KxwQ+ftpAjbMUlImL+c9WR+l+f5hzjkqhu2g==",
         "dependencies": {
-          "Azure.Identity": "1.6.0",
-          "Microsoft.Data.SqlClient.SNI.runtime": "5.0.1",
-          "Microsoft.Identity.Client": "4.45.0",
-          "Microsoft.IdentityModel.JsonWebTokens": "6.21.0",
-          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "6.21.0",
+          "Azure.Identity": "1.7.0",
+          "Microsoft.Data.SqlClient.SNI.runtime": "5.1.0",
+          "Microsoft.Identity.Client": "4.47.2",
+          "Microsoft.IdentityModel.JsonWebTokens": "6.24.0",
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "6.24.0",
           "Microsoft.SqlServer.Server": "1.0.0",
-          "Microsoft.Win32.Registry": "5.0.0",
-          "System.Buffers": "4.5.1",
-          "System.Configuration.ConfigurationManager": "5.0.0",
-          "System.Diagnostics.DiagnosticSource": "5.0.0",
-          "System.IO": "4.3.0",
-          "System.Resources.ResourceManager": "4.3.0",
-          "System.Runtime.Caching": "5.0.0",
+          "System.Configuration.ConfigurationManager": "6.0.1",
+          "System.Diagnostics.DiagnosticSource": "6.0.0",
+          "System.Runtime.Caching": "6.0.0",
           "System.Security.Cryptography.Cng": "5.0.0",
           "System.Security.Principal.Windows": "5.0.0",
-          "System.Text.Encoding.CodePages": "5.0.0",
-          "System.Text.Encodings.Web": "4.7.2"
+          "System.Text.Encoding.CodePages": "6.0.0",
+          "System.Text.Encodings.Web": "6.0.0"
         }
       },
       "Microsoft.Data.SqlClient.SNI.runtime": {
         "type": "Transitive",
-        "resolved": "5.0.1",
-        "contentHash": "y0X5MxiNdbITJYoafJ2ruaX6hqO0twpCGR/ipiDOe85JKLU8WL4TuAQfDe5qtt3bND5Je26HnrarLSAMMnVTNg=="
+        "resolved": "5.1.0",
+        "contentHash": "jVsElisM5sfBzaaV9kdq2NXZLwIbytetnsOIlJ0cQGgQP4zFNBmkfHBnpwtmKrtBJBEV9+9PVQPVrcCVhDgcIg=="
       },
       "Microsoft.Data.Sqlite.Core": {
         "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "FTerRmQPqHrCrnoUzhBu+E+1DNGwyrAMLqHkAqOOOu5pGfyMOj8qQUBxI/gDtWtG11p49UxSfWmBzRNlwZqfUg==",
+        "resolved": "7.0.14",
+        "contentHash": "qvYae3/v9Fvqsjp/7OKQBuJK+Uc3m/WctfpIUMmGMDot2Bd8UWBKiMSlh26UtfQa9x4N+k7NxCT+AbZVoNrCdg==",
         "dependencies": {
           "SQLitePCLRaw.core": "2.1.4"
         }
       },
       "Microsoft.EntityFrameworkCore": {
         "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "RXbRLHHWP2Z3pq8qcL5nQ6LPeoOyp8hasM5bd0Te8PiQi3RjWQR4tcbdY5XMqQ+oTO9wA8/RLhZRn/hnxlTDnQ==",
+        "resolved": "7.0.14",
+        "contentHash": "0KYkAemPygW6yzifciFlmMzkO4sI4Dw69xLgwg3ui5rXJS5XvzuAWVvfdrKJciqeCbCnVS/ZbOWpcwWgqce5bQ==",
         "dependencies": {
-          "Microsoft.EntityFrameworkCore.Abstractions": "7.0.5",
-          "Microsoft.EntityFrameworkCore.Analyzers": "7.0.5",
+          "Microsoft.EntityFrameworkCore.Abstractions": "7.0.14",
+          "Microsoft.EntityFrameworkCore.Analyzers": "7.0.14",
           "Microsoft.Extensions.Caching.Memory": "7.0.0",
           "Microsoft.Extensions.DependencyInjection": "7.0.0",
           "Microsoft.Extensions.Logging": "7.0.0"
@@ -511,49 +507,49 @@
       },
       "Microsoft.EntityFrameworkCore.Abstractions": {
         "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "iwQso+hFRsEWjhH2WsEQj1D2QE5BlEXiXEt6A3SlYTPRPdZsyTNDeDDEdtxL+H/UJPQgQYY+9SMMRcEiXBmCAA=="
+        "resolved": "7.0.14",
+        "contentHash": "aEcXDSYpDdD5wdIRKTqcS44f3W4capqQ1BWVRPJgacATfHkO62RX9Nnh0hUFg+rei9OLuJp0Y4zsy1fNeOXv5g=="
       },
       "Microsoft.EntityFrameworkCore.Analyzers": {
         "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "yMLM/aK1MikVqpjxd7PJ1Pjgztd3VAd26ZHxyjxG3RPeM9cHjvS5tCg9kAAayR6eHmBg0ffZsHdT28WfA5tTlA=="
+        "resolved": "7.0.14",
+        "contentHash": "esI4RF6mix4DDFBhWB9k1vJxAL8GouSf5ZV8oFJoVsIQ9d2J3MPgC1VL2qM9Vw5cH7Vg7TzRyKNpCRXFVkWs9w=="
       },
       "Microsoft.EntityFrameworkCore.Relational": {
         "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "u/33DC4S6g2hpMPgBc5Kdnlz//nqHR5c/ovgjtiP/wQ7sOd0EOdygVzUJAAOxCwbtAHDsJXS9Vc3jLFYq0yu8Q==",
+        "resolved": "7.0.14",
+        "contentHash": "MrVBnWOFYwfLMGQfrcIuqEM9Xvokv1vJeYxqNH3K3xOtAdHwHQTrKnpDP97tU+LBlvcnyXAtAtryYcpLXWtRNA==",
         "dependencies": {
-          "Microsoft.EntityFrameworkCore": "7.0.5",
+          "Microsoft.EntityFrameworkCore": "7.0.14",
           "Microsoft.Extensions.Configuration.Abstractions": "7.0.0"
         }
       },
       "Microsoft.EntityFrameworkCore.Sqlite": {
         "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "2XPZB9OLF5/m13HgZp7/Dv0u8FWEJzcaBsMYR9Kp3R6aygkb3RnOijofPDTsmdhAqG9YTysCmh2bFaGs0TCc7A==",
+        "resolved": "7.0.14",
+        "contentHash": "8c8Hw2tmfy5YEsi9RL2/u2Qi9IwVbmj/yDlJy4iJPadeE3/AssLrgtobOBz4ftg2y5PVjFL59Gq7YzGLQH5q1A==",
         "dependencies": {
-          "Microsoft.EntityFrameworkCore.Sqlite.Core": "7.0.5",
+          "Microsoft.EntityFrameworkCore.Sqlite.Core": "7.0.14",
           "SQLitePCLRaw.bundle_e_sqlite3": "2.1.4"
         }
       },
       "Microsoft.EntityFrameworkCore.Sqlite.Core": {
         "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "4C+9ct6A/Bq61Ta9Uh2td4/XwNpRCiPI03SWTa3hPJjA/g8wCw2hetbh3DDe5HcydzgDq/lRRjU/eRy3UODklQ==",
+        "resolved": "7.0.14",
+        "contentHash": "JNUkZVff1V/A/P3JiBbgt+Y2oCQSuzORxE3jOqFDbFjSFu7jHDEetJ/afSF/taa0lbyN9OpvaKjsbKk3Iis29Q==",
         "dependencies": {
-          "Microsoft.Data.Sqlite.Core": "7.0.5",
-          "Microsoft.EntityFrameworkCore.Relational": "7.0.5",
+          "Microsoft.Data.Sqlite.Core": "7.0.14",
+          "Microsoft.EntityFrameworkCore.Relational": "7.0.14",
           "Microsoft.Extensions.DependencyModel": "7.0.0"
         }
       },
       "Microsoft.EntityFrameworkCore.SqlServer": {
         "type": "Transitive",
-        "resolved": "7.0.5",
-        "contentHash": "cUJqCiamT0EvpKNgZEV5fqNv2MyVfKNgOPQfFINqHiIKHOYrS0nTCUJP97+UuG0JIIrP792/PwnuNjbekImtBg==",
+        "resolved": "7.0.14",
+        "contentHash": "d9hqEw4W/TdQ1WDm03uyFuDoehL6GNq/NMChFaC4dcV60I42vKdUC0fYTuE2QPunVUpf5XUTCkJ6fYGjMos2AA==",
         "dependencies": {
-          "Microsoft.Data.SqlClient": "5.0.1",
-          "Microsoft.EntityFrameworkCore.Relational": "7.0.5"
+          "Microsoft.Data.SqlClient": "5.1.1",
+          "Microsoft.EntityFrameworkCore.Relational": "7.0.14"
         }
       },
       "Microsoft.Extensions.Caching.Abstractions": {
@@ -806,50 +802,52 @@
       },
       "Microsoft.IdentityModel.Abstractions": {
         "type": "Transitive",
-        "resolved": "6.22.0",
-        "contentHash": "iI+9V+2ciCrbheeLjpmjcqCnhy+r6yCoEcid3nkoFWerHgjVuT6CPM4HODUTtUPe1uwks4wcnAujJ8u+IKogHQ=="
+        "resolved": "6.24.0",
+        "contentHash": "X6aBK56Ot15qKyG7X37KsPnrwah+Ka55NJWPppWVTDi8xWq7CJgeNw2XyaeHgE1o/mW4THwoabZkBbeG2TPBiw=="
       },
       "Microsoft.IdentityModel.JsonWebTokens": {
         "type": "Transitive",
-        "resolved": "6.21.0",
-        "contentHash": "d3h1/BaMeylKTkdP6XwRCxuOoDJZ44V9xaXr6gl5QxmpnZGdoK3bySo3OQN8ehRLJHShb94ElLUvoXyglQtgAw==",
+        "resolved": "6.24.0",
+        "contentHash": "XDWrkThcxfuWp79AvAtg5f+uRS1BxkIbJnsG/e8VPzOWkYYuDg33emLjp5EWcwXYYIDsHnVZD/00kM/PYFQc/g==",
         "dependencies": {
-          "Microsoft.IdentityModel.Tokens": "6.21.0"
+          "Microsoft.IdentityModel.Tokens": "6.24.0",
+          "System.Text.Encoding": "4.3.0",
+          "System.Text.Json": "4.7.2"
         }
       },
       "Microsoft.IdentityModel.Logging": {
         "type": "Transitive",
-        "resolved": "6.21.0",
-        "contentHash": "tuEhHIQwvBEhMf8I50hy8FHmRSUkffDFP5EdLsSDV4qRcl2wvOPkQxYqEzWkh+ytW6sbdJGEXElGhmhDfAxAKg==",
+        "resolved": "6.24.0",
+        "contentHash": "qLYWDOowM/zghmYKXw1yfYKlHOdS41i8t4hVXr9bSI90zHqhyhQh9GwVy8pENzs5wHeytU23DymluC9NtgYv7w==",
         "dependencies": {
-          "Microsoft.IdentityModel.Abstractions": "6.21.0"
+          "Microsoft.IdentityModel.Abstractions": "6.24.0"
         }
       },
       "Microsoft.IdentityModel.Protocols": {
         "type": "Transitive",
-        "resolved": "6.21.0",
-        "contentHash": "0FqY5cTLQKtHrClzHEI+QxJl8OBT2vUiEQQB7UKk832JDiJJmetzYZ3AdSrPjN/3l3nkhByeWzXnhrX0JbifKg==",
+        "resolved": "6.24.0",
+        "contentHash": "+NzKCkvsQ8X1r/Ff74V7CFr9OsdMRaB6DsV+qpH7NNLdYJ8O4qHbmTnNEsjFcDmk/gVNDwhoL2gN5pkPVq0lwQ==",
         "dependencies": {
-          "Microsoft.IdentityModel.Logging": "6.21.0",
-          "Microsoft.IdentityModel.Tokens": "6.21.0"
+          "Microsoft.IdentityModel.Logging": "6.24.0",
+          "Microsoft.IdentityModel.Tokens": "6.24.0"
         }
       },
       "Microsoft.IdentityModel.Protocols.OpenIdConnect": {
         "type": "Transitive",
-        "resolved": "6.21.0",
-        "contentHash": "vtSKL7n6EnAsLyxmiviusm6LKrblT2ndnNqN6rvVq6iIHAnPCK9E2DkDx6h1Jrpy1cvbp40r0cnTg23nhEAGTA==",
+        "resolved": "6.24.0",
+        "contentHash": "a/2RRrc8C9qaw8qdD9hv1ES9YKFgxaqr/SnwMSLbwQZJSUQDd4qx1K4EYgWaQWs73R+VXLyKSxN0f/uE9CsBiQ==",
         "dependencies": {
-          "Microsoft.IdentityModel.Protocols": "6.21.0",
-          "System.IdentityModel.Tokens.Jwt": "6.21.0"
+          "Microsoft.IdentityModel.Protocols": "6.24.0",
+          "System.IdentityModel.Tokens.Jwt": "6.24.0"
         }
       },
       "Microsoft.IdentityModel.Tokens": {
         "type": "Transitive",
-        "resolved": "6.21.0",
-        "contentHash": "AAEHZvZyb597a+QJSmtxH3n2P1nIJGpZ4Q89GTenknRx6T6zyfzf592yW/jA5e8EHN4tNMjjXHQaYWEq5+L05w==",
+        "resolved": "6.24.0",
+        "contentHash": "ZPqHi86UYuqJXJ7bLnlEctHKkPKT4lGUFbotoCNiXNCSL02emYlcxzGYsRGWWmbFEcYDMi2dcTLLYNzHqWOTsw==",
         "dependencies": {
           "Microsoft.CSharp": "4.5.0",
-          "Microsoft.IdentityModel.Logging": "6.21.0",
+          "Microsoft.IdentityModel.Logging": "6.24.0",
           "System.Security.Cryptography.Cng": "4.5.0"
         }
       },
@@ -980,13 +978,13 @@
       },
       "Newtonsoft.Json": {
         "type": "Transitive",
-        "resolved": "13.0.1",
-        "contentHash": "ppPFpBcvxdsfUonNcvITKqLl3bqxWbDCZIzDWHzjpdAHRFfZe0Dw9HmA0+za13IdyrgJwpkDTDA9fHaxOrt20A=="
+        "resolved": "13.0.3",
+        "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
       },
       "Npgsql": {
         "type": "Transitive",
-        "resolved": "7.0.4",
-        "contentHash": "7UVPYy2RP0ci04PED1tc9ZCaTw/DfSdSkLiGEFCAvwMwsgA/bAluj1liNzP1IpN0MFofnOF0cm1zJfmbEuCehg==",
+        "resolved": "7.0.6",
+        "contentHash": "TAqvwRnm3NJ0QvN7cvu6geJkbI0XPzGVRElVY5hF4gsgA+BnE12x6GM1TLhdeq+7ZKvvo3BD8jXKnXmr3tvdEw==",
         "dependencies": {
           "Microsoft.Extensions.Logging.Abstractions": "6.0.0",
           "System.Runtime.CompilerServices.Unsafe": "6.0.0"
@@ -994,13 +992,13 @@
       },
       "Npgsql.EntityFrameworkCore.PostgreSQL": {
         "type": "Transitive",
-        "resolved": "7.0.4",
-        "contentHash": "ZYMtyG6pmLtUsFAx0/XaIlVkJM+1gArWEKD55cLLxiVlGScAphjiGj+G7Gk16yg5lhhdWx+bgXWpIUISXuS33g==",
+        "resolved": "7.0.11",
+        "contentHash": "cHEgEz0ldXc9wVANs8sJqC+3eilqefrkasCBgaVT0tyj8tb1p3/pwy2ngjboNkDG3M0z+xJsJ4jC5p8wySAM3w==",
         "dependencies": {
-          "Microsoft.EntityFrameworkCore": "[7.0.5, 8.0.0)",
-          "Microsoft.EntityFrameworkCore.Abstractions": "[7.0.5, 8.0.0)",
-          "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, 8.0.0)",
-          "Npgsql": "7.0.4"
+          "Microsoft.EntityFrameworkCore": "[7.0.11, 8.0.0)",
+          "Microsoft.EntityFrameworkCore.Abstractions": "[7.0.11, 8.0.0)",
+          "Microsoft.EntityFrameworkCore.Relational": "[7.0.11, 8.0.0)",
+          "Npgsql": "7.0.6"
         }
       },
       "NSec.Cryptography": {
@@ -1323,8 +1321,8 @@
       },
       "Serilog.Sinks.SyslogMessages": {
         "type": "Transitive",
-        "resolved": "2.0.6",
-        "contentHash": "V2Yq2GEbk7taEPbpBLFzLXhrHrUzKf4sQu/zLrANU8XIoUn/Mr08M2E8PrcrWVXCj0R4xLMWYe0Z1sxOrMF3IA==",
+        "resolved": "2.0.9",
+        "contentHash": "y7J+/h/Nf5EAtbpa6lC1nDhK/F9kC5oxuVYmQivv242Oh4hAVMeoAk5Gv6bgb/KbmqufGPXUFkX/AlcrvZ8Ywg==",
         "dependencies": {
           "Serilog": "2.5.0",
           "Serilog.Sinks.PeriodicBatching": "2.3.0"
@@ -1457,8 +1455,8 @@
       },
       "System.Configuration.ConfigurationManager": {
         "type": "Transitive",
-        "resolved": "6.0.0",
-        "contentHash": "7T+m0kDSlIPTHIkPMIu6m6tV6qsMqJpvQWW2jIc2qi7sn40qxFo0q+7mEQAhMPXZHMKnWrnv47ntGlM/ejvw3g==",
+        "resolved": "6.0.1",
+        "contentHash": "jXw9MlUu/kRfEU0WyTptAVueupqIeE3/rl0EZDMlf8pcvJnitQ8HeVEp69rZdaStXwTV72boi/Bhw8lOeO+U2w==",
         "dependencies": {
           "System.Security.Cryptography.ProtectedData": "6.0.0",
           "System.Security.Permissions": "6.0.0"
@@ -1617,11 +1615,11 @@
       },
       "System.IdentityModel.Tokens.Jwt": {
         "type": "Transitive",
-        "resolved": "6.21.0",
-        "contentHash": "JRD8AuypBE+2zYxT3dMJomQVsPYsCqlyZhWel3J1d5nzQokSRyTueF+Q4ID3Jcu6zSZKuzOdJ1MLTkbQsDqcvQ==",
+        "resolved": "6.24.0",
+        "contentHash": "Qibsj9MPWq8S/C0FgvmsLfIlHLE7ay0MJIaAmK94ivN3VyDdglqReed5qMvdQhSL0BzK6v0Z1wB/sD88zVu6Jw==",
         "dependencies": {
-          "Microsoft.IdentityModel.JsonWebTokens": "6.21.0",
-          "Microsoft.IdentityModel.Tokens": "6.21.0"
+          "Microsoft.IdentityModel.JsonWebTokens": "6.24.0",
+          "Microsoft.IdentityModel.Tokens": "6.24.0"
         }
       },
       "System.IO": {
@@ -2070,10 +2068,10 @@
       },
       "System.Runtime.Caching": {
         "type": "Transitive",
-        "resolved": "5.0.0",
-        "contentHash": "30D6MkO8WF9jVGWZIP0hmCN8l9BTY4LCsAzLIe4xFSXzs+AjDotR7DpSmj27pFskDURzUvqYYY0ikModgBTxWw==",
+        "resolved": "6.0.0",
+        "contentHash": "E0e03kUp5X2k+UAoVl6efmI7uU7JRBWi5EIdlQ7cr0NpBGjHG4fWII35PgsBY9T4fJQ8E4QPsL0rKksU9gcL5A==",
         "dependencies": {
-          "System.Configuration.ConfigurationManager": "5.0.0"
+          "System.Configuration.ConfigurationManager": "6.0.0"
         }
       },
       "System.Runtime.CompilerServices.Unsafe": {
@@ -2591,71 +2589,71 @@
       "core": {
         "type": "Project",
         "dependencies": {
-          "AWSSDK.SQS": "[3.7.2.47, )",
-          "AWSSDK.SimpleEmail": "[3.7.0.150, )",
-          "AspNetCoreRateLimit": "[4.0.2, )",
-          "AspNetCoreRateLimit.Redis": "[1.0.1, )",
-          "Azure.Extensions.AspNetCore.DataProtection.Blobs": "[1.3.2, )",
-          "Azure.Identity": "[1.10.2, )",
-          "Azure.Messaging.ServiceBus": "[7.15.0, )",
-          "Azure.Storage.Blobs": "[12.14.1, )",
-          "Azure.Storage.Queues": "[12.12.0, )",
-          "BitPay.Light": "[1.0.1907, )",
-          "Braintree": "[5.19.0, )",
-          "DnsClient": "[1.7.0, )",
-          "Duende.IdentityServer": "[6.0.4, )",
-          "Fido2.AspNet": "[3.0.1, )",
-          "Handlebars.Net": "[2.1.2, )",
-          "LaunchDarkly.ServerSdk": "[8.0.0, )",
-          "MailKit": "[4.2.0, )",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "[6.0.4, )",
-          "Microsoft.Azure.Cosmos.Table": "[1.0.8, )",
-          "Microsoft.Azure.NotificationHubs": "[4.1.0, )",
-          "Microsoft.Data.SqlClient": "[5.0.1, )",
-          "Microsoft.Extensions.Caching.StackExchangeRedis": "[6.0.6, )",
-          "Microsoft.Extensions.Configuration.EnvironmentVariables": "[6.0.1, )",
-          "Microsoft.Extensions.Configuration.UserSecrets": "[6.0.1, )",
-          "Microsoft.Extensions.Identity.Stores": "[6.0.4, )",
-          "Newtonsoft.Json": "[13.0.1, )",
-          "Otp.NET": "[1.2.2, )",
-          "Quartz": "[3.4.0, )",
-          "SendGrid": "[9.27.0, )",
-          "Sentry.Serilog": "[3.16.0, )",
-          "Serilog.AspNetCore": "[5.0.0, )",
-          "Serilog.Extensions.Logging": "[3.1.0, )",
-          "Serilog.Extensions.Logging.File": "[2.0.0, )",
-          "Serilog.Sinks.AzureCosmosDB": "[2.0.0, )",
-          "Serilog.Sinks.SyslogMessages": "[2.0.6, )",
-          "Stripe.net": "[40.0.0, )",
-          "YubicoDotNetClient": "[1.2.0, )"
+          "AWSSDK.SQS": "3.7.2.47",
+          "AWSSDK.SimpleEmail": "3.7.0.150",
+          "AspNetCoreRateLimit": "4.0.2",
+          "AspNetCoreRateLimit.Redis": "1.0.1",
+          "Azure.Extensions.AspNetCore.DataProtection.Blobs": "1.3.2",
+          "Azure.Identity": "1.10.2",
+          "Azure.Messaging.ServiceBus": "7.15.0",
+          "Azure.Storage.Blobs": "12.14.1",
+          "Azure.Storage.Queues": "12.12.0",
+          "BitPay.Light": "1.0.1907",
+          "Braintree": "5.19.0",
+          "DnsClient": "1.7.0",
+          "Duende.IdentityServer": "6.0.4",
+          "Fido2.AspNet": "3.0.1",
+          "Handlebars.Net": "2.1.4",
+          "LaunchDarkly.ServerSdk": "8.0.0",
+          "MailKit": "4.2.0",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "6.0.4",
+          "Microsoft.Azure.Cosmos.Table": "1.0.8",
+          "Microsoft.Azure.NotificationHubs": "4.1.0",
+          "Microsoft.Data.SqlClient": "5.0.1",
+          "Microsoft.Extensions.Caching.StackExchangeRedis": "6.0.6",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "6.0.1",
+          "Microsoft.Extensions.Configuration.UserSecrets": "6.0.1",
+          "Microsoft.Extensions.Identity.Stores": "6.0.4",
+          "Newtonsoft.Json": "13.0.3",
+          "Otp.NET": "1.2.2",
+          "Quartz": "3.4.0",
+          "SendGrid": "9.27.0",
+          "Sentry.Serilog": "3.16.0",
+          "Serilog.AspNetCore": "5.0.0",
+          "Serilog.Extensions.Logging": "3.1.0",
+          "Serilog.Extensions.Logging.File": "2.0.0",
+          "Serilog.Sinks.AzureCosmosDB": "2.0.0",
+          "Serilog.Sinks.SyslogMessages": "2.0.9",
+          "Stripe.net": "40.0.0",
+          "YubicoDotNetClient": "1.2.0"
         }
       },
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.3, )",
-          "Dapper": "[2.0.123, )"
+          "Core": "2023.10.3",
+          "Dapper": "2.0.123"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
-          "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.3, )",
-          "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
-          "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
-          "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "[7.0.4, )",
-          "Pomelo.EntityFrameworkCore.MySql": "[7.0.0, )",
-          "linq2db.EntityFrameworkCore": "[7.5.0, )"
+          "AutoMapper.Extensions.Microsoft.DependencyInjection": "12.0.1",
+          "Core": "2023.10.3",
+          "Microsoft.EntityFrameworkCore.Relational": "7.0.14",
+          "Microsoft.EntityFrameworkCore.SqlServer": "7.0.14",
+          "Microsoft.EntityFrameworkCore.Sqlite": "7.0.14",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "7.0.11",
+          "Pomelo.EntityFrameworkCore.MySql": "7.0.0",
+          "linq2db.EntityFrameworkCore": "7.6.0"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.3, )",
-          "Infrastructure.Dapper": "[2023.10.3, )",
-          "Infrastructure.EntityFramework": "[2023.10.3, )"
+          "Core": "2023.10.3",
+          "Infrastructure.Dapper": "2023.10.3",
+          "Infrastructure.EntityFramework": "2023.10.3"
         }
       }
     }

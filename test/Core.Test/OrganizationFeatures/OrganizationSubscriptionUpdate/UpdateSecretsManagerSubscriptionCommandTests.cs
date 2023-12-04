@@ -1,4 +1,4 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -94,6 +94,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
         organization.PlanType = planType;
+        organization.Seats = 20;
 
         const int updateSmSeats = 15;
         const int updateSmServiceAccounts = 450;

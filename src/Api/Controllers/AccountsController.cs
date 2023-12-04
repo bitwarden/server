@@ -58,6 +58,8 @@ public class AccountsController : Controller
     private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
 
+    private bool UseFlexibleCollections =>
+        _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public AccountsController(
         GlobalSettings globalSettings,
@@ -415,7 +417,7 @@ public class AccountsController : Controller
             var ciphers = new List<Cipher>();
             if (model.Ciphers.Any())
             {
-                var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id);
+                var existingCiphers = await _cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: UseFlexibleCollections);
                 ciphers.AddRange(existingCiphers
                     .Join(model.Ciphers, c => c.Id, c => c.Id, (existing, c) => c.ToCipher(existing)));
             }

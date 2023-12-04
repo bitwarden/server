@@ -153,9 +153,9 @@
       },
       "Handlebars.Net": {
         "type": "Direct",
-        "requested": "[2.1.2, )",
-        "resolved": "2.1.2",
-        "contentHash": "p60QyeBYpZmcZdIXRMqs9XySIBaxJ0lj3+QD0EJVr4ybTigOTCumXMMin5dPwjo9At1UwkDZ3gGwa1lmGjG6DA==",
+        "requested": "[2.1.4, )",
+        "resolved": "2.1.4",
+        "contentHash": "Od7MWDfGxYKRtxETFMlcvCrY8hAqyuXZDX4EsOfiI/jzh+PVBuVxazHBC1HmVqTKX1JnRtoxIMcH95K9UFlYog==",
         "dependencies": {
           "Microsoft.CSharp": "4.7.0"
         }
@@ -284,9 +284,9 @@
       },
       "Newtonsoft.Json": {
         "type": "Direct",
-        "requested": "[13.0.1, )",
-        "resolved": "13.0.1",
-        "contentHash": "ppPFpBcvxdsfUonNcvITKqLl3bqxWbDCZIzDWHzjpdAHRFfZe0Dw9HmA0+za13IdyrgJwpkDTDA9fHaxOrt20A=="
+        "requested": "[13.0.3, )",
+        "resolved": "13.0.3",
+        "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
       },
       "Otp.NET": {
         "type": "Direct",
@@ -382,9 +382,9 @@
       },
       "Serilog.Sinks.SyslogMessages": {
         "type": "Direct",
-        "requested": "[2.0.6, )",
-        "resolved": "2.0.6",
-        "contentHash": "V2Yq2GEbk7taEPbpBLFzLXhrHrUzKf4sQu/zLrANU8XIoUn/Mr08M2E8PrcrWVXCj0R4xLMWYe0Z1sxOrMF3IA==",
+        "requested": "[2.0.9, )",
+        "resolved": "2.0.9",
+        "contentHash": "y7J+/h/Nf5EAtbpa6lC1nDhK/F9kC5oxuVYmQivv242Oh4hAVMeoAk5Gv6bgb/KbmqufGPXUFkX/AlcrvZ8Ywg==",
         "dependencies": {
           "Serilog": "2.5.0",
           "Serilog.Sinks.PeriodicBatching": "2.3.0"
