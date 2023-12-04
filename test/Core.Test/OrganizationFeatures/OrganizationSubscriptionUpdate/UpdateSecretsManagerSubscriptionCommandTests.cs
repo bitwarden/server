@@ -98,6 +98,10 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         const int updateSmSeats = 15;
         const int updateSmServiceAccounts = 450;
+
+        // Ensure that SmSeats is different from the original organization.SmSeats
+        organization.SmSeats = updateSmSeats + 5;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
             SmSeats = updateSmSeats,
