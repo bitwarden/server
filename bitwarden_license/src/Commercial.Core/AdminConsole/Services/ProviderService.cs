@@ -1,4 +1,6 @@
-﻿using Bit.Core.AdminConsole.Entities.Provider;
+﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Business.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -33,13 +35,14 @@ public class ProviderService : IProviderService
     private readonly IUserService _userService;
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
+    private readonly IStripeAdapter _stripeAdapter;
 
     public ProviderService(IProviderRepository providerRepository, IProviderUserRepository providerUserRepository,
         IProviderOrganizationRepository providerOrganizationRepository, IUserRepository userRepository,
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext, IStripeAdapter stripeAdapter)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
@@ -53,6 +56,7 @@ public class ProviderService : IProviderService
         _globalSettings = globalSettings;
         _dataProtector = dataProtectionProvider.CreateProtector("ProviderServiceDataProtector");
         _currentContext = currentContext;
+        _stripeAdapter = stripeAdapter;
     }
 
     public async Task<Provider> CompleteSetupAsync(Provider provider, Guid ownerUserId, string token, string key)
@@ -380,7 +384,7 @@ public class ProviderService : IProviderService
         {
             throw new BadRequestException("Provider must be of type Reseller in order to assign Organizations to it.");
         }
-
+        await UpdatePlanForExistingProviderAsync(organizationIds, provider);
         var existingProviderOrganizationsCount = await _providerOrganizationRepository.GetCountByOrganizationIdsAsync(organizationIds);
         if (existingProviderOrganizationsCount > 0)
         {
@@ -391,6 +395,88 @@ public class ProviderService : IProviderService
         var insertedProviderOrganizations = await _providerOrganizationRepository.CreateManyAsync(providerOrganizationsToInsert);
 
         await _eventService.LogProviderOrganizationEventsAsync(insertedProviderOrganizations.Select(ipo => (ipo, EventType.ProviderOrganization_Added, (DateTime?)null)));
+    }
+
+    private async Task UpdatePlanForExistingProviderAsync(IEnumerable<Guid> organizationIds, Provider provider)
+    {
+        // Check if provider was created on or after November 6, 2023; if so, do not update the plan to the 2020 plan.
+        if (provider.CreationDate >= new DateTime(2023, 11, 6))
+        {
+            return;
+        }
+
+        foreach (var orgId in organizationIds)
+        {
+            var organization = await _organizationRepository.GetByIdAsync(orgId);
+            var subscriptionItem = await GetSubscriptionItemAsync(organization.GatewaySubscriptionId, GetPlanId(organization.PlanType));
+            var newPlanType = GetPlanTypeFromPlan(organization.Plan, organization);
+            if (subscriptionItem != null)
+            {
+                await UpdateSubscriptionAsync(organization.GatewaySubscriptionId, subscriptionItem, GetPlanId(newPlanType));
+            }
+
+            await _organizationRepository.UpsertAsync(organization);
+        }
+    }
+
+    private async Task<Stripe.SubscriptionItem> GetSubscriptionItemAsync(string subscriptionId, string oldPlanId)
+    {
+        var subscrptionInfo = await _stripeAdapter.SubscriptionGetAsync(subscriptionId);
+        return subscrptionInfo.Items.Data.FirstOrDefault(item => item.Price.Id == oldPlanId);
+    }
+
+    private static string GetPlanId(PlanType planType)
+    {
+        return StaticStore.GetPlan(planType).PasswordManager.StripeSeatPlanId;
+    }
+
+    private async Task UpdateSubscriptionAsync(string subscriptionId, Stripe.SubscriptionItem subscriptionItem, string newPlanId)
+    {
+        try
+        {
+            if (subscriptionItem.Plan.Id != newPlanId)
+            {
+                await _stripeAdapter.SubscriptionUpdateAsync(subscriptionId,
+                    new Stripe.SubscriptionUpdateOptions
+                    {
+                        Items = new List<Stripe.SubscriptionItemOptions>
+                        {
+                            new Stripe.SubscriptionItemOptions { Id = subscriptionItem.Id, Price = newPlanId },
+                        }
+                    });
+            }
+        }
+        catch (Exception e)
+        {
+            throw new Exception("Unable to update existing plan on stripe");
+        }
+
+    }
+
+    private static PlanType GetPlanTypeFromPlan(string plan, Organization organization)
+    {
+        PlanType planType = plan switch
+        {
+            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.EnterpriseAnnually2020)) => PlanType.EnterpriseAnnually2020,
+            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.EnterpriseMonthly2020)) => PlanType.EnterpriseMonthly2020,
+            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.TeamsMonthly2020)) => PlanType.TeamsMonthly2020,
+            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.TeamsAnnually2020)) => PlanType.TeamsAnnually2020,
+            _ => throw new BadRequestException("Invalid PlanType selected")
+        };
+
+        organization.PlanType = planType;
+        organization.Plan = GetEnumDisplayName(planType);
+
+        return planType;
+    }
+
+    private static string GetEnumDisplayName(Enum value)
+    {
+        var fieldInfo = value.GetType().GetField(value.ToString());
+
+        var displayAttribute = (DisplayAttribute)Attribute.GetCustomAttribute(fieldInfo, typeof(DisplayAttribute));
+
+        return displayAttribute?.Name ?? value.ToString();
     }
 
     public async Task<ProviderOrganization> CreateOrganizationAsync(Guid providerId,

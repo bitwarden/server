@@ -83,14 +83,24 @@
                     @{
                         var planTypes = Enum.GetValues<PlanType>()
                             .Where(p =>
-                                Model.Provider == null ||
+                                (Model.Provider == null && !p.ToString().Contains("2020")) ||
                                 (Model.Provider != null
-                                 && p is >= PlanType.TeamsMonthly2019 and <= PlanType.EnterpriseAnnually2019 or >= PlanType.TeamsMonthly2020 and <= PlanType.EnterpriseAnnually)
+                                 && (
+                                     (Model.Provider.CreationDate < new DateTime(2023, 11, 6) && p.ToString().Contains("2020"))
+                                     || (Model.Provider.CreationDate >= new DateTime(2023, 11, 6)
+                                         && (
+                                             (p >= PlanType.TeamsMonthly2019 && p <= PlanType.EnterpriseAnnually2019)
+                                             || (p >= PlanType.TeamsMonthly2020 && p <= PlanType.EnterpriseAnnually)
+                                             )
+                                         )
+                                     )
+                                    )
                             )
                             .Select(e => new SelectListItem
                             {
                                 Value = ((int)e).ToString(),
-                                Text = e.GetDisplayAttribute()?.GetName() ?? e.ToString()
+                                Text = e.GetDisplayAttribute()?.GetName() ?? e.ToString(),
+                                Selected = (e == Model.PlanType)
                             })
                             .ToList();
                     }
@@ -100,7 +110,11 @@
             <div class="col-sm">
                 <div class="form-group">
                     <label asp-for="Plan"></label>
-                    <input type="text" class="form-control" asp-for="Plan" required readonly='@(!canEditPlan)'>
+                    @{
+                        var selectedPlanType = planTypes.FirstOrDefault(p => p.Selected) ?? planTypes.FirstOrDefault();
+                        var planValue = selectedPlanType?.Text ?? "";
+                    }
+                    <input type="text" class="form-control" asp-for="Plan" required readonly='@(!canEditPlan)' value="@planValue" />
                 </div>
             </div>
         </div>
