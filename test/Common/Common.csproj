@@ -2,9 +2,10 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <RootNamespace>Bit.Test.Common</RootNamespace>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
-    <ItemGroup>
+  <ItemGroup>
     <PackageReference Include="NSubstitute" Version="$(NSubstituteVersion)" />
     <PackageReference Include="xunit" Version="$(XUnitVersion)" />
     <PackageReference Include="xunit.runner.visualstudio" Version="$(XUnitRunnerVisualStudioVersion)">
@@ -16,6 +17,7 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="$(MicrosoftNetTestSdkVersion)" />
     <PackageReference Include="Kralizek.AutoFixture.Extensions.MockHttp" Version="1.2.0" />
   </ItemGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\..\src\Core\Core.csproj" />
   </ItemGroup>
