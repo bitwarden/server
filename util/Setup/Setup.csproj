@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Handlebars.Net" Version="2.1.2" />
+    <PackageReference Include="Handlebars.Net" Version="2.1.4" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="6.0.0" />
     <PackageReference Include="YamlDotNet" Version="11.2.1" />
   </ItemGroup>
