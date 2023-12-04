@@ -389,8 +389,8 @@ public class UpdateSecretsManagerSubscriptionCommandTests
     {
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmSeats = 15,
-            MaxAutoscaleSmSeats = 10
+            SmSeats = organization.SmSeats + 10,
+            MaxAutoscaleSmSeats = organization.SmSeats + 5
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
