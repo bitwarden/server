@@ -543,9 +543,13 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int newSmServiceAccounts = 199;
+
+        organization.SmServiceAccounts = newSmServiceAccounts - 10;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmServiceAccounts = 199,
+            SmServiceAccounts = newSmServiceAccounts,
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
