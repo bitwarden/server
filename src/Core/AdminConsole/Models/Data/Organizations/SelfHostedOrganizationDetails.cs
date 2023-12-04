@@ -145,6 +145,7 @@ public class SelfHostedOrganizationDetails : Organization
             MaxAutoscaleSeats = MaxAutoscaleSeats,
             OwnersNotifiedOfAutoscaling = OwnersNotifiedOfAutoscaling,
             LimitCollectionCreationDeletion = LimitCollectionCreationDeletion,
+            AllowAdminAccessToAllCollectionItems = AllowAdminAccessToAllCollectionItems
         };
     }
 }

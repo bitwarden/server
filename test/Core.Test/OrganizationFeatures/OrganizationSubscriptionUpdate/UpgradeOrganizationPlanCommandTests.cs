@@ -11,7 +11,7 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using Organization = Bit.Core.Entities.Organization;
+using Organization = Bit.Core.AdminConsole.Entities.Organization;
 
 namespace Bit.Core.Test.OrganizationFeatures.OrganizationSubscriptionUpdate;
 
