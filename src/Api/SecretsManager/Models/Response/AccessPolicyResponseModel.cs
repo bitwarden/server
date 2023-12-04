@@ -167,3 +167,29 @@ public class ServiceAccountProjectAccessPolicyResponseModel : BaseAccessPolicyRe
     public Guid? GrantedProjectId { get; set; }
     public string? GrantedProjectName { get; set; }
 }
+
+//DO I need this or does the above handle it?
+//public class ProjectServiceAccountsAccessPolicyResponseModel : BaseAccessPolicyResponseModel
+//{
+//    private const string _objectName = "serviceAccountProjectAccessPolicy";
+
+//    public ServiceAccountProjectAccessPolicyResponseModel(ServiceAccountProjectAccessPolicy accessPolicy)
+//        : base(accessPolicy, _objectName)
+//    {
+//        ServiceAccountId = accessPolicy.ServiceAccountId;
+//        GrantedProjectId = accessPolicy.GrantedProjectId;
+//        ServiceAccountName = accessPolicy.ServiceAccount?.Name;
+//        GrantedProjectName = accessPolicy.GrantedProject?.Name;
+//    }
+
+//    public ServiceAccountProjectAccessPolicyResponseModel()
+//        : base(new ServiceAccountProjectAccessPolicy(), _objectName)
+//    {
+//    }
+
+//    public Guid? ServiceAccountId { get; set; }
+//    public string? ServiceAccountName { get; set; }
+//    public Guid? GrantedProjectId { get; set; }
+//    public string? GrantedProjectName { get; set; }
+//}
+

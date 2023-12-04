@@ -1,19 +1,22 @@
 ﻿using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Queries.AccessPolicies.Interfaces;
+using Bit.Core.SecretsManager.Repositories;
 
 namespace Bit.Commercial.Core.SecretsManager.Queries.AccessPolicies;
 
 public class SameOrganizationQuery : ISameOrganizationQuery
 {
     private readonly IGroupRepository _groupRepository;
+    private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public SameOrganizationQuery(IOrganizationUserRepository organizationUserRepository,
-        IGroupRepository groupRepository)
+        IGroupRepository groupRepository, IServiceAccountRepository serviceAccountRepository)
     {
         _organizationUserRepository = organizationUserRepository;
         _groupRepository = groupRepository;
+        _serviceAccountRepository = serviceAccountRepository;
     }
 
     public async Task<bool> OrgUsersInTheSameOrgAsync(List<Guid> organizationUserIds, Guid organizationId)
@@ -28,5 +31,12 @@ public class SameOrganizationQuery : ISameOrganizationQuery
         var groups = await _groupRepository.GetManyByManyIds(groupIds);
         return groups.All(group => group.OrganizationId == organizationId) &&
                groups.Count == groupIds.Count;
+    }
+
+    public async Task<bool> ServiceAccountsInTheSameOrgAsync(List<Guid> serviceAccountIds, Guid organizationId)
+    {
+        var serviceAccounts = await _serviceAccountRepository.GetManyByIds(serviceAccountIds);
+        return serviceAccounts.All(serviceAccount => serviceAccount.OrganizationId == organizationId) &&
+               serviceAccounts.Count() == serviceAccountIds.Count;
     }
 }
