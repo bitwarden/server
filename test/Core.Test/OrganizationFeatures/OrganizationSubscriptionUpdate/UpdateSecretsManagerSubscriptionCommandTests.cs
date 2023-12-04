@@ -519,10 +519,16 @@ public class UpdateSecretsManagerSubscriptionCommandTests
         Organization organization,
         SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
+        const int smServiceAccount = 15;
+        const int maxAutoscaleSmServiceAccounts = 10;
+
+        organization.SmServiceAccounts = smServiceAccount - 5;
+        organization.MaxAutoscaleSmServiceAccounts = 2 * smServiceAccount;
+
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
-            SmServiceAccounts = 15,
-            MaxAutoscaleSmServiceAccounts = 10
+            SmServiceAccounts = smServiceAccount,
+            MaxAutoscaleSmServiceAccounts = maxAutoscaleSmServiceAccounts
         };
 
         var exception = await Assert.ThrowsAsync<BadRequestException>(
