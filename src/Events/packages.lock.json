@@ -2596,7 +2596,7 @@
           "DnsClient": "[1.7.0, )",
           "Duende.IdentityServer": "[6.0.4, )",
           "Fido2.AspNet": "[3.0.1, )",
-          "Handlebars.Net": "[2.1.4, )",
+          "Handlebars.Net": "[2.1.2, )",
           "LaunchDarkly.ServerSdk": "[8.0.0, )",
           "MailKit": "[4.2.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[6.0.4, )",
@@ -2607,7 +2607,7 @@
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[6.0.1, )",
           "Microsoft.Extensions.Configuration.UserSecrets": "[6.0.1, )",
           "Microsoft.Extensions.Identity.Stores": "[6.0.4, )",
-          "Newtonsoft.Json": "[13.0.3, )",
+          "Newtonsoft.Json": "[13.0.1, )",
           "Otp.NET": "[1.2.2, )",
           "Quartz": "[3.4.0, )",
           "SendGrid": "[9.27.0, )",
@@ -2616,7 +2616,7 @@
           "Serilog.Extensions.Logging": "[3.1.0, )",
           "Serilog.Extensions.Logging.File": "[2.0.0, )",
           "Serilog.Sinks.AzureCosmosDB": "[2.0.0, )",
-          "Serilog.Sinks.SyslogMessages": "[2.0.9, )",
+          "Serilog.Sinks.SyslogMessages": "[2.0.6, )",
           "Stripe.net": "[40.0.0, )",
           "YubicoDotNetClient": "[1.2.0, )"
         }
@@ -2624,29 +2624,29 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.12.0, )",
-          "Dapper": "[2.1.24, )"
+          "Core": "[2023.10.3, )",
+          "Dapper": "[2.0.123, )"
         }
       },
       "infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.12.0, )",
-          "Microsoft.EntityFrameworkCore.Relational": "[7.0.14, )",
-          "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.14, )",
-          "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.14, )",
-          "Npgsql.EntityFrameworkCore.PostgreSQL": "[7.0.11, )",
+          "Core": "[2023.10.3, )",
+          "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
+          "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
+          "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
+          "Npgsql.EntityFrameworkCore.PostgreSQL": "[7.0.4, )",
           "Pomelo.EntityFrameworkCore.MySql": "[7.0.0, )",
-          "linq2db.EntityFrameworkCore": "[7.6.0, )"
+          "linq2db.EntityFrameworkCore": "[7.5.0, )"
         }
       },
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.12.0, )",
-          "Infrastructure.Dapper": "[2023.12.0, )",
-          "Infrastructure.EntityFramework": "[2023.12.0, )"
+          "Core": "[2023.10.3, )",
+          "Infrastructure.Dapper": "[2023.10.3, )",
+          "Infrastructure.EntityFramework": "[2023.10.3, )"
         }
       }
     }
