@@ -94,7 +94,8 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         if (org is
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.EditAnyCollection: true } or
-        { Permissions.DeleteAnyCollection: true })
+        { Permissions.DeleteAnyCollection: true } or
+        { Permissions.ManageUsers: true })
         {
             context.Succeed(requirement);
             return;

@@ -181,10 +181,11 @@ public class CollectionAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(true, false)]
-    [BitAutoData(false, true)]
+    [BitAutoData(true, false, false)]
+    [BitAutoData(false, true, false)]
+    [BitAutoData(false, false, true)]
     public async Task CanReadAllWithAccessAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool editAnyCollection, bool deleteAnyCollection,
+        bool editAnyCollection, bool deleteAnyCollection, bool manageUsers,
         SutProvider<CollectionAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
@@ -195,6 +196,7 @@ public class CollectionAuthorizationHandlerTests
         {
             EditAnyCollection = editAnyCollection,
             DeleteAnyCollection = deleteAnyCollection,
+            ManageUsers = manageUsers
         };
 
         var context = new AuthorizationHandlerContext(
