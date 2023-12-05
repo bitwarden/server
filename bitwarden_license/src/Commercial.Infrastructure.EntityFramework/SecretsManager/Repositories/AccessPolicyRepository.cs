@@ -160,9 +160,6 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
         }
     }
 
-    //Create
-
-    //Delete this one
     public async Task<IEnumerable<Core.SecretsManager.Entities.BaseAccessPolicy>> GetManyByGrantedProjectIdAsync(Guid id, Guid userId)
     {
         using var scope = ServiceScopeFactory.CreateScope();

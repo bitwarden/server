@@ -20,7 +20,7 @@ public class ProjectServiceAccountsAccessPoliciesResponseModel : ResponseModel
             switch (baseAccessPolicy)
             {
                 case ServiceAccountProjectAccessPolicy accessPolicy:
-                    ServiceAccountsAccessPolicies.Add(new ServiceAccountProjectAccessPolicyResponseModel(accessPolicy)); // TODO should I rename the response model? or rename everything else
+                    ServiceAccountsAccessPolicies.Add(new ServiceAccountProjectAccessPolicyResponseModel(accessPolicy));
                     break;
             }
         }

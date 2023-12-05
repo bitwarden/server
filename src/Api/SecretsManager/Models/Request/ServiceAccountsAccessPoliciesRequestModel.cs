@@ -43,7 +43,7 @@ public class ServiceAccountsAccessPoliciesRequestModel
         {
             Id = grantedProjectId,
             OrganizationId = organizationId,
-            ServiceAccountProjectsAccessPolicies = projectServiceAccountsAccessPolicies, //TODO compare this to thomas
+            ServiceAccountProjectsAccessPolicies = projectServiceAccountsAccessPolicies,
         };
     }
 }
