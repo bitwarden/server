@@ -305,7 +305,13 @@ jobs:
         env:
           IMAGE_TAG: ${{ steps.tag.outputs.image_tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
-        run: echo "name=${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          SHA: ${{ github.sha }}
+        run: |
+          NAME="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
+          if [[ "${IMAGE_TAG}" == "dev" ]]; then
+            NAME=$NAME",${_AZ_REGISTRY}/${PROJECT_NAME}:${SHA}"
+          fi
+          echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
         if: ${{ matrix.dotnet }}
