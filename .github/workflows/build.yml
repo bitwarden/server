@@ -309,7 +309,8 @@ jobs:
         run: |
           NAMES="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
           if [[ "${IMAGE_TAG}" == "dev" ]]; then
-            NAMES=$NAMES",${_AZ_REGISTRY}/${PROJECT_NAME}:${SHA}"
+            SHORT_SHA=$(echo "${SHA}" | cut -c1-7)
+            NAMES=$NAMES",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
           fi
           echo "names=$NAME" >> $GITHUB_OUTPUT
 
