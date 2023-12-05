@@ -2794,25 +2794,25 @@
           "AspNetCore.HealthChecks.SqlServer": "[6.0.2, )",
           "AspNetCore.HealthChecks.Uris": "[6.0.3, )",
           "Azure.Messaging.EventGrid": "[4.10.0, )",
-          "Commercial.Core": "[2023.10.3, )",
-          "Commercial.Infrastructure.EntityFramework": "[2023.10.3, )",
-          "Core": "[2023.10.3, )",
-          "SharedWeb": "[2023.10.3, )",
+          "Commercial.Core": "[2023.12.0, )",
+          "Commercial.Infrastructure.EntityFramework": "[2023.12.0, )",
+          "Core": "[2023.12.0, )",
+          "SharedWeb": "[2023.12.0, )",
           "Swashbuckle.AspNetCore": "[6.5.0, )"
         }
       },
       "commercial.core": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.3, )"
+          "Core": "[2023.12.0, )"
         }
       },
       "commercial.infrastructure.entityframework": {
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.3, )",
-          "Infrastructure.EntityFramework": "[2023.10.3, )"
+          "Core": "[2023.12.0, )",
+          "Infrastructure.EntityFramework": "[2023.12.0, )"
         }
       },
       "core": {
@@ -2860,7 +2860,7 @@
       "infrastructure.dapper": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.3, )",
+          "Core": "[2023.12.0, )",
           "Dapper": "[2.0.123, )"
         }
       },
@@ -2868,7 +2868,7 @@
         "type": "Project",
         "dependencies": {
           "AutoMapper.Extensions.Microsoft.DependencyInjection": "[12.0.1, )",
-          "Core": "[2023.10.3, )",
+          "Core": "[2023.12.0, )",
           "Microsoft.EntityFrameworkCore.Relational": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.SqlServer": "[7.0.5, )",
           "Microsoft.EntityFrameworkCore.Sqlite": "[7.0.5, )",
@@ -2880,9 +2880,9 @@
       "sharedweb": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2023.10.3, )",
-          "Infrastructure.Dapper": "[2023.10.3, )",
-          "Infrastructure.EntityFramework": "[2023.10.3, )"
+          "Core": "[2023.12.0, )",
+          "Infrastructure.Dapper": "[2023.12.0, )",
+          "Infrastructure.EntityFramework": "[2023.12.0, )"
         }
       }
     }
