@@ -129,7 +129,7 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
 
         // The acting user is a member of the target organization,
         // ensure they have access for the collection being read
-        if (org is { LimitCollectionCreationDeletion: false })
+        if (org is not null)
         {
             var isAssignedToCollections = await IsAssignedToCollectionsAsync(resources, org, false);
             if (isAssignedToCollections)
@@ -161,8 +161,8 @@ public class BulkCollectionAuthorizationHandler : BulkAuthorizationHandler<BulkC
         }
 
         // The acting user is a member of the target organization,
-        // ensure they have access for the collection being read
-        if (org is { LimitCollectionCreationDeletion: false })
+        // ensure they have access with manage permission for the collection being read
+        if (org is not null)
         {
             var isAssignedToCollections = await IsAssignedToCollectionsAsync(resources, org, true);
             if (isAssignedToCollections)

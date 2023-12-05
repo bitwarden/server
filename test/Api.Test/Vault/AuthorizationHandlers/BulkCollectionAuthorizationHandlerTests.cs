@@ -162,12 +162,10 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, CollectionCustomization]
-    [BitAutoData(true, false, true)]
-    [BitAutoData(false, true, true)]
-    [BitAutoData(false, false, false)]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
     public async Task CanReadAsync_WhenCustomUserWithRequiredPermissions_Success(
         bool editAnyCollection, bool deleteAnyCollection,
-        bool limitCollectionCreationDeletion,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization)
@@ -175,7 +173,6 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = editAnyCollection,
@@ -382,15 +379,12 @@ public class BulkCollectionAuthorizationHandlerTests
     }
 
     [Theory, CollectionCustomization]
-    [BitAutoData(true, false, false, false, true)]
-    [BitAutoData(false, true, false, false, true)]
-    [BitAutoData(false, false, true, false, true)]
-    [BitAutoData(false, false, false, true, true)]
-    [BitAutoData(false, false, false, false, false)]
+    [BitAutoData(true, false, false)]
+    [BitAutoData(false, true, false)]
+    [BitAutoData(false, false, true)]
 
     public async Task CanReadWithAccessAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool editAnyCollection, bool deleteAnyCollection,
-        bool createNewCollections, bool manageUsers, bool limitCollectionCreationDeletion,
+        bool editAnyCollection, bool deleteAnyCollection, bool manageUsers,
         SutProvider<BulkCollectionAuthorizationHandler> sutProvider,
         ICollection<Collection> collections,
         CurrentContextOrganization organization)
@@ -398,12 +392,10 @@ public class BulkCollectionAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
-        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = editAnyCollection,
             DeleteAnyCollection = deleteAnyCollection,
-            CreateNewCollections = createNewCollections,
             ManageUsers = manageUsers
         };
 
