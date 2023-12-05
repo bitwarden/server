@@ -455,19 +455,25 @@ public class ProviderService : IProviderService
 
     private static PlanType GetPlanTypeFromPlan(string plan, Organization organization)
     {
-        PlanType planType = plan switch
+        var planTypeMappings = new Dictionary<PlanType, string>
         {
-            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.EnterpriseAnnually2020)) => PlanType.EnterpriseAnnually2020,
-            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.EnterpriseMonthly2020)) => PlanType.EnterpriseMonthly2020,
-            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.TeamsMonthly2020)) => PlanType.TeamsMonthly2020,
-            var planTypeString when planTypeString.Contains(GetEnumDisplayName(PlanType.TeamsAnnually2020)) => PlanType.TeamsAnnually2020,
-            _ => throw new BadRequestException("Invalid PlanType selected")
+            { PlanType.EnterpriseAnnually2020, GetEnumDisplayName(PlanType.EnterpriseAnnually2020) },
+            { PlanType.EnterpriseMonthly2020, GetEnumDisplayName(PlanType.EnterpriseMonthly2020) },
+            { PlanType.TeamsMonthly2020, GetEnumDisplayName(PlanType.TeamsMonthly2020) },
+            { PlanType.TeamsAnnually2020, GetEnumDisplayName(PlanType.TeamsAnnually2020) }
         };
 
-        organization.PlanType = planType;
-        organization.Plan = GetEnumDisplayName(planType);
+        foreach (var mapping in planTypeMappings)
+        {
+            if (mapping.Value.IndexOf(organization.Plan, StringComparison.Ordinal) != -1)
+            {
+                organization.PlanType = mapping.Key;
+                organization.Plan = mapping.Value;
+                return organization.PlanType;
+            }
+        }
 
-        return planType;
+        throw new BadRequestException("Invalid PlanType selected");
     }
 
     private static string GetEnumDisplayName(Enum value)
