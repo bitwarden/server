@@ -21,7 +21,8 @@ public class CipherRotationValidatorTests
         var userCiphers = ciphers.Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
             .ToList();
         userCiphers.Add(new CipherDetails { Id = Guid.NewGuid(), Type = Core.Vault.Enums.CipherType.Login });
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id).Returns(userCiphers);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
+            .Returns(userCiphers);
 
 
         await Assert.ThrowsAsync<BadRequestException>(async () => await sutProvider.Sut.ValidateAsync(user, ciphers));
@@ -34,7 +35,8 @@ public class CipherRotationValidatorTests
         var userCiphers = ciphers.Select(c => new CipherDetails { Id = c.Id.GetValueOrDefault(), Type = c.Type })
             .ToList();
         userCiphers.RemoveAt(0);
-        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id).Returns(userCiphers);
+        sutProvider.GetDependency<ICipherRepository>().GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
+            .Returns(userCiphers);
 
         var result = await sutProvider.Sut.ValidateAsync(user, ciphers);
 
