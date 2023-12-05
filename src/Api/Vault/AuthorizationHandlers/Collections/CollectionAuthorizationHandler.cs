@@ -72,7 +72,8 @@ public class CollectionAuthorizationHandler : AuthorizationHandler<CollectionOpe
         { Type: OrganizationUserType.Owner or OrganizationUserType.Admin } or
         { Permissions.EditAnyCollection: true } or
         { Permissions.DeleteAnyCollection: true } or
-        { Permissions.AccessImportExport: true })
+        { Permissions.AccessImportExport: true } or
+        { Permissions.ManageGroups: true })
         {
             context.Succeed(requirement);
             return;
