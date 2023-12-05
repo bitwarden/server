@@ -565,16 +565,18 @@ public class CollectionsController : Controller
             );
         }
 
-        var readAssignedAuthorized = await _authorizationService.AuthorizeAsync(User, assignedOrgCollections, BulkCollectionOperations.ReadWithAccess);
+        // Filter the assigned collections to only return those where the user has Manage permission
+        var manageableOrgCollections = assignedOrgCollections.Where(c => c.Item1.Manage).ToList();
+        var readAssignedAuthorized = await _authorizationService.AuthorizeAsync(User, manageableOrgCollections.Select(c => c.Item1), BulkCollectionOperations.ReadWithAccess);
         if (!readAssignedAuthorized.Succeeded)
         {
             throw new NotFoundException();
         }
 
-        return new ListResponseModel<CollectionAccessDetailsResponseModel>(assignedOrgCollections.Select(c =>
+        return new ListResponseModel<CollectionAccessDetailsResponseModel>(manageableOrgCollections.Select(c =>
             new CollectionAccessDetailsResponseModel(c.Item1, c.Item2.Groups, c.Item2.Users)
             {
-                Assigned = true // Mapping from assignedOrgCollections implies they're all assigned
+                Assigned = true // Mapping from manageableOrgCollections implies they're all assigned
             })
         );
     }
