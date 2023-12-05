@@ -135,7 +135,22 @@ public class CollectionsController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<CollectionResponseModel>> Get(Guid orgId)
     {
-        IEnumerable<Collection> orgCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
+        IEnumerable<Collection> orgCollections = null;
+        if (await _currentContext.ManageGroups(orgId))
+        {
+            // ManageGroups users need to see all collections to manage other users' collection access.
+            // This is not added to collectionService.GetOrganizationCollectionsAsync as that may have
+            // unintended consequences on other logic that also uses that method.
+            // This is a quick fix but it will be properly fixed by permission changes in Flexible Collections.
+
+            // Get all collections for organization
+            orgCollections = await _collectionRepository.GetManyByOrganizationIdAsync(orgId);
+        }
+        else
+        {
+            // Returns all collections or collections the user is assigned to, depending on permissions
+            orgCollections = await _collectionService.GetOrganizationCollectionsAsync(orgId);
+        }
 
         var responses = orgCollections.Select(c => new CollectionResponseModel(c));
         return new ListResponseModel<CollectionResponseModel>(responses);
