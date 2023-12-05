@@ -1,8 +1,12 @@
 ﻿using System.Security.Claims;
+using Bit.Api.Auth.Controllers;
+using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
-using Bit.Api.Controllers;
+using Bit.Api.Auth.Validators;
+using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Services;
 using Bit.Core.Auth.UserFeatures.UserKey;
@@ -23,7 +27,7 @@ using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
 
-namespace Bit.Api.Test.Controllers;
+namespace Bit.Api.Test.Auth.Controllers;
 
 public class AccountsControllerTests : IDisposable
 {
@@ -47,6 +51,9 @@ public class AccountsControllerTests : IDisposable
     private readonly IFeatureService _featureService;
     private readonly ICurrentContext _currentContext;
 
+    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
+        _emergencyAccessValidator;
+
 
     public AccountsControllerTests()
     {
@@ -67,6 +74,8 @@ public class AccountsControllerTests : IDisposable
         _rotateUserKeyCommand = Substitute.For<IRotateUserKeyCommand>();
         _featureService = Substitute.For<IFeatureService>();
         _currentContext = Substitute.For<ICurrentContext>();
+        _emergencyAccessValidator = Substitute.For<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>,
+            IEnumerable<EmergencyAccess>>>();
 
         _sut = new AccountsController(
             _globalSettings,
@@ -85,7 +94,8 @@ public class AccountsControllerTests : IDisposable
             _setInitialMasterPasswordCommand,
             _rotateUserKeyCommand,
             _featureService,
-            _currentContext
+            _currentContext,
+            _emergencyAccessValidator
         );
     }
 
@@ -111,14 +121,14 @@ public class AccountsControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToSha256And100000Iterations()
+    public async Task PostPrelogin_WhenUserDoesNotExist_ShouldDefaultToPBKDF()
     {
         _userRepository.GetKdfInformationByEmailAsync(Arg.Any<string>()).Returns(Task.FromResult((UserKdfInformation)null));
 
         var response = await _sut.PostPrelogin(new PreloginRequestModel { Email = "user@example.com" });
 
         Assert.Equal(KdfType.PBKDF2_SHA256, response.Kdf);
-        Assert.Equal(100000, response.KdfIterations);
+        Assert.Equal(AuthConstants.PBKDF2_ITERATIONS.Default, response.KdfIterations);
     }
 
     [Fact]

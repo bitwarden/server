@@ -4,7 +4,9 @@ using Bit.Api.Vault.AuthorizationHandlers.Collections;
 using Bit.Core;
 using Bit.Core.Context;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
+using Bit.Core.Models.Data;
 using Bit.Core.OrganizationFeatures.OrganizationCollections.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
@@ -26,6 +28,7 @@ public class CollectionsController : Controller
     private readonly ICurrentContext _currentContext;
     private readonly IBulkAddCollectionAccessCommand _bulkAddCollectionAccessCommand;
     private readonly IFeatureService _featureService;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
 
     public CollectionsController(
         ICollectionRepository collectionRepository,
@@ -35,7 +38,8 @@ public class CollectionsController : Controller
         IAuthorizationService authorizationService,
         ICurrentContext currentContext,
         IBulkAddCollectionAccessCommand bulkAddCollectionAccessCommand,
-        IFeatureService featureService)
+        IFeatureService featureService,
+        IOrganizationUserRepository organizationUserRepository)
     {
         _collectionRepository = collectionRepository;
         _collectionService = collectionService;
@@ -45,6 +49,7 @@ public class CollectionsController : Controller
         _currentContext = currentContext;
         _bulkAddCollectionAccessCommand = bulkAddCollectionAccessCommand;
         _featureService = featureService;
+        _organizationUserRepository = organizationUserRepository;
     }
 
     private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
@@ -169,7 +174,29 @@ public class CollectionsController : Controller
         }
 
         var groups = model.Groups?.Select(g => g.ToSelectionReadOnly());
-        var users = model.Users?.Select(g => g.ToSelectionReadOnly());
+        var users = model.Users?.Select(g => g.ToSelectionReadOnly()).ToList() ?? new List<CollectionAccessSelection>();
+
+        // Pre-flexible collections logic assigned Managers to collections they create
+        var assignUserToCollection =
+            !FlexibleCollectionsIsEnabled &&
+            !await _currentContext.EditAnyCollection(orgId) &&
+            await _currentContext.EditAssignedCollections(orgId);
+        var isNewCollection = collection.Id == default;
+
+        if (assignUserToCollection && isNewCollection && _currentContext.UserId.HasValue)
+        {
+            var orgUser = await _organizationUserRepository.GetByOrganizationAsync(orgId, _currentContext.UserId.Value);
+            // don't add duplicate access if the user has already specified it themselves
+            var existingAccess = users.Any(u => u.Id == orgUser.Id);
+            if (orgUser is { Status: OrganizationUserStatusType.Confirmed } && !existingAccess)
+            {
+                users.Add(new CollectionAccessSelection
+                {
+                    Id = orgUser.Id,
+                    ReadOnly = false
+                });
+            }
+        }
 
         await _collectionService.SaveAsync(collection, groups, users);
         return new CollectionResponseModel(collection);
