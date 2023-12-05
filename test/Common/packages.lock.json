@@ -2669,7 +2669,7 @@
           "DnsClient": "[1.7.0, )",
           "Duende.IdentityServer": "[6.0.4, )",
           "Fido2.AspNet": "[3.0.1, )",
-          "Handlebars.Net": "[2.1.2, )",
+          "Handlebars.Net": "[2.1.4, )",
           "LaunchDarkly.ServerSdk": "[8.0.0, )",
           "MailKit": "[4.2.0, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[6.0.4, )",
@@ -2680,7 +2680,7 @@
           "Microsoft.Extensions.Configuration.EnvironmentVariables": "[6.0.1, )",
           "Microsoft.Extensions.Configuration.UserSecrets": "[6.0.1, )",
           "Microsoft.Extensions.Identity.Stores": "[6.0.4, )",
-          "Newtonsoft.Json": "[13.0.1, )",
+          "Newtonsoft.Json": "[13.0.3, )",
           "Otp.NET": "[1.2.2, )",
           "Quartz": "[3.4.0, )",
           "SendGrid": "[9.27.0, )",
@@ -2689,7 +2689,7 @@
           "Serilog.Extensions.Logging": "[3.1.0, )",
           "Serilog.Extensions.Logging.File": "[2.0.0, )",
           "Serilog.Sinks.AzureCosmosDB": "[2.0.0, )",
-          "Serilog.Sinks.SyslogMessages": "[2.0.6, )",
+          "Serilog.Sinks.SyslogMessages": "[2.0.9, )",
           "Stripe.net": "[40.0.0, )",
           "YubicoDotNetClient": "[1.2.0, )"
         }
