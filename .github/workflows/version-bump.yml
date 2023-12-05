@@ -11,7 +11,7 @@ on:
 jobs:
   bump_props_version:
     name: "Create version_bump_${{ github.event.inputs.version_number }} branch"
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout Branch
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
@@ -37,7 +37,11 @@ jobs:
           git_commit_gpgsign: true
 
       - name: Create Version Branch
-        run: git switch -c version_bump_${{ github.event.inputs.version_number }}
+        id: create-branch
+        run: |
+          NAME=version_bump_${{ github.ref_name }}_${{ github.event.inputs.version_number }}
+          git switch -c $NAME
+          echo "name=$NAME" >> $GITHUB_OUTPUT
 
       - name: Bump Version - Props
         uses: bitwarden/gh-actions/version-bump@main
@@ -74,13 +78,12 @@ jobs:
       - name: Create Version PR
         if: ${{ steps.version-changed.outputs.changes_to_commit == 'TRUE' }}
         env:
-          PR_BRANCH: "version_bump_${{ github.event.inputs.version_number }}"
+          PR_BRANCH: ${{ steps.create-branch.outputs.name }}
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          BASE_BRANCH: master
           TITLE: "Bump version to ${{ github.event.inputs.version_number }}"
         run: |
           gh pr create --title "$TITLE" \
-            --base "$BASE" \
+            --base "$GITHUB_REF" \
             --head "$PR_BRANCH" \
             --label "version update" \
             --label "automated pr" \
