@@ -429,7 +429,7 @@ public class AccessPolicyRepository : BaseEntityFrameworkRepository, IAccessPoli
 
         var currentProjectServiceAccountsPolicyEntities = await dbContext.AccessPolicies.Where(ap =>
             ap.Discriminator == AccessPolicyDiscriminator.ServiceAccountProject &&
-            ((ServiceAccountProjectAccessPolicy)ap).GrantedProjectId == newProjectServiceAccountsAccessPolicies.Id).ToListAsync(); //All service accounts associated to the project
+            ((ServiceAccountProjectAccessPolicy)ap).GrantedProjectId == newProjectServiceAccountsAccessPolicies.Id).ToListAsync();
 
         if (newProjectServiceAccountsAccessPolicies.ServiceAccountProjectsAccessPolicies == null || !newProjectServiceAccountsAccessPolicies.ServiceAccountProjectsAccessPolicies.Any())
         {

@@ -80,7 +80,6 @@ public class AccessPoliciesController : Controller
         return new ProjectAccessPoliciesResponseModel(results);
     }
 
-    //Delete?
     [HttpGet("/projects/{id}/access-policies")]
     public async Task<ProjectAccessPoliciesResponseModel> GetProjectAccessPoliciesAsync([FromRoute] Guid id)
     {
@@ -309,7 +308,7 @@ public class AccessPoliciesController : Controller
         [FromRoute] Guid id)
     {
         var project = await _projectRepository.GetByIdAsync(id);
-        await CheckUserHasWriteAccessToProjectAsync(project); //Check that only users are accessing this if they have access
+        await CheckUserHasWriteAccessToProjectAsync(project);
 
         var results = await _accessPolicyRepository.GetServiceAccountPoliciesByGrantedProjectIdAsync(id);
         return new ProjectServiceAccountsAccessPoliciesResponseModel(results);
