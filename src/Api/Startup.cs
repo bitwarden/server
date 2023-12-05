@@ -7,6 +7,9 @@ using Stripe;
 using Bit.Core.Utilities;
 using IdentityModel;
 using System.Globalization;
+using Bit.Api.Auth.Models.Request;
+using Bit.Api.Auth.Validators;
+using Bit.Core.Auth.Entities;
 using Bit.Core.IdentityServer;
 using Bit.SharedWeb.Health;
 using Microsoft.IdentityModel.Logging;
@@ -135,6 +138,9 @@ public class Startup
 
         // Key Rotation
         services.AddScoped<IRotateUserKeyCommand, RotateUserKeyCommand>();
+        services
+            .AddScoped<IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>,
+                EmergencyAccessRotationValidator>();
 
         // Services
         services.AddBaseServices(globalSettings);

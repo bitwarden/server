@@ -1,5 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Models.Response;
+using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
+using Bit.Api.Auth.Validators;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
@@ -8,6 +10,7 @@ using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.Core.Auth.Models.Data;
@@ -16,6 +19,7 @@ using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Auth.Utilities;
 using Bit.Core.Context;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Api.Response;
@@ -34,7 +38,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Bit.Api.Controllers;
+namespace Bit.Api.Auth.Controllers;
 
 [Route("accounts")]
 [Authorize("Application")]
@@ -61,6 +65,10 @@ public class AccountsController : Controller
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
+    private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
+        _emergencyAccessValidator;
+
+
     public AccountsController(
         GlobalSettings globalSettings,
         ICipherRepository cipherRepository,
@@ -78,7 +86,9 @@ public class AccountsController : Controller
         ISetInitialMasterPasswordCommand setInitialMasterPasswordCommand,
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
-        ICurrentContext currentContext
+        ICurrentContext currentContext,
+        IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
+            emergencyAccessValidator
         )
     {
         _cipherRepository = cipherRepository;
@@ -98,6 +108,7 @@ public class AccountsController : Controller
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
         _currentContext = currentContext;
+        _emergencyAccessValidator = emergencyAccessValidator;
     }
 
     #region DEPRECATED (Moved to Identity Service)
@@ -403,14 +414,14 @@ public class AccountsController : Controller
                 MasterPasswordHash = model.MasterPasswordHash,
                 Key = model.Key,
                 PrivateKey = model.PrivateKey,
-                // Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
-                // Folders = await _folderValidator.ValidateAsync(user, model.Folders),
-                // Sends = await _sendValidator.ValidateAsync(user, model.Sends),
-                // EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
-                // ResetPasswordKeys = await _accountRecoveryValidator.ValidateAsync(user, model.ResetPasswordKeys),
+                Ciphers = new List<Cipher>(),
+                Folders = new List<Folder>(),
+                Sends = new List<Send>(),
+                EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
+                ResetPasswordKeys = new List<OrganizationUser>(),
             };
 
-            result = await _rotateUserKeyCommand.RotateUserKeyAsync(dataModel);
+            result = await _rotateUserKeyCommand.RotateUserKeyAsync(user, dataModel);
         }
         else
         {
