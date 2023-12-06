@@ -22,51 +22,70 @@ public class OrganizationSubscriptionUpdateRequestModel : IValidatableObject
 
 public class PasswordManagerSubscriptionUpdateModel
 {
-    private int? _seats;
-    public int? Seats
-    {
-        get { return _seats; }
-        set { _seats = value is < 0 or null ? 0 : value; }
-    }
-
-    private int? _storage;
-    public int? Storage
-    {
-        get { return _storage; }
-        set { _storage = value is < 0 or null ? 0 : value; }
-    }
-
+    public int? Seats { get; set; }
+    public int? Storage { get; set; }
     private int? _maxAutoScaleSeats;
     public int? MaxAutoScaleSeats
     {
         get { return _maxAutoScaleSeats; }
         set { _maxAutoScaleSeats = value < 0 ? null : value; }
+    }
+
+    public virtual void ToPasswordManagerSubscriptionUpdate(Organization organization)
+    {
+        UpdateMaxAutoScaleSeats(organization);
+
+        UpdateSeats(organization);
+
+        UpdateStorage(organization);
+    }
+
+    private void UpdateMaxAutoScaleSeats(Organization organization)
+    {
+        MaxAutoScaleSeats ??= organization.MaxAutoscaleSeats;
+    }
+
+    private void UpdateSeats(Organization organization)
+    {
+        if (Seats is > 0)
+        {
+            if (organization.Seats.HasValue)
+            {
+                Seats = Seats.Value - organization.Seats.Value;
+            }
+        }
+        else
+        {
+            Seats = 0;
+        }
+    }
+
+    private void UpdateStorage(Organization organization)
+    {
+        if (Storage is > 0)
+        {
+            if (organization.MaxStorageGb.HasValue)
+            {
+                Storage = (short?)(Storage - organization.MaxStorageGb.Value);
+            }
+        }
+        else
+        {
+            Storage = null;
+        }
     }
 }
 
 public class SecretsManagerSubscriptionUpdateModel
 {
-    private int? _seats;
-    public int? Seats
-    {
-        get { return _seats; }
-        set { _seats = value is < 0 or null ? 0 : value; }
-    }
-
+    public int? Seats { get; set; }
     private int? _maxAutoScaleSeats;
     public int? MaxAutoScaleSeats
     {
         get { return _maxAutoScaleSeats; }
         set { _maxAutoScaleSeats = value < 0 ? null : value; }
     }
-
-    private int? _serviceAccounts;
-    public int? ServiceAccounts
-    {
-        get { return _serviceAccounts; }
-        set { _serviceAccounts = value is < 0 or null ? 0 : value; }
-    }
-
+    public int? ServiceAccounts { get; set; }
     private int? _maxAutoScaleServiceAccounts;
     public int? MaxAutoScaleServiceAccounts
     {
@@ -76,23 +95,44 @@ public class SecretsManagerSubscriptionUpdateModel
 
     public virtual SecretsManagerSubscriptionUpdate ToSecretsManagerSubscriptionUpdate(Organization organization)
     {
+        var update = UpdateUpdateMaxAutoScale(organization);
+        UpdateSeats(organization, update);
+        UpdateServiceAccounts(organization, update);
+        return update;
+    }
+
+    private SecretsManagerSubscriptionUpdate UpdateUpdateMaxAutoScale(Organization organization)
+    {
         var update = new SecretsManagerSubscriptionUpdate(organization, false)
         {
             MaxAutoscaleSmSeats = MaxAutoScaleSeats ?? organization.MaxAutoscaleSmSeats,
-            MaxAutoscaleSmServiceAccounts = MaxAutoScaleServiceAccounts ?? organization.MaxAutoscaleSmServiceAccounts,
+            MaxAutoscaleSmServiceAccounts = MaxAutoScaleServiceAccounts ?? organization.MaxAutoscaleSmServiceAccounts
         };
-        if (Seats.HasValue)
-        {
-            update.AdjustSeats(Seats.Value);
-        }
-        if (ServiceAccounts.HasValue)
-        {
-            update.AdjustServiceAccounts(ServiceAccounts.Value);
-        }
-
         return update;
     }
+
+    private void UpdateSeats(Organization organization, SecretsManagerSubscriptionUpdate update)
+    {
+        if (Seats is > 0)
+        {
+            if (organization.SmSeats.HasValue)
+            {
+                Seats = Seats.Value - organization.SmSeats.Value;
+
+            }
+            update.AdjustSeats(Seats.Value);
+        }
+    }
+
+    private void UpdateServiceAccounts(Organization organization, SecretsManagerSubscriptionUpdate update)
+    {
+        if (ServiceAccounts is > 0)
+        {
+            if (organization.SmServiceAccounts.HasValue)
+            {
+                ServiceAccounts = ServiceAccounts.Value - organization.SmServiceAccounts.Value;
+            }
+            update.AdjustServiceAccounts(ServiceAccounts.Value);
+        }
+    }
 }
-
-
-

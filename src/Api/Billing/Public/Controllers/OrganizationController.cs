@@ -12,16 +12,16 @@ using OrganizationSubscriptionUpdateRequestModel = Bit.Api.Billing.Public.Models
 
 namespace Bit.Api.Billing.Public.Controllers;
 
-[Route("public/billing-organization")]
+[Route("public/organization")]
 [Authorize("Organization")]
-public class OrganizationsController : Controller
+public class OrganizationController : Controller
 {
     private readonly IOrganizationService _organizationService;
     private readonly ICurrentContext _currentContext;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IUpdateSecretsManagerSubscriptionCommand _updateSecretsManagerSubscriptionCommand;
 
-    public OrganizationsController(
+    public OrganizationController(
         IOrganizationService organizationService,
         ICurrentContext currentContext,
         IOrganizationRepository organizationRepository,
