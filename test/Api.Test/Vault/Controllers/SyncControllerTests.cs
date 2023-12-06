@@ -3,9 +3,12 @@ using System.Text.Json;
 using AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Data;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
@@ -73,7 +76,7 @@ public class SyncControllerTests
         user.EquivalentDomains = JsonSerializer.Serialize(userEquivalentDomains);
         user.ExcludedGlobalEquivalentDomains = JsonSerializer.Serialize(userExcludedGlobalEquivalentDomains);
 
-        // At least 1 org needs to be enabled to fully test 
+        // At least 1 org needs to be enabled to fully test
         if (!organizationUserDetails.Any(o => o.Enabled))
         {
             // We need at least 1 enabled org
@@ -104,7 +107,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -113,7 +116,7 @@ public class SyncControllerTests
 
         // Returns for methods only called if we have enabled orgs
         collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
 
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
@@ -165,7 +168,7 @@ public class SyncControllerTests
         user.EquivalentDomains = JsonSerializer.Serialize(userEquivalentDomains);
         user.ExcludedGlobalEquivalentDomains = JsonSerializer.Serialize(userExcludedGlobalEquivalentDomains);
 
-        // All orgs disabled 
+        // All orgs disabled
         if (organizationUserDetails.Count > 0)
         {
             foreach (var orgUserDetails in organizationUserDetails)
@@ -195,7 +198,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -218,7 +221,7 @@ public class SyncControllerTests
 
         Assert.IsType<SyncResponseModel>(result);
 
-        // Collections should be empty when all standard orgs are disabled. 
+        // Collections should be empty when all standard orgs are disabled.
         Assert.Empty(result.Collections);
     }
 
@@ -269,7 +272,7 @@ public class SyncControllerTests
             .Returns(providerUserOrganizationDetails);
 
         folderRepository.GetManyByUserIdAsync(user.Id).Returns(folders);
-        cipherRepository.GetManyByUserIdAsync(user.Id).Returns(ciphers);
+        cipherRepository.GetManyByUserIdAsync(user.Id, useFlexibleCollections: Arg.Any<bool>()).Returns(ciphers);
 
         sendRepository
             .GetManyByUserIdAsync(user.Id).Returns(sends);
@@ -278,7 +281,7 @@ public class SyncControllerTests
 
         // Returns for methods only called if we have enabled orgs
         collectionRepository.GetManyByUserIdAsync(user.Id).Returns(collections);
-        collectionCipherRepository.GetManyByUserIdAsync(user.Id).Returns(new List<CollectionCipher>());
+        collectionCipherRepository.GetManyByUserIdAsync(user.Id, Arg.Any<bool>()).Returns(new List<CollectionCipher>());
 
         // Back to standard test setup
         userService.TwoFactorIsEnabledAsync(user).Returns(false);
@@ -297,7 +300,7 @@ public class SyncControllerTests
         Assert.IsType<SyncResponseModel>(result);
 
         // Look up ProviderOrg output and compare to ProviderOrg method inputs to ensure
-        // product type is set correctly. 
+        // product type is set correctly.
         foreach (var profProviderOrg in result.Profile.ProviderOrganizations)
         {
             var matchedProviderUserOrgDetails =
@@ -305,7 +308,7 @@ public class SyncControllerTests
 
             if (matchedProviderUserOrgDetails != null)
             {
-                var providerOrgProductType = StaticStore.GetPasswordManagerPlan(matchedProviderUserOrgDetails.PlanType).Product;
+                var providerOrgProductType = StaticStore.GetPlan(matchedProviderUserOrgDetails.PlanType).Product;
                 Assert.Equal(providerOrgProductType, profProviderOrg.PlanProductType);
             }
         }
@@ -332,26 +335,26 @@ public class SyncControllerTests
             .GetManyByUserIdAsync(default);
 
         await cipherRepository.ReceivedWithAnyArgs(1)
-            .GetManyByUserIdAsync(default);
+            .GetManyByUserIdAsync(default, useFlexibleCollections: default);
 
         await sendRepository.ReceivedWithAnyArgs(1)
             .GetManyByUserIdAsync(default);
 
-        // These two are only called when at least 1 enabled org. 
+        // These two are only called when at least 1 enabled org.
         if (hasEnabledOrgs)
         {
             await collectionRepository.ReceivedWithAnyArgs(1)
                 .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(1)
-                .GetManyByUserIdAsync(default);
+                .GetManyByUserIdAsync(default, default);
         }
         else
         {
-            // all disabled orgs 
+            // all disabled orgs
             await collectionRepository.ReceivedWithAnyArgs(0)
                 .GetManyByUserIdAsync(default);
             await collectionCipherRepository.ReceivedWithAnyArgs(0)
-                .GetManyByUserIdAsync(default);
+                .GetManyByUserIdAsync(default, default);
         }
 
         await userService.ReceivedWithAnyArgs(1)

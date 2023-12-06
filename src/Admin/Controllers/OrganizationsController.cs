@@ -2,9 +2,11 @@
 using Bit.Admin.Models;
 using Bit.Admin.Services;
 using Bit.Admin.Utilities;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
-using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.Models.OrganizationConnectionConfigs;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
@@ -199,6 +201,13 @@ public class OrganizationsController : Controller
     {
         var organization = await GetOrganization(id, model);
 
+        if (organization.UseSecretsManager &&
+            !organization.SecretsManagerBeta &&
+            !StaticStore.GetPlan(organization.PlanType).SupportsSecretsManager)
+        {
+            throw new BadRequestException("Plan does not support Secrets Manager");
+        }
+
         await _organizationRepository.ReplaceAsync(organization);
         await _applicationCacheService.UpsertOrganizationAbilityAsync(organization);
         await _referenceEventService.RaiseEventAsync(new ReferenceEvent(ReferenceEventType.OrganizationEditedByAdmin, organization, _currentContext)
@@ -206,6 +215,7 @@ public class OrganizationsController : Controller
             EventRaisedByUser = _userService.GetUserName(User),
             SalesAssistedTrialStarted = model.SalesAssistedTrialStarted,
         });
+
         return RedirectToAction("Edit", new { id });
     }
 

@@ -32,7 +32,7 @@ public static class DapperHelpers
     public static DataTable ToArrayTVP(this IEnumerable<CollectionAccessSelection> values)
     {
         var table = new DataTable();
-        table.SetTypeName("[dbo].[SelectionReadOnlyArray]");
+        table.SetTypeName("[dbo].[CollectionAccessSelectionType]");
 
         var idColumn = new DataColumn("Id", typeof(Guid));
         table.Columns.Add(idColumn);
@@ -40,6 +40,8 @@ public static class DapperHelpers
         table.Columns.Add(readOnlyColumn);
         var hidePasswordsColumn = new DataColumn("HidePasswords", typeof(bool));
         table.Columns.Add(hidePasswordsColumn);
+        var manageColumn = new DataColumn("Manage", typeof(bool));
+        table.Columns.Add(manageColumn);
 
         if (values != null)
         {
@@ -49,6 +51,7 @@ public static class DapperHelpers
                 row[idColumn] = value.Id;
                 row[readOnlyColumn] = value.ReadOnly;
                 row[hidePasswordsColumn] = value.HidePasswords;
+                row[manageColumn] = value.Manage;
                 table.Rows.Add(row);
             }
         }
@@ -104,7 +107,8 @@ public static class DapperHelpers
         return organizationSponsorships.BuildTable(table, columnData);
     }
 
-    private static DataTable BuildTable<T>(this IEnumerable<T> entities, DataTable table, List<(string name, Type type, Func<T, object> getter)> columnData)
+    public static DataTable BuildTable<T>(this IEnumerable<T> entities, DataTable table,
+        List<(string name, Type type, Func<T, object> getter)> columnData)
     {
         foreach (var (name, type, getter) in columnData)
         {

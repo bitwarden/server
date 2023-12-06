@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Security.Claims;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Identity;
@@ -10,9 +11,9 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
+using Duende.IdentityServer.Models;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4.Models;
-using IdentityServer4.Stores;
 
 namespace Bit.Identity.IdentityServer;
 
@@ -100,16 +101,11 @@ public class ClientStore : IClientStore
         {
             case ServiceAccountApiKeyDetails key:
                 var org = await _organizationRepository.GetByIdAsync(key.ServiceAccountOrganizationId);
-                if (!org.UseSecretsManager)
+                if (!org.UseSecretsManager || !org.Enabled)
                 {
                     return null;
                 }
                 break;
-        }
-
-        if (string.IsNullOrEmpty(apiKey.ClientSecretHash))
-        {
-            apiKey.ClientSecretHash = apiKey.ClientSecret.Sha256();
         }
 
         var client = new Client

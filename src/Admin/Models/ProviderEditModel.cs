@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bit.Core.Entities.Provider;
-using Bit.Core.Models.Data;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 
 namespace Bit.Admin.Models;
 

@@ -1,5 +1,5 @@
-﻿using Bit.Core.Enums.Provider;
-using Bit.Core.Models.Data;
+﻿using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 
 namespace Bit.Infrastructure.EntityFramework.Repositories.Queries;
 

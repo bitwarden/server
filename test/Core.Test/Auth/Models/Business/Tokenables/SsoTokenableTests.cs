@@ -1,6 +1,6 @@
 ﻿using AutoFixture.Xunit2;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Models.Business.Tokenables;
-using Bit.Core.Entities;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Xunit;

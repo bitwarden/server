@@ -1,5 +1,7 @@
 ﻿using System.Security.Claims;
 using Bit.Core;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models;
@@ -16,14 +18,15 @@ using Bit.Core.Tokens;
 using Bit.Core.Utilities;
 using Bit.Sso.Models;
 using Bit.Sso.Utilities;
+using Duende.IdentityServer;
+using Duende.IdentityServer.Extensions;
+using Duende.IdentityServer.Services;
+using Duende.IdentityServer.Stores;
 using IdentityModel;
-using IdentityServer4;
-using IdentityServer4.Extensions;
-using IdentityServer4.Services;
-using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using DIM = Duende.IdentityServer.Models;
 
 namespace Bit.Sso.Controllers;
 
@@ -47,6 +50,7 @@ public class AccountController : Controller
     private readonly IGlobalSettings _globalSettings;
     private readonly Core.Services.IEventService _eventService;
     private readonly IDataProtectorTokenFactory<SsoTokenable> _dataProtector;
+    private readonly IOrganizationDomainRepository _organizationDomainRepository;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -65,7 +69,8 @@ public class AccountController : Controller
         UserManager<User> userManager,
         IGlobalSettings globalSettings,
         Core.Services.IEventService eventService,
-        IDataProtectorTokenFactory<SsoTokenable> dataProtector)
+        IDataProtectorTokenFactory<SsoTokenable> dataProtector,
+        IOrganizationDomainRepository organizationDomainRepository)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -84,6 +89,7 @@ public class AccountController : Controller
         _eventService = eventService;
         _globalSettings = globalSettings;
         _dataProtector = dataProtector;
+        _organizationDomainRepository = organizationDomainRepository;
     }
 
     [HttpGet]
@@ -513,11 +519,21 @@ public class AccountController : Controller
             }
         }
 
+        // If the email domain is verified, we can mark the email as verified
+        var emailVerified = false;
+        var emailDomain = CoreHelpers.GetEmailDomain(email);
+        if (!string.IsNullOrWhiteSpace(emailDomain))
+        {
+            var organizationDomain = await _organizationDomainRepository.GetDomainByOrgIdAndDomainNameAsync(orgId, emailDomain);
+            emailVerified = organizationDomain?.VerifiedDate.HasValue ?? false;
+        }
+
         // Create user record - all existing user flows are handled above
         var user = new User
         {
             Name = name,
             Email = email,
+            EmailVerified = emailVerified,
             ApiKey = CoreHelpers.SecureRandomString(30)
         };
         await _userService.RegisterUserAsync(user);
@@ -704,7 +720,7 @@ public class AccountController : Controller
         return (logoutId, logout?.PostLogoutRedirectUri, externalAuthenticationScheme);
     }
 
-    public bool IsNativeClient(IdentityServer4.Models.AuthorizationRequest context)
+    public bool IsNativeClient(DIM.AuthorizationRequest context)
     {
         return !context.RedirectUri.StartsWith("https", StringComparison.Ordinal)
            && !context.RedirectUri.StartsWith("http", StringComparison.Ordinal);

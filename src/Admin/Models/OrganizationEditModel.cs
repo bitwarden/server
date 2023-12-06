@@ -1,8 +1,9 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Entities;
-using Bit.Core.Entities.Provider;
 using Bit.Core.Enums;
-using Bit.Core.Enums.Provider;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Settings;
@@ -28,9 +29,9 @@ public class OrganizationEditModel : OrganizationViewModel
     public OrganizationEditModel(Organization org, Provider provider, IEnumerable<OrganizationUserUserDetails> orgUsers,
         IEnumerable<Cipher> ciphers, IEnumerable<Collection> collections, IEnumerable<Group> groups,
         IEnumerable<Policy> policies, BillingInfo billingInfo, IEnumerable<OrganizationConnection> connections,
-        GlobalSettings globalSettings, int secrets, int projects, int serviceAccounts, int smSeats)
+        GlobalSettings globalSettings, int secrets, int projects, int serviceAccounts, int occupiedSmSeats)
         : base(org, provider, connections, orgUsers, ciphers, collections, groups, policies, secrets, projects,
-            serviceAccounts, smSeats)
+            serviceAccounts, occupiedSmSeats)
     {
         BillingInfo = billingInfo;
         BraintreeMerchantId = globalSettings.Braintree.MerchantId;
@@ -145,12 +146,26 @@ public class OrganizationEditModel : OrganizationViewModel
     public int? SmSeats { get; set; }
     [Display(Name = "Max Autoscale Seats")]
     public int? MaxAutoscaleSmSeats { get; set; }
-    [Display(Name = "Max Service Accounts")]
+    [Display(Name = "Service Accounts")]
     public int? SmServiceAccounts { get; set; }
     [Display(Name = "Max Autoscale Service Accounts")]
     public int? MaxAutoscaleSmServiceAccounts { get; set; }
     [Display(Name = "Secrets Manager Beta")]
     public bool SecretsManagerBeta { get; set; }
+
+    /**
+     * Creates a Plan[] object for use in Javascript
+     * This is mapped manually below to provide some type safety in case the plan objects change
+     * Add mappings for individual properties as you need them
+     */
+    public IEnumerable<Dictionary<string, object>> GetPlansHelper() =>
+        StaticStore.Plans
+            .Where(p => p.SupportsSecretsManager)
+            .Select(p => new Dictionary<string, object>
+            {
+                { "type", p.Type },
+                { "baseServiceAccount", p.SecretsManager.BaseServiceAccount }
+            });
 
     public Organization CreateOrganization(Provider provider)
     {

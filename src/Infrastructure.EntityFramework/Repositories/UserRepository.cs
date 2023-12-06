@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Repositories;
 using Bit.Infrastructure.EntityFramework.Models;
 using Microsoft.EntityFrameworkCore;
@@ -135,6 +136,50 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
         }
     }
 
+    /// <inheritdoc />
+    public async Task UpdateUserKeyAndEncryptedDataAsync(Core.Entities.User user,
+        IEnumerable<UpdateEncryptedDataForKeyRotation> updateDataActions)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        try
+        {
+            // Update user
+            var entity = await dbContext.Users.FindAsync(user.Id);
+            if (entity == null)
+            {
+                throw new ArgumentException("User not found", nameof(user));
+            }
+
+            entity.SecurityStamp = user.SecurityStamp;
+            entity.Key = user.Key;
+            entity.PrivateKey = user.PrivateKey;
+            entity.LastKeyRotationDate = user.LastKeyRotationDate;
+            entity.AccountRevisionDate = user.AccountRevisionDate;
+            entity.RevisionDate = user.RevisionDate;
+
+            await dbContext.SaveChangesAsync();
+
+            //  Update re-encrypted data
+            foreach (var action in updateDataActions)
+            {
+                // connection and transaction aren't used in EF
+                await action();
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+
+    }
+
     public async Task<IEnumerable<Core.Entities.User>> GetManyAsync(IEnumerable<Guid> ids)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -155,6 +200,7 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
 
             dbContext.Ciphers.RemoveRange(dbContext.Ciphers.Where(c => c.UserId == user.Id));
             dbContext.Folders.RemoveRange(dbContext.Folders.Where(f => f.UserId == user.Id));
+            dbContext.AuthRequests.RemoveRange(dbContext.AuthRequests.Where(s => s.UserId == user.Id));
             dbContext.Devices.RemoveRange(dbContext.Devices.Where(d => d.UserId == user.Id));
             var collectionUsers = from cu in dbContext.CollectionUsers
                                   join ou in dbContext.OrganizationUsers on cu.OrganizationUserId equals ou.Id
@@ -166,6 +212,10 @@ public class UserRepository : Repository<Core.Entities.User, User, Guid>, IUserR
                              where ou.UserId == user.Id
                              select gu;
             dbContext.GroupUsers.RemoveRange(groupUsers);
+            dbContext.UserProjectAccessPolicy.RemoveRange(
+                dbContext.UserProjectAccessPolicy.Where(ap => ap.OrganizationUser.UserId == user.Id));
+            dbContext.UserServiceAccountAccessPolicy.RemoveRange(
+                dbContext.UserServiceAccountAccessPolicy.Where(ap => ap.OrganizationUser.UserId == user.Id));
             dbContext.OrganizationUsers.RemoveRange(dbContext.OrganizationUsers.Where(ou => ou.UserId == user.Id));
             dbContext.ProviderUsers.RemoveRange(dbContext.ProviderUsers.Where(pu => pu.UserId == user.Id));
             dbContext.SsoUsers.RemoveRange(dbContext.SsoUsers.Where(su => su.UserId == user.Id));
