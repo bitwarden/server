@@ -1,7 +1,7 @@
-﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Billing.Commands;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -15,46 +15,30 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
     private readonly IMailService _mailService;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
-    private readonly IPaymentService _paymentService;
     private readonly IProviderOrganizationRepository _providerOrganizationRepository;
-    private readonly IProviderRepository _providerRepository;
+    private readonly IRemovePaymentMethodCommand _removePaymentMethodCommand;
 
     public RemoveOrganizationFromProviderCommand(
         IEventService eventService,
         IMailService mailService,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
-        IPaymentService paymentService,
         IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderRepository providerRepository)
+        IRemovePaymentMethodCommand removePaymentMethodCommand)
     {
         _eventService = eventService;
         _mailService = mailService;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
-        _paymentService = paymentService;
         _providerOrganizationRepository = providerOrganizationRepository;
-        _providerRepository = providerRepository;
+        _removePaymentMethodCommand = removePaymentMethodCommand;
     }
 
-    public async Task RemoveOrganizationFromProvider(Guid providerId, Guid providerOrganizationId)
+    public async Task RemoveOrganizationFromProvider(
+        Provider provider,
+        ProviderOrganization providerOrganization)
     {
-        var providerOrganization = await ValidateProviderOrganizationAsync(providerId, providerOrganizationId);
-
-        var organization = await RemoveOrganizationPaymentMethodAsync(providerOrganization.OrganizationId);
-
-        var organizationOwnerEmails = await UpdateOrganizationBillingEmailAsync(organization);
-
-        await SendProviderUpdatePaymentMethodEmailsAsync(organization, providerId, organizationOwnerEmails);
-
-        await DeleteProviderOrganizationAsync(providerOrganization);
-    }
-
-    private async Task<ProviderOrganization> ValidateProviderOrganizationAsync(Guid providerId, Guid providerOrganizationId)
-    {
-        var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(providerOrganizationId);
-
-        if (providerOrganization == null || providerOrganization.ProviderId != providerId)
+        if (provider == null || providerOrganization == null || providerOrganization.ProviderId != provider.Id)
         {
             throw new BadRequestException("Failed to remove organization. Please contact support.");
         }
@@ -67,20 +51,10 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
             throw new BadRequestException("Organization must have at least one confirmed owner.");
         }
 
-        return providerOrganization;
-    }
+        var organization = await _organizationRepository.GetByIdAsync(providerOrganization.OrganizationId);
 
-    private async Task<Organization> RemoveOrganizationPaymentMethodAsync(Guid organizationId)
-    {
-        var organization = await _organizationRepository.GetByIdAsync(organizationId);
+        await _removePaymentMethodCommand.RemovePaymentMethod(organization);
 
-        await _paymentService.RemovePaymentMethod(organization);
-
-        return organization;
-    }
-
-    private async Task<List<string>> UpdateOrganizationBillingEmailAsync(Organization organization)
-    {
         var organizationOwnerEmails =
             (await _organizationRepository.GetOwnerEmailAddressesById(organization.Id)).ToList();
 
@@ -88,25 +62,12 @@ public class RemoveOrganizationFromProviderCommand : IRemoveOrganizationFromProv
 
         await _organizationRepository.ReplaceAsync(organization);
 
-        return organizationOwnerEmails;
-    }
-
-    private async Task SendProviderUpdatePaymentMethodEmailsAsync(
-        Organization organization,
-        Guid providerId,
-        IEnumerable<string> organizationOwnerEmails)
-    {
-        var provider = await _providerRepository.GetByIdAsync(providerId);
-
         await _mailService.SendProviderUpdatePaymentMethod(
             organization.Id,
             organization.Name,
             provider.Name,
             organizationOwnerEmails);
-    }
 
-    private async Task DeleteProviderOrganizationAsync(ProviderOrganization providerOrganization)
-    {
         await _providerOrganizationRepository.DeleteAsync(providerOrganization);
 
         await _eventService.LogProviderOrganizationEventAsync(

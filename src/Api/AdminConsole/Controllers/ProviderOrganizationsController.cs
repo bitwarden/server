@@ -23,19 +23,22 @@ public class ProviderOrganizationsController : Controller
     private readonly IUserService _userService;
     private readonly ICurrentContext _currentContext;
     private readonly IRemoveOrganizationFromProviderCommand _removeOrganizationFromProviderCommand;
+    private readonly IProviderRepository _providerRepository;
 
     public ProviderOrganizationsController(
         IProviderOrganizationRepository providerOrganizationRepository,
         IProviderService providerService,
         IUserService userService,
         ICurrentContext currentContext,
-        IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand)
+        IRemoveOrganizationFromProviderCommand removeOrganizationFromProviderCommand,
+        IProviderRepository providerRepository)
     {
         _providerOrganizationRepository = providerOrganizationRepository;
         _providerService = providerService;
         _userService = userService;
         _currentContext = currentContext;
         _removeOrganizationFromProviderCommand = removeOrganizationFromProviderCommand;
+        _providerRepository = providerRepository;
     }
 
     [HttpGet("")]
@@ -91,6 +94,10 @@ public class ProviderOrganizationsController : Controller
             throw new NotFoundException();
         }
 
-        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(providerId, id);
+        var provider = await _providerRepository.GetByIdAsync(providerId);
+
+        var providerOrganization = await _providerOrganizationRepository.GetByIdAsync(id);
+
+        await _removeOrganizationFromProviderCommand.RemoveOrganizationFromProvider(provider, providerOrganization);
     }
 }

@@ -1,6 +1,10 @@
-﻿namespace Bit.Core.AdminConsole.Providers.Interfaces;
+﻿using Bit.Core.AdminConsole.Entities.Provider;
+
+namespace Bit.Core.AdminConsole.Providers.Interfaces;
 
 public interface IRemoveOrganizationFromProviderCommand
 {
-    Task RemoveOrganizationFromProvider(Guid providerId, Guid providerOrganizationId);
+    Task RemoveOrganizationFromProvider(
+        Provider provider,
+        ProviderOrganization providerOrganization);
 }

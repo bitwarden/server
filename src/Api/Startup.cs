@@ -22,6 +22,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.UserKey;
 using Bit.Core.Auth.UserFeatures.UserKey.Implementations;
+using Bit.Core.Billing.Extensions;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions;
 using Bit.Core.Vault.Entities;
 
@@ -156,6 +157,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddOrganizationSubscriptionServices();
         services.AddCoreLocalizationServices();
+        services.AddBillingCommands();
 
         // Authorization Handlers
         services.AddAuthorizationHandlers();

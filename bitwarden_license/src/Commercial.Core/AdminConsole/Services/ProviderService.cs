@@ -39,7 +39,7 @@ public class ProviderService : IProviderService
         IUserService userService, IOrganizationService organizationService, IMailService mailService,
         IDataProtectionProvider dataProtectionProvider, IEventService eventService,
         IOrganizationRepository organizationRepository, GlobalSettings globalSettings,
-        ICurrentContext currentContext, IPaymentService paymentService)
+        ICurrentContext currentContext)
     {
         _providerRepository = providerRepository;
         _providerUserRepository = providerUserRepository;
