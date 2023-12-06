@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Entities;
 using Bit.Core.Models.Business;
 using Bit.Core.Settings;
 using Microsoft.AspNetCore.Hosting;

@@ -20,4 +20,6 @@ public interface ICollectionRepository : IRepository<Collection, Guid>
     Task UpdateUsersAsync(Guid id, IEnumerable<CollectionAccessSelection> users);
     Task<ICollection<CollectionAccessSelection>> GetManyUsersByIdAsync(Guid id);
     Task DeleteManyAsync(IEnumerable<Guid> collectionIds);
+    Task CreateOrUpdateAccessForManyAsync(Guid organizationId, IEnumerable<Guid> collectionIds,
+        IEnumerable<CollectionAccessSelection> users, IEnumerable<CollectionAccessSelection> groups);
 }
