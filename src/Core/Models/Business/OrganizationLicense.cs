@@ -136,7 +136,7 @@ public class OrganizationLicense : ILicense
     public bool UseSecretsManager { get; set; }
     public int? SmSeats { get; set; }
     public int? SmServiceAccounts { get; set; }
-    public bool LimitCollectionCreationDeletion { get; set; }
+    public bool LimitCollectionCreationDeletion { get; set; } = true;
     public bool Trial { get; set; }
     public LicenseType? LicenseType { get; set; }
     public string Hash { get; set; }
