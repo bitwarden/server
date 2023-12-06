@@ -1,4 +1,7 @@
 ﻿using System.Text.Json;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -328,7 +331,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
     }
 
     [Theory, BitAutoData]
-    public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Bit.Core.Entities.Organization organization, Bit.Core.Entities.OrganizationApiKey organizationApiKey)
+    public async Task TokenEndpoint_GrantTypeClientCredentials_AsOrganization_Success(Organization organization, Bit.Core.Entities.OrganizationApiKey organizationApiKey)
     {
         var orgRepo = _factory.Services.GetRequiredService<IOrganizationRepository>();
         organization.Enabled = true;
@@ -556,7 +559,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         var organizationUserRepository = _factory.Services.GetService<IOrganizationUserRepository>();
         var policyRepository = _factory.Services.GetService<IPolicyRepository>();
 
-        var organization = new Bit.Core.Entities.Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled, UsePolicies = true };
+        var organization = new Organization { Id = organizationId, Enabled = true, UseSso = ssoPolicyEnabled, UsePolicies = true };
         await organizationRepository.CreateAsync(organization);
 
         var user = await userRepository.GetByEmailAsync(username);
@@ -569,7 +572,7 @@ public class IdentityServerTests : IClassFixture<IdentityApplicationFactory>
         };
         await organizationUserRepository.CreateAsync(organizationUser);
 
-        var ssoPolicy = new Bit.Core.Entities.Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
+        var ssoPolicy = new Policy { OrganizationId = organization.Id, Type = PolicyType.RequireSso, Enabled = ssoPolicyEnabled };
         await policyRepository.CreateAsync(ssoPolicy);
     }
 

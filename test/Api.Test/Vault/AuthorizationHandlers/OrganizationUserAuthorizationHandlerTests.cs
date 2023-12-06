@@ -26,6 +26,7 @@ public class OrganizationUserAuthorizationHandlerTests
         CurrentContextOrganization organization)
     {
         organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions();
 
         var context = new AuthorizationHandlerContext(
@@ -46,6 +47,10 @@ public class OrganizationUserAuthorizationHandlerTests
         Guid userId,
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider, CurrentContextOrganization organization)
     {
+        organization.Type = OrganizationUserType.User;
+        organization.LimitCollectionCreationDeletion = true;
+        organization.Permissions = new Permissions();
+
         var context = new AuthorizationHandlerContext(
             new[] { OrganizationUserOperations.ReadAll(organization.Id) },
             new ClaimsPrincipal(),
@@ -64,18 +69,21 @@ public class OrganizationUserAuthorizationHandlerTests
     }
 
     [Theory]
-    [BitAutoData(true, false, false, false)]
-    [BitAutoData(false, true, false, false)]
-    [BitAutoData(false, false, true, false)]
-    [BitAutoData(false, false, false, true)]
+    [BitAutoData(true, false, false, false, true)]
+    [BitAutoData(false, true, false, false, true)]
+    [BitAutoData(false, false, true, false, true)]
+    [BitAutoData(false, false, false, true, true)]
+    [BitAutoData(false, false, false, false, false)]
     public async Task CanReadAllAsync_WhenCustomUserWithRequiredPermissions_Success(
-        bool editAnyCollection, bool deleteAnyCollection, bool manageGroups, bool manageUsers,
+        bool editAnyCollection, bool deleteAnyCollection, bool manageGroups,
+        bool manageUsers, bool limitCollectionCreationDeletion,
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
     {
         var actingUserId = Guid.NewGuid();
 
         organization.Type = OrganizationUserType.Custom;
+        organization.LimitCollectionCreationDeletion = limitCollectionCreationDeletion;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = editAnyCollection,
@@ -100,7 +108,7 @@ public class OrganizationUserAuthorizationHandlerTests
     [Theory]
     [BitAutoData(OrganizationUserType.User)]
     [BitAutoData(OrganizationUserType.Custom)]
-    public async Task CanReadAllAsync_WhenMissingAccess_Failure(
+    public async Task CanReadAllAsync_WhenMissingPermissions_NoSuccess(
         OrganizationUserType userType,
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider,
         CurrentContextOrganization organization)
@@ -108,13 +116,13 @@ public class OrganizationUserAuthorizationHandlerTests
         var actingUserId = Guid.NewGuid();
 
         organization.Type = userType;
+        organization.LimitCollectionCreationDeletion = true;
         organization.Permissions = new Permissions
         {
             EditAnyCollection = false,
             DeleteAnyCollection = false,
             ManageGroups = false,
-            ManageUsers = false,
-            AccessImportExport = false
+            ManageUsers = false
         };
 
         var context = new AuthorizationHandlerContext(
@@ -131,25 +139,7 @@ public class OrganizationUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_MissingUserId_Failure(
-        Guid organizationId,
-        SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
-    {
-        var context = new AuthorizationHandlerContext(
-            new[] { OrganizationUserOperations.ReadAll(organizationId) },
-            new ClaimsPrincipal(),
-            null
-        );
-
-        // Simulate missing user id
-        sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
-
-        await sutProvider.Sut.HandleAsync(context);
-        Assert.False(context.HasSucceeded);
-    }
-
-    [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_MissingOrg_Failure(
+    public async Task HandleRequirementAsync_WhenMissingOrgAccess_NoSuccess(
         Guid userId,
         Guid organizationId,
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
@@ -168,7 +158,25 @@ public class OrganizationUserAuthorizationHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task HandleRequirementAsync_NoSpecifiedOrgId_NoSuccessOrFailure(
+    public async Task HandleRequirementAsync_MissingUserId_Failure(
+        Guid organizationId,
+        SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
+    {
+        var context = new AuthorizationHandlerContext(
+            new[] { OrganizationUserOperations.ReadAll(organizationId) },
+            new ClaimsPrincipal(),
+            null
+        );
+
+        // Simulate missing user id
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns((Guid?)null);
+
+        await sutProvider.Sut.HandleAsync(context);
+        Assert.True(context.HasFailed);
+    }
+
+    [Theory, BitAutoData]
+    public async Task HandleRequirementAsync_NoSpecifiedOrgId_Failure(
         SutProvider<OrganizationUserAuthorizationHandler> sutProvider)
     {
         var context = new AuthorizationHandlerContext(
@@ -181,7 +189,6 @@ public class OrganizationUserAuthorizationHandlerTests
 
         await sutProvider.Sut.HandleAsync(context);
 
-        Assert.False(context.HasSucceeded);
-        Assert.False(context.HasFailed);
+        Assert.True(context.HasFailed);
     }
 }
