@@ -283,7 +283,7 @@ public class CurrentContext : ICurrentContext
 
     public async Task<bool> OrganizationManager(Guid orgId)
     {
-        if (UseFlexibleCollections)
+        if (FlexibleCollectionsIsEnabled)
         {
             throw new FeatureUnavailableException("Flexible Collections is ON when it should be OFF.");
         }

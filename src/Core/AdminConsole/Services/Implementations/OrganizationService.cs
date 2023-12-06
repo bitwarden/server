@@ -64,7 +64,7 @@ public class OrganizationService : IOrganizationService
     private readonly IDataProtectorTokenFactory<OrgUserInviteTokenable> _orgUserInviteTokenDataFactory;
     private readonly IFeatureService _featureService;
 
-    private bool UseFlexibleCollections => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
+    private bool FlexibleCollectionsIsEnabled => _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -1967,7 +1967,7 @@ public class OrganizationService : IOrganizationService
             throw new BadRequestException("Custom users can only grant the same custom permissions that they have.");
         }
 
-        if (UseFlexibleCollections && newType == OrganizationUserType.Manager)
+        if (FlexibleCollectionsIsEnabled && newType == OrganizationUserType.Manager)
         {
             throw new BadRequestException("Manager role is deprecated after Flexible Collections.");
         }
