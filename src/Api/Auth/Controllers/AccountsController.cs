@@ -6,6 +6,7 @@ using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Accounts;
 using Bit.Api.Models.Response;
 using Bit.Api.Utilities;
+using Bit.Api.Vault.Models.Request;
 using Bit.Core;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
@@ -65,6 +66,8 @@ public class AccountsController : Controller
     private bool UseFlexibleCollections =>
         _featureService.IsEnabled(FeatureFlagKeys.FlexibleCollections, _currentContext);
 
+    private readonly IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> _cipherValidator;
+    private readonly IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> _folderValidator;
     private readonly IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
         _emergencyAccessValidator;
 
@@ -87,6 +90,8 @@ public class AccountsController : Controller
         IRotateUserKeyCommand rotateUserKeyCommand,
         IFeatureService featureService,
         ICurrentContext currentContext,
+        IRotationValidator<IEnumerable<CipherWithIdRequestModel>, IEnumerable<Cipher>> cipherValidator,
+        IRotationValidator<IEnumerable<FolderWithIdRequestModel>, IEnumerable<Folder>> folderValidator,
         IRotationValidator<IEnumerable<EmergencyAccessWithIdRequestModel>, IEnumerable<EmergencyAccess>>
             emergencyAccessValidator
         )
@@ -108,6 +113,8 @@ public class AccountsController : Controller
         _rotateUserKeyCommand = rotateUserKeyCommand;
         _featureService = featureService;
         _currentContext = currentContext;
+        _cipherValidator = cipherValidator;
+        _folderValidator = folderValidator;
         _emergencyAccessValidator = emergencyAccessValidator;
     }
 
@@ -414,8 +421,8 @@ public class AccountsController : Controller
                 MasterPasswordHash = model.MasterPasswordHash,
                 Key = model.Key,
                 PrivateKey = model.PrivateKey,
-                Ciphers = new List<Cipher>(),
-                Folders = new List<Folder>(),
+                Ciphers = await _cipherValidator.ValidateAsync(user, model.Ciphers),
+                Folders = await _folderValidator.ValidateAsync(user, model.Folders),
                 Sends = new List<Send>(),
                 EmergencyAccessKeys = await _emergencyAccessValidator.ValidateAsync(user, model.EmergencyAccessKeys),
                 ResetPasswordKeys = new List<OrganizationUser>(),
