@@ -308,10 +308,10 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           NAMES="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
-          # if [[ "${IMAGE_TAG}" == "dev" ]]; then
-          SHORT_SHA=$(git rev-parse --short ${SHA})
-          NAMES=$NAMES",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
-          # fi
+          if [[ "${IMAGE_TAG}" == "dev" ]]; then
+            SHORT_SHA=$(git rev-parse --short ${SHA})
+            NAMES=$NAMES",${_AZ_REGISTRY}/${PROJECT_NAME}:dev-${SHORT_SHA}"
+          fi
           echo "names=$NAMES" >> $GITHUB_OUTPUT
 
       - name: Get build artifact
