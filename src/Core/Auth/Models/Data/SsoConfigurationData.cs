@@ -70,7 +70,7 @@ public class SsoConfigurationData
     public bool IdpWantAuthnRequestsSigned { get; set; }
 
     // SAML2 SP
-    public bool SpUniqueEntityId { get; set; } = true;
+    public bool SpUniqueEntityId { get; set; }
     public Saml2NameIdFormat SpNameIdFormat { get; set; }
     public string SpOutboundSigningAlgorithm { get; set; }
     public Saml2SigningBehavior SpSigningBehavior { get; set; }
