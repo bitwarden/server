@@ -18,10 +18,10 @@ BEGIN
         target.[HidePasswords] = 0,
         target.[Manage] = 0
         FROM [dbo].[CollectionUser] AS target
-        JOIN (
+        INNER JOIN (
             SELECT C.[Id] AS [CollectionId], T.[OrganizationUserId]
             FROM [dbo].[Collection] C
-            JOIN #TempOrgUser T ON C.[OrganizationId] = T.[OrganizationId] AND T.Batch = @CurrentBatch
+            INNER JOIN #TempOrgUser T ON C.[OrganizationId] = T.[OrganizationId] AND T.Batch = @CurrentBatch
         ) AS source
     ON target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId];
 
@@ -31,7 +31,7 @@ BEGIN
     FROM (
              SELECT C.[Id] AS [CollectionId], T.[OrganizationUserId]
              FROM [dbo].[Collection] C
-                 JOIN #TempOrgUser T ON C.[OrganizationId] = T.[OrganizationId] AND T.Batch = @CurrentBatch
+                 INNER JOIN #TempOrgUser T ON C.[OrganizationId] = T.[OrganizationId] AND T.Batch = @CurrentBatch
          ) AS source
              LEFT JOIN [dbo].[CollectionUser] AS target
     ON target.[CollectionId] = source.[CollectionId] AND target.[OrganizationUserId] = source.[OrganizationUserId]
