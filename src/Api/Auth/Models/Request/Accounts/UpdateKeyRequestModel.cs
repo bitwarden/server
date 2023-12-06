@@ -17,7 +17,7 @@ public class UpdateKeyRequestModel
     public IEnumerable<CipherWithIdRequestModel> Ciphers { get; set; }
     public IEnumerable<FolderWithIdRequestModel> Folders { get; set; }
     public IEnumerable<SendWithIdRequestModel> Sends { get; set; }
-    public IEnumerable<EmergencyAccessUpdateRequestModel> EmergencyAccessKeys { get; set; }
+    public IEnumerable<EmergencyAccessWithIdRequestModel> EmergencyAccessKeys { get; set; }
     public IEnumerable<OrganizationUserUpdateRequestModel> ResetPasswordKeys { get; set; }
 
 }
