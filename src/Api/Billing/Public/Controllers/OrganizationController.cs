@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using Bit.Api.Models.Public.Response;
-using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Context;
 using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Repositories;
@@ -48,7 +47,13 @@ public class OrganizationController : Controller
 
         if (model.PasswordManager != null)
         {
-            await UpdatePasswordManagerSubscriptionAsync(organization, model);
+            model.PasswordManager.ToPasswordManagerSubscriptionUpdate(organization);
+            await _organizationService.UpdateSubscription(organization.Id, (int)model.PasswordManager.Seats,
+                model.PasswordManager.MaxAutoScaleSeats);
+            if (model.PasswordManager.Storage.HasValue)
+            {
+                await _organizationService.AdjustStorageAsync(organization.Id, (short)model.PasswordManager.Storage);
+            }
         }
 
         if (model.SecretsManager != null)
@@ -58,16 +63,5 @@ public class OrganizationController : Controller
         }
 
         return new OkResult();
-    }
-
-    private async Task UpdatePasswordManagerSubscriptionAsync(Organization organization, OrganizationSubscriptionUpdateRequestModel model)
-    {
-        model.PasswordManager.MaxAutoScaleSeats ??= organization.MaxAutoscaleSeats;
-        await _organizationService.UpdateSubscription(organization.Id, (int)model.PasswordManager.Seats,
-            model.PasswordManager.MaxAutoScaleSeats);
-        if (model.PasswordManager.Storage.HasValue)
-        {
-            await _organizationService.AdjustStorageAsync(organization.Id, (short)model.PasswordManager.Storage);
-        }
     }
 }
